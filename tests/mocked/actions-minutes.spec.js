@@ -1,13 +1,10 @@
-// Home: the Actions minutes card (JOB 46, 30 Oct 2026). Private minutes used this month against the 2,000 free, per repo
-// and per workflow, days to reset, last run per repo, amber at 75%, red at 90%, stale after 2 days. Pretend Drive only;
-// every label and number is invented. The card reads one counts-only JSON with the existing sign-in and sends nothing.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
 
 const CONFIG = fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8');
 const FOLDER = 'FAKE_MINS_FOLDER';
-const SHOTS = process.env.MINS_SHOTS; // set to a folder to save one screenshot per state for the PR
+const SHOTS = process.env.MINS_SHOTS;
 
 const state = (used, ageH = 3, extra = {}) => Object.assign({
   version: 1, generated_at: new Date(Date.now() - ageH * 3600e3).toISOString(),
@@ -17,7 +14,6 @@ const state = (used, ageH = 3, extra = {}) => Object.assign({
   workflows: [{ repo: 'Alpha', label: 'Scan', minutes: used - 140, runs: 30 }, { repo: 'Alpha', label: 'Tests', minutes: 40, runs: 12 }, { repo: 'Beta', label: 'Sync', minutes: 100, runs: 9 }]
 }, extra);
 
-// Serve config.js with the folder id the test needs, whatever config.js holds today ('' = the example data).
 const withFolder = (page, id) => page.route(/\/config\.js$/, (route) => route.fulfill({ status: 200, contentType: 'text/javascript',
   body: CONFIG.replace(/(actionsMinutes: \{\s*folderId: )'[^']*'/, `$1'${id}'`) }));
 async function withFile(page, guard, st) {
@@ -39,7 +35,7 @@ async function open(page) {
 }
 async function shot(card, name) {
   if (!SHOTS) return;
-  await card.page().addStyleTag({ content: 'header, nav.main { position: static !important; }' }); // screenshots only: keep the bars off the card
+  await card.page().addStyleTag({ content: 'header, nav.main { position: static !important; }' });
   await card.screenshot({ path: path.join(SHOTS, `actions-minutes-${name}.png`) });
 }
 
@@ -134,3 +130,4 @@ test.describe('Home: Actions minutes card', () => {
     [block, tile].forEach((t) => { expect(t).not.toMatch(/ljoyrose\/|gh[pousr]_|github_pat_|Authorization/); });
   });
 });
+

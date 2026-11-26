@@ -1,6 +1,3 @@
-// MARKETPLACE DATA CONTRACT (JOB 31). No browser, no Google. Names and types only.
-// Covers the Open work tab (read by position), RR_LISTINGS.csv (read by header) and the wake file (JSON).
-// Each failure case proves itself: CONTRACT_PROVE_RED=1 flips it to expect "no problem", so it must go red.
 const { test, expect } = require('@playwright/test');
 const { EXPECTED } = require('./headers');
 const { EXPECTED_STATE, fixture, pageFns, constList, checkColumns, checkRows, checkState, codes } = require('./shape');
@@ -13,7 +10,6 @@ const { fns } = pageFns('marketplace', ['csvRows']); // the page's own CSV reade
 const openWork = () => JSON.parse(fixture('marketplace/open-work.json')).rows;
 const listings = () => fixture('marketplace/RR_LISTINGS.csv');
 
-/** Open work: row 1 header in page order, rows mapped by position like the page, detail must be a JSON object. */
 function checkOpenWork(values) {
   const out = checkColumns('Open work tab', E['Open work tab'], values[0]);
   if (out.some((x) => x.code === 'EMPTY')) return out;
@@ -23,7 +19,6 @@ function checkOpenWork(values) {
   rows.forEach((r, i) => { let d; try { d = JSON.parse(r.detail || '{}'); } catch (err) { d = null; } if (!d || typeof d !== 'object' || Array.isArray(d)) out.push({ code: 'WRONG_TYPE', msg: `Open work row ${i + 1}: "detail" is not a JSON object` }); });
   return out;
 }
-/** RR_LISTINGS.csv: the page scans the first 5 lines for "listing_id"; without it the photos silently vanish. */
 function checkListings(text) {
   const t = fns.csvRows(text).filter((r) => r.some((c) => c.trim()));
   if (!t.length) return [{ code: 'EMPTY', msg: 'RR_LISTINGS.csv: empty file' }];
@@ -61,3 +56,4 @@ test.describe('Marketplace contract: each kind of change gives a named failure @
   test('empty file: the wake file is {}', () => { caught(checkState('MKT-WAKE-WEBAPP.json', WAKE, {}), 'EMPTY'); });
   test('empty tab: Open work has no header row', () => { caught(checkOpenWork([]), 'EMPTY'); });
 });
+

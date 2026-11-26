@@ -1,5 +1,3 @@
-// Turns Playwright's results file into a short, readable table for the GitHub "Actions" page.
-// Usage: node tests/support/summary.js [results.json]   (writes to $GITHUB_STEP_SUMMARY if set, else prints)
 const fs = require('fs');
 const { groupOf, load, isFailed, isRegression } = require('./results');
 
@@ -36,19 +34,11 @@ out.push('| Result | Page or area | Where | Passed | Failed | Skipped | Time |',
   out.push(`| ${icon} | ${r.name} | ${r.where} | ${r.pass} | ${r.fail} | ${r.skip} | ${(r.ms / 1000).toFixed(0)}s |`);
 });
 
-// Bug-fix tests ("@regression") and pretend-Drive drift, each as one plain line.
 const reg = tests.filter(isRegression);
 const regOk = reg.filter((t) => t.status === 'expected' || t.status === 'flaky').length;
-out.push('', `**Regression tests** (each one guards a bug that was fixed): ${reg.length} in the suite, ${regOk} passing.`);
+out.push('', `**Tagged:** ${reg.length}, ${regOk} passing.`);
 const drift = readDrift();
 out.push(drift === null ? '' : `**Pretend-Drive drift:** the pages made ${drift} Drive request${drift === 1 ? '' : 's'} the pretend Drive did not know how to answer.${drift ? ' Not a failure. If this number grows, the pages have started asking Drive something new, and the pretend Drive needs teaching.' : ''}`);
-
-// Docs check (a warning, never a failure): does TESTS.md quote the right total?
-if (tests.some((t) => /(^|\/)mocked\//.test(t.file))) {
-  const m = /That is (\d+) checks that must pass/.exec(fs.existsSync('TESTS.md') ? fs.readFileSync('TESTS.md', 'utf8') : '');
-  const counted = total.pass + total.fail;
-  if (m) out.push(Number(m[1]) === counted ? `**Docs check:** TESTS.md says ${m[1]} checks, this run counted ${counted}. ✅` : `**⚠ Docs check:** TESTS.md says ${m[1]} checks but this run counted ${counted}. Update the number in TESTS.md ("What is checked, page by page"). Not a failure.`);
-}
 
 const failed = tests.filter(isFailed);
 if (failed.length) {
@@ -61,7 +51,7 @@ finish(out);
 
 function readDrift() {
   const f = require('path').join(require('path').dirname(file), 'unhandled-drive.jsonl');
-  if (!tests.some((t) => /(^|\/)(mocked|phone)\//.test(t.file))) return null; // the live check uses no pretend Drive
+  if (!tests.some((t) => /(^|\/)(mocked|phone)\//.test(t.file))) return null;
   if (!fs.existsSync(f)) return 0;
   return fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).length;
 }
@@ -71,3 +61,4 @@ function finish(lines) {
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
   else process.stdout.write(text);
 }
+

@@ -18,12 +18,10 @@
   var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var NR = 'not recorded';
-  /* Only these say "not recorded" when empty. The rest stay blank. A blank Given by shows NAMED instead. */
   var REQUIRED = { date: 1, dog: 1, product: 1, dose: 1 };
-  var NAMED = 'Lisa Carson';
+  var NAMED = 'User';
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-  /* The register's columns, in print order: [key, heading]. */
   var COLUMNS = [
     ['date', 'Date'], ['time', 'Time'], ['dog', 'Dog'], ['chip', 'Microchip'], ['product', 'Medicine'],
     ['batch', 'Batch'], ['expiry', 'Expiry'], ['dose', 'Dose'], ['route', 'Route'], ['reason', 'Reason'],
@@ -32,7 +30,6 @@
   var SOURCE = { dispense: 'dog card', job: 'staff job' };
   var RESULT = { ok: 'done', done: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', part_done: 'part done' };
 
-  /* Where each detail is read from: the record's own column names, first one with a value wins. */
   var FROM = {
     batch: ['batch', 'batch_number', 'lot_batch'],
     expiry: ['expires_on', 'expiry'],
@@ -57,19 +54,15 @@
       .replace(/\s+([.,;:])/g, '$1').replace(/([.,;:·|])(\s*[.,;:·|])+/g, '$1')
       .replace(/\s{2,}/g, ' ').replace(/^[\s.,;:·|]+|[\s,;:·|]+$/g, '').trim();
   }
-  /* Who did it: a name. A visitor's record says visit:<link id>; that prints as "Visitor (shared link)". */
   function who(s) { s = str(s); return /^visit:/i.test(s) ? 'Visitor (shared link)' : clean(s); }
 
   function pick(r, cols) { for (var i = 0; i < cols.length; i++) { var v = str(r[cols[i]]); if (v) return v; } return ''; }
 
-  /* A product written as "NOT STATED", "unknown" or flagged for a ruling is not a named medicine. */
   function unnamed(product, ruling) {
     var p = str(product);
     return !p || /not stated|unnamed|unknown/i.test(p) || !!str(ruling);
   }
 
-  /* given_at (date and time) or given_on (date, sometimes with a time). Returns {date:'YYYY-MM-DD', time:'HH:MM'|''}. */
-  /* An instant with Z or an offset is shown in UK time (Europe/London); a plain date or local time is kept as written. */
   var FMT = null;
   function when(r) {
     var s = str(r.given_at) || str(r.given_on);
@@ -121,18 +114,12 @@
   function ymd(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1].slice(0, 3) + ' ' + m[1] : ''; }
   function monthWords(ym) { var m = /^(\d{4})-(\d{2})$/.exec(ym || ''); return m ? MON[Number(m[2]) - 1] + ' ' + m[1] : ''; }
 
-  /** The months that have a record, newest first, as 'YYYY-MM'. */
   function months(rows) {
     var seen = {};
     (rows || []).forEach(function (r) { var d = when(r).date; if (d) seen[d.slice(0, 7)] = 1; });
     return Object.keys(seen).sort().reverse();
   }
 
-  /**
-   * The register lines for one month, oldest first.
-   * opts: { month: 'YYYY-MM', dog: function(subject_id) -> {name, chip} | null }
-   * Each line: { id, date, time, dog, chip, product, ..., missing: [keys], offList: bool }
-   */
   function build(rows, opts) {
     opts = opts || {};
     var ym = str(opts.month), dogOf = typeof opts.dog === 'function' ? opts.dog : function () { return null; };
@@ -144,7 +131,7 @@
       var line = {
         id: str(r.id), sort: w.date + ' ' + (w.time || '99:99'),
         date: w.date, time: str(r.time_given).toLowerCase() === 'false' ? '' : w.time, noTime: str(r.time_given).toLowerCase() === 'false',
-        source: SOURCE[str(r._from)] || SOURCE.dispense,   // _from, not the sheet's own source column (where a row came from)
+        source: SOURCE[str(r._from)] || SOURCE.dispense,
         dog: d && str(d.name) ? str(d.name) : '', offList: !!sid && !d,
         sid: sid,
         chip: d ? str(d.chip) : '',
@@ -159,8 +146,6 @@
     return out;
   }
 
-  /** A line's value for a column as printed: "not recorded" for a missing detail. Note may be blank.
-   *  iso: the date as YYYY-MM-DD (the CSV), so a spreadsheet in any country reads it the same. */
   function cell(line, key, iso) {
     if (key === 'date') return line.date ? (iso ? line.date : ymd(line.date)) : NR;
     if (key === 'dog') return line.dog || (line.sid ? 'Dog not on the current list' : NR);
@@ -171,7 +156,6 @@
     return REQUIRED[key] ? NR : '';
   }
 
-  /** How many lines miss each column: {key: n}. Only columns with a gap are listed. */
   function gaps(lines) {
     var g = {};
     lines.forEach(function (l) { l.missing.forEach(function (k) { g[k] = (g[k] || 0) + 1; }); });
@@ -180,17 +164,12 @@
 
   function heading(key) { for (var i = 0; i < COLUMNS.length; i++) if (COLUMNS[i][0] === key) return COLUMNS[i][1]; return key; }
 
-  /* CSV: quoted when needed; a cell starting = + - @ is prefixed with ' so a spreadsheet does not run it. */
   function csvCell(v) {
     v = String(v == null ? '' : v);
     if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
     return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   }
 
-  /**
-   * CSV text (UTF-8 with a BOM, so Excel shows accents and \u00a3 right): four header lines (kennel, month, printed, the "not recorded" rule), a blank line, then the table.
-   * head: { kennel, month: 'YYYY-MM', printed: 'D Mon YYYY HH:MM' }
-   */
   function toCsv(head, lines) {
     var out = [
       ['Medicines register', str(head.kennel)],
@@ -206,7 +185,6 @@
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  /* One month is one A4 landscape sheet, shrunk to fit (the temperature history rule). A year is one sheet per month. */
   function sheetHtml(head, lines, ym) {
     var g = gaps(lines), gk = COLUMNS.map(function (c) { return c[0]; }).filter(function (k) { return g[k]; });
     var title = 'Medicines register · ' + monthWords(ym || head.month);
@@ -241,7 +219,6 @@
     + 'function go(){if(done)return;done=1;fit();setTimeout(function(){window.print();},300);}'
     + 'if(document.readyState==="complete")go();else window.addEventListener("load",go);}());<\/script>';
 
-  /** A whole printable page (A4 landscape, one month, shrunk to fit). It prints itself once open. */
   function toHtml(head, lines) {
     var title = 'Medicines register · ' + monthWords(head.month);
     return '<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -251,7 +228,6 @@
       + SHEET_FIT + '</body></html>';
   }
 
-  /** A whole year: one A4 sheet per month that has a record. A year with none is one line. */
   function toYearHtml(head, sheets) {
     var title = 'Medicines register · ' + str(head.year);
     var kept = (sheets || []).filter(function (s) { return s && s.lines && s.lines.length; });
@@ -264,7 +240,6 @@
       + SHEET_FIT + '</body></html>';
   }
 
-  /** A file name: medicines-register-YYYY-MM.csv (no kennel name, so nothing personal is in it). */
   function fileName(ym, ext) { return 'medicines-register-' + (str(ym) || 'month') + '.' + (ext || 'csv'); }
 
   /**
@@ -294,3 +269,4 @@
   return { NR: NR, COLUMNS: COLUMNS, FROM: FROM, months: months, fromChecks: fromChecks, combine: combine, clean: clean, build: build, cell: cell, gaps: gaps,
     toCsv: toCsv, toHtml: toHtml, toYearHtml: toYearHtml, fileName: fileName, monthWords: monthWords };
 }));
+

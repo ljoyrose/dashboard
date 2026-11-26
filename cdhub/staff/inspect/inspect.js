@@ -23,24 +23,19 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  /* The lists, in the order they show under each dog, and the column that names the dog in each. */
   var LISTS = [
     { key: 'microchip', title: 'Microchip', dog: 'subject_id', date: '' },
     { key: 'subject_status', title: 'Status', dog: 'subject_id', date: 'from_date' },
     { key: 'health_screen', title: 'Health tests', dog: 'subject_id', date: 'tested_on' },
-    { key: 'fit_to_breed', title: 'Fit to Breed', dog: 'subject_id', date: 'assessed_on|done_on' },   // done_on: a job record (15 Nov 2026)
+    { key: 'fit_to_breed', title: 'Fit to Breed', dog: 'subject_id', date: 'assessed_on|done_on' },
     { key: 'litter', title: 'Litters', dog: 'dam_subject_id', date: 'dob' }
   ];
-  /* 18 Nov 2026: records for a room or the whole site, shown after the dogs, grouped by day, newest first.
-     The script sends them newest first and adds readable names (room, job, dog). */
   var SITE = [
     { key: 'area_reading', title: 'Temperatures', date: 'taken_at|period_start' },
     { key: 'check_log', title: 'Jobs: health checks, bowls, cleaning', date: 'happened_at|taken_at' }
   ];
   var HIDE = { id: 1, subject_id: 1, dam_subject_id: 1, tenant_id: 1, area_id: 1, check_type_id: 1, corrects_id: 1, litter_id: 1, item_id: 1, note_for_id: 1, applied_limit_id: 1, thermometer_id: 1, device_id: 1 };
-  /* lists this page asks for quietly: when a link does not share them, nothing is said (the script does not send them yet) */
   var QUIET = [{ key: 'must_pass', dog: 'subject_id' }, { key: 'breeding_rule', dog: '' }];
-  /* never shown to an outside viewer, whatever comes back */
   var NEVER_FIELDS = /^(points|points_earned|points_available|points_unverified|target|target_points|rank|ranking|verdict|note|notes|programme|judged_by)$/;
   var WORD = { pass: 'Pass', unverified: 'Unverified', fail: 'Fail' };
   var RANK = { fail: 0, unverified: 1, pass: 2 };
@@ -55,13 +50,11 @@
     if (s === 'dob') return 'DOB';
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
-  /* the first date column a row has, of those named by | */
   function dateOf(r, cols) { var c = String(cols || '').split('|').filter(function (k) { return r[k]; })[0]; return c ? r[c] : ''; }
   function isDateCol(c) { return /(^dob$|_on$|_date$|_until$|_at$)/.test(c); }
   function show(c, v) { return isDateCol(c) ? day(v) : String(v === undefined || v === null ? '' : v); }
   function time(v) { var m = /[T ](\d{2}:\d{2})/.exec(String(v || '')); return m ? m[1] : ''; }
 
-  /** Room and site records: [{title, days:[{day, rows:[[{label,value}]]}]}]. Pure, for tests. */
   function buildSite(res) {
     return SITE.filter(function (L) { return res[L.key] && res[L.key].rows && res[L.key].rows.length; }).map(function (L) {
       var fields = res[L.key].fields.filter(function (c) { return !HIDE[c]; }), days = [], at = {};
@@ -78,7 +71,6 @@
     });
   }
 
-  /** Read the link from the address. Returns {script, code} or null. */
   function parseHash(hash) {
     var p = {};
     String(hash || '').replace(/^#/, '').split('&').forEach(function (kv) {
@@ -94,8 +86,6 @@
   function newest(rows, col) { return rows.slice().sort(function (a, b) { return txt(dateOf(b, col)).localeCompare(txt(dateOf(a, col))); }); }
   function clean(fields) { return (fields || []).filter(function (c) { return !HIDE[c] && !NEVER_FIELDS.test(c); }); }
 
-  /** Group what came back by dog, dogs A to Z: [{name, facts, word, checks:[{label, word, sub, open:[cells]}], litters, lists}].
-   *  Pure, for tests. today = YYYY-MM-DD (for "in the last 12 months"); shows = what the link's viewer level shows. */
   function build(res, today, shows) {
     shows = shows || { records: true, grades: true, due_dates: true, must_pass: true };
     today = today || new Date().toISOString().slice(0, 10);
@@ -117,12 +107,10 @@
           if (shows.grades && txt(r.answer)) sub.push(txt(r.answer));
           if (shows.grades && txt(r.date)) sub.push(day(r.date));
           if (shows.due_dates && txt(r.due_date)) sub.push('due ' + day(r.due_date));
-          /* Open: the shared record this result was read from, when the link shares that list */
           var list = res[txt(r.evidence_table).replace(/^BLD-/, '')], rec = list && txt(r.evidence_id) ? (list.rows || []).filter(function (x) { return txt(x.id) === txt(r.evidence_id); })[0] : null;
           checks.push({ label: txt(r.label), word: shows.must_pass && WORD[o] ? o : '', sub: sub.join(' \u00b7 ') || (o === 'unverified' ? 'No record yet' : ''), open: rec ? [cells(list.fields, rec)] : [] });
         });
       } else {
-        /* no summary: the must-pass records as they are, grade and date, newest per test. No words. */
         var hs = res.health_screen && (res.health_screen.rows || []).filter(function (r) { return r.subject_id === d.id; });
         var tests = {};
         (hs || []).forEach(function (r) { var k = txt(r.test) || 'Health test'; (tests[k] = tests[k] || []).push(r); });
@@ -164,7 +152,6 @@
 
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
-  /* the save app's own words for the codes an inspector can meet (PR 442) */
   var SAY = {
     BAD_CODE: 'This link has ended. Ask the breeder for a new one if you still need it.',
     READ_NOT_CONFIGURED: 'These records are not set up for sharing yet. Ask the breeder.',
@@ -257,7 +244,6 @@
   function start() {
     var screen = document.getElementById('screen');
     var link = parseHash(location.hash);
-    /* clear the link from the address bar and history at once */
     try { history.replaceState(null, '', location.pathname); } catch (e) { /* ignore */ }
     if (!link) { message(screen, 'This link is not complete. Ask the breeder to send it again.'); return; }
     var save = root_BLDSave().create({ scriptUrl: link.script, localStorage: null, sessionStorage: null });
@@ -273,10 +259,10 @@
         if (!go) return false;
         return save.read(k).then(function (r) {
           if (r.ok) { res[k] = r; if (r.ends) ends = r.ends; return true; }
-          if (quiet[k]) return true;   // not sent for this link: the page shows records only
+          if (quiet[k]) return true;
           if (r.code === 'NOT_ALLOWED') {
             if (k === 'subject') { message(screen, 'No dogs have been shared on this link.'); return false; }
-            notShared.push(title(k)); return true;   // that list was not ticked for this link
+            notShared.push(title(k)); return true;
           }
           message(screen, SAY[r.code] || 'These records cannot be shown right now.');
           return false;
@@ -284,7 +270,6 @@
       });
     });
     chain.then(function (ok) {
-      /* the link's viewer level (sent by the script when set); the inspector default otherwise */
       var L = root_Levels(), lv = (res.must_pass && res.must_pass.viewer_level) || '';
       var shows = L ? L.showsFor(null, 'inspector', '', lv) : { records: true, grades: true, due_dates: true };
       shows.grades = true; shows.records = true;
@@ -299,3 +284,4 @@
   if (typeof document !== 'undefined' && document.getElementById('screen')) start();
   return { parseHash: parseHash, build: build, buildSite: buildSite, day: day };
 }));
+

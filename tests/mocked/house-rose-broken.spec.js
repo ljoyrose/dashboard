@@ -74,15 +74,12 @@ for (const scheme of ['light', 'dark']) {
         for (const k of ['Expiring', 'Live']) await expect(page.locator(`[data-hm="nums"] a.hm-n[data-k="${k}"] .hm-v`)).not.toHaveClass(/\b(broken|need)\b/);
         const v = await down.locator('.hm-v').evaluate(look());
         expect([v.bg, v.ink, v.line]).toEqual([...BLACK[scheme], BLACK[scheme][0]]);
-        // Needs you holds a down site: its count is black (broken wins over late).
         await expect(page.locator('[data-hm="needs"] .cnt')).toHaveClass(/\bbroken\b/);
         await expect(page.locator('[data-hm="needs"] .cnt')).not.toHaveClass(/\bneed\b/);
-        // The Do tab: black, its name says "down" (a phone shows the black dot).
         const tab = page.locator('nav.house-tabs a[data-nav="look"]');
         await expect(tab.locator('.n')).toHaveClass(/\bbroken\b/);
         await expect(tab).toHaveAttribute('aria-label', /^Do \d+ down$/);
         expect((await tab.locator('.n').evaluate(look())).bg).toBe(BLACK[scheme][0]);
-        // The tiles on All: Down black; Live grey.
         await page.evaluate(() => { location.hash = '#/all'; });
         await expect(page.locator('.tile .v[data-count="Down"]')).toHaveClass(/\bbroken\b/);
         await expect(page.locator('a.tile[data-show="down"]')).toHaveAttribute('aria-label', /^Down: \d+ down\. Open the list$/);
@@ -107,7 +104,7 @@ for (const scheme of ['light', 'dark']) {
       const { build } = require('../fixtures/factory/state');
       const logs = IDS.factoryLogs;
       const st = build(Date.now());
-      st.lists.apps[1].updated = Date.now() - 20 * 864e5;                             // Kennel Book: untouched for 20 days = stuck
+      st.lists.apps[1].updated = Date.now() - 20 * 864e5;
       st.health.push({ job: 'sampleJob', result: 'FAILED', last: new Date().toISOString() });   // one engine fault
       guard.world.folder(logs, 'AF logs (sample)');
       guard.world.file('af-state-sample', 'af-state.json', JSON.stringify(st), { parents: [logs], mimeType: 'application/json' });
@@ -128,7 +125,7 @@ for (const scheme of ['light', 'dark']) {
 test.describe('Search dialog (390px)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('the hint follows every key: shown under 2 letters, gone from the 2nd letter on, back when the box is cleared @regression', async ({ page }) => {
+  test('t-house-rose-broken-spec-1', async ({ page }) => {
     await home(page);
     await page.locator('[data-search-open]').first().click();
     const hint = page.locator('#dashSearchHint'), box = page.locator('#dashSearchBox');
@@ -137,7 +134,6 @@ test.describe('Search dialog (390px)', () => {
     await box.pressSequentially('i');
     await expect(hint).toBeVisible();
     await box.pressSequentially('nvoice');
-    // At once, before the search itself runs (it waits 300ms): the hint is gone.
     expect(await hint.isHidden()).toBe(true);
     await expect(page.locator('#dashSearchStatus')).toContainText(/for "invoice"/);
     await expect(hint).toBeHidden();
@@ -148,7 +144,7 @@ test.describe('Search dialog (390px)', () => {
   });
 
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: Close is a house button: 1px line, 12px corners, Lexend 14px/600, no fill; hover and keyboard focus a 1px line inside @regression`, async ({ page }) => {
+    test(scheme + '-t-house-rose-broken-spec-2', async ({ page }) => {
       await setLook(page, { scheme });
       await home(page);
       await page.locator('[data-search-open]').first().click();
@@ -175,3 +171,4 @@ test.describe('Search dialog (390px)', () => {
     });
   }
 });
+

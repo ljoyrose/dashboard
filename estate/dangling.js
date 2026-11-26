@@ -1,6 +1,3 @@
-// Web Estate Hub, Stage 15 (I5): dangling-record / subdomain-takeover check. Pure: no network, no Drive, no DOM.
-// The engine gathers DNS records and an HTTP probe elsewhere; this file only classifies them.
-// It only REPORTS. It never suggests deleting a record: keep or retire is a human decision.
 (function (root, factory) {
   'use strict';
   var api = factory();
@@ -11,17 +8,11 @@
 
   var VERSION = '1.0.0';
 
-  // Known hosted platforms. cname: suffixes (host equals or ends with '.' + suffix) or RegExps.
-  // a: exact addresses or RegExps. body: lower-cased 'no such site' fingerprints (public, well known).
-  // Where no reliable body fingerprint is known the list is empty and only a 404 or a parked page counts.
   var PLATFORMS = [
-    // ClickFunnels: no stable public 'no such site' text known; 404 / parked only.
     { id: 'clickfunnels', name: 'ClickFunnels', cname: ['myclickfunnels.com', 'clickfunnels.com'], a: [], body: [] },
     { id: 'shopify', name: 'Shopify', cname: ['shops.myshopify.com', 'myshopify.com'], a: [/^23\.227\.38\.\d{1,3}$/],
       body: ['sorry, this shop is currently unavailable', 'only one step left'] },
-    // Brilliant Directories: no reliable public fingerprint known; 404 / parked only.
     { id: 'brilliantdirectories', name: 'Brilliant Directories', cname: ['brilliantdirectories.com'], a: [], body: [] },
-    // Webwave: no reliable public fingerprint known; 404 / parked only.
     { id: 'webwave', name: 'Webwave', cname: ['webwave.me', 'webwave.pl', 'webwave.dev'], a: [], body: [] },
     { id: 'github', name: 'GitHub Pages', cname: ['github.io'], a: [/^185\.199\.(108|109|110|111)\.153$/],
       body: ["there isn't a github pages site here", 'there isn&#39;t a github pages site here'] },
@@ -33,7 +24,6 @@
       body: ['nosuchbucket', 'the specified bucket does not exist'] }
   ];
 
-  // Generic parked / placeholder pages that mean nothing is served.
   var PARKED = ['this domain is parked', 'domain is parked', 'parked free', 'this domain is for sale', 'domain may be for sale', 'no site configured at this address'];
 
   function list(v) {
@@ -62,7 +52,6 @@
     return null;
   }
 
-  // records { cname, a } (string or array; CNAME/A also accepted) -> platform id or null. CNAME wins over A.
   function platformOf(records) {
     var cnames = pick(records, ['cname', 'CNAME']);
     var addrs = pick(records, ['a', 'A']);
@@ -76,8 +65,6 @@
     return null;
   }
 
-  // host, records, probe { status, body } -> { host, platform, risk: 'dangling'|'ok'|'unknown', reason }.
-  // dangling = on a known platform AND (its no-such-site text, or 404, or a generic parked page).
   function check(host, records, probe) {
     var h = clean(host);
     var id = platformOf(records);
@@ -96,7 +83,6 @@
     return res('ok', p.name + ' serves a site' + (status > 0 ? ' (' + status + ')' : ''));
   }
 
-  // results from check -> red alerts, dangling only. Report only; no record is ever changed.
   function alerts(results) {
     return (Array.isArray(results) ? results : []).filter(function (r) {
       return r && r.risk === 'dangling' && r.host;
@@ -108,3 +94,4 @@
 
   return { VERSION: VERSION, PLATFORMS: PLATFORMS, PARKED: PARKED, platformOf: platformOf, check: check, alerts: alerts };
 });
+

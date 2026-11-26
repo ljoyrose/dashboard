@@ -40,7 +40,6 @@
 <script src="work-actions.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-/* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
 (function(){ var o={}; try{ o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{}; }catch(e){ o={}; }
  var r=document.documentElement, c=r.classList;
  c.toggle('look-cool',o.bg==='cool'); c.toggle('sel-soft',o.sel==='soft');
@@ -52,15 +51,6 @@
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
 <style>
-/* ==== House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio).
-   Lexend 400/600, nothing under 13px, line height 1.5, no uppercase. 1px lines. Hover AND selected = the same 1px edge
-   turns ink (outline over it), nothing moves; keyboard focus 1px ink inside. ONE radius, 12px (circles only for status dots and
-   who rings). No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints.
-   Dark frame top and bottom. Greys follow Warm clear (default) or Cool clear, read from Studio's Look ('dash-look', read only).
-   Screens are built on generic Bloodline foundation concepts (record, round, check, rule, place, person, document);
-   animal-only parts are marked "kit: animal". ==== */
-/* Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule: ../tokens.css through ../house.css,
-   the same on every hub. CD Hub's own names below: the LJR7 slots, the kit (sex) colours and the old short names. */
 
 
 :root{--sel-fill:var(--hov);
@@ -129,7 +119,6 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
  font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);
  min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;box-sizing:border-box;line-height:1.2}
 .filt input,.sbox input,.tmp input,#rdate,.frow input{font-weight:400;cursor:text}
-/* 17 Nov 2026: Compliance's "What was true on" and "Add a rule" rows were bare browser boxes (24-30px), not house controls */
 .frow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;min-width:0}.frow select{padding:0 10px;max-width:100%;min-width:0}
 .radd{max-width:100%}   /* the "add a dog" list on The round: a long name never makes a 360px phone scroll sideways (20 Nov 2026) */
 .filt select,.fpanel select,.sortsel{padding:0 10px}
@@ -146,7 +135,6 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .dc .nl .st{border:0;padding:0;height:auto;font-size:var(--fs-small)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :focus-visible{outline: 1px solid var(--ink)!important;outline-offset: -1px}
-/* Typing boxes: one 1px line inside the rounded box; focus recolours that line. Never a second square ring. */
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
 .sbox input:is(:focus,:focus-visible){outline:none!important}
 .sbox:focus-within{border-color:var(--ink)}
@@ -201,20 +189,16 @@ tr:last-child td{border-bottom:none}
    buttons stays in view at the right edge while the rest scrolls. Narrow phones: each row becomes a small card. */
 table[data-tidy] td{vertical-align:middle}
 .scroll table[data-tidy] th,.scroll table[data-tidy] td{padding:10px 14px}
-/* only where the table can scroll sideways: a table outside a scroll box must still fit the screen */
 .scroll table[data-tidy] td.tshort{white-space:nowrap}
 .scroll table[data-tidy] td.tlong{min-width:22ch;max-width:44ch}
 .scroll table[data-tidy] td.tact{white-space:nowrap;position:sticky;right:0;background:var(--card);box-shadow:-8px 0 8px -8px var(--line)}
 table[data-tidy] td.tact>:is(button,select,input,a){vertical-align:middle;margin:2px 4px 2px 0}
-/* Sentence case (house rule 1): a column name starts with a capital, as every other heading does (17 Nov 2026) */
 table[data-tidy] th::first-letter{text-transform:uppercase}
 @media (max-width:600px){
  table.tstack,table.tstack tbody,table.tstack tr,table.tstack td{display:block;width:auto}
  table.tstack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
  table.tstack tr{padding:10px 14px;border-bottom:1px solid var(--line)}
  table.tstack tr:last-child{border-bottom:none}
- /* 17 Nov 2026: written with .scroll and [data-tidy] so it outranks the wide-table rules above (the cards kept 10px 14px cell padding,
-    the action cell stayed sticky with its shadow, and short cells never wrapped) */
  .scroll table.tstack[data-tidy] td{padding:3px 0;border:none;position:static;box-shadow:none;background:none;max-width:none;min-width:0;white-space:normal}
  table.tstack td[data-label]:not(:first-child)::before{content:attr(data-label) ': ';color:var(--muted)}
  table.tstack td:first-child{font-weight:600}
@@ -266,7 +250,6 @@ table[data-tidy] th::first-letter{text-transform:uppercase}
 @media (hover:hover){#sopcard .mrow:has(.sopopen:hover){background:var(--hov)}}
 #sopcard .mrow .sopopen:hover,#sopcard .mrow .sopopen:focus,#sopcard .mrow .sopopen:focus-visible{outline:none!important}
 #sopcard .mrow:has(.sopopen:focus-visible){border-color:var(--ink)}
-/* The card is the frame. The button is the words inside it, so it is not a second one-line control. */
 #main #sopcard button.sopopen{background:transparent;border:0;border-radius:0;box-shadow:none;min-height:44px;height:auto;padding:10px 12px;width:100%;min-width:0;display:flex;align-items:flex-start;text-align:left;cursor:pointer;color:inherit;font-weight:600}
 #sopcard .sopopen .t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;white-space:normal;overflow:visible;-webkit-line-clamp:unset;line-clamp:unset}
 #sopcard .sopopen .t .n{font-size:var(--fs-small);font-weight:600;line-height:1.2}
@@ -278,9 +261,6 @@ table[data-tidy] th::first-letter{text-transform:uppercase}
 .compfold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;min-height:44px}.compfold>summary::-webkit-details-marker{display:none}
 .rgroup{margin:8px 0}.rgroup>summary{cursor:pointer;min-height:44px;display:flex;align-items:center}.rgroup>summary h4{margin:0;flex:1}.rgroup[hidden]{display:none}
 .compfold>summary h3{margin:0;flex:1}
-/* 17 Nov 2026: these folds (Compliance, Items, Jobs, Settings) drew a small black triangle while the card beside them has the house
-   chevron. The same look here, in CSS: ::after is the 36px (44px phone) box on the control line, ::before the grey chevron in it,
-   a quarter turn when folded. */
 .compfold>summary{--cfb:var(--house-btn)}
 @media (max-width:767.98px){.compfold>summary{--cfb:var(--house-btn-phone)}}
 .compfold>summary::after{content:"";order:2;flex:none;box-sizing:border-box;width:var(--cfb);height:var(--cfb);margin-left:8px;border:var(--house-line) solid var(--press);border-radius:var(--radius)}
@@ -371,7 +351,6 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .ph .dogphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
 .ph .off{display:none !important}
 .dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch;width:120px}
-/* The photo itself is the button . Take and Upload open under it, only while that menu is open. */
 #main button.phbtn:not(.tile):not(.ttl):not(.rdel):not(.jd){position:absolute;inset:0;display:grid;place-items:center;width:100%;height:100%;min-height:0;padding:0;border:0;background:transparent;color:inherit;cursor:pointer;font:inherit;box-shadow:none}
 #main button.phbtn:not(.tile):not(.ttl):not(.rdel):not(.jd):hover{background:transparent;border:0}
 .phbtn:focus-visible{outline:2px solid var(--ljr-6);outline-offset:-3px}
@@ -395,7 +374,6 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .pcam video{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid var(--line);border-radius:var(--radius);background:var(--soft)}
 .dogphoto-msg{margin:0 12px 8px}
 .dogphoto-msg:empty{display:none}
-/* gallery : small square thumbnails, files and links as plain links */
 .glist{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
 .glist .gi{display:flex;flex-direction:column;gap:2px;font-size:var(--fs-small);max-width:100%}
 .gph{display:block;width:88px;height:auto;aspect-ratio:1/1;border-radius:8px;overflow:hidden;background:var(--line)}
@@ -410,7 +388,6 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .gi .gtools{display:flex;gap:4px;flex-wrap:wrap}
 .gi .gtools .cb{font-size:var(--fs-small)}
 .gal-ended{margin-top:8px}
-/* photo crop step (12 Nov 2026): white sheet, 12px corners, 1px lines; works by touch */
 .pcrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
 .pcrop-in{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px;font-family:var(--house-font)}
 .pcrop-in h3{margin:0;font-size:var(--fs-body)}
@@ -560,8 +537,6 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 
 
 .dc .dc-top{display:flex;gap:10px;align-items:flex-start;padding:10px 12px 8px}
-/* 17 Nov 2026: the rule above came after the phone layout and undid it, so on a phone the name column shrank to its words and
-   Edit floated mid-card. The phone layout again: full-width column, its own padding. */
 @media(max-width:600px){.dc .dc-top{align-items:stretch;padding:12px 12px 6px}}
 .dc .dc-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .dc .dc-info .ricon{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}   /* room icon: small, never the browser's default 300x150 (quality review 12 Nov 2026) */
@@ -602,17 +577,11 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 .pill.dna.d-affected{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 @media(max-width:767px){.dcs-link{height:var(--house-btn-phone)}}
 @media(max-width:767px){.dcs>summary,.dcs-line,.dcs-form input,.dcs-form select,.dcs-form button{height:var(--house-btn-phone)}}
-/* 17 Nov 2026: "no chip recorded" (a house button, 36px / 44px on a phone) was taller than its fixed-height line and was drawn over
-   the lines above and below. A line that holds a button grows round it instead. */
 .dcs-line:has(>.dcs-label>button){height:auto;min-height:var(--house-btn);padding-top:4px;padding-bottom:4px}
 .dcs-line>.dcs-label:has(>button){overflow:visible}
-/* the name and its Edit button share one row; Edit no longer floats on a line of its own */
 .dc .nmrow{display:flex;align-items:flex-start;gap:8px;min-width:0}.dc .nmrow>.nm{flex:1;min-width:0}.dc .nmrow>.dedit{margin-left:0;flex:none}
 /* Menu option A (14 Nov 2026) has 5 tabs: on a phone they stay square (the owner's pick b, 2 Nov), a long word still keeps its room. */
 @media (max-width: 600px) { #nav.house-tabs > .ht, #nav.house-tabs > .ht-more { max-width: calc(var(--house-tabs-h) - 2 * var(--house-tabs-gap)); } }
-/* Print (13 Nov 2026): A4 from the browser's Print or Save as PDF. Bars, buttons and forms stay off the paper; no card
-   splits across pages. The round prints as a two-column round sheet with blank min/max boxes; Dogs prints two cards a row.
-   Inline-block, not grid, so Safari and Chrome break pages the same way. Screen is unchanged. */
 @media print{
 @page{size:A4;margin:0}   /* no room for the browser's header and footer: no page address on the paper */
 html,body{background:#fff!important;color:var(--ljr-8)!important;margin:0!important}
@@ -677,8 +646,6 @@ h2,h3,h4,summary{break-after:avoid;page-break-after:avoid}
 </div>
 <nav id="nav" class="house-tabs" aria-label="Sections"></nav>
 <script>
-/* Print in the light look (13 Nov 2026): a phone or Mac in dark mode, or Look > Dark, printed pale text and a black
-   margin on white paper. Light for the print only, then back. Same in ../cdhub/staff/look.js. */
 (function(){ var r=document.documentElement, was=null, on=false;
  function light(){ if(on) return; on=true; was=r.getAttribute('data-theme'); r.setAttribute('data-theme','light'); }
  function back(){ if(!on) return; on=false; if(was===null) r.removeAttribute('data-theme'); else r.setAttribute('data-theme',was); }
@@ -709,8 +676,6 @@ if(DEMO){
   var b=document.createElement('div'); b.className='demo-banner'; b.setAttribute('data-demo-banner',''); b.setAttribute('role','status'); b.textContent=DEMO_WORDS;
   document.body.insertBefore(b,document.body.firstChild);
   document.title='DEMO - '+document.title;
-  /* a demo never opens a live page (history, The Board, print cards): real and pretend data never mix in one session.
-     Every link to another CD Hub page becomes a plain note, and a click that still reaches one is stopped. */
   var here=location.pathname, base=here.replace(/[^\/]*$/,'');
   function livePage(a){ var u; try{ u=new URL(a.getAttribute('href')||'',location.href); }catch(e){ return false; }
    return u.origin===location.origin && u.pathname.indexOf(base)===0 && u.pathname!==here && u.pathname!==base && u.pathname!==base+'index.html'; }
@@ -730,36 +695,29 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
  'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv','BLD-area_link.csv','BLD-status_label.csv','BLD-inspection.csv','BLD-credential.csv','BLD-credential_version.csv',
- 'BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_owner.csv','BLD-sale.csv','BLD-match_candidate.csv'];
-/* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
+ 'BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_user.csv','BLD-sale.csv','BLD-match_candidate.csv'];
 WANT.push('BLD-subject_link.csv');
 WANT.push('BLD-links.csv','BLD-files.csv');   /* main photo + gallery : one file store, link rows (decision C); absent until the files exist */   /* BFFs / Fren. links ; absent until the file exists */
-var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-links.csv':1,'BLD-files.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
-/* LATER: tables the first screen does not need (owner speed, 13 Nov 2026). They are read straight after the first
-   screen shows; a page that needs them (LATER_PAGES) says it is getting them ready until they land. */
+var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-links.csv':1,'BLD-files.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_user.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
 var LATER={};
 ['medicinal_product','stock_level','clinical_note','dispense',                      /* medicines */
  'dna_marker','dna_result',                                                         /* DNA */
  'prospect','prospect_set','export_route','breeder_category','association',          /* prospects (Assocs) */
- 'subject_owner','household','household_member','sale','match_candidate',           /* enquiries */
+ 'subject_user','household','household_member','sale','match_candidate',           /* enquiries */
  'audience','code_register','retention_setting',                                    /* Admin */
- /* read by Compliance, Dogs and the Table map only (traced 13 Nov 2026); the first screen does not touch them */
  'authority','jurisdiction','checklist_instance','checklist_template','checklist_template_item','credential','credential_version',
  'deviation','finding','governed_by','inspection','microchip_registration','outcome','reminder','verification','visit','fit_to_breed'
 ].forEach(function(t){ LATER['BLD-'+t+'.csv']=1; });
 function wantLater(f){ if(WANT.indexOf(f)<0){ WANT.push(f); LATER[f]=1; } OPTIONAL_FILES[f]=1; }
-/* LAZY: heavier parts load the first time a page that uses them opens, not on first open (OV11, 15 Nov 2026).
-   files = the tables each part reads; they must match the part's own FILES (tests/mocked/cdhub-lazy-load.spec.js checks). */
 var LAZY={
  bb:{src:['../breed-better/score.js','../breed-better/dna-panel.js','../breed-better/hub-view.js'],ready:function(){return typeof BBHubView!=='undefined';},
   files:['BLD-score_scheme.csv','BLD-score_band.csv','BLD-score_criterion.csv','BLD-score_point.csv','BLD-score_enrolment.csv','BLD-fit_to_breed.csv','BLD-score_judgement.csv','BLD-score_assessment.csv','BLD-grade_band.csv','BLD-viewer_level.csv','BLD-check_value.csv']},
  enq:{src:['../enquiries/core.js','../enquiries/reader.js','../enquiries/requests.js','../enquiries/examples.js','enquiries-view.js'],ready:function(){return typeof CDEnquiries!=='undefined';},
-  files:['BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_owner.csv','BLD-sale.csv','BLD-match_candidate.csv']}
+  files:['BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_user.csv','BLD-sale.csv','BLD-match_candidate.csv']}
 };
 var LAZY_FOR={breed:['bb'],dogs:['bb','enq'],enquiries:['enq']};   /* the dog card shows the Breed Better section and the household line */
 var LAZY_ERR='';
 Object.keys(LAZY).forEach(function(k){ LAZY[k].files.forEach(wantLater); });
-/* The parts a view still waits for; starts loading them and opens the view again once they have run. */
 function lazyWait(id){
  var need=(LAZY_FOR[id]||[]).filter(function(k){ return !LAZY[k].ready(); });
  if(!need.length) return false;
@@ -769,7 +727,7 @@ function lazyWait(id){
  },function(e){ LAZY_ERR=String(e&&e.message||e); if(document.getElementById('cdWait')) go(SHOWN||'map',false); });
  return 'wait';
 }
-if(typeof AdminView!=='undefined') AdminView.FILES.forEach(wantLater);   /* Admin (owner-only): admin.js */
+if(typeof AdminView!=='undefined') AdminView.FILES.forEach(wantLater);   /* Admin (user-only): admin.js */
 if(typeof CDEnquiries!=='undefined') CDEnquiries.FILES.forEach(wantLater);
 if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (owner): items-view.js, 14 Nov 2026 */
 /* Joins A (the owner 17 Nov 2026): dogs moved to the archive keep their history (vaccinations, vet visits, litters). The archive
@@ -786,18 +744,15 @@ function compJobsV(){ var v=jobsV(), keys={}, ids={};
  v.logs=v.logs.filter(function(r){ return !ids[r.check_type_id]; });
  return v; }
 var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1,yearly:1};
-/* LIVE_PAGES: Compliance ("What was true on", the inspection export) and Yearly print show a read at most COMP_FRESH_MS old, always with its "As of" time; older waits for the live read */
 var LIVE_PAGES={compliance:1,yearly:1};
 var COMP_FRESH_MS=5*60*1000;   /* Compliance shows a read at most 5 minutes old, always with its "As of" time */
 function readAgeMs(){ var t=LOAD&&LOAD.storedAt?Date.parse(LOAD.storedAt):NaN; return t>0?Math.max(0,Date.now()-t):Infinity; }
 function hhmm(iso){ return new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}); }
-/* the "As of" line at the top of Compliance: copy = some rows are the copy on this device while the live check runs */
 function compAsOfHtml(){ var copy=!!(LOAD.copy||LOAD.laterCopy), at=LOAD.copy?LOAD.storedAt:(LOAD.laterCopy&&LOAD.copyAt?LOAD.copyAt:LOAD.storedAt);
  if(!at) return '';
  return '<p class="mut" id="compAsOf" role="status" data-state="'+(copy?'copy':'live')+'">As of '+esc(hhmm(at))
   +(copy?' (the copy on this device) \u00b7 checking the live records\u2026':' \u00b7 live')
   +' <button type="button" class="btn" data-reload="1" data-comp-refresh'+(READING?' disabled':'')+'>Refresh</button></p>'; }
-/* Litters still here: a pup on site, or the dam on site and no pups entered yet. Litter jobs (puppy microchips) count and record against these. */
 function currentLitters(){
  var on={};
  (CD.dogs||[]).forEach(function(d){ if(d.area_id&&!d.off) on[d.id]=1; });
@@ -813,12 +768,10 @@ function jobsV(){ var types=T['BLD-check_type.csv']||[]; if(typeof BLDSopRecords
  var dogs=subjects.filter(function(d){ return BLDDue.onSite(d, occ, st, day); });
  var areas=(CD.areas||[]).map(function(a){ return {id:a.id,code:a.code,use:a.use||'',grouping:a.grouping||'',kind:a.kind||'',retired:!BLDOccupancy.inUse(a,day,req),noDogs:BLDOccupancy.takesDogs?!BLDOccupancy.takesDogs(a,day,req):false}; });
  return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:dogs,subjects:subjects,occupancy:occ,statuses:st,areas:areas,litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],records:{weight:T['BLD-weight.csv']||[],dispense:T['BLD-dispense.csv']||[],vaccination:T['BLD-vaccination.csv']||[],microchip:T['BLD-microchip.csv']||[]},today:day,esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref,doneNote:COMP.doneNote||null}; }
-/* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
 var COMP={shut:{},asAt:'',doneNote:null};   /* asAt: the "What was true on" date; blank = today. doneNote: the line after a Jobs tick */
 function compOpen(k){ return COMP.shut[k]?'':' open'; }
 function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><details class="compfold" data-fold="'+k+'"'+compOpen(k)+'><summary><h3>'+title+'</h3></summary>'+body+'</details></section>'; }
 function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
-/* Only a cabin in use today opens on Areas; a corridor or a retired room is named, not linked (it opened "Room not found", 20 Nov 2026). */
 function roomLink(id,label){ var on=id&&typeof liveCabins==='function'&&liveCabins().some(function(a){ return a.id===id; });
  return on?'<a href="#/areas/'+esc(id)+'" data-room-link>'+esc(label)+'</a>':esc(label); }
 /* a dog's documents: files linked from the dog, labelled by BLD-doc_type (the owner 17 Nov 2026) */
@@ -995,7 +948,6 @@ function parseCSV(text){
   var head=rows[0].map(function(h){return h.trim();});
   return rows.slice(1).map(function(r){ var o={}; head.forEach(function(h,i){o[h]=(r[i]==null?'':r[i]).trim();}); return o; });
 }
-/* Friendly boot only. Never list file names, folder names or where the pages are kept. */
 function bootHtml(){
   return '<div class="boot" id="boot" role="status" aria-live="polite" aria-busy="true">'
     +'<span class="bootmark" aria-hidden="true"><svg class="bootspin" viewBox="0 0 48 48" width="48" height="48">'
@@ -1065,10 +1017,8 @@ function initGoogle(){
   if(!auth.init()) return false;
   render(); return true;
 }
-/* Assigned before restoreShared(): a saved sign-in calls load() while this script is still running,
-   and a var lower down would still be undefined (a 0ms timeout, and the read is then ignored). */
 var BOOT_SLOW_MS=15000, BOOT_READ_MS=45000, bootTicket=0, bootSlowTimer=0;
-var COPY_DB='cdhub-owner-copy', copyWiped=0, agoTimer=0;   /* the device copy (see load); copyWiped: a put that started before a wipe must not bring the copy back */
+var COPY_DB='cdhub-user-copy', copyWiped=0, agoTimer=0;   /* the device copy (see load); copyWiped: a put that started before a wipe must not bring the copy back */
 function restoreShared(){
   var saved=window.DashAuth&&DashAuth.valid();
   if(!saved||!DashAuth.hasScope(saved,SCOPE)) return;
@@ -1121,7 +1071,6 @@ function armBootSlow(ticket){
   }, BOOT_SLOW_MS);
 }
 function endBootWait(ticket){ if(ticket===bootTicket) clearTimeout(bootSlowTimer); }
-/* one shared queue: readSlot(fn) runs fn when fewer than `limit` reads are under way, in the order asked */
 function readQueue(limit){
   var running=0, q=[];
   function kick(){ while(running<limit&&q.length){ var it=q.shift(); running++;
@@ -1155,13 +1104,10 @@ function agoText(iso){ var m=Math.floor((Date.now()-Date.parse(iso))/60000); if(
   if(m<1) return 'updated just now'; if(m<60) return 'updated '+m+' min ago';
   var h=Math.floor(m/60); if(h<24) return 'updated '+h+' hr ago'; var d=Math.floor(h/24); return 'updated '+d+' day'+(d===1?'':'s')+' ago'; }
 function agoTick(){ clearInterval(agoTimer); if(LOAD.copy) agoTimer=setInterval(function(){ if(LOAD.copy) pill(); else clearInterval(agoTimer); },30000); }
-/* a page re-drawn when more rows land must not lose what someone is typing */
 function typing(){ var a=document.activeElement; return !!(a&&a.closest&&a.closest('#main')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); }
 var SHOWN='';   /* the view go() last drew, so a redraw keeps it (go() can be called without a hash change) */
 function redrawAfterRead(){ if(LOAD.state!=='ok') return; if(typing()){ document.getElementById('nav').innerHTML=navHtml(); pill(); return; }
   if(SHOWN) go(SHOWN,false); else render(); }
-/* READ_MOD / READ_TXT: each file's Drive id+modifiedTime and its text as last read (kept with the device copy).
-   A file with the same stamp in the new folder list is not read again: its kept text is used (nothing else is). */
 var READ_MOD={}, READ_TXT={}, READING=0;   /* READING: the load() ticket still reading, 0 = none */
 function fileStamp(f){ return f&&f.id&&f.modifiedTime?f.id+'|'+f.modifiedTime:''; }
 function readSet(titles,byTitle,live,slot){
@@ -1213,7 +1159,6 @@ async function load(){
     document.getElementById('main').innerHTML=bootHtml();
     armBootSlow(ticket);
   }
-  /* a read that fails behind the copy keeps the copy on screen and says so; a refusal wipes it */
   function failed(msg,e,kind){
     endBootWait(ticket); fin();
     if(showing&&!refused(e)){ LOAD.stale=msg; redrawAfterRead(); return; }
@@ -1228,7 +1173,6 @@ async function load(){
   if(!live()) return;
   var storedAt=new Date().toISOString();
   var byTitle={};
-  /* Same listing the reads use. Saves look a file up by its name here. A missing or doubled name is not a save. */
   window._driveIds={};
   window._driveFiles=files.map(function(f){ return {id:f.id,name:f.name,mimeType:f.mimeType||''}; });
   files.forEach(function(f){ (byTitle[f.name]=byTitle[f.name]||[]).push(f); window._driveIds[f.name]=f.id; });
@@ -1262,7 +1206,6 @@ async function load(){
     LOAD.later=LOAD.laterCopy?'ok':'err'; LOAD.laterErr=r2.fail; if(LOAD.laterCopy) LOAD.stale=r2.fail; redrawAfterRead(); return;
   }
   later.forEach(function(t){ T[t]=r2.tables[t]; });
-  /* rows per table as this read found them, the same read as the manifest: the manifest check uses these only */
   var rc={}; first.concat(later).forEach(function(t){ var rows=(r1.tables[t]||r2.tables[t]); rc[t.replace('BLD-','').replace('.csv','')]=rows?rows.length:0; });
   LOAD.rowCounts=rc;
   LOAD.later='ok'; LOAD.laterCopy=false; LOAD.laterErr=''; LOAD.files=first.length+later.length;
@@ -1271,12 +1214,9 @@ async function load(){
 }
 var CD={};
 function idx(rows,k){ var m={}; (rows||[]).forEach(function(r){ m[r[k]]=r; }); return m; }
-/* a dog's room = its occupancy row with the latest moved_in (Specs.gs occupancy; same rule as BLDOccupancy.latestRow), not the last row in the file */
 function occLatest(rows){ var m={}; rows=rows||[]; rows.forEach(function(r){ if(r.subject_id in m) return;
  var cur=BLDOccupancy.latestRow(rows,r.subject_id), lab=BLDOccupancy.latestRow(rows.filter(function(x){ return x.classification; }),r.subject_id);
- /* classification is the licence label, not a location: a move row leaves it blank, so it comes from the latest row that has one */
  m[r.subject_id]=lab&&!cur.classification?Object.assign({},cur,{classification:lab.classification,classification_note:lab.classification_note}):cur; }); return m; }
-/* Newest first. The same date keeps the order the rows were read in . */
 function byDateDesc(a, b){ var x=String(a.on||''), y=String(b.on||''); return x>y?-1:(x<y?1:0); }
 function build(){
   var COL=idx(T['BLD-coat_colour.csv'],'id'), PAT=idx(T['BLD-coat_pattern.csv'],'id'), PIG=idx(T['BLD-nose_pigment.csv'],'id');
@@ -1320,7 +1260,7 @@ function build(){
       copies:r.copies,interp:r.interpretation,need:r.ruling_needed,lab:r.lab||'',on:r.tested_on||''}); });
   CD.dna=DNA;
   var VAC={}, VACA={}; (T['BLD-vaccination.csv']||[]).forEach(function(r){ if(!r.subject_id) return;
-    var arch=!!String(r.voided_on||'').trim();   /* Archive (owner, 17 Nov 2026): the row stays in the sheet, marked voided_on, shown under Archived */
+    var arch=!!String(r.voided_on||'').trim();   /* Archive (user, 17 Nov 2026): the row stays in the sheet, marked voided_on, shown under Archived */
     ((arch?VACA:VAC)[r.subject_id]=(arch?VACA:VAC)[r.subject_id]||[]).push({id:r.id||'',vet:r.practice||r.administered_by||'',card:r.certificate_media_id||'',on:r.given_on||'',kind:r.event_kind||'',product:r.product_shorthand||r.product||'',
       covers:r.diseases_covered||'',titre:r.titre_result||'',protective:r.titre_protective||'',due:r.next_due_on_card||'',dueSrc:r.next_due_source||''}); });
   [VAC,VACA].forEach(function(M){ Object.keys(M).forEach(function(k){ M[k].sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); }); });
@@ -1376,7 +1316,6 @@ function build(){
     var a=CAP[r.area_id]=CAP[r.area_id]||{free:{},limited:{}};
     (a[r.access_type]||(a[r.access_type]={}))[r.size_band]={n:r.max_dogs,basis:r.basis||''}; });
   CD.cap=CAP;
-  /* the flap row in force today (from_date/to_date, latest start wins; LD-SC audit 15 Nov 2026), never just the last row */
   CD.accessCsv={}; (function(){ var best={}; BLDCapacity.inForce((T['BLD-area_access.csv']||[]).map(function(r){ return Object.assign({},r,{from_date:r.from_date||r.effective_from||''}); }),_day,'from_date').forEach(function(r){
    if(!r.area_id||!r.access_type) return; var f=String(r.from_date||'').slice(0,10); if(!(r.area_id in best)||f>=best[r.area_id]){ best[r.area_id]=f; CD.accessCsv[r.area_id]=r; } }); })();
 
@@ -1420,13 +1359,12 @@ function build(){
 }
 
 var TODAY=new Date();
-function dmy(iso){ if(!iso) return ''; return /^\d{4}-\d{2}-\d{2}$/.test(iso)?BLDDates.long(iso):iso; }   /* owner screens: "2 Mar 2026" , one formatter: staff/lib/date-words.js */
+function dmy(iso){ if(!iso) return ''; return /^\d{4}-\d{2}-\d{2}$/.test(iso)?BLDDates.long(iso):iso; }   /* user screens: "2 Mar 2026" , one formatter: staff/lib/date-words.js */
 function plural(n,one,many){ return n+' '+(n===1?one:(many||one+'s')); }
 var UKMON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function ukDate(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); if(!m) return '';
   var mon=UKMON[+m[2]-1]; return mon?((+m[3])+' '+mon+' '+m[1]):''; }
 function nameOf(sid){ if(!sid) return ''; var d=(CD._byId||{})[sid]; return d?shownDogName(d):sid.replace(/^sub-/,'').replace(/-/g,' '); }
-/* Marble / merle pups: short z- names (z-b-merle) so they sort last and the name is not cut off. Adults keep their name. */
 function shownDogName(d){
  if(!d) return '';
  var raw=d.name||'';
@@ -1488,7 +1426,7 @@ function statusOf(d){
 
  if(d.dod) return {code:'DE',label:'Deceased',cls:'st-de'};
  var here=/^(active|in training)$/i.test(d.state||'');
- if(w==='Collected' || (!here && (/otherowner/i.test(d.vetStatus||'') || (d.vetActive||'')==='false')))
+ if(w==='Collected' || (!here && (/otheruser/i.test(d.vetStatus||'') || (d.vetActive||'')==='false')))
    return {code:'CL',label:'Collected',cls:'st-cl'};
 
  var kl=keeperStatus(d); if(kl) return kl;
@@ -1542,7 +1480,6 @@ function wGraph(h){ if(!h||h.length<2) return '';
   +h.map(function(x,i){ return '<circle cx="'+X(x,i).toFixed(1)+'" cy="'+Y(x).toFixed(1)+'" r="2.5" class="wg-dot"><title>'+esc(dmy(x.on)+' '+x.kg+' kg')+'</title></circle>'; }).join('')
   +'</svg><p class="mut wg-cap"><span>'+esc(dmy(f.on))+' \u00b7 '+f.kg+' kg</span><span>'+mn+'\u2013'+mx+' kg</span><span>'+esc(dmy(l.on))+' \u00b7 '+l.kg+' kg</span></p>'; }
 function todayLondon(){ try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }catch(e){ return new Date().toISOString().slice(0,10); } }
-/* One dog-card save through the save script. The staff code is checked by the script. Plain answer for an older script. */
 async function sinkAct(action,fields){
  var j=await sinkSend({action:action,fields:fields});
  if(!j.ok&&/^Unknown action/.test(j.message||'')) j.message='The save script has not been updated for this yet. Nothing was saved.';
@@ -1592,8 +1529,6 @@ function refAudit(){
   var rows=T[f];
   if(!rows||!rows.length){ absent[f]=1; return; }
   var s={}; rows.forEach(function(r){ if(r.id) s[r.id]=1; }); idsOf[f]=s; });
- /* Joins A: a record of an archived dog resolves (it is history, not an error); counted separately */
- /* Any table's "<name>-Archive.csv" (dogs, litters, 17 Nov 2026) holds history: a record pointing there resolves. */
  var arch={}; Object.keys(idsOf).forEach(function(f){ var a=f.replace(/\.csv$/,'-Archive.csv'), s=arch[f]={};
   (T[a]||[]).forEach(function(r){ if(r.id&&!idsOf[f][r.id]) s[r.id]=1; }); });
  var archived=0;
@@ -1714,7 +1649,6 @@ function inWhelp(onISO){
   if(day===null||day<0) return;
   if(!g){ out.push({dog:d,dam:dam,matings:open.length,on:first.on,due:'',from:'',to:'',day:day,unset:true}); return; }
   if(day>g.to) return;
-  /* SOP Mating Plan: the mating's own due date wins; else first mating + gestation.due_days (17 Nov 2026) */
   var due=isoDay(first.due)||addDays(first.on,g.due);
   out.push({dog:d,dam:dam,matings:open.length,on:first.on,g:g,dueDay:daysBetween(first.on,due),dueOwn:!!isoDay(first.due),
     due:due,from:addDays(first.on,g.from),to:addDays(first.on,g.to),day:day,
@@ -1792,10 +1726,8 @@ function breedRuleRows(key){ return (T['BLD-breeding_rule.csv']||[]).filter(func
 /* the version in force on a date: latest effective_from on or before it (null = no rule yet on that date) */
 /* A whole-number rule in force on a date, or null (not set). the owner 12 Nov 2026: every limit is a dated row; no row = not set. */
 function ruleNum(key,iso){ var r=breedRule(key,iso), n=r?parseInt(r.value,10):NaN; return isNaN(n)?null:n; }
-/* Gestation timings in force on the MATING date: days to due, window from/to, alert day. null unless due and window are all set. */
 function gestOn(iso){ var g={due:ruleNum('gestation.due_days',iso),from:ruleNum('gestation.window_from_days',iso),to:ruleNum('gestation.window_to_days',iso),alert:ruleNum('gestation.alert_from_day',iso)};
  return (g.due!==null&&g.from!==null&&g.to!==null)?g:null; }
-/* The age (months) a dog counts as an adult, from dog.adult_from_months in force on the day; null = not set. */
 function adultMonths(iso){ return ruleNum('dog.adult_from_months',iso||todayISO()); }
 function isAdultM(m,iso){ var a=adultMonths(iso); return m!==null&&a!==null&&m>=a; }
 function isPupM(m,iso){ var a=adultMonths(iso); return m!==null&&a!==null&&m<a; }
@@ -1804,14 +1736,10 @@ function addMonths(iso,n){ var y=+iso.slice(0,4), m=+iso.slice(5,7)-1+n, d=+iso.
  y+=Math.floor(m/12); m=((m%12)+12)%12; var last=new Date(Date.UTC(y,m+1,0)).getUTCDate();
  return y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+Math.min(d,last)).slice(-2); }
 function litDob(l){ return isoDay(l&&(l.dob||l.born_on)); }
-/* A litter's name for people: pairing when the sheet has it (the live sheet does), otherwise it is
-   the dam and sire by name. Never the row id (17 Nov 2026). */
 function litName(l){ return (l&&l.pairing)||((nameOf(l&&l.dam_subject_id)||'dam not recorded')+' \u00d7 '+(nameOf(l&&l.sire_subject_id)||'sire not recorded')); }
 function isoDay(v){ return /^\d{4}-\d{2}-\d{2}/.test(v||'')?v.slice(0,10):''; }
-/* born litters by dam, oldest first (a litter with no DOB - planned or missed - is not a litter born) */
 function littersByDam(){ var by={}; (CD.litters||[]).forEach(function(l){ var d=litDob(l); if(l.dam_subject_id&&d) (by[l.dam_subject_id]=by[l.dam_subject_id]||[]).push(l); });
  Object.keys(by).forEach(function(k){ by[k].sort(function(x,y){ return litDob(x)<litDob(y)?-1:(litDob(x)>litDob(y)?1:0); }); }); return by; }
-/* Litters by one dam closer together than the rule in force when the later one was born. */
 function litterGaps(){
  var by=littersByDam(), out=[];
  Object.keys(by).forEach(function(d){ var a=by[d];
@@ -1834,11 +1762,8 @@ function damAgeBreaches(){
   if(on<addMonths(dob[d],+r.value)) out.push({dam:d,on:on,dob:dob[d],months:+r.value,rule:r,est:true,what:litName(l)}); });
  return out;
 }
-/* Estimated mating date for a born litter: DOB minus the due-days row. The row is read on the birth date, then again on the estimated mating date
-   (the rule in force when she was mated); null when no row is set. */
 function estMated(b){ var n=ruleNum('gestation.due_days',b); if(n===null) return null; var on=addDays(b,-n), n2=ruleNum('gestation.due_days',on);
  return (n2!==null&&n2!==n)?addDays(b,-n2):on; }
-/* The litter that takes a bitch past the most litters allowed (counted on the date that litter was born). */
 function litterCountBreaches(){
  var by=littersByDam(), out=[];
  Object.keys(by).forEach(function(d){ by[d].forEach(function(l,i){ var r=breedRule('max_litters_per_dam',litDob(l)); if(r&&i+1>+r.value) out.push({dam:d,litter:l,n:i+1,max:+r.value,rule:r}); }); });
@@ -1848,10 +1773,8 @@ function breedRulesMissing(){ return BREED_RULES.filter(function(b){ return !bre
 function checks(){
  var c=counts(), out=[];
  var man=CD.manifest||[], mism=[], rc=LOAD.rowCounts;
- /* Judged only on a finished live read, counting the rows that read found (never the copy on this device, never
-    a half-finished read): the copy's rows and a newer manifest row come from different moments. */
  if(!rc||LOAD.copy||LOAD.stale||LOAD.later!=='ok') out.push({k:'tables',ok:true,wait:true,msg:'Checking tables\u2026'});
- else { man.forEach(function(r){ var n=rc[r.table]; if(n!=null && +n < +r.rows) mism.push(r.table); });  // saves add rows; only a table that has lost rows needs a look
+ else { man.forEach(function(r){ var n=rc[r.table]; if(n!=null && +n < +r.rows) mism.push(r.table); });
  out.push({k:'tables',ok:!mism.length&&!LOAD.notes.length,
    fix:mism.length?'The tables list count is old and needs updating. Ended rows stay in the sheets.':'',msg:mism.length?plural(mism.length,'table')+(mism.length===1?' has':' have')+' fewer rows than the manifest: '+mism.join(', ')
      :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, none has lost rows')}); }
@@ -1917,8 +1840,6 @@ function checks(){
  out.push({k:'rule changes',ok:!ra.bad.length,
    msg:ra.bad.length? ra.bad.slice(0,4).join('; ')+(ra.bad.length>4?' \u2026':'')
      :plural(ra.keys,'rule')+' change cleanly over time; '+plural(ra.checked,'record')+' still match the rule in force on their own date'});
- /* Time zone (STAFF, 14 Nov 2026): a BLD-locale row for this tenant with a time_zone in force today. Without one the save
-    script falls back to its own setting, so the owner sees the gap here. */
  var tzDay=todayISO(), tzTen=CD.tenant&&CD.tenant.id, tz=(T['BLD-locale.csv']||[]).filter(function(r){
    var f=String(r.from_date||'').slice(0,10), t=String(r.to_date||'').slice(0,10);
    return String(r.time_zone||'').trim() && (!tzTen||!r.tenant_id||r.tenant_id===tzTen) && (!f||f<=tzDay) && (!t||t>=tzDay); })[0];
@@ -1935,17 +1856,12 @@ function strip(){
 }
 
 
-/* ---------- Live feed: the Bloodline home screens, built only from what this page already reads. ---------- */
 var BREED_CHECKS={'litter gap':1,'dam age':1,'litter count':1,'breeding rules':1};
 var CHECKNAME={'time zone':'Time zone','room temps':'Room temperatures','litter gap':'Time between litters','dam age':'Age at mating','litter count':'Litters per bitch','breeding rules':'Breeding rules','tables':'Tables read','law vs yours':'Licence counts','date of birth':'Date of birth','microchip':'Microchip',
  'placed in an area':'Placed in a cabin','joins':'Links between records','dates':'Date formats','rule changes':'Rule history','saving off':'Saving'};
 function capFirst(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1); }
 function dmyShort(iso){ return BLDDates.long(iso||''); }
-/* foundation: date on a record. Every date pill wears a plain ring; late = rose ring + tint, soon = amber ring + tint. */
 function dpill(iso,tone){ return iso?'<span class="dpill'+(tone?' '+tone:'')+'">'+esc(dmyShort(iso))+(tone?'<span class="sr"> ('+tone+')</span>':'')+'</span>':''; }
-/* foundation: needs-you queue. One list of things waiting on the owner, from checks, rules, places and work records.
-   Each item: title, one-line why, an optional date with its urgency, and ONE place to go. Never stored; worked out each time. */
-/* A work item about naming a medicine ("identify medicine given in Feb", and close wordings). */
 var MED_MON=[['january',1,'jan'],['february',2,'feb'],['march',3,'mar'],['april',4,'apr'],['may',5,'may'],['june',6,'jun'],['july',7,'jul'],['august',8,'aug'],['september',9,'sep'],['october',10,'oct'],['november',11,'nov'],['december',12,'dec'],['jan',1,'jan'],['feb',2,'feb'],['mar',3,'mar'],['apr',4,'apr'],['jun',6,'jun'],['jul',7,'jul'],['aug',8,'aug'],['sep',9,'sep'],['oct',10,'oct'],['nov',11,'nov'],['dec',12,'dec']];
 function medMonth(s){
  for(var i=0;i<MED_MON.length;i++){ if(new RegExp('\\b'+MED_MON[i][0]+'\\b').test(s)) return {n:MED_MON[i][1],token:MED_MON[i][2]}; }
@@ -1996,23 +1912,19 @@ function needsToday(){
  var date=CD._roundDate||todayISO();
  if(CD._needs&&CD._needs.date===date&&CD._needs.built===CD._built) return CD._needs.list;
  var out=[];
- /* foundation: check (a data check that fails) */
  checks().forEach(function(x){ if(x.ok||x.k==='saving off') return;
   out.push({title:(CHECKNAME[x.k]||capFirst(x.k))+' needs a look',sub:x.msg,go:x.list?'today':'compliance/'+ckId(x.k),list:x.list||'',tone:'',kind:'check'}); });
- /* kit: animal (a pregnancy getting close to its whelping window, from the mating rows) */
  inWhelp(date).forEach(function(x){
   if(x.unknown){ out.push({title:x.dog.name+': mating date not recorded',sub:'No due date can be worked out',go:'today',tone:'',kind:'kit'}); return; }
   if(x.unset){ out.push({title:x.dog.name+': gestation timings not set',sub:'Add the gestation rows in Compliance',go:'compliance',tone:'',kind:'kit'}); return; }
   if(x.g.alert===null||x.day<x.g.alert) return;   /* no alert-day row: no alert */
   out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+' · window '+dmy(x.from)+' to '+dmy(x.to),date:x.due,
    tone:x.day>x.dueDay?'late':(x.day>=x.g.from?'soon':''),go:'today',kind:'kit'}); });
- /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
  areasOn(date).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id),date);
   if(r.status==='over') out.push({title:a.code+' is over its limit',sub:r.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
  closedAudit(date).forEach(function(x){ if(x.dogs) out.push({title:x.label+' is closed but in use',sub:x.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
- /* foundation: work record (an open item waiting on the owner). A medicine ask opens the dispense rows. */
  CD._medPref={};
- (CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).forEach(function(r){
+ (CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.user==='User';}).forEach(function(r){
   var ask=medAsk(r);
   if(ask){
    var rows=medRows(ask);
@@ -2047,7 +1959,6 @@ function needsCard(){
  if(n.length>7) h+='<div class="mfoot"><span class="mut">Showing 7 of '+n.length+'</span><button type="button" class="btn" data-needall="1">Show all</button></div>';
  return h+'</section>';
 }
-/* foundation: place occupancy (who is on site). The words are the animal kit's labels. */
 function onSiteCard(){
  var c=counts();
 
@@ -2059,17 +1970,12 @@ function onSiteCard(){
   +row('Off site',c.offsite.length,'','offsite')
   +'<div class="mfoot"><span class="mut"></span><button type="button" class="btn" data-go="dogs">Dogs</button></div></section>';
 }
-/* A puppy still here: born in a litter, not collected or deceased, not off site, and (when the owner's adult-age row is
-   set) under that age. */
 function pupOnSite(d){ var c=statusOf(d).code; if(!d.birthLitter||c==='CL'||c==='DE'||d.off) return false;
  var a=adultMonths(), m=months(d.dob); return a===null||m===null||m<a; }
-/* Current litters (SOP Puppy Handover: puppies stay until handed over): a litter counts while any of its puppies is
-   still on site. No day count; litters.recent_days was withdrawn 15 Nov 2026. */
 function currentLitters(){
  var on={}; (CD.dogs||[]).forEach(function(d){ if(pupOnSite(d)) on[d.birthLitter]=1; });
  return (CD.litters||[]).filter(function(l){ return !!on[l.id]; });
 }
-/* kit: animal (Litters card: pregnancies from the mating rows, and litters with a puppy still on site) */
 function littersCard(title){
  var date=CD._roundDate||todayISO(), w=inWhelp(date).filter(function(x){return !x.unknown&&!x.unset;});
  var recent=currentLitters()
@@ -2084,8 +1990,6 @@ function littersCard(title){
 
  return h+'<div class="mfoot"><span class="mut">'+plural((CD.litters||[]).length,'litter')+' on file</span>'+(navHas('litters')?'<button type="button" class="btn" data-go="litters">Litters</button>':'')+'</div></section>';
 }
-/* Outdoor week strip. Cold or Hot against the adult band, otherwise OK.
-   Rain: none at 0 mm, light under 10 mm, wet from 10 mm. Windy only at 40 km/h or more. */
 function outdoorBandWord(min,max){
  var st=tempState(min,max);
  return st==='cold'?'Cold':(st==='hot'||st==='warm')?'Hot':(st==='swap'||st==='unread')?'Check':(st==='ok'||st==='nospot')?'OK':'';
@@ -2110,7 +2014,6 @@ function outdoorForDay(date){
  var got=rows.filter(function(r){ return r.kind && r.kind!=='forecast'; });
  return got[0]||rows[0];
 }
-/* Same words as Temperature history: "7.5 / 1.7 °C, rain 0 mm". */
 function outdoorLine(date){
  var r=outdoorForDay(date); if(!r) return '';
  var rain=r.rain, rainS='';
@@ -2163,7 +2066,6 @@ function outdoorStrip(date){
      +'</div>';
   }).join('')+'</div>';
 }
-/* foundation: readings against a rule band (temperature per place, per round slot) */
 function tempsCard(){
  var date=CD._roundDate||todayISO(), A=liveCabins(), N=A.length;
  var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max||t.empty); }).length; };
@@ -2183,14 +2085,11 @@ function tempsCard(){
   +'<div class="mfoot"><span class="mut"></span><a class="btn" href="./history.html">Temperature history</a><button type="button" class="btn house-open" data-go="round">The round</button>'
   +'<a class="btn" id="addThermo" href="./staff/print/?add=thermometer">+ Thermometer</a></div></section>';
 }
-/* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
-// A failed data check is broken: its count is the black badge (../toolkit.js DashKit.count), read out as "N failed".
 function ckId(k){ return 'ck-'+String(k).replace(/[^a-z0-9]+/gi,'-').toLowerCase(); }
 function checksCard(){
  var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
  return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?DashKit.count.cls(bad,'failed').trim():'ok')+(bad?'<span class="sr"> failed</span>':'')+'</h3>'
   +all.map(function(x){
-   /* skip: a rule check with no rule set is not run, so it shows a grey dash, never a green tick (17 Nov 2026) */
    return '<div id="'+ckId(x.k)+'" class="mrow ckrow'+(x.wait?' wait':x.skip?' notrun':x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.skip?' notrun':x.ok?'':' bad')+'" aria-hidden="true">'+(x.wait?'\u2026':x.skip?'\u2013':x.ok?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.wait?' checking':x.skip?' not checked':x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small>'+(x.fix&&!x.ok?'<small class="help">'+esc(x.fix)+'</small>':'')+'</span>'
     +(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
@@ -2218,9 +2117,6 @@ function mainNums(ok){
   {label:'Unplaced',value:ok?listFor('unplaced').length:null,href:'#/today/unplaced'},
   {label:'Bitches',value:ok?c.bitches.length:null,href:'#/today/bitches',late:ok&&c.bitches.length!==c.active.length}];
 }
-/* Main answers "what needs me today?" (OV11 15 Nov 2026). Each person builds their own: which cards, in what order, are
-   owner-setting rows nav.home.<ROLE>.<card> (place 1, 2, 3...; 0 = off), dated, with a source. No rows = the starter.
-   A card is a count or its top 3, then "See all" to the full list in its own section: Main never repeats a whole list. */
 var HOME_CARDS={
  needs:{label:'Needs you',view:'work',draw:function(){ return DashKit.hubMain({hub:'cdhub',rows:mainRows(),nums:mainNums(true),doHref:'#/work'}); }},
  unplaced:{label:'Not placed',view:'today',all:'#/today/unplaced',n:function(){ return listFor('unplaced').length; },
@@ -2237,7 +2133,7 @@ var HOME_CARDS={
 var HOME_STARTER=['needs'];   /* the pack's starting Main: the house Main (Next, Needs you, 3 numbers, the owner 2 Nov 2026); more cards are each person's own */
 var HOME={edit:null,msg:''};
 function homeCards(){ var ids=Object.keys(HOME_CARDS).filter(function(id){ return navHas(HOME_CARDS[id].view); });
- return {ids:ids,on:HubNav.home({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER',cards:ids,starter:HOME_STARTER})}; }
+ return {ids:ids,on:HubNav.home({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'USER',cards:ids,starter:HOME_STARTER})}; }
 function homeSlot(id){ var s=HubNav.sectionOf(HOME_CARDS[id].view); return s?s.slot:'0'; }
 function homeCard(id){ var c=HOME_CARDS[id];
  if(c.draw) return '<div data-home="'+id+'">'+c.draw()+'</div>';
@@ -2263,9 +2159,8 @@ function pageMap(){ var h=homeCards();
    /* the owner 17 Nov 2026: "Board is hard to find" and "I need to print areas and dogs": both one tap from Main. */
    +'<p class="hm-go" data-main-links><a class="btn" href="./staff/" data-open-board>The Board</a> <a class="btn" href="./staff/print/" data-open-print>Print cards</a></p>');
 }
-/* Save = one dated row per card (place, or 0 = off), a new row from today; old rows stay for the past. */
 function homeSave(){ var h=homeCards(), on=HOME.edit, from=todayISO();
- var rows=h.ids.map(function(id){ return {rule_key:'nav.home.OWNER.'+id,value:String(on.indexOf(id)+1),effective_from:from,source:'CD Hub, Arrange Main'}; });
+ var rows=h.ids.map(function(id){ return {rule_key:'nav.home.USER.'+id,value:String(on.indexOf(id)+1),effective_from:from,source:'CD Hub, Arrange Main'}; });
  HOME.msg='Saving';
  return rows.reduce(function(p,r){ return p.then(function(){ return sinkPost('breeding_rule',r).then(function(j){
    var s=bbSaved(j); (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:s.id,rule_key:r.rule_key,value:r.value,effective_from:from,source:r.source,to_date:''}); }); }); },Promise.resolve())
@@ -2335,16 +2230,12 @@ function licenceBar(c){
   +seg(bitchSeg,'lb-b','breeding bitches','active')+seg(retired,'lb-r','retired, entire','bitches')+seg(studs,'lb-s','studs','studs')+seg(other,'lb-o','other','adults')
   +'</div></div>';
 }
-/* Live cabins for the Today checklist and The round. Retired rooms (room.in_use ended) are already left out of CD.areas.
-   The fields line is not a cabin (grouping Fields, code "Level 1 and level 5", or use Fields). It stays on Areas
-   and is not asked for a flap mode or a morning or evening cabin temperature. */
 function normPlace(s){ return String(s==null?'':s).trim().toLowerCase().replace(/\s+/g,' '); }
 function isFieldsRow(a){
  if(!a) return false;
  return normPlace(a.grouping)==='fields' || normPlace(a.code||a.cabin)==='level 1 and level 5' || normPlace(a.use)==='fields';
 }
 function isLiveCabin(a){
- /* corridors: room.no_dogs; day pens: room.no_overnight. Need types are row values, never room names in code. */
  var day=CD._roundDate||todayISO(), req=CD.req||[];
  var overnight=BLDOccupancy.takesOvernight?BLDOccupancy.takesOvernight(a,day,req):BLDOccupancy.takesDogs(a,day,req);
  return !!a && !isFieldsRow(a) && overnight;
@@ -2354,10 +2245,7 @@ function isLiveCabin(a){
 function areasOn(day){ day=day||todayISO(); if(day===todayISO()||!CD.allAreas) return CD.areas||[];
  return CD.allAreas.filter(function(a){ return BLDOccupancy.inUse(a,day,CD.req||[]); }); }
 function liveCabins(day){ return areasOn(day||CD._roundDate||todayISO()).filter(isLiveCabin); }
-/* A chosen flap mode is only free or limited (the sheet value, or the same value on today's round). */
 function flapChosen(v){ v=normPlace(v); return v==='free'||v==='limited'; }
-/* foundation: checklist instance for today's round. Each line is a check on the round's places (✓ done / ✗ not yet),
-   worked out from what is read: placements, flap modes, readings and headcounts. Nothing is stored. */
 function todayChecklist(date,unplacedN){
  var A=liveCabins(), N=A.length;
  var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max||t.empty); }).length; };
@@ -2426,9 +2314,6 @@ function showList(key){
   });
  });
 }
-/* Place a dog : pick a cabin, check the room's limits with the dog's size from its latest weight, then
-   one move row through the save script (the same path as The round). Replaces the old "flag" (it wrote to a database
-   that no longer exists) and the "not in a cabin" Save that wrote the Drive file straight from the browser. */
 function placeCell(d){
  return '<select class="cb placesel" aria-label="Cabin for '+esc(d.name||'')+'"><option value="">cabin\u2026</option>'
   +CD.areas.filter(isLiveCabin).map(function(a){ return '<option value="'+esc(a.id)+'">'+esc(a.code)+'</option>'; }).join('')
@@ -2464,8 +2349,6 @@ function headerCols(text){
  cols.push(f.trim());
  return {cols:cols,text:text};
 }
-/* Append one row to the named file in the folder. A Sheet gets one appended row. A csv file is read and written back.
-   If the name is missing, doubled, or the read fails, nothing is written. */
 async function appendListedRow(name, label, fields){
  var hits=(window._driveFiles||[]).filter(function(f){ return f&&f.name===name&&f.id; });
  if(hits.length!==1) return {ok:false, message:hits.length>1?('Not saved: more than one '+label+' is in the folder.'):('Not saved: the '+label+' is not in the folder.')};
@@ -2581,7 +2464,6 @@ document.addEventListener('change',function(e){ var id=e.target&&e.target.getAtt
 function fsel(id,name,opts){ return '<select id="'+id+'" aria-label="'+esc(name)+'" data-fname="'+esc(name)+'"><option value="">Any</option>'+(opts||'')+'</select>'; }
 function fchips(id,ids){
  var box=document.getElementById('ach-'+id); if(!box) return;
- /* Clear filters is off until a filter or a search word is set: a button that would change nothing is not offered */
  var ca=document.querySelector('#fp-'+id+' [data-clear-all]'), cq=ca&&document.getElementById(ca.getAttribute('data-clear-all'));
  if(ca) ca.disabled=!(cq&&cq.value)&&!ids.some(function(i){ var e=document.getElementById(i); return e&&e.value; });
  var on=ids.map(function(i){ var e=document.getElementById(i); if(!e||!e.value) return null;
@@ -2612,7 +2494,6 @@ function medBanner(){
   +'</tbody></table></div></section>';
  return h;
 }
-/* One dog picked from the medicine table: its card is kept in the list whatever the filters say, its medicines are opened and the page moves to it. */
 function openMedDog(id){
  if(!CD._byId||!CD._byId[id]) return;
  MEDDOG=id; drawDogs();
@@ -2647,16 +2528,12 @@ function pageDogs(){
        "there are only 2 in sops"); no rule = no Age filter */
     adultMonths()===null?null:['Age',fsel('fa','Age','<option value="p">Puppy</option><option value="a">Adult</option><option value="__none">no DOB</option>')],
     ['Colour',fsel('fc','Colour','')],['Screening',fsel('ft','Screening','')],
-    /* kit: animal (status chips), folded into Filter so the first dog shows on a phone (quality review 12 Nov 2026) */
     ['Status','<div class="key stf">'+statusList().map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false">'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
      +'<span class="info" tabindex="0" role="button" aria-expanded="false" title="Tap a status to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>']]})
  +(miss?'<div class="card acc2"><h4>'+miss+' here carry no sex</h4><p style="margin-bottom:0">A blank sex drops a dog out of the breeding-bitch count silently.'+(missGone?' A further <b>'+missGone+'</b> have no sex but have been collected or have died — nothing to fix there.':'')+'</p></div>':(missGone?'<div class="card acc5"><h4>Every dog still here has a sex recorded</h4><p style="margin-bottom:0">'+missGone+' subjects carry no sex, and <b>all of them have been collected or have died</b>. Nothing to chase.</p></div>':''))
- /* foundation: record media and named people, not held yet */
   +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
 }
 function ageBand(m){ if(m===null) return '__none'; return isPupM(m)?'p':(isAdultM(m)?'a':''); }
-/* Edit the card header : name, sex, date of birth, colour, entire/neutered, microchip. One save,
-   action dog_details, owner code only, behind SAVE_ENABLED and TABLE_ON_dog_details. Size comes from weight unless an owner size_override row is set. */
 function dEditForm(d){
  var cols=Object.keys(CD.colour||{}).map(function(k){ return CD.colour[k]; }).filter(function(c){ return c&&c.id; })
   .sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
@@ -2674,7 +2551,6 @@ function dEditForm(d){
   +'</div><div class="dcs-row"><button type="submit" class="btn yes">Save details</button><button type="button" class="btn" data-dedit-cancel>Cancel</button></div>'
   +'<p class="mut" data-dedit-msg role="status"></p></form>';
 }
-/* A correction is a new row whose corrects_id points at the old one. The list shows only rows nothing else corrects. */
 function liveWeights(rows){ var replaced={}; (rows||[]).forEach(function(r){ if(r.corrects) replaced[r.corrects]=1; });
  return (rows||[]).filter(function(r){ return !r.id||!replaced[r.id]; }); }
 function weighPencil(w){ if(!w||!w.id) return '';
@@ -2739,7 +2615,6 @@ var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='', MEDDOG='', DOGQ='
 var SIZE_WORD={small:'Small',medium:'Medium',large:'Large'};   /* only when the owner has no size_label.* rows */
 /* the one place size is worked out: the dog's latest weight against the owner's cut-off rows. Run again after a new weight. */
 function sizeOverrideOf(d){ return BLDCapacity.sizeOverride(T['BLD-breeding_rule.csv']||[], d.id, todayISO()); }
-/* size: the one shared rule (staff/lib/capacity.js sizeForDog), also used by the print cards: override, latest weight, kg-range middle */
 function sizeFromWeight(d){ var lw=d.weights.length?d.weights[d.weights.length-1]:null;
  var by=BLDCapacity.sizeForDog({id:d.id,kg:lw?lw.kg:null,sizeText:d.size,rules:T['BLD-breeding_rule.csv']||[],today:todayISO(),cut:CD.sizeCut});
  d.sizeWord=by.size; d.sizeFrom=by.from;
@@ -2763,7 +2638,6 @@ function wtChange(dl){ if(dl===null||dl===undefined||isNaN(dl)) return '';
  var r=Math.round(dl*10)/10; return (r>0?'↑ ':(r<0?'↓ ':'= '))+Math.abs(r).toFixed(1)+' · '; }
 function lastOn(rows){ var last=''; (rows||[]).forEach(function(r){ if(r.on&&r.on>last) last=r.on; });
  return last?' <span class="mut">· last '+esc(dmyShort(last))+'</span>':''; }
-/* DNA: clear / carrier / affected from the lab's words, else the copy count. Anything else stays a plain pill. */
 function dnaKind(r){ var t=String(r.interp||'')+' '+String(r.genotype||'');
  if(/\b(not|non)[- ]?(affected|carrier)/i.test(t)||/clear|normal|negative/i.test(t)) return 'clear';
  if(/affected|at[- ]?risk/i.test(t)) return 'affected';
@@ -2805,12 +2679,10 @@ function vaccRow(d){ var x=d.vacc||[], ax=(CD.vaxArch||{})[d.id]||[];
   +vaxForm(d)
   +'<p class="mut" data-vax-msg role="status"></p>'
   +'</div></details>'; }
-/* vaccine disease codes as words . Display only: the sheet keeps its codes. */
 var VAX_WORDS={distemper:'Distemper',adenovirus_ich:'Hepatitis (adenovirus)',parvovirus:'Parvovirus',leptospirosis:'Leptospirosis',
  parainfluenza:'Parainfluenza',bordetella:'Kennel cough (Bordetella)',bordetella_kennel_cough:'Kennel cough (Bordetella)',rabies:'Rabies'};
 function vaxWords(s){ return String(s||'').split(';').map(function(c){ c=c.trim(); if(!c) return '';
   var k=c.toLowerCase(); if(VAX_WORDS[k]) return VAX_WORDS[k]; var w=c.replace(/_/g,' '); return w.charAt(0).toUpperCase()+w.slice(1); }).filter(Boolean).join(', '); }
-/* the vaccine card: an https link, or a Drive file id */
 function vaxCardUrl(v){ v=String(v||'').trim(); if(!v) return ''; if(/^https:\/\//i.test(v)) return v;
  return /^[A-Za-z0-9_-]{20,}$/.test(v)?'https://drive.google.com/file/d/'+v+'/view':''; }
 var VAX_PICK=['distemper','adenovirus_ich','parvovirus','leptospirosis','parainfluenza','bordetella','rabies'];
@@ -2823,7 +2695,6 @@ function vaxForm(d){
   +'<label>Card link (optional)<input type="url" name="card" placeholder="https://"></label></div>'
   +'<button type="submit">Add vaccination</button></form>'; }
 
-/* litters as dam: count, the last one, and a link to the Litters page filtered to this dam */
 function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
  var last=''; x.forEach(function(l){ var b=l.born_on||l.dob||''; if(b>last) last=b; });
  var on=navHas('litters');   /* the Litters page switched off: the line stays as words, with no link that would open Main */
@@ -2831,9 +2702,6 @@ function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
   +'<svg class="ricon" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'
   +'<span class="dcs-label" data-k="litters"><b>'+x.length+'</b> litter'+(x.length!==1?'s':'')+(last?' <span class="mut">· last '+esc(dmyShort(last))+'</span>':'')+'</span>'
   +(on?'</a>':'</span>')+'</div>'; }
-/* photo cell: a Drive file id, or a Drive file URL. Found by the header name on the subject file the hub already reads
-   (BLD-subject.csv: a Sheet is exported as CSV, so the tab name is not used). Empty or not Drive: the paw. */
-/* BFFs / Fren. : dated dog-to-dog link rows, words from link_kind.* rule rows (staff/lib/links.js) */
 function dogLinksHtml(d){
  if(typeof BLDLinks==='undefined') return '';
  var g=BLDLinks.forDog(T['BLD-subject_link.csv']||[],T['BLD-breeding_rule.csv']||[],d.id,todayISO());
@@ -2893,9 +2761,7 @@ function loadPhotoImg(img){
    dogPhotoBytes(img,id);
   }).catch(function(){ dogPhotoBytes(img,id); });
 }
-/* Main photo + gallery : files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subject',d.id,todayISO()); }
-/* The card shows the chosen (main) photo. A photo that was removed stays off the card even if the old photo cell still names it. */
 function cardPhotoId(d,ph){
  var main=ph&&ph.main&&dogPhotoId(ph.main.drive_file_id);
  if(main) return main;
@@ -2910,16 +2776,12 @@ function cardPhotoId(d,ph){
    as before. Sorting never changes; only the label is hidden. */
 var PHOTO_DATES_ME='photos.show_dates.owner', PHOTO_DATES_ALL='photos.show_dates';
 function photoDatesOn(iso){ var r=breedRule(PHOTO_DATES_ME,iso)||breedRule(PHOTO_DATES_ALL,iso); return !r||String(r.value)!=='0'; }
-/* Remove, Make main and Put back . Nothing is deleted:
-   Remove ends the photo's gallery link (it moves to Ended), Put back adds a new gallery link from today, Make main adds a
-   main link (the script ends the old main one). ended = true for an item in the Ended list. */
 function galleryTools(f,main,ended){
  if(!f.link_id) return '';
  if(ended) return ' <button type="button" class="cb" data-gal-back="'+esc(f.id)+'">Put back</button>';
  if(f.kind==='photo') return main?'':' <span class="gtools"><button type="button" class="cb" data-gal-main="'+esc(f.id)+'">Make main</button></span>';
  return ' <span class="gtools"><button type="button" class="cb" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this from the gallery">\u00d7 Remove</button></span>';
 }
-/* the × and ✎ that sit on a gallery photo (not in the Ended list) */
 function galleryPhotoMarks(f,ended){
  if(ended||!f.link_id) return '';
  return '<button type="button" class="ged" data-gal-edit="'+esc(f.id)+'" aria-label="Crop or adjust this photo" title="Crop or adjust">\u270e</button>'
@@ -2942,11 +2804,7 @@ function galleryHtml(d,ph){
   +'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>'
   +'<p class="mut" data-gal-msg role="status">'+esc(GAL_MSG[d.id]||'')+'</p></div></details>';
 }
-/* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
-   with the gallery still open. A photo added today can only end today (an end date cannot be before its start), so the
-   end reason marks it removed and photos.js treats it as ended straight away. */
 var GAL_REMOVED='Removed from gallery';
-/* Take a removed photo off the dog card: end any other open link to the same file, and clear the old photo cell when it is that file. */
 async function clearCardPhoto(dog, fileRowId){
  var files=T['BLD-files.csv']||[], links=T['BLD-links.csv']||[], d=CD._byId[dog]||{}, day=todayLondon();
  var file=fileRowId?files.filter(function(f){ return f.id===fileRowId; })[0]:null;
@@ -3003,8 +2861,6 @@ document.addEventListener('click',async function(ev){
   var id=b.getAttribute('data-gal-end'), row=links.filter(function(l){ return l.id===id; })[0]||{};
   var y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;   /* gone from today; never before its start */
   j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
-  /* already ended (22 Nov 2026): this phone was showing an old copy, and the photo was removed before. It is gone, so
-     the screen says so instead of "Not saved". */
   if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
   if(j.ok&&j.result&&j.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); linkEndsApply();
    await clearCardPhoto(dog, row.to_id); }
@@ -3016,7 +2872,6 @@ document.addEventListener('click',async function(ev){
    links.push({id:j.result.id||'',from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()}); }
  }
  b.disabled=false;
- /* a read may have redrawn the list while this saved: use the gallery on screen now, not the one tapped */
  var gNow=dog?document.querySelector('details.gal[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'):null;
  if(gNow&&gNow!==g){ g=gNow; msg=g.querySelector('[data-gal-msg]'); }
  if(!(j&&j.ok&&j.result&&j.result.status==='saved')){ GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); if(g){ g.open=true; GAL_OPEN[dog]=1; } if(msg) msg.textContent=GAL_MSG[dog]; return; }
@@ -3101,11 +2956,9 @@ document.addEventListener('click',async function(ev){
  if(document.getElementById('adm-display')){ go('admin',false); var m3=document.querySelector('#adm-display [data-photo-dates-msg]'); if(m3) m3.textContent='\u2713 Saved'; return; }
  drawDogs();
 });
-/* which dogs' Photos are open, so a redraw (a save, or a read landing behind the copy) does not shut them (22 Nov 2026) */
 var GAL_OPEN={};
 document.addEventListener('toggle',function(e){ var el=e.target;
  if(el&&el.matches&&el.matches('details.gal')&&el.isConnected){ var k=el.getAttribute('data-dog'); if(el.open) GAL_OPEN[k]=1; else delete GAL_OPEN[k]; } },true);
-/* gallery pictures load only when that gallery is opened (one Drive call each) */
 document.addEventListener('toggle',function(e){
  var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal,details.gal-ended')) return;
  Array.prototype.forEach.call(el.querySelectorAll('img.galph[data-gal-id]:not([data-photo-id])'),function(img){
@@ -3128,8 +2981,6 @@ function photoLooksImage(file){
  if(/^image\//.test(file.type||'')) return true;
  return !file.type && /\.(jpe?g|png|gif|webp|heic|heif|avif|bmp)$/i.test(file.name||'');
 }
-/* Decode with the camera's own orientation (EXIF). createImageBitmap first, then an <img> (browsers apply
-   image-orientation: from-image to images by default). Drawn onto a working canvas no bigger than PHOTO_WORK. */
 function photoDecode(file){
  function toCanvas(src,w,h){
   var s=Math.min(1,PHOTO_WORK/Math.max(w,h)), c=document.createElement('canvas');
@@ -3153,7 +3004,6 @@ function photoDecode(file){
  }
  return viaImg();
 }
-/* Edit before save : brightness and contrast, -50 to +50, done on the pixels so it works in every browser. */
 function photoTone(g,size,br,ct){
  br=+br||0; ct=+ct||0; if(!br&&!ct) return;
  var c=ct*2, f=(259*(c+255))/(255*(259-c)), o=br*2.55, im=g.getImageData(0,0,size,size), d=im.data;
@@ -3162,7 +3012,6 @@ function photoTone(g,size,br,ct){
 }
 function photoBytes(n){ n=Math.max(1,Math.round(n/1024)); return n<1024?n+' KB':(Math.round(n/102.4)/10)+' MB'; }
 function photoKB(b64){ return photoBytes(b64.length*3/4); }
-/* The square output: JPEG quality steps down from 0.8 until the base64 fits. */
 function photoSquareB64(draw){
  var c=document.createElement('canvas'); c.width=PHOTO_OUT; c.height=PHOTO_OUT;
  var g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,PHOTO_OUT,PHOTO_OUT); draw(g,PHOTO_OUT);
@@ -3170,7 +3019,6 @@ function photoSquareB64(draw){
  for(var q=0.8;q>0.05;q=Math.round((q-0.1)*10)/10){ var u=c.toDataURL('image/jpeg',q); b=u.slice(u.indexOf(',')+1); if(b.length<=PHOTO_MAX_B64) return b; }
  return b.length<=PHOTO_MAX_B64?b:'';
 }
-/* The crop step. Resolves {mime,b64} on Save, null on Cancel. Drag to move, pinch / wheel / slider to zoom, Rotate 90. */
 function photoCrop(src,was,opts){
  opts=opts||{};
  return new Promise(function(resolve){
@@ -3190,7 +3038,6 @@ function photoCrop(src,was,opts){
   var view=box.querySelector('[data-crop-view]'), cv=box.querySelector('[data-crop-canvas]'), zoom=box.querySelector('[data-crop-zoom]');
   var bright=box.querySelector('[data-crop-bright]'), contrast=box.querySelector('[data-crop-contrast]'), sizeEl=box.querySelector('[data-crop-size]'), sizeT=0;
   function tone(g,size){ photoTone(g,size,bright.value,contrast.value); }
-  /* what will be saved: always the shrunk square, never the original (shown so the shrink is visible before Save) */
   function sizeNote(){ clearTimeout(sizeT); sizeT=setTimeout(function(){ var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
    sizeEl.textContent=b?'Saves as '+PHOTO_OUT+' \u00d7 '+PHOTO_OUT+', about '+photoKB(b)+(was?' (picture was '+was+')':''):'Too large to save. Zoom in or crop closer.'; },250); }
   var rot=0, z=1, ox=0, oy=0, V=0, dpr=Math.min(3,window.devicePixelRatio||1), pts={}, last=null, pinch=null;
@@ -3231,11 +3078,6 @@ function photoCrop(src,was,opts){
   fit(); box.querySelector('[data-crop-use]').focus();
  });
 }
-/* Upload goes through the save script (the same address and staff code as The round), which puts the file in the
-   Shared Drive folder named by Script Properties and writes that file id into the photo cell. The page never
-   holds the folder id and never changes who can see the file. */
-/* Take photo: on a phone or tablet the input's capture opens the camera app. On a laptop or desktop (no touch pointer) the
-   page opens the camera itself (getUserMedia), so Take photo works on any device. The frame is handled like a picked file. */
 function photoCamera(){
  return new Promise(function(resolve){
   var md=navigator.mediaDevices;
@@ -3265,9 +3107,6 @@ function photoBusy(inp,on){
  var card=inp&&inp.closest?inp.closest('article'):null;
  Array.prototype.forEach.call(card?card.querySelectorAll('input[data-dog-photo]'):[inp],function(x){ x.disabled=!!on; });
 }
-/* Upload goes through the save script (the same address and staff code as The round), which puts the file in the
-   Shared Drive folder named by Script Properties and writes that file id into the photo cell. The page never
-   holds the folder id and never changes who can see the file. */
 async function photoSave(inp,getSrc,was){
  var id=inp.getAttribute('data-dog-photo')||'';
  if(!TOKEN){ photoMsg(inp,'Sign in to add a photo.'); return; }
@@ -3288,7 +3127,7 @@ async function photoSave(inp,getSrc,was){
   var res=await fetch(g.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(pb)});
   var j;
   try{ j=await res.json(); }catch(e){ j={ok:false,message:'The save script did not answer. Nothing was saved.'}; }
-  if(sinkGoogleRefused(j,g)){ SINK_GOOGLE_NO=true; photoBusy(inp,false); photoMsg(inp,'This Google account is not an owner. Add the photo again and enter your staff code.'); return; }
+  if(sinkGoogleRefused(j,g)){ SINK_GOOGLE_NO=true; photoBusy(inp,false); photoMsg(inp,'This Google account is not an user. Add the photo again and enter your staff code.'); return; }
   if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')){ if(g.code) noteBadCode(g.code); } else if(j&&j.ok&&g.code) keepStaffCode(g.code);
   if(!j.ok||!j.result||!j.result.file_id){ photoBusy(inp,false); photoMsg(inp,j.message||'The photo was not saved.'); return; }
   var d=CD._byId[id]; if(d) d.photo=j.result.file_id;
@@ -3303,7 +3142,6 @@ async function uploadDogPhoto(inp){
  if(!photoLooksImage(file)){ photoMsg(inp,'Choose a picture.'); return; }
  return photoSave(inp,function(){ return photoDecode(file); },file.size?photoBytes(file.size):'');
 }
-/* Add weight (weighings panel), Add vaccination and Remove (newest vaccination only). Saved through the save script. */
 document.addEventListener('submit',async function(ev){
  var f=ev.target; if(!f||!f.matches) return;
  if(f.matches('[data-dedit-form]')){ ev.preventDefault();
@@ -3450,7 +3288,7 @@ function drawDogs(){
   if(DOGFOCUS) return d.id===DOGFOCUS;   /* opened from a room card: just this dog */
   if(MEDDOG&&d.id===MEDDOG) return true;   /* picked from the medicine table: shown even when a filter would hide it */
   var sc=statusOf(d).code;
-  if(!fst && !(/^active$/i.test(d.state||'') && (sc==='BI'||sc==='ST'||sc==='PU'))) return false; // default list: active dogs on site (breeding dogs and puppies); the Status filter shows the rest
+  if(!fst && !(/^active$/i.test(d.state||'') && (sc==='BI'||sc==='ST'||sc==='PU'))) return false;
   if(fs==='__none'){ if(d.sex) return false; } else if(fs&&d.sex!==fs) return false;
   if(fn){ var e=isEntire(d); if(fn==='e'&&!e) return false; if(fn==='n'&&e) return false; }
   if(fa&&ageBand(months(d.dob))!==fa) return false;
@@ -3462,7 +3300,6 @@ function drawDogs(){
  var h='', dogN=dogShown==='all'?list.length:Math.min(list.length, Math.max(300, dogShown));
  var so=v('dsort');
  list=BLDSort.sort(list,so,{dob:function(d){return d.dob;},name:function(d){return shownDogName(d);}});
- /* foundation: record card (name line, title, 44x44 thumbnail, who-has-it ring). The rows inside are kit: animal. */
  list.slice(0,dogN).forEach(function(d){
   var m=months(d.dob), st=statusOf(d);
   var cls=!d.sex?'u':((d.sex==='Male'?'m':'f')+(isEntire(d)?'e':'n'));
@@ -3472,7 +3309,7 @@ function drawDogs(){
   var w=d.weights.length?{kg:d.weights[d.weights.length-1].kg,on:d.weights[d.weights.length-1].on,n:d.weights.length,
        delta:d.weights.length>1?(d.weights[d.weights.length-1].kg-d.weights[d.weights.length-2].kg):null}:null;
   var away=!!d.off||st.code==='CL'||st.code==='DE';
-  var who=st.code==='DE'?'Deceased':(st.code==='CL'?'Collected, with a new owner':(d.off?'Off site: '+d.off:(d.where?'On site, '+d.where:'On site, cabin not recorded')));
+  var who=st.code==='DE'?'Deceased':(st.code==='CL'?'Collected, with a new user':(d.off?'Off site: '+d.off:(d.where?'On site, '+d.where:'On site, cabin not recorded')));
 
    var gSex=d.sex==='Female'?(isEntire(d)?'f':'fn'):d.sex==='Male'?(isEntire(d)?'m':'mn'):'u';
    var gSym=d.sex==='Female'?'#i-female':d.sex==='Male'?'#i-male':'#i-paw';
@@ -3515,7 +3352,6 @@ function drawDogs(){
         +'<span class="whor" role="img" aria-label="'+esc(who)+'" title="'+esc(who)+'"><svg class="ricon" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span>'
         +(d.room&&!away?'<button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="'+esc(d.room)+'">'+esc(d.where)+'</button>'
           :'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>'
-           /* no room yet (pups too) or off site: Place opens the same cabin picker (13 Nov 2026) */
            +(st.code==='DE'||st.code==='CL'?'':' <button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="">Place</button>'))
         +(CD._moved&&CD._moved.id===d.id?' <span class="mut" data-k="moved" role="status">'+saveHtml(CD._moved.text)+'</span>':'')
       +'</div>'
@@ -3626,12 +3462,10 @@ var FAMNAME={};
 function famSort(g){ var r=CD.areas.filter(function(a){return a.grouping===g;})[0];
  return r?parseInt(r.group_sort,10):99; }
 function cabSort(x){ var n=(x.match(/\d+/g)||[]).map(Number); return n.length?n[n.length-1]:0; }
-/* the room's size columns come from its own BLD-area_capacity rows (no kg written here); small, medium, large, then + pups */
 function bandsFor(aid){ var a=CD.cap[aid]||{}, seen={}, out=[];
  ['free','limited'].forEach(function(m){ Object.keys(a[m]||{}).forEach(function(b){ if(!seen[b]){ seen[b]=1; out.push(b); } }); });
  var rank=function(b){ var k=BLDCapacity.band(b); return (['small','medium','large','small+pups','medium+pups','large+pups'].indexOf(k)+1)||9; };
  return out.sort(function(x,y){ return rank(x)-rank(y); }); }
-/* limits as the door sign shows them: the current flap mode's alternatives, in size colour, small first; 0 and + pups left out */
 function limitChips(aid,mode){ if(!mode) return ''; var a=(CD.cap[aid]||{})[mode]||{}, out=[];
  bandsFor(aid).forEach(function(b){ var k=BLDCapacity.band(b), c=a[b], n=c?parseInt(c.n,10):0; if(!k||/pups/.test(k)||!(n>0)) return;
   var col=CD.sizeColour&&CD.sizeColour[k]; out.push('<span class="pill lim" data-size="'+esc(k)+'"'+(col?' style="border-color:'+esc(col)+'"':'')+'>'+(out.length?'or ':'')+n+' '+k+'</span>'); });
@@ -3712,7 +3546,6 @@ function spaceCabins(fromId, dogId, date){
 }
 function movePickerHtml(fromId, dogId){
  var d=CD._byId[dogId], rooms=spaceCabins(fromId,dogId), size=d&&d.sizeWord?d.sizeWord:'dog';
- /* Off-site: a new occupancy_out row, as on the staff page; only for a dog that is in a cabin now */
  var offBtn=d&&d.room&&!d.off?'<button type="button" class="cb" data-move-off="'+esc(dogId)+'">Off-site</button>':'';
  if(!rooms.length) return '<div class="movepick" data-move-panel><p class="mut">No cabin has space</p>'+offBtn+'<button type="button" class="cb" data-move-cancel>Close</button><span class="mut" data-move-msg></span></div>';
  return '<div class="movepick" data-move-panel>'+rooms.map(function(x){
@@ -3913,8 +3746,6 @@ function inCabin(aid,date){
   return d.area_id===aid;
  }).map(function(d){ return d.id; }); }
 
-/* Room card: today's temperature (TEMPS helper BLDAreaTempLine; same words as The round; colour as a ring, never a fill).
-   Limit from BLD-temperature_band rows via the youngest dog in the room. No thermometer in the room: no line. */
 function roomTempLine(aid,who,date){ if(!window.BLDAreaTempLine) return '';
  var young=null; (who||[]).forEach(function(sid){ var d=CD._byId[sid], n=d?ageDays(d.dob,date):null; if(n!==null&&(young===null||n<young)) young=n; });
  var r=BLDAreaTempLine.lineFor(aid,T['BLD-area_reading.csv']||[],T['BLD-thermometer.csv']||[],T['BLD-area_link.csv']||[],T['BLD-temperature_band.csv']||[],date,{youngestDays:young,req:CD.req||[]});
@@ -3993,8 +3824,6 @@ function pageAreas(){
  return h+'</div>';
 }
 function pageLitters(){
- /* 17 Nov 2026: the date of birth is dob or born_on (the live sheet uses dob; older copies born_on) and the name is pairing,
-    else "Dam × Sire", so a litter never shows "no DOB" or a blank name whichever columns the sheet has. */
  var withDob=CD.litters.filter(function(l){return litDob(l);}).length;
  var h='<h2>Litters</h2><p class="sub">'+withDob+' of '+CD.litters.length+' have a date of birth.</p>'
  +'<div class="mecards">'+littersCard('Due and new')+'</div>'
@@ -4154,8 +3983,6 @@ function rk(x){ return x in RK ? RK[x] : 9; }
  var cnt=document.getElementById('bcnt'); if(cnt) cnt.textContent=list.length+' of '+CD.prospects.length;
  fchips('buyers',['bcat','bctry','bapp','bsig','bmd','bem','bch']);
 }
-/* 17 Nov 2026: the kennel's day, not the UTC day. From midnight to 1am in summer time the UTC date is still yesterday, so the
-   round, Today and every form opened on yesterday's date. */
 function todayISO(){ return todayLondon(); }
 
 function walkList(){
@@ -4207,12 +4034,8 @@ function keptReadings(date){
 /* Room empty (the owner, 11 Nov 2026): BLD-area_reading.room_empty = yes. An out-of-range reading is still flagged, with "Room empty",
    and never counted as non-compliant. An empty mark with no reading counts as covered. */
 function roomEmpty(r){ return /^yes$/i.test(String(r&&r.room_empty||'').trim()); }
-/* A saved value must be a plain number (OV11 15 Nov 2026): "25,3" or other text in the sheet is never read as 25 (parseFloat
-   would). A reading with one side blank or not a number is state 'unread', shown and counted as a problem like a swap. */
 function tempNum(v){ v=String(v==null?'':v).trim(); if(!v) return null; return /^-?\d+(\.\d+)?$/.test(v)?parseFloat(v):undefined; }
 function tempUnreadable(min,max){ var a=tempNum(min), b=tempNum(max); if(a===null&&b===null) return false; return a===undefined||b===undefined||a===null||b===null; }
-/* Header guard (TEMPS 15 Nov 2026): a sort or filter in the sheet moved the heading row off row 1 and saves stopped.
-   If row 1 is not the heading, or a heading row sits lower down, say so plainly instead of reading wrong columns. */
 function areaHeaderProblem(rows){ if(!rows||!rows.length) return '';
  if(!('area_id' in rows[0])||!('min_c' in rows[0])||!('max_c' in rows[0])) return 'row 1 is not the heading row';
  var n=rows.filter(function(r){ return r.id==='id'||r.area_id==='area_id'; }).length;
@@ -4235,7 +4058,6 @@ function foldAreaReadings(rows){
  });
  Object.keys(ROUND).forEach(function(k){ if(ROUND[k].subjects===null) delete ROUND[k].subjects; });
 }
-/* limits come from BLD-temperature_band; no readable row = 'unknown' */
 function ageYM(days){ var m=Math.floor((+days||0)/30.4375); return m<12?(m<1?(+days||0)+'d':m+'m'):Math.floor(m/12)+'y'+(m%12?' '+(m%12)+'m':''); }
 function bandReadable(b){ return !!b&&b.min!==null&&b.max!==null&&!isNaN(b.min)&&!isNaN(b.max); }
 /* the owner 12 Nov 2026: every limit is a dated row. A band row is in force on a day when from_date is blank or on/before it
@@ -4256,11 +4078,7 @@ function tempState(min,max,band,spot,day){ var lo=parseFloat(min), hi=parseFloat
  if(!band) return 'unknown';
  if(window.BLDTempJudge){ var k=BLDTempJudge.judge({min:min,max:max,spot:spot},band,generalBand(day)||band,band.to!=null&&band.to<99999); return k==='spotcold'?'cold':k==='spothot'?'hot':k; }
  if(!isNaN(lo)&&lo<band.min) return 'cold'; if(!isNaN(hi)&&hi>band.max) return 'warm'; return 'ok'; }
-/* "1 dog" / "2 dogs" (OV11 14 Nov: never "1 dogs"). */
 function dogWord(n){ return n===1?'dog':'dogs'; }
-/* Why a dog is on the "not yet placed" card (OV11 14 Nov, Joy in 4.3): its latest occupancy row points at a place
-   the round leaves out on this day. The reason comes from the need rows in force (room.no_dogs, room.no_overnight,
-   room.in_use), never from room names. Tapping the name opens the same capacity-checked "place in" list as a move. */
 function unplacedWhy(d,date){
  var row=window.BLDOccupancy&&BLDOccupancy.rowOn?BLDOccupancy.rowOn(T['BLD-occupancy.csv']||[],d.id,date):null;
  var aid=row?row.area_id:'', a=aid?(CD.allAreas||CD.areas||[]).filter(function(x){ return x.id===aid; })[0]:null;
@@ -4271,9 +4089,6 @@ function unplacedWhy(d,date){
  else if(BLDOccupancy.takesOvernight&&!BLDOccupancy.takesOvernight(a,date,req)) why='day pen';
  return {from:aid,text:'in '+code+(why?' ('+why+')':'')};
 }
-/* The round's temperature lines (OV11 15 Nov 2026): one line per thermometer needed that day (BLD-thermometer +
-   need rows), so a room with two (H5/6) keeps a reading each and every save names its thermometer_id. A room with
-   one thermometer keeps its single line; a room with none (no rows yet) saves by room as before. */
 function roundThermos(aid,date){ var all=T['BLD-thermometer.csv']||[];
  if(!window.BLDThermometer||!all.length) return [];
  return BLDThermometer.neededList(all.filter(function(t){ return t.area_id===aid; }),date,CD.req||[]); }
@@ -4293,10 +4108,8 @@ function roundTempHtml(aid,label,sel,date,k){
       return '<span class="sl">'+slot+'</span>'
        +'<input class="tmin'+(vmin&&vmin!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'"'+thA+' inputmode="decimal" placeholder="min" aria-label="'+esc(lab+' '+slot+' min °C')+'" value="'+esc(t.min||'')+'">'
        +'<input class="tmax'+(vmax&&vmax!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'"'+thA+' inputmode="decimal" placeholder="max °C" aria-label="'+esc(lab+' '+slot+' max °C')+'" value="'+esc(t.max||'')+'">'
-       +'<span class="msg tmsg" data-area="'+aid+'" data-slot="'+slot+'"'+thA+'>'+(t.at?(t.empty?'empty, saved':'saved'):'<button type="button" class="btn rempty" data-area="'+aid+'" data-slot="'+slot+'"'+thA+' title="No dogs in here: no reading needed">Empty</button>')+(tempSwapped(t.min,t.max)?' <span class="pill no">max lower than min — tell Lisa</span>':flag(vmin,t.min)+flag(vmax,t.max))+'</span>'; }).join('')
+       +'<span class="msg tmsg" data-area="'+aid+'" data-slot="'+slot+'"'+thA+'>'+(t.at?(t.empty?'empty, saved':'saved'):'<button type="button" class="btn rempty" data-area="'+aid+'" data-slot="'+slot+'"'+thA+' title="No dogs in here: no reading needed">Empty</button>')+(tempSwapped(t.min,t.max)?' <span class="pill no">max lower than min — tell User</span>':flag(vmin,t.min)+flag(vmax,t.max))+'</span>'; }).join('')
    +'</div>'; }).join(''); }
-/* Places with a thermometer that the cabin walk leaves out (corridors: room.no_dogs; day pens: room.no_overnight):
-   their own temperature-only cards at the end of the round, so every needed thermometer can be read here. */
 function roundTempOnly(date){
  var walk={}; walkList().forEach(function(c){ walk[c.area.id]=1; });
  return areasOn(date).filter(function(a){ return !walk[a.id]&&!isFieldsRow(a)&&roundThermos(a.id,date).length; })
@@ -4397,21 +4210,11 @@ function tempVerdict(val,band){
  var n=parseFloat(val); if(isNaN(n)) return '';
  if(n<band.b.min) return 'low'; if(n>band.b.max) return 'high'; return 'ok';
 }
-/* ROUND SAVING. One new row on the save script. The script checks the staff code and records who saved.
-   A code remembered in this tab is reused. A missing device set-up does not block a save. Room temperatures are 1 decimal place. */
-var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code', SAVE_KEEP_KEY='cdhub.save.url';   // save.url: an address read from Drive or that worked, kept on this device (15 Nov 2026)
-/* A remembered address or code (this tab, the round card, or the staff page) is reused. "Switch off here" forgets the code
-   and the address kept on this device, and stops the staff page's copy being reused here (15 Nov 2026).
-   #join=<code>&url=<address> still fills the card. */
+var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code', SAVE_KEEP_KEY='cdhub.save.url';
 var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.save.off', SINK_OFF_OLD='cdhub.sink.off';
-/* Storage tidy, stage 2 (owner 15 Nov 2026, "go with recommendation"): "Switch off here" is now kept as cdhub.save.off.
-   A phone switched off before this still has the old cdhub.sink.off, so either one means off. Only the new one is written;
-   switching back on clears both, or the old flag would keep the phone off for good. Old keys are removed in the last stage. */
 function offHere(){ return !!(sinkRaw(SINK_OFF_KEY)||sinkRaw(SINK_OFF_OLD)); }
 function setOffHere(on){ if(on){ sinkSet(SINK_OFF_KEY,'1'); return; } sinkSet(SINK_OFF_KEY,''); if(sinkRaw(SINK_OFF_OLD)) sinkSet(SINK_OFF_OLD,''); }
 var STAFF_MEM='', STAFF_REJECTED='', STAFF_ASK=null;
-/* A code the save script ACCEPTED is kept on this device (localStorage), so a phone is not asked again after the tab
-   or the Home Screen app is closed. A refused code is removed. This tab's copy (sessionStorage) is only a fallback. */
 var STAFF_KEEP_KEY='cdhub.staff.code';
 function keepStaffCode(c){ c=String(c||'').trim(); if(!c||c===STAFF_REJECTED) return;
  sinkSet(STAFF_KEEP_KEY,c); setOffHere(false);
@@ -4419,10 +4222,6 @@ function keepStaffCode(c){ c=String(c||'').trim(); if(!c||c===STAFF_REJECTED) re
 function sinkRaw(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
 function sinkGet(k){ if(k===SINK_CODE_KEY) return staffCodeNow(); var v=sinkRaw(k); if(v) return v;
  if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||(offHere()?'':sinkRaw(SAVE_KEEP_KEY))||''; return ''; }
-/* The save address is private: after sign-in it is read from BLD-save-webapp.json ({"url":"https://script.google.com/.../exec"})
-   in the Drive folder, or from the public config when that is set. Missing file: the address box shows as before.
-   The file may also carry set_at (a date) and set_by (a role, never a name); they are for people reading the file and
-   nothing here depends on them. */
 var SAVE_URL_FILE='BLD-save-webapp.json';
 function saveUrlLoad(){
  if(SINK_RE.test(sinkGet(SINK_URL_KEY))) return Promise.resolve(sinkGet(SINK_URL_KEY));
@@ -4436,14 +4235,12 @@ function saveUrlLoad(){
   var u=''; try{ u=String((JSON.parse(txt)||{}).url||'').trim(); }catch(e){ u=''; }
   if(SINK_RE.test(u)){ CD.saveUrl=u; keepSaveUrl(u); if(/^#\/round/.test(location.hash)) go('round',false); return u; }
   return '';
- }).catch(function(){ return ''; }).then(function(u){ if(!u) CD.saveUrlPromise=null; return u; });   // nothing found: try again next time, never stuck for the visit
+ }).catch(function(){ return ''; }).then(function(u){ if(!u) CD.saveUrlPromise=null; return u; });
  return CD.saveUrlPromise;
 }
 function keepSaveUrl(u){ if(SINK_RE.test(u)&&!offHere()) sinkSet(SAVE_KEEP_KEY,u); }
 function sinkSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); return true; }catch(e){ return false; } }
-/* ONE source for the code (live test 13 Nov 2026: the panel said "off" although the kept code saved fine). The panel, the
-   saves and the photo all use staffCodeNow(). The staff page's copy (bld.*) is not reused after "Switch off here". */
-function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && (!!staffCodeNow() || !!sinkGoogle()); }   /* a signed-in owner needs no code (16 Nov 2026) */
+function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && (!!staffCodeNow() || !!sinkGoogle()); }   /* a signed-in user needs no code (16 Nov 2026) */
 function codeKept(){ var off=offHere();
  return sinkRaw(STAFF_KEEP_KEY)||sinkRaw(SINK_CODE_KEY)||(off?'':(sinkRaw('bld.staffCode')||sinkRaw('bld.device.code')))||''; }
 function staffCodeNow(){
@@ -4465,12 +4262,10 @@ function noteBadCode(c){
  if(sinkRaw(STAFF_KEEP_KEY)===STAFF_REJECTED) sinkSet(STAFF_KEEP_KEY,'');
  if(sinkRaw(SINK_CODE_KEY)===STAFF_REJECTED) sinkSet(SINK_CODE_KEY,'');
 }
-/* "Switch off here": forget the code and the address on this device; the next save asks for the code again. */
 function forgetHere(){ STAFF_MEM='';
  try{ sessionStorage.removeItem('cdhub.staff.session'); }catch(e){}
  [SINK_URL_KEY,SINK_CODE_KEY,STAFF_KEEP_KEY,SAVE_KEEP_KEY].forEach(function(k){ sinkSet(k,''); });
  setOffHere(true); }
-/* One line on the panel that says what this device holds. It never shows the code, only whether one is kept. */
 function deviceLine(){ var app=false; try{ app=!!((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true); }catch(e){}
  var yn=function(b){ return b?'yes':'no'; };
  /* plain words (the owner 17 Nov 2026, "yes all") */
@@ -4522,17 +4317,12 @@ function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:f
 /* Saves go one at a time from this device (the owner 16 Nov 2026: the round sent every room at once and all but the first
    gave up with "Someone else is saving right now"). The time limit starts when a save is sent, not while it waits. */
 var sinkWaiting=0, sinkLine=[], sinkSending=[], sinkQ=[], sinkPumping=false, sinkNoMany=false;
-/* 20 Nov 2026: each waiting save's line says "Waiting, N ahead", then "saving..." once it is sent (was "saving..." for minutes). */
 function sinkTell(){ sinkLine.forEach(function(rid,i){ var el=rid&&document.querySelector('[data-rid="'+rid+'"]'); if(el&&!el.querySelector('.sv-line')) el.textContent=(i===0||sinkSending.indexOf(rid)>=0)?'saving…':'Waiting, '+i+' ahead'; }); }
 function sinkFetch(body,url){ sinkWaiting++; var rid=body&&body.request_id||''; sinkLine.push(rid); sinkTell();
  var p=new Promise(function(res){ sinkQ.push({body:body,url:url,res:res}); });
  var done=function(){ sinkWaiting--; var i=sinkLine.indexOf(rid); if(i>=0) sinkLine.splice(i,1); sinkTell(); };
  p.then(done,done); sinkPump(); return p; }
-/* One request at a time from this phone. ONE REQUEST FOR A ROUND (OV12 20 Nov 2026): when several plain adds are waiting
-   (a round typed faster than it saves), up to 20 go together as one list save; each keeps its own request id and gets its
-   own answer. A script that does not know list saves yet (before v24) answers BAD_REQUEST once, and they go one by one. */
 function sinkPump(){ if(sinkPumping) return; sinkPumping=true;
- /* Wait until this turn's saves are all queued (Send now puts the whole outbox on the queue, then one list goes). */
  Promise.resolve().then(sinkDrain); }
 async function sinkDrain(){ try { while(sinkQ.length){
   var first=sinkQ[0], group=[first];
@@ -4550,7 +4340,6 @@ async function sinkDrain(){ try { while(sinkQ.length){
   else group.forEach(function(q){ q.res(j); });
  }
  } finally { sinkSending=[]; sinkPumping=false; if(sinkQ.length) sinkPump(); } }
-/* leaving the page while saves wait their turn would drop them (OV12 16 Nov 2026): the browser asks "Leave site?" first */
 window.addEventListener('beforeunload',function(e){ if(sinkWaiting>0){ e.preventDefault(); e.returnValue=''; return ''; } });
 /* Two people saving at once (the owner 16 Nov 2026): BUSY means the script wrote nothing, so the same save (same request id)
    is sent again after a short random pause, up to 3 times, before the person is told. */
@@ -4581,7 +4370,6 @@ var HUB_BOX='cdhub.outbox', HUB_REFUSED='cdhub.outbox.refused', HUB_BOX_AUTO=5*3
     HUB_TERMINAL={INVALID:1,BAD_REQUEST:1,NOT_ALLOWED:1,HEADER_MISMATCH:1,FILE_NOT_ALLOWED:1,UNEXPECTED:1},
     HUB_SIGNIN_MSG='Not sent yet: sign in again (or enter your code). Kept on this phone: do not type it again.',
     hubStop=false, hubWhy=false;
-/* Who would send now, without asking anyone: the Google sign-in or the code this phone holds. */
 function hubAuthNow(){ return (staffCodeNow()||'')+'|'+(sinkGoogle()||''); }
 function hubCanSend(){ var a=hubAuthNow(); return a!=='|'&&a!==HUB_AUTH_WAIT; }
 function hubList(k){ try{ var a=JSON.parse(localStorage.getItem(k)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
@@ -4590,18 +4378,13 @@ function hubKeep(body){ var b; try{ b=JSON.parse(JSON.stringify(body)); }catch(e
  if(JSON.stringify(b).length>60000) return;   /* a photo is too big to keep; it says so itself */
  var all=hubList(HUB_BOX), was=all.filter(function(x){ return x.id===b.request_id; })[0], a=all.filter(function(x){ return x.id!==b.request_id; });
  var item={id:b.request_id,body:b,at:new Date().toISOString()}; if(was&&was.unsure) item.unsure=true; a.push(item); hubPut(HUB_BOX,a); }
-/* SAVED, NOT "NOT SAVED" (OV13 22 Nov 2026: saves took 19-60 s; the first try saved, its answer never came, the resend
-   was answered DUPLICATE and the page said Not saved). A try with no answer (NETWORK, BAD_ANSWER) may have saved; when
-   that entry is sent again and answered DUPLICATE, the first try saved it: saved, with a tick. */
 function hubUnsure(id,j){ if(!(j&&!j.ok&&(j.code==='NETWORK'||j.code==='BAD_ANSWER'))) return;
  var a=hubList(HUB_BOX), hit=false; a.forEach(function(x){ if(x.id===id&&!x.unsure){ x.unsure=true; hit=true; } }); if(hit){ try{ localStorage.setItem(HUB_BOX,JSON.stringify(a)); }catch(e){} } }
 function hubAnswer(id,j){ if(!(j&&j.ok===false&&j.code==='DUPLICATE')) return j;
  var it=hubList(HUB_BOX).filter(function(x){ return x.id===id; })[0];
  return it&&it.unsure?{ok:true,result:{status:'saved',repeat:true,earlier_try:true,at:new Date().toISOString()}}:j; }
 function hubDrop(id){ var a=hubList(HUB_BOX), b=a.filter(function(x){ return x.id!==id; }); if(b.length!==a.length) hubPut(HUB_BOX,b); }
-/* After an answer: saved (or already saved) and refused leave the box; 'not this time' (or no answer) keeps it. true = settled. */
 function hubHasFields(j){ var f=j&&j.fields; return !!(f&&typeof f==='object'&&!Array.isArray(f)&&Object.keys(f).length); }
-/* A check that failed is finished: no code, a validation code, or any reply that names a field. Sending it again fails the same way. */
 function hubTerminal(j){ if(!j||j.ok) return false; if(hubHasFields(j)||!j.code||HUB_TERMINAL[j.code]) return true; return false; }
 function hubRefuse(id,j){
  var it=hubList(HUB_BOX).filter(function(x){ return x.id===id; })[0];
@@ -4620,7 +4403,6 @@ function hubSettle(id,j,auth){
  if(!hubStop) hubRetry(60000); return false; }
 function hubRetry(ms){ if(hubStop||hubTimer||!hubList(HUB_BOX).length) return; hubTimer=setTimeout(function(){ hubTimer=null; if(hubStop) return; hubFlush().then(function(n){ if(n>0&&!hubStop) hubRetry(60000); }); },ms); }
 function hubStopSending(){ hubStop=true; if(hubTimer){ clearTimeout(hubTimer); hubTimer=null; } hubBoxDraw(); }
-/* A kept entry was delivered later: the round shows it as saved without a reload. */
 function hubDelivered(item,j){
  var f=item.body.fields||{};
  if(item.body.table==='area_reading'&&j&&j.ok&&j.result&&f.area_id&&f.period_start){
@@ -4632,16 +4414,12 @@ function hubDelivered(item,j){
   try{ roundRefresh(date); }catch(e){} }
  var el=document.querySelector('[data-rid="'+item.id+'"]'); if(el) showSave(el,sinkMsg(j));
 }
-/* Send every kept entry again, oldest first. They are all queued first, so Send now is one list (up to 20) rather than
-   one request per row. A script that has no list save yet (before v24) still answers once and they go one by one.
-   {old:true} also sends those past 5 hours. Resolves to how many are still kept. */
 function hubFlush(o){
  if(hubFlushing) return hubFlushing;
  if(o&&o.ask) hubStop=false;
  var now=Date.now(), due=hubList(HUB_BOX).filter(function(x){ return (o&&o.old)||now-Date.parse(x.at)<HUB_BOX_AUTO; });
  if(!due.length) return Promise.resolve(hubList(HUB_BOX).length);
  hubFlushing=(async function(){
-  /* by itself (every minute, on open, signal back): never asks for a code, and waits while no one is signed in */
   if(hubStop) return;
   if(!(o&&o.ask)&&!hubCanSend()) return;
   var g=await sinkGate(); if(!g.ok||hubStop) return;
@@ -4655,7 +4433,6 @@ function hubFlush(o){
    finally{ delete hubInFlight[job.it.id]; } }
  })().then(function(){ hubFlushing=null; hubBoxDraw(); return hubList(HUB_BOX).length; },function(){ hubFlushing=null; return hubList(HUB_BOX).length; });
  return hubFlushing; }
-/* The line at the top of every page: what this phone still holds to send, and anything the records refused. Fewest words. */
 function hubJob(x){ var f=x.fields||{}; return String(f.check_type_id||f.area_id||f.subject_id||x.table||'entry').replace(/^(area|cty|sub)-/,''); }
 function hubGroups(rf){
  var map={}, order=[];
@@ -4717,7 +4494,7 @@ async function sinkSend(body){
  hubInFlight[rid]=1;
  try{
   var j=hubAnswer(rid,await sinkFetch(body,g.url)); hubUnsure(rid,j);
-  if(sinkGoogleRefused(j,g)){ SINK_GOOGLE_NO=true; delete hubInFlight[rid]; return sinkSend(body); }   /* not an owner account: ask the code instead */
+  if(sinkGoogleRefused(j,g)){ SINK_GOOGLE_NO=true; delete hubInFlight[rid]; return sinkSend(body); }   /* not an user account: ask the code instead */
   if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')){ if(g.code) noteBadCode(g.code); } else if(j&&j.ok){ if(g.code) keepStaffCode(g.code); keepSaveUrl(g.url); }
   if(!hubSettle(rid,j,(g.code||'')+'|'+(g.google||''))) return HUB_SIGN_IN[j&&j.code]?{ok:false,code:j.code,kept:true,signIn:true,requestId:rid,message:HUB_SIGNIN_MSG}:{ok:false,code:(j&&j.code)||'NETWORK',kept:true,requestId:rid,message:HUB_KEPT_MSG};
   return j;
@@ -4731,7 +4508,7 @@ function sinkMsg(r,kind){
  if(r&&r.kept&&r.signIn) return 'Not sent yet: sign in again';
  if(r&&r.kept) return 'Not sent yet, will retry';
  if(r.ok&&r.result&&r.result.status==='saved') return (kind==='move'?'Moved ':'Saved ')+hhmmNow();
- if(r.ok&&r.result&&r.result.status==='queued') return kind==='move'?'Moved, still waiting. Open Compliance, then Who has access, then the owner page.':'Sent, waiting for approval';
+ if(r.ok&&r.result&&r.result.status==='queued') return kind==='move'?'Moved, still waiting. Open Compliance, then Who has access, then the user page.':'Sent, waiting for approval';
  var f=r.fields?Object.keys(r.fields).map(function(k){ return r.fields[k]; }).join(' '):'';
  return 'Not saved: '+(f||r.message||r.code||'error');
 }
@@ -4746,7 +4523,6 @@ function saveHtml(text){ text=String(text||''); if(!text) return '';
  if(!k) return esc(text);
  return '<span class="sv-line '+k+'" data-saved="'+k+'"><span class="sv-ic">'+(k==='good'?SV_TICK:k==='wait'?SV_CLOCK:'')+'</span><span>'+esc(text)+'</span></span>'; }
 function showSave(el,text){ if(el) el.innerHTML=saveHtml(text); }
-/* a time on the round's date, with this device's offset, e.g. 2026-11-07T12:00:00+00:00 */
 function isoAt(dateISO,hh){ var d=new Date(dateISO+'T'+hh+':00:00'), off=-d.getTimezoneOffset(), sg=off<0?'-':'+'; off=Math.abs(off);
  return dateISO+'T'+hh+':00:00'+sg+('0'+Math.floor(off/60)).slice(-2)+':'+('0'+(off%60)).slice(-2); }
 function temp1dp(v){ v=String(v==null?'':v).trim().replace(',','.'); if(!v) return {ok:true,val:''};   /* "25,3" = 25.3 (OV11 15 Nov 2026) */
@@ -4770,7 +4546,7 @@ async function tempSave(areaId,slot,which,raw,el,msgEl,th){
  if(msgEl){ msgEl.classList.toggle('swapalert',sw); if(sw) msgEl.setAttribute('role','alert'); else msgEl.removeAttribute('role'); }
  if(sw){ if(msgEl) msgEl.textContent=window.BLDTempPair.message; return; }
  var startH=slot==='am'?'00':'12', ps=isoAt(date,startH);
- if(have.at){ if(msgEl) msgEl.textContent='already saved. Wrong? Tell Lisa \u2014 a saved reading is never changed here'; return; }
+ if(have.at){ if(msgEl) msgEl.textContent='already saved. Wrong? Tell User \u2014 a saved reading is never changed here'; return; }
  if(t.min!==''&&t.max!==''&&Date.parse(ps)>Date.now()){ if(msgEl) msgEl.textContent=slot==='pm'?'the afternoon reading can be saved from 12:00':'That time has not arrived yet.'; return; }
  if(t.min===''||t.max===''){ if(msgEl) msgEl.textContent='type '+(t.min===''?'min':'max')+' too, then it saves'; return; }
  if(t.busy) return; t.busy=true;
@@ -4793,8 +4569,6 @@ function keptRow(areaId,ps,f,r){ var rows=T['BLD-area_reading.csv']||(T['BLD-are
 function roundRefresh(date){
  var st=document.getElementById('rstat'); if(st){ var rows=liveCabins(), n=rows.filter(function(a){ var x=ROUND[roundKey(date,a.id)]||{}; return x.t_am||x.t_pm; }).length; st.textContent=rows.length+' cabins \u00b7 '+n+' with a temperature'; }
  var kr=document.getElementById('kept-readings'); if(kr) kr.outerHTML=keptReadings(date); }
-/* Empty cabin : one area_reading row with room_empty = yes for that slot. It is the evidence (date,
-   slot, who: the save script stamps taken_at and taken_by), needs no temperature, and Compliance counts it as covered. */
 async function roomEmptySave(areaId,slot,msgEl,th){
  th=th||''; var date=(CD._roundDate||todayISO()), multi=roundThermos(areaId,date).length>1, sk=tSlotKey(slot,th,multi), k=roundKey(date,areaId), have=(ROUND[k]&&ROUND[k][sk])||{};
  if(have.at){ if(msgEl) msgEl.textContent='already saved'; return; }
@@ -4812,7 +4586,6 @@ async function roomEmptySave(areaId,slot,msgEl,th){
   keptRow(areaId,ps,th?{room_empty:'yes',thermometer_id:th}:{room_empty:'yes'},r); roundRefresh(date);
   if(msgEl) msgEl.textContent='empty, saved'; }
 }
-/* a whole litter (and its dam) into one cabin: one move row each, through the same save as one dog */
 async function roundAddLitter(areaId,litterId,msgEl){
  var l=(CD.litters||[]).filter(function(x){ return x.id===litterId; })[0]||{}, here=inCabin(areaId,CD._roundDate||todayISO());
  var ids=CD.dogs.filter(function(d){ return d.birthLitter===litterId&&months(d.dob)!==null&&months(d.dob)<6&&!d.off; }).map(function(d){ return d.id; });
@@ -4828,7 +4601,6 @@ async function roundAddLitter(areaId,litterId,msgEl){
  CD._roundMsg={area:areaId,text:ok+' moved'+(bad?'; stopped: '+bad:' \u2713')};
  go('round',false);
 }
-/* add a dog to a cabin = one move row in BLD-occupancy (the dog's cabin is its newest row) */
 async function roundSave(areaId,patch,msgEl,sel){
  if(patch.access!=null){
   var mode=patch.access, back=function(){ if(sel) sel.value=accessOf(areaId)||''; };
@@ -4863,11 +4635,10 @@ async function roundSave(areaId,patch,msgEl,sel){
 }
 function sinkCard(){
  saveUrlLoad(); var on=sinkOn(), goog=!!sinkGoogle(), remembered=!!staffCodeNow();
- /* A remembered code still shows, masked. The box is left off only when the owner sign-in is on and no code is kept, so nobody is asked to type one. */
  var hideCode=goog&&!remembered;
  return '<div class="card '+(on?'acc5':'acc2')+'" id="sinkcard"><h4>Saving on this device: '+(on?'on':'off')+'</h4>'
   +(!on&&!goog&&SINK_RE.test(sinkGet(SINK_URL_KEY))?'<p class="mut">The save address is already on this phone: type your staff code and tap Use these.</p>':'')
-  +(goog?'<p class="mut">Signed in as the owner. A staff code is not needed.</p>':'')
+  +(goog?'<p class="mut">Signed in as the user. A staff code is not needed.</p>':'')
   +'<p class="mut" data-device-line>'+deviceLine()+'</p>'
   +'<div class="filt"><input id="sinkurl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/\u2026/exec" aria-label="Save script address" value="'+esc(sinkGet(SINK_URL_KEY))+'"'+(SINK_RE.test(sinkGet(SINK_URL_KEY))?' hidden style="display:none"':'')+'>'
   +(hideCode?'':'<input id="sinkcode" type="password" autocomplete="off" placeholder="your staff code" aria-label="Your staff code" value="'+(remembered?'\u2022\u2022\u2022\u2022\u2022\u2022':'')+'">')
@@ -4891,12 +4662,11 @@ function pageWork(){
  [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me'],['SNOOZED','acc4','Snoozed']].forEach(function(g){
   var rows=by[g[0]]||[]; if(!rows.length) return;
   rows=wsort==='name'?BLDSort.sort(rows,'name',{name:function(r){ return r.item; }}):rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
-  /* foundation: work records grouped by who they wait on */
   h+='<div class="card '+g[1]+'" data-find-group><h4>'+g[2]+cntPill(rows.length,'')+'</h4>'
    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
    +rows.map(function(r){
      var ask=g[0]==='BLOCKED'?medAsk(r):null, found=ask?medRows(ask):null;
-     var tail=g[0]==='DONE'?(r.evidence||''):g[0]==='SNOOZED'?('Back '+ukDate(r.snooze_until)):(r.owner&&r.owner!=='Lisa'&&r.owner!=='Claude'?'Waiting on '+r.owner:(r.blocked_on||''));   /* the note is already under the item: never twice (20 Nov 2026) */
+     var tail=g[0]==='DONE'?(r.evidence||''):g[0]==='SNOOZED'?('Back '+ukDate(r.snooze_until)):(r.user&&r.user!=='User'&&r.user!=='Claude'?'Waiting on '+r.user:(r.blocked_on||''));   /* the note is already under the item: never twice (20 Nov 2026) */
      var act='';
      if(ask){
       if(!found.length) act='<br><span class="mut">No medicine recorded'+(ask.month?' in '+esc(UKMON[ask.month-1]):'')+'. Nothing to open.</span>';
@@ -4950,8 +4720,6 @@ function pageShape(){
           .sort(function(a,b){return N[b].rows-N[a].rows;});
  var loose=Object.keys(N).filter(function(t){return N[t].in===0&&N[t].out===0;}).sort();
 
- /* foundation: data model map (records, lookups, events and how full each link is). Real text sizes: the map sits in its own
-    sideways-scrolling box, so it is never shrunk below 13px. Colour only in the lines, never the words. */
  var W=1180, PAD=28, colL=PAD+10, colS=430, colE=800, STEP=56, BH=46;
  var rowsH=Math.max(look.length,ev.length,3);
  var H=Math.max(600, 110+rowsH*STEP);
@@ -5042,8 +4810,6 @@ function pageSops(){
   +'<h3>File types</h3><div class="card" id="soptypes"></div>'
   +'<h3>File formats</h3><div class="card" id="sopformats"></div>';
 }
-/* SOP wording is private: it is read after sign-in from a file in the Drive folder, never from this public site.
-   A spreadsheet export is CSV, and JSON.parse of that fails: say so, instead of a generic "could not be read". */
 function sopCardsMessage(e){
  var m=e&&e.message?String(e.message):'', st=e&&e.status;
  if(m==='missing') return 'The SOP wording file is not in the Drive folder yet.';
@@ -5125,7 +4891,6 @@ function sopCardHtml(r){
   return '<details class="sopsec"><summary>'+esc(s.h)+' <span class="n">'+n+'</span></summary>'+sopBlocks(s.blocks)+'</details>';
  }).join('')+extra;
 }
-/* One check_log save, the same fields as a tap on The Board → Jobs. The queue keeps the request id, so a retry does not save twice. */
 var SAVE_MEM={};
 function saveMem(key,sig){ var m=SAVE_MEM[key]; if(!m||m.sig!==sig) m=SAVE_MEM[key]={sig:sig,rids:[],from:0}; return m; }
 function pushCheckLog(logs, fields, res){
@@ -5154,7 +4919,6 @@ function readExtra(root, prefix){
  if(item) extra.item=item.value.trim(); if(amount) extra.amount=amount.value.trim(); if(note) extra.note=note.value.trim();
  return extra;
 }
-/* Record a due or never-recorded SOP check. Same payload as The Board → Jobs, on the chosen day (today is the real time). */
 async function sopRecord(btn){
  var key=btn.getAttribute('data-sop-save'), box=btn.closest('[data-sop-record]'); if(!box) return;
  var msg=box.querySelector('[data-sop-msg]'), picked=[];
@@ -5170,7 +4934,6 @@ async function sopRecord(btn){
  drawSops();
  if(!sent.ok){ var again=document.querySelector('[data-sop-record="'+CSS.escape(key)+'"] [data-sop-msg]'); if(again) showSave(again, sent.message); }
 }
-/* Checked today: an SOP with no check in force. The first time also adds the check_type row, then one check_log. */
 async function sopChecked(btn){
  var name=btn.getAttribute('data-sop-checked'), box=btn.closest('[data-sop-record]'); if(!box||typeof BLDSopRecords==='undefined') return;
  var msg=box.querySelector('[data-sop-msg]'), sop=(SOP.rows||[]).filter(function(r){ return r.short_name===name; })[0]||{short_name:name};
@@ -5198,7 +4961,6 @@ async function sopChecked(btn){
  drawSops();
  if(bad){ var again=document.querySelector('[data-sop-checked="'+CSS.escape(name)+'"]'); if(again){ again.disabled=false; var m=again.parentNode.querySelector('[data-sop-msg]'); if(m) showSave(m, bad); } }
 }
-/* Jobs table: a tick and a day. A dog, room or litter job opens its chooser first. The save matches a Board tap. */
 async function jobDone(btn){
  var key=btn.getAttribute('data-job-done'), cell=btn.closest('td'); if(!cell) return;
  var box=cell.querySelector('[data-job-box]'), pick=cell.querySelector('[data-job-pick]'), msg=cell.querySelector('[data-job-msg]');
@@ -5235,9 +4997,6 @@ document.addEventListener('change',function(ev){
  if(job) delete SAVE_MEM['job:'+job];
  if(sop) delete SAVE_MEM['sop:'+sop];
 });
-/* Print records: the yearly print for this SOP's records (loaded if it is not on the page yet).
-   A SOP the yearly print does not cover falls through to this month in the Checks register. */
-/* Print records opens the print view first. The person presses Print there. It does not print the SOP list. */
 function sopPrint(a){
  var name=a.getAttribute('data-sop-print');
  if(!name) return;
@@ -5371,11 +5130,6 @@ function compTempsHtml(){
    +(c.miss.length?'<ul class="ctl">'+c.miss.map(function(x){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+esc(dmyShort(x.day))+' \u2014 '+esc(x.name)+', no reading</li>'; }).join('')+'</ul>':'')+'</li>'
   +'</ul><p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a> \u00b7 <a href="./history.html#report">Month report (PDF)</a></p>');
 }
-/* Medicines register (priority 2, 21 Nov 2026): print or CSV of one month's medicines for an inspector. Read only.
-   meds-register.js loads on the first press, so the page is no heavier until it is used. */
-/* Every month from the first record to this one is offered, a month with none too, so its nil record can be printed. */
-/* The staff "Medicine given" job (check_type type_key medicine) saves to BLD-check_log: its records count here too. */
-/* A dog's name for the registers: the current list, then the archive (old dogs keep their history). Never an id. */
 function regDog(sid){ var d=(CD._byId||{})[sid]; if(d) return {name:d.name,chip:d.chip};
  var a=(T['BLD-subject-Archive.csv']||[]).filter(function(r){ return r.id===sid; })[0]; return a&&a.name?{name:a.name,chip:''}:null; }
 function medsRows(){ var med={}; (T['BLD-check_type.csv']||[]).forEach(function(t){ if(String(t.type_key||'').toLowerCase()==='medicine') med[t.id]=1; });
@@ -5387,7 +5141,7 @@ function compMedsHtml(){
  while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
  var years=[]; list.forEach(function(k){ var yy=k.slice(0,4); if(years.indexOf(yy)<0) years.push(yy); });
  if(years.length<2) years.push(String(Number(years[0]||todayISO().slice(0,4))-1));
- return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine and dose say \u201cnot recorded\u201d when the record does not hold them. A blank name shows Lisa Carson. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
+ return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine and dose say \u201cnot recorded\u201d when the record does not hold them. A blank name shows User. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
   +'<div class="frow"><label for="medsPeriod">Period</label> <select id="medsPeriod" aria-label="Period"><option value="month" selected>One month</option><option value="year">Whole year</option></select></div>'
   +'<div class="frow"><label for="medsMonth">Month</label> <select id="medsMonth">'+list.map(function(k){ return '<option value="'+k+'">'+esc(UKMON[Number(k.slice(5))-1]+' '+k.slice(0,4))+' ('+(ms[k]||'none')+')</option>'; }).join('')+'</select> '
   +'<label for="medsYear">Year</label> <select id="medsYear" aria-label="Year">'+years.map(function(yy){ return '<option value="'+yy+'">'+yy+'</option>'; }).join('')+'</select> '
@@ -5425,7 +5179,6 @@ function saveBlob(b,name){ var a=document.createElement('a'); a.href=URL.createO
 var JCAL={ym:''};
 var YP={sub:''};   /* Yearly print: which records to tick when opened from a calendar or the checks register */
 if(typeof BLDJobCal!=='undefined'){ (function(){ var st=document.createElement('style'); st.textContent=BLDJobCal.CSS; document.head.appendChild(st); })(); }
-/* the calendar's day photos: read from Drive with the sign-in (like dog photos), shown from memory; a failed one keeps its link only */
 var CALPHOTO_URLS={};
 function loadCalPhotos(){
  Array.prototype.forEach.call(document.querySelectorAll('img[data-cal-photo-id]:not([src])'),function(img){
@@ -5511,9 +5264,6 @@ document.addEventListener('click',async function(ev){
   var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml();
  } else { b.disabled=false; b.textContent='Done today'; var p=document.createElement('p'); p.className='msg bad'; p.setAttribute('data-jcal-msg',''); p.textContent=sinkMsg(r||{},''); b.closest('.jcal').appendChild(p); }
 });
-/* Checks register (priority 2, 21 Nov 2026): print or CSV of one month's check records for an inspector. Read only.
-   checks-register.js is fetched when Compliance opens (not on first load). Every month from the first record to this one
-   is offered, a month with none too, so its nil record can be printed. Printing is inside this page, as Temperatures. */
 function compChecksRegHtml(){
  var jobs=compJobsV();
  var rows=jobs.logs.filter(function(r){ return !(r.outcome==='note'&&r.note_for_id); }), ms={}, now=todayISO().slice(0,7);
@@ -5582,7 +5332,7 @@ function pageCompliance(){
  if(typeof CDItems!=='undefined') h+=CDItems.complianceHtml(itmV(),compOpen,COMP.asAt||todayISO());   /* Items: in date / due soon / overdue per kind (14 Nov 2026) */
  h+=compRulesHtml(today);
  h+=compFold('compAdd','add','Add a rule or a change',''
-  +'<p class="mut help">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only the owner can save.</p>'
+  +'<p class="mut help">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only the user can save.</p>'
   +'<div class="frow"><select id="brKey"><option value="">choose a rule…</option>'+BREED_RULES.concat(SETTING_RULES).map(function(b){ return '<option value="'+b[0]+'">'+esc(b[1])+' ('+b[2]+')</option>'; }).join('')+'</select> '
   +'<input id="brVal" type="number" inputmode="numeric" min="1" max="999" step="1" placeholder="number" aria-label="number" style="width:7em"> '
   +'<input id="brFrom" type="date" value="'+today+'" aria-label="in force from"> '
@@ -5591,10 +5341,6 @@ function pageCompliance(){
  h+=compRehearsalHtml()+compAccessHtml();
  return h;
 }
-/* URGENT WARNINGS (mock-up 7 Nov, H-06): four signals each - the SOP's colour inside a red ring, an icon and the word
-   "Urgent" - so colour is never the only signal. A warning NEVER stops anyone working. Today's sources: a closed room
-   with a dog in it, a room over its limit, a temperature out of range today. Overdue crucial requirements join when
-   BLD-credential exists. The SOP colour comes from sop-index.json by the SOP name a row carries; none = grey. */
 function sopSlot(name){ var r=(SOP.rows||[]).filter(function(x){ return x.short_name===name; })[0]; var i=r?SOP_COLOURS.indexOf(r.colour):-1; return i<0?0:i+1; }
 function compUrgent(iso){ var out=[];
  closedAudit(iso).forEach(function(x){ if(x.dogs) out.push({k:'closed',icon:'i-building-cottage',title:x.label+' is closed but has a dog in it',sub:x.message,area:x.areaId,sop:''}); });
@@ -5608,11 +5354,6 @@ function compUrgentHtml(iso){ var u=compUrgent(iso); if(!SOP.rows&&!SOP.err) sop
  return compFold('compUrgent','urgent','Urgent'+cntPill(u.length,u.length?'need':''),u.length
   ?'<ul class="urgl" id="urgList">'+u.map(function(x){ return '<li data-k="'+x.k+'"><span class="urg"><span class="urg-ring" aria-hidden="true"><i style="--c:var(--ljr-'+sopSlot(x.sop)+')"></i></span><svg aria-hidden="true"><use href="#'+x.icon+'"/></svg>Urgent</span> <b>'+(x.area?roomLink(x.area,x.title):esc(x.title))+'</b><br><span class="mut">'+esc(x.sub)+(x.sop?' · '+esc(x.sop):'')+'</span></li>'; }).join('')+'</ul><p class="mut help">A warning never stops anyone working.</p>'
   :'<p class="mut">Nothing urgent.</p>'); }
-/* EXTERNAL REQUIREMENTS STATE (mock-up 7 Nov, H-07): BLD-credential is the thing (label, area_id, sop, crucial, issuer,
-   source); BLD-credential_version is a dated link row (credential_id, from_date, to_date, source). As at a date the version
-   in force is the latest from_date on or before it. Blank to_date = "Expiry not stated", never a guessed date. Due soon =
-   to_date within compliance.due_soon_days (a rule row; no row = not set: nothing is called due soon, and the page says so). No version = No record. */
-/* an optional table is "set up" when its file is in the folder (an absent one still reads as no rows) */
 function hasTable(name){ return !!(window._driveIds&&window._driveIds[name]); }
 var DUE_SOON_KEY='compliance.due_soon_days';
 function dueSoonDays(iso){ var r=breedRule(DUE_SOON_KEY,iso), n=r?parseInt(r.value,10):NaN; return n>0&&n<=366?{n:n,set:true}:{n:0,set:false}; }
@@ -5645,9 +5386,6 @@ function compStateHtml(iso){ var c=compCredentials(iso), n={ok:0,soon:0,late:0,n
      +(x.to?' <span class="dpill'+(x.state==='late'?' late':(x.state==='soon'?' soon':''))+'">'+esc(dmyShort(x.to))+'</span>':'')
      +(x.sop?'<br><span class="mut">'+esc(x.sop)+'</span>':'')+(x.src&&hideSource(x.src)?'<br><span class="mut">'+esc(hideSource(x.src))+'</span>':'')+'</li>'; }).join('')+'</ul>'; }).join('');
  return compFold('compState','state','Requirements'+cntPill(n.late,n.late?'need':''),body); }
-/* INSPECTIONS (mock-up 7 Nov, H-03/H-05): BLD-inspection rows (kind external or internal, authority, inspection_date,
-   outcome_summary, visibility private or disclosable, source). External and internal are listed apart; an internal one is
-   Private unless its row says disclosable, and is never counted in any figure on this page. */
 function compInspectionsHtml(iso){ var on=hasTable('BLD-inspection.csv');
  var rows=(T['BLD-inspection.csv']||[]).filter(function(r){ var d=isoDay(r.inspection_date); return d&&d<=iso; }).sort(function(a,b){ return a.inspection_date<b.inspection_date?1:-1; });
  var nf=function(id){ return (T['BLD-finding.csv']||[]).filter(function(f){ return f.inspection_id===id&&isoDay(f.raised_on)<=iso; }).length; };
@@ -5658,10 +5396,6 @@ function compInspectionsHtml(iso){ var on=hasTable('BLD-inspection.csv');
   :'<h4>External</h4>'+(ext.length?'<ul class="ctl" id="inspExt">'+ext.map(function(r){ return li(r,false); }).join('')+'</ul>':'<p class="mut">None yet.</p>')
   +'<h4>Internal</h4>'+(int.length?'<ul class="ctl" id="inspInt">'+int.map(function(r){ return li(r,String(r.visibility||'private').toLowerCase()!=='disclosable'); }).join('')+'</ul>':'<p class="mut">None yet.</p>')
   +'<p class="mut help">Internal checks are never counted in any figure here.</p>'); }
-/* FINDINGS (mock-up 7 Nov): BLD-finding rows as at a date. Open = raised on or before it and not closed by it.
-   Recurrence = every finding on the same requirement (outcome_id) raised by that date: "failed N times", with its trail.
-   A finding from a PRIVATE internal inspection (BLD-inspection, when that table exists) stays off this list (H-03, H-05);
-   level words are the issuer's own (finding_kind), never mapped to a grade here. */
 function findingIsPrivate(f){ var i=(T['BLD-inspection.csv']||[]).filter(function(x){ return x.id===f.inspection_id; })[0];
  return !!i&&String(i.kind||'').toLowerCase()==='internal'&&String(i.visibility||'private').toLowerCase()!=='disclosable'; }
 function compFindings(iso){
@@ -5686,8 +5420,6 @@ function compFindingsHtml(iso){ var c=compFindings(iso);
      +'<br><span class="mut" data-k="recur">'+(x.times>1?'<b>Found '+x.times+' times</b>: '+x.trail.map(dmyShort).join(', '):'First time')+'</span></li>'; }).join('')+'</ul>'
    :'<p class="mut">No open findings'+(c.on?'':' (no finding rows yet)')+'.</p>')
   +(c.closed?'<p class="mut">'+c.closed+' closed.</p>':'')); }
-/* REHEARSAL (mock-up 7 Nov, H-04): a practice inspection that leaves NO trace. Notes live only in this variable while it
-   runs; nothing is saved, stored in the browser, counted or scored. End (or leaving Compliance) throws it all away. */
 var REHEARSAL=null;
 function compRehearsalHtml(){ var r=REHEARSAL;
  return compFold('compRehearsal','rehearsal','Rehearsal',r
@@ -5696,12 +5428,10 @@ function compRehearsalHtml(){ var r=REHEARSAL;
    +'<div class="frow"><input id="rhNote" type="text" placeholder="practice finding" aria-label="practice finding" style="min-width:14em"> <button type="button" id="rhAdd">Add</button></div>'
    +'<p><button type="button" class="btn" id="rhEnd">End and discard</button></p></div>'
   :'<p class="mut help">A practice inspection. Nothing is saved or counted.</p><p><button type="button" class="btn" id="rhStart">Start a rehearsal</button></p>'); }
-/* ACCESS (mock-up 7 Nov): who holds a staff or guest code, and Revoke, live on the save script's owner page (signed in
-   to the owner's Google account). The hub only links to it, from the save address this browser holds. */
 function compAccessHtml(){ var u=sinkGet(SINK_URL_KEY), ok=SINK_RE.test(u);
  return compFold('compAccess','access','Who has access',
-  '<p class="mut help">Staff and guest codes: see who has one and Revoke it on the owner page.</p>'+(typeof AdminView!=='undefined'&&AdminView.on(T)?'<p><button type="button" class="btn" data-go="admin" data-adm-pre="codes">Codes, inspector and vet: Admin</button></p>':'')
-  +(ok?'<p><a class="btn" id="accOpen" href="'+esc(u+'?page=approve')+'" target="_blank" rel="noopener">Open owner page</a></p>'
+  '<p class="mut help">Staff and guest codes: see who has one and Revoke it on the user page.</p>'+(typeof AdminView!=='undefined'&&AdminView.on(T)?'<p><button type="button" class="btn" data-go="admin" data-adm-pre="codes">Codes, inspector and vet: Admin</button></p>':'')
+  +(ok?'<p><a class="btn" id="accOpen" href="'+esc(u+'?page=approve')+'" target="_blank" rel="noopener">Open user page</a></p>'
      :'<p class="mut" id="accOff">Saving is not set up in this browser yet. Set it up at the top of <a href="#/round">The round</a>.</p>')); }
 function bindRehearsal(){
  var st=document.getElementById('rhStart'), en=document.getElementById('rhEnd'), ad=document.getElementById('rhAdd'), re=function(){ go('compliance',false); };
@@ -5711,7 +5441,6 @@ function bindRehearsal(){
 }
 function bindCompliance(){
  Array.prototype.forEach.call(document.querySelectorAll('[data-change-window]'),function(cw){ cw.addEventListener('click',function(e){ e.preventDefault(); var t=document.getElementById('compAdd'); if(!t) return;
-  /* open the rule box, pick the rule this link is about, and put the cursor in the number */
   var d=t.querySelector('details'); if(d) d.open=true; var k=cw.getAttribute('data-change-window'), sel=document.getElementById('brKey'), v=document.getElementById('brVal');
   if(k&&sel&&sel.querySelector('option[value="'+k+'"]')){ sel.value=k; sel.dispatchEvent(new Event('change')); }
   if(t.scrollIntoView) t.scrollIntoView({block:'start'}); if(v) v.focus(); }); });
@@ -5890,7 +5619,6 @@ function bbV(){var u=sinkGet(SINK_URL_KEY);return {T:T,today:todayISO(),esc:esc,
 /* Breed Better enrol / un-enrol (the owner 15 Nov 2026): an enrolled_in link row, subject -> score_scheme, saved by link_add / link_end.
    Never deleted: un-enrol fills the link's to_date with a reason. The page's own copy is updated so it redraws without a reload. */
 function bbSaved(j){ if(!(j&&j.ok&&j.result&&j.result.status==='saved')) throw new Error(sinkMsg(j||{})); return j.result; }
-/* an owner setting: one new dated rule row (a change is a new row from today; old rows stay for the past) */
 function bbSetRule(key,value,from,source){
  return sinkPost('breeding_rule',{rule_key:key,value:value,effective_from:from,source:source}).then(function(j){
   var r=bbSaved(j); (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:r.id,rule_key:key,value:value,effective_from:from,source:source,to_date:''}); }); }
@@ -5901,31 +5629,25 @@ function bbUnenrol(e,reason,to){
  var end=function(id){ return sinkAct('link_end',{id:id,to_date:to,reason:reason}).then(function(j){
   bbSaved(j); (T['BLD-links.csv']||[]).forEach(function(l){ if(l.id===id){ l.to_date=to; l.end_reason=reason; } }); }); };
  if(e.src==='link') return end(e.id);
- /* an older-list enrolment: copy it to a link from its own start, then end that link. Once a link exists the older row is not read. */
  var from=e.from&&e.from<=to?e.from:to;
  return bbEnrol(e.subject_id,e.scheme_id,from).then(function(){ var l=(T['BLD-links.csv']||[]).filter(function(x){ return x.from_id===e.subject_id&&x.to_id===e.scheme_id&&!x.to_date; }).pop(); return end(l.id); }); }
-/* Saved dated scores (15 Nov 2026): one score_assessment row and its score_line rows, behind TABLE_ON_score_assessment */
 function bbSaveScore(f){
  return sinkAct('score_save',f).then(function(j){ var r=bbSaved(j);
   (T['BLD-score_assessment.csv']=T['BLD-score_assessment.csv']||[]).push({id:r.id,subject_id:f.subject_id,scheme_id:f.scheme_id,period:f.period,verdict:f.verdict,
    points_earned:f.points_earned,points_available:f.points_available,status:'saved',calculated_at:r.at||'',replaces_id:r.replaces_id||''}); }); }
-/* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
 function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
 PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']);   /* loads on first open (LAZY.bb) */
 function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
 PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']);   /* loads on first open (LAZY.enq) */
-/* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
 function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,save:function(table,fields){ return sinkPost(table,fields); },send:sinkSend,msg:sinkMsg,rerender:function(){ if(document.getElementById('admFuture')){ var y=window.scrollY; go('admin',false); window.scrollTo(0,y); } }};}
 if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV())+navMenuCard();}; SECTIONS.push(['admin','Settings']);
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); }
-/* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports. Sits in Compliance. */
 function itmV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,sinkSend:sinkSend,sinkPost:sinkPost,redraw:function(){ go('items',false); }}; }
 if(typeof CDItems!=='undefined'){ PAGES.items=function(){ return CDItems.page(itmV()); }; SECTIONS.push(['items','Items']); }
 /* Money and Ideas: sections the owner named (14 Nov 2026) with nothing in them yet; shown only once the owner switches them on. */
 PAGES.money=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Money</h2><p class="mut">Nothing here yet.</p></section>'; };
 PAGES.ideas=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Ideas</h2><p class="mut">Nothing here yet.</p></section>'; };
 SECTIONS.push(['money','Money'],['ideas','Ideas']);
-/* Outstanding: Done, Reassign, Snooze (work-actions.js). A save is remembered at once, so the row moves without a reload. */
 function workV(){ return {esc:esc,dmy:ukDate,saveHtml:saveHtml,today:todayLondon(),rules:T['BLD-breeding_rule.csv']||[],sinkPost:sinkPost,bbSaved:bbSaved,showSave:showSave,
  canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },
  remember:function(row){ (T['BLD-requirement.csv']=T['BLD-requirement.csv']||[]).push(row);
@@ -5935,17 +5657,14 @@ function workV(){ return {esc:esc,dmy:ukDate,saveHtml:saveHtml,today:todayLondon
 /* Which views exist on this hub for this sign-in. Table map and Assocs stay off the menu. */
 function viewOn(id){ return HubNav.viewOn({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),id:id}); }
 function navHas(id){
- if(!viewOn(id)) return false;   /* switched off by the owner, or by the pack's starter */
+ if(!viewOn(id)) return false;   /* switched off by the user, or by the pack's starter */
  if(id==='temps') return true;
  if(id==='breed') return bbOn();
  if(id==='admin') return typeof AdminView!=='undefined'&&AdminView.on(T);
  if(id==='qrprint') return typeof AdminView!=='undefined'&&AdminView.on(T);
  return !!PAGES[id];
 }
-/* The bar for this sign-in: owner setting rows (nav.*) in force today; none = the starting layout. The hub is the owner's page. */
-function navLayout(){ return HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER',has:navHas}); }
-/* Settings, Menu (menu PR 3): which sections are on and which sit on the bar, as owner-setting rows (nav.on.*, nav.tab.OWNER.*),
-   in force from today. Nothing is deleted: a change is a newer row. No rows: the starting layout, said so. */
+function navLayout(){ return HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'USER',has:navHas}); }
 function navPickable(){ return HubNav.SECTIONS.filter(function(s){ return s.id!=='main'&&s.id!=='settings'; }); }
 function navMenuSet(){
  var iso=todayISO();
@@ -5958,7 +5677,7 @@ function navMenuSet(){
  });
 }
 function navMenuCard(){
- var any=HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER'});
+ var any=HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'USER'});
  var h='<section class="card" id="navMenu" style="margin-top:24px"><h3 class="hx4">Menu</h3>'
   +'<p class="mut">'+(navMenuSet()?'Your menu, in force from the dates saved.':'Starting layout, not set.')+' Main is always first and More always last; up to 3 sections sit between.</p>'
   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>Section</th><th>On</th><th>On the bar</th></tr></thead><tbody>'
@@ -5981,11 +5700,11 @@ function bindNavMenu(){
    if(t&&used[t]) bad=bad||'Two sections share place '+t+'.';
    used[t]=1; });
   if(bad){ msg.textContent=bad; return; }
-  var now=HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER'}), from=todayLondon(), src='CD Hub Settings, Menu', posts=[];
+  var now=HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'USER'}), from=todayLondon(), src='CD Hub Settings, Menu', posts=[];
   navPickable().forEach(function(sc){
    if(want.on[sc.id]!==(now.on[sc.id]?1:0)) posts.push(['nav.on.'+sc.id,want.on[sc.id]]);
-   if(want.tab[sc.id]!==now.tabs.indexOf(sc.id)+1||!now.set) posts.push(['nav.tab.OWNER.'+sc.id,want.tab[sc.id]]); });   /* the bar is saved whole: a partial set would drop the rest */
-  if(posts.some(function(x){ return x[0].indexOf('nav.tab.')===0; })) navPickable().forEach(function(sc){ var k='nav.tab.OWNER.'+sc.id;
+   if(want.tab[sc.id]!==now.tabs.indexOf(sc.id)+1||!now.set) posts.push(['nav.tab.USER.'+sc.id,want.tab[sc.id]]); });   /* the bar is saved whole: a partial set would drop the rest */
+  if(posts.some(function(x){ return x[0].indexOf('nav.tab.')===0; })) navPickable().forEach(function(sc){ var k='nav.tab.USER.'+sc.id;
    if(!posts.some(function(x){ return x[0]===k; })) posts.push([k,want.tab[sc.id]]); });
   if(!posts.length){ msg.textContent='Nothing changed.'; return; }
   b.disabled=true; msg.textContent='saving…';
@@ -6009,7 +5728,7 @@ function navHtml(){
    It replaces the "Next: X" buttons that sat at the foot of the page. */
 function chipCounts(){
  var nd=needsToday();
- return {today:nd.length,work:(CD.work||[]).filter(function(r){return r.status==='BLOCKED'&&r.owner==='Lisa';}).length,
+ return {today:nd.length,work:(CD.work||[]).filter(function(r){return r.status==='BLOCKED'&&r.user==='User';}).length,
   dogs:(CD.dogs||[]).filter(function(d){return !d.off;}).length,areas:(CD.areas||[]).length,litters:(CD.litters||[]).length,
   sops:SOP.rows?SOP.rows.length:null};
 }
@@ -6022,7 +5741,6 @@ function pill(){
  var p=document.getElementById('livepill');
  p.removeAttribute('data-read');
  if(LOAD.state==='ok'&&(LOAD.copy||LOAD.stale)){
-  /* the device copy: plain words, so no one takes it for a live read */
   var ago=agoText(LOAD.storedAt);
   p.className='live'+(LOAD.stale?' bad':''); p.textContent=LOAD.stale?'read failed · '+ago:ago;
   p.title=LOAD.stale?'Showing the copy on this device. '+LOAD.stale:'Showing the copy on this device while the live read runs.'; }
@@ -6049,7 +5767,6 @@ function labelControls(root){
   el.setAttribute('aria-label',t);
  });
 }
-/* no address: the owner's start row (nav.start.OWNER), else Main */
 function startView(){ var v=''; try{ v=navLayout().start||''; }catch(e){} return v&&viewOn(v)?v:'map'; }
 function render(){ go((location.hash||('#/'+startView())).replace('#/',''),false); }
 
@@ -6078,7 +5795,6 @@ function focusView(){
 }
 
 function cdIn(on){ document.documentElement.classList.toggle('cd-in',on); ['cdRefresh','cdSignout'].forEach(function(id){ document.getElementById(id).classList.toggle('hidden',!on); }); }
-/* Marks the open view in More and its section's tab on the bar. */
 function navCurrent(id){
  var sec=HubNav.sectionOf(id);
  Array.prototype.forEach.call(document.querySelectorAll('#nav [data-go]'),function(b){
@@ -6119,7 +5835,6 @@ function goBody(id,push){
    +'<p class="cd-retry"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
- /* Lisa 20 Nov 2026: the Bin page is gone. An old #/bin address opens Settings, or Main when this sign-in has no Settings. */
  if(id==='bin'&&LOAD.later==='wait'){ id='admin'; full='admin'; sub=null; main.setAttribute('data-view',id); }   /* Settings' rows still loading: wait; SHOWN stays #/bin, so the redraw when they land decides */
  else if(id==='bin'){
   var binTo=navHas('admin')?'admin':'map';
@@ -6137,7 +5852,6 @@ function goBody(id,push){
  document.getElementById('nav').innerHTML=navHtml();
  if(id==='breed'&&sub&&typeof BBHubView!=='undefined') BBHubView.open(sub);   /* #/breed/<dog id> opens that dog */
  if(id==='enquiries'&&typeof CDEnquiries!=='undefined') CDEnquiries.open(sub||'home');
- /* A read up to COMP_FRESH_MS old is shown at once with its time; an older one is read again first. */
  if(LIVE_PAGES[id]&&!LOAD.copy&&!READING&&readAgeMs()>COMP_FRESH_MS&&TOKEN&&Date.now()<TOKEN_EXP){ load(); return; }
  var wait=LIVE_PAGES[id]&&LOAD.copy&&readAgeMs()>COMP_FRESH_MS?'live':(LATER_PAGES[id]&&LOAD.later!=='ok'?LOAD.later:'');
  var lzErr='';
@@ -6266,7 +5980,6 @@ function goBody(id,push){
     list.push(v);
     var opt=null, was='';
     Array.prototype.forEach.call(el.options,function(o){ if(o.value===v){ opt=o; was=o.textContent; o.disabled=true; o.textContent=was.replace(/ \u2014 .*$/,'')+' \u2014 adding\u2026'; } });
-    /* finished: forget it; if the page was not redrawn (the save failed), the dog can be picked again */
     var done=function(){ var l=(CD._adding||{})[aid]||[], i=l.indexOf(v); if(i>=0) l.splice(i,1); if(opt&&opt.isConnected){ opt.disabled=false; opt.textContent=was; } };
     roundSave(aid,{add:v},msg).then(done,done); }); });
   Array.prototype.forEach.call(document.querySelectorAll('.rempty'),function(el){ el.addEventListener('click',function(){
@@ -6281,7 +5994,6 @@ function goBody(id,push){
    setOffHere(false);
    c=String(c).trim();
    if(c&&c.indexOf('\u2022')<0){ sinkSet(SINK_CODE_KEY,c); if(sinkRaw(STAFF_KEEP_KEY)!==c) sinkSet(STAFF_KEEP_KEY,''); rememberStaffCode(c); }
-   /* The code box is on the card only when this phone is not using the owner sign-in. An empty box still has to be filled. */
    if(codeEl&&!c){ m.textContent='Type your staff code too.'; return; }
    if(!sinkSet(SINK_URL_KEY,u)){ m.textContent='This browser will not keep it (private window?).'; return; }
    go('round',false); });
@@ -6305,14 +6017,12 @@ function goBody(id,push){
      roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
  goPush(id,sub,full,push,prevShown,leaveY);
- /* a record page: back to where you came from, or a way to its list when opened cold. Breed Better draws its own. */
  if(sub&&id!=='breed'&&!medGo) main.insertAdjacentHTML('afterbegin','<p class="hbackrow">'+HubNav.back.button({hash:'#/'+id,label:label(id)})+'</p>');
  Array.prototype.forEach.call(document.querySelectorAll('[data-find-in]'),function(b){ findApply(b.getAttribute('data-find-in')); });
  if(window.DashKit&&DashKit.fold&&DashKit.fold.run) DashKit.fold.run();
  window.scrollTo(0,keepY);
  var hb=document.getElementById('hubBack'); HubNav.back.sync(hb); setTimeout(function(){ HubNav.back.sync(hb); },0);
 }
-/* History for a move. The wait card calls this too, so Back has one step per move. */
 function goPush(id,sub,full,push,prevShown,leaveY){
  var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops'||id==='breed'||id==='yearly')?full:id;
  if(push!==false && location.hash!=='#/'+at){
@@ -6353,7 +6063,6 @@ document.addEventListener('click',function(e){
  if(row){ row.setAttribute('tabindex','-1'); row.focus(); if(row.scrollIntoView) row.scrollIntoView({block:'nearest'}); }
 });
 document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus();
-  /* the tabindex is only there to take the focus: left on, every section heading inside stops folding when tapped */
   m.addEventListener('blur',function(){ m.removeAttribute('tabindex'); },{once:true}); } });
 document.addEventListener('click',function(e){
  var b=e.target.closest&&e.target.closest('[data-dogshow],[data-unshow]'); if(!b) return;
@@ -6409,7 +6118,6 @@ DashKit.search.register(function(q){
   var dam=byId[l.dam_subject_id];
   out.push({group:L('litters'),slot:4,title:(l.born_on?ukDate(l.born_on):l.id)+(dam?' · '+dam.name:''),sub:l.id,act:function(){ go('litters'); focusView(); }});
  });
- /* SOPs come from a file read on first use: wait for it, and leave them out if it cannot be read. */
  return Promise.resolve(sopStart()).then(function(){
   (SOP.rows||[]).filter(function(r){ return hit([r.short_name,r.category,r.frequency].join(' ')); }).slice(0,8).forEach(function(r){
    out.push({group:L('sops'),slot:4,title:r.short_name,sub:[r.frequency,r.category].filter(Boolean).join(' · '),act:function(){ go('sops/'+encodeURIComponent(r.short_name)); focusView(); }});
@@ -6423,17 +6131,13 @@ function tempsReportHash(){ if(/^#\/?m\/temperature\b/.test(location.hash||'')){
 tempsReportHash();
 function followHash(){ if(tempsReportHash()) return; if(LOAD.state==='ok'){ go((location.hash||('#/'+startView())).replace('#/',''),false); focusView(); } }
 try{ history.scrollRestoration='manual'; }catch(e){}
-/* a plain link (#/...) also gets a Back step from the browser: note how far down this page was first */
 document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a[href^="#/"]'); if(!a) return;
  try{ history.replaceState(Object.assign({},history.state||{},{y:window.scrollY}),''); }catch(x){} },true);
-/* Back: redraw the page, then return to where you were on it */
 window.addEventListener('popstate',function(e){ followHash(); var y=e.state&&e.state.y; if(y) window.scrollTo(0,y); });
 window.addEventListener('hashchange',followHash);
 render();
 </script>
 <script>
-/* Calm: every help bullet list (ul.notes) becomes one (i); its words show on hover or tap.
-   Findings lists (Compliance: needs a look, room limits) carry data-calm="off" and always show. */
 (function () {
   function calm() {
     document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
@@ -6443,7 +6147,6 @@ render();
       ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
     });
   }
-  /* An (i) says its words when it is tapped or pressed: a title alone shows nothing on a phone. A second tap puts them away. */
   function say(i) {
     var n = i.nextElementSibling;
     if (n && n.classList.contains('infonote')) { n.remove(); i.setAttribute('aria-expanded', 'false'); return; }
@@ -6482,3 +6185,4 @@ render();
 })();
 </script>
 </body></html>
+

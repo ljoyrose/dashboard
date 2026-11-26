@@ -19,7 +19,6 @@ const ALL = {
   },
 };
 
-// The frame, the bar and the name, measured in the page.
 function measure() {
   const W = document.documentElement.clientWidth;
   const shown = (e) => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
@@ -30,10 +29,8 @@ function measure() {
   const h1 = row.querySelector(':scope > h1');
   const rg = document.createRange(); rg.selectNodeContents(h1);
   const words = rg.getBoundingClientRect(), hb = h1.getBoundingClientRect(), hcs = getComputedStyle(h1);
-  // What a person sees of the name: the words, cut to the name's own inner box when they are cut short with ...
   const seen = { left: Math.max(words.left, hb.left + parseFloat(hcs.paddingLeft)), right: Math.min(words.right, hb.right - parseFloat(hcs.paddingRight)) };
   const others = [...row.children].filter((e) => e !== h1 && shown(e) && !e.classList.contains('house-sp')).map((e) => { const r = e.getBoundingClientRect(); return { what: e.outerHTML.slice(0, 80), left: r.left, right: r.right }; });
-  // The page's widest content: any shown block inside the frame (not the frame itself) with a real width.
   const blocks = [...frame.querySelectorAll('*')].filter((e) => shown(e) && getComputedStyle(e).position !== 'fixed' && !e.closest('[hidden], .hidden, dialog, [role="dialog"]'))
     .map((e) => e.getBoundingClientRect()).filter((r) => r.width > 40);
   const tabs = document.querySelector('nav.house-tabs');
@@ -70,10 +67,8 @@ for (const width of [1280, 390]) {
       const m = await page.evaluate(measure);
       const G = width === 390 ? 16 : 24;
       expect(m.gutter, 'the --house-gutter token').toBe(G);
-      // Nothing scrolls sideways.
       expect(m.scrollW, 'page width (no sideways scroll)').toBeLessThanOrEqual(m.W);
       expect(m.bodyScrollW, 'body width (no sideways scroll)').toBeLessThanOrEqual(m.W);
-      // The bar, its row and the page frame run the full window; their insides sit exactly G in from each edge.
       for (const [what, b] of [['top bar', m.header], ['top bar row', m.row], ['page frame', m.frame]]) {
         expect(Math.abs(b.left), what + ' left edge at the window').toBeLessThanOrEqual(0.5);
         expect(Math.abs(b.right - m.W), what + ' right edge at the window').toBeLessThanOrEqual(0.5);
@@ -82,16 +77,11 @@ for (const width of [1280, 390]) {
         expect(Math.abs(b.inL - G), what + ' inside left = gutter').toBeLessThanOrEqual(0.5);
         expect(Math.abs(b.inR - (m.W - G)), what + ' inside right = window - gutter').toBeLessThanOrEqual(0.5);
       }
-      // The content itself fills the frame: nothing starts outside the gutter, and the widest content reaches both edges
-      // (no narrow middle column, no 980px box).
       expect(m.minLeft, 'content starts at the gutter').toBeGreaterThanOrEqual(G - 0.5);
       expect(Math.abs(m.minLeft - G), 'content reaches the left gutter').toBeLessThanOrEqual(0.5);
       expect(m.maxRight, 'content stays inside the right gutter').toBeLessThanOrEqual(m.W - G + 0.5);
       expect(Math.abs(m.maxRight - (m.W - G)), 'content reaches the right gutter').toBeLessThanOrEqual(0.5);
-      // The bottom tabs' bar runs the full window too (the same outer edges as the top bar).
       if (m.tabs) { expect(Math.abs(m.tabs.left)).toBeLessThanOrEqual(0.5); expect(Math.abs(m.tabs.right - m.W)).toBeLessThanOrEqual(0.5); }
-      // The name: centred on the bar from 768px up; on a phone straight after the Home icon (or the Dashboard's empty place).
-      // (On a phone a long name may be cut short with ...; at 1280 every name shows whole.)
       if (width === 1280) {
         expect(m.name.cut, 'the name shows whole at 1280').toBe(false);
         expect(Math.abs(m.name.mid - m.W / 2), 'name centred on the bar').toBeLessThanOrEqual(2);
@@ -109,8 +99,6 @@ for (const width of [1280, 390]) {
   }
 }
 
-// Tight room: at 768px (the smallest laptop / tablet width) and with a very long name, the name stays centred, is cut short
-// with ... and never runs under an icon; nothing scrolls sideways.
 for (const [hub, H] of Object.entries(ALL)) {
   test(`${hub}: at 768px and with a very long name the name is centred, cut with ... and never overlaps an icon`, async ({ page, guard }) => {
     test.setTimeout(60_000);
@@ -121,12 +109,9 @@ for (const [hub, H] of Object.entries(ALL)) {
     let m = await page.evaluate(measure);
     expect(m.scrollW, 'no sideways scroll at 768').toBeLessThanOrEqual(m.W);
     noOverlap(m);
-    // Centred, unless the right-hand things themselves reach past the middle of the bar (Studio's status pills at 768): then the
-    // name sits as near the middle as it can without touching them.
     const rightStart = Math.min(...m.others.filter((o) => o.left > m.name.seenL).map((o) => o.left));
     if (rightStart - 8 >= m.W / 2 + m.name.words / 2) expect(Math.abs(m.name.mid - m.W / 2), 'name centred at 768').toBeLessThanOrEqual(2);
     else expect(m.name.seenR, 'name pushed only as far as the right-hand things').toBeGreaterThanOrEqual(rightStart - 8 - 1);
-    // A name far too long for the bar.
     await page.evaluate(() => { const h = document.querySelector('header .house-row > h1'); const t = h.querySelector('a') || h; t.append(' with a very long extra name that cannot possibly fit in the top bar at all'); });
     await page.waitForTimeout(150);
     m = await page.evaluate(measure);
@@ -139,7 +124,6 @@ for (const [hub, H] of Object.entries(ALL)) {
   });
 }
 
-// A very wide window (1920): still the full window, no 1600px or 980px box, the same 24px gap; the name still centred.
 for (const [hub, H] of Object.entries(ALL)) {
   test(`${hub} at 1920px: the frame runs the full window with the 24px gap`, async ({ page, guard }) => {
     test.setTimeout(60_000);
@@ -155,9 +139,9 @@ for (const [hub, H] of Object.entries(ALL)) {
     expect(Math.abs(m.maxRight - (m.W - 24)), 'content reaches the right gutter').toBeLessThanOrEqual(0.5);
     expect(Math.abs(m.name.mid - m.W / 2), 'name centred').toBeLessThanOrEqual(2);
     noOverlap(m);
-    // Straight down to a phone: the centring's padding is never used there, so nothing scrolls sideways even for a moment.
     await page.setViewportSize({ width: 390, height: 844 });
     const w = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
     expect(w[0], 'no sideways scroll straight after shrinking to a phone').toBeLessThanOrEqual(w[1]);
   });
 }
+

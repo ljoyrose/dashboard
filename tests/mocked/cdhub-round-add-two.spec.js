@@ -5,8 +5,8 @@ const { test, expect, HUBS } = require('../fixtures/job34/load');
 const { SINK } = require('../support/dog-photo-world');
 
 test('two dogs added to one room one after the other: both are sent, the list resets, no dog is sent twice', async ({ page, guard }) => {
-  const occ = guard.world.files.find((x) => x.name === 'BLD-occupancy.csv');   // both dogs on site (SLA) so the round lists them
-  occ.content = occ.content.replace('sub-test-dog-1,area-1,Resident,', 'sub-test-dog-1,area-1,SLA,').replace('sub-test-dog-2,area-2,Resident,', 'sub-test-dog-2,area-1,SLA,');   // both in one room, so another room is empty
+  const occ = guard.world.files.find((x) => x.name === 'BLD-occupancy.csv');
+  occ.content = occ.content.replace('sub-test-dog-1,area-1,Resident,', 'sub-test-dog-1,area-1,SLA,').replace('sub-test-dog-2,area-2,Resident,', 'sub-test-dog-2,area-1,SLA,');
   await HUBS.cdhub.open(page, guard);
   await page.evaluate((url) => { localStorage.setItem('cdhub.sink.url', url); localStorage.setItem('cdhub.sink.code', 'pretend-code'); }, SINK);
   const bodies = [];
@@ -23,7 +23,7 @@ test('two dogs added to one room one after the other: both are sent, the list re
   expect(pick, 'the test data has two dogs that can be added').not.toBeNull();
   const sel = () => page.locator(`.radd[data-area="${pick.area}"]`);
   await sel().selectOption(pick.a);
-  await expect(sel()).toHaveValue('');                                          // back to "add a dog..." at once
+  await expect(sel()).toHaveValue('');
   await expect(sel().locator(`option[value="${pick.a}"]`)).toBeDisabled();      // cannot be picked twice
   await sel().selectOption(pick.b);
   await expect.poll(() => bodies.length).toBe(2);
@@ -32,3 +32,4 @@ test('two dogs added to one room one after the other: both are sent, the list re
   await expect(sel().locator(`option[value="${pick.b}"]`)).toContainText('here');
   await expect(sel().locator(`option[value="${pick.a}"]`)).toContainText('here');
 });
+

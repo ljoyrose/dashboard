@@ -1,5 +1,3 @@
-// Hub V2 on the main dashboard (25 Oct 2026, same layout as Marketplace): a bar at the bottom. Since Lisa's tab picks (2 Nov 2026)
-// it is Main and More, with Drives, Bin and Changes under More. Home opens with "Needs you: N", three big tiles and ONE most urgent card.
 const { test, expect } = require('../support/test');
 const { tabClick, tabTo } = require('../support/tabs');
 
@@ -27,7 +25,6 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     const box = await bar.boundingBox();
     expect(Math.round(box.y + box.height)).toBe(844); // touches the bottom of the screen
     const tabs = bar.locator('.ht');
-    // Main, Decide (slot 2) and Do (slot 4) were added on Dashboard Main (Lisa's picks, 2 Nov), then More.
     await expect(tabs).toHaveText(['Main', 'Decide', 'Do', 'More'].map((t) => new RegExp('^' + t)));
     for (let i = 0; i < 4; i++) expect((await tabs.nth(i).boundingBox()).height).toBeGreaterThanOrEqual(44);
     await noSidewaysScroll(page, 'Dashboard');
@@ -66,7 +63,7 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     }
   });
 
-  test('the selected view under More has one clean edge and the pale grey selected fill; the "You are here" title has no box @regression', async ({ page }) => {
+  test('t-hub-v2-main-spec-1', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     for (const [via, key, title] of [['bar', 'drives', 'Drives'], ['bar', 'changes', 'Changes · Recent'], ['bar', 'bin', 'Bin']]) {
@@ -87,7 +84,6 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
       expect(h.b).toBe('nonenone');
       expect(h.sh).toBe('none');
     }
-    // Keyboard route too (g then d = Drives): a keyboard user gets :focus-visible, which drew the square box.
     await page.locator('body').click({ position: { x: 5, y: 300 } });
     await page.keyboard.press('g'); await page.keyboard.press('d');
     await expect(page.locator('#hereTitle')).toHaveText('Drives');
@@ -102,9 +98,9 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
       await signIn(page);
       await expect(page).toHaveURL(new RegExp(hash.replace(/[/#]/g, (c) => '\\' + c)));
       await expect(page.locator(`#mainNav a[data-nav="${tab}"]`)).toHaveAttribute('aria-current', 'page');
-      // On a phone Sign out sits inside the Look menu (the top bar, Lisa's pick A).
       await page.locator('#houseLookBtn').click();
       await page.locator('#houseLook').getByRole('button', { name: 'Sign out', exact: true }).click();
     }
   });
 });
+

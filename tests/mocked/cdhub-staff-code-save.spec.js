@@ -1,5 +1,3 @@
-// A valid staff code saves a room move and a photo from a browser with empty storage.
-// The save script (mocked) checks the code. Nothing here is a device flag, and nothing is a real animal.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -29,10 +27,8 @@ function rooms(world) {
 }
 
 function answer(body) {
-  // 16 Nov 2026: a signed-in hub first sends its Google sign-in; these pretend staff are not owners, so the script says
-  // so and the hub asks for the staff code (as the real script does when the account is not on the owner list).
   if (!body.code) return body.google_token
-    ? { ok: false, code: 'GOOGLE_NOT_OWNER', message: 'This Google account is not on the owner list. Enter your staff code. Nothing was saved.' }
+    ? { ok: false, code: 'GOOGLE_NOT_USER', message: 'This Google account is not on the user list. Enter your staff code. Nothing was saved.' }
     : { ok: false, code: 'NO_CODE', message: 'Enter your staff code.' };
   const who = WHO[body.code];
   if (!who) return { ok: false, code: 'BAD_CODE', message: 'That staff code was not recognised.' };
@@ -45,7 +41,7 @@ async function openDogs(page, guard) {
   const sent = [];
   await page.route(SINK, async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
-    if (body.code) sent.push(body);   // the Google-only first try (refused in answer) is not a save
+    if (body.code) sent.push(body);
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer(body)) });
   });
   await page.route('https://example.com/pretend-dog-new.png', (route) => route.fulfill({ status: 200, contentType: 'image/png', body: PNG }));
@@ -97,7 +93,7 @@ async function roomAndPhoto(page, guard, code, shots) {
   await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
   await enterCode(page, code);
   await expect(card.locator('[data-k="moved"]')).toHaveText(/^Moved \d\d:\d\d$/);
-  await expect(card.locator('[data-k="moved"] .sv-line.good svg')).toHaveCount(1);   // the tick on the item (tick on every save)
+  await expect(card.locator('[data-k="moved"] .sv-line.good svg')).toHaveCount(1);
   expect(sent).toHaveLength(1);
   expect(sent[0]).toMatchObject({ table: 'occupancy', action: 'add', code, fields: { subject_id: 'sub-test-pup-1', area_id: 'area-1' } });
   expect(sent[0].code).toBe(code);
@@ -123,7 +119,7 @@ async function roomAndPhoto(page, guard, code, shots) {
   if (shots) await shot(page, card, '02');
 }
 
-test('staff code River saves a room and a photo from empty storage @regression', async ({ page, guard }) => {
+test('t-cdhub-staff-code-save-spec-1', async ({ page, guard }) => {
   await roomAndPhoto(page, guard, 'river-staff-441', true);
 });
 
@@ -131,7 +127,7 @@ test('staff code Moss saves a room and a photo from a second empty browser', asy
   await roomAndPhoto(page, guard, 'moss-staff-882', false);
 });
 
-test('an invalid staff code is refused and nothing is saved @regression', async ({ page, guard }) => {
+test('t-cdhub-staff-code-save-spec-2', async ({ page, guard }) => {
   const sent = await openDogs(page, guard);
   const card = page.locator('.dc[data-dog="sub-test-pup-1"]');
   await card.getByRole('button', { name: 'Place' }).click();
@@ -144,9 +140,7 @@ test('an invalid staff code is refused and nothing is saved @regression', async 
   expect(sent[0].table).toBe('occupancy');
 });
 
-// Phone repro (13 Nov 2026): the code was kept for the tab only, so a phone asked again after the tab or Home Screen
-// app closed. A code the script accepts is now kept on the device; a refused code is not.
-test('an accepted staff code is kept on this device and not asked again in a new tab @regression', async ({ page, guard }) => {
+test('t-cdhub-staff-code-save-spec-3', async ({ page, guard }) => {
   const sent = await openDogs(page, guard);
   const card = page.locator('.dc[data-dog="sub-test-pup-1"]');
   await card.getByRole('button', { name: 'Place' }).click();
@@ -179,15 +173,12 @@ test('a refused staff code is not kept on this device', async ({ page, guard }) 
   expect(await page.evaluate(() => localStorage.getItem('cdhub.staff.code'))).toBeNull();
 });
 
-// 15 Nov 2026 ("could not reach the save script" on the dog card): a Drive read of the save address that found
-// nothing was kept as the answer for the whole visit, and a found address lived in memory only. Now an empty read is
-// tried again, and the address is kept on this device for the next visit.
-test('save address: an empty first read is tried again, and the found address is kept for the next visit @regression', async ({ page, guard }) => {
+test('t-cdhub-staff-code-save-spec-4', async ({ page, guard }) => {
   rooms(guard.world);
   const sent = [];
   await page.route(SINK, async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
-    if (body.code) sent.push(body);   // the Google-only first try (refused in answer) is not a save
+    if (body.code) sent.push(body);
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer(body)) });
   });
   await page.goto('cdhub/');
@@ -218,8 +209,6 @@ test('save address: an empty first read is tried again, and the found address is
 });
 
 
-// Live test (13 Nov 2026 09:07): saving worked, but The round said "Saving on this device: off" with an empty code box
-// on every open, because the panel read only the old round-card keys and never the kept code. One source now.
 const CODE = 'river-staff-441';
 
 async function saveOnce(page, guard) {
@@ -240,7 +229,7 @@ async function panelIsOn(page) {
   expect(await box.evaluate((e) => e.outerHTML)).not.toContain(CODE);
 }
 
-test('after a code is accepted, The round panel says on and masks the code @regression', async ({ page, guard }) => {
+test('t-cdhub-staff-code-save-spec-5', async ({ page, guard }) => {
   await saveOnce(page, guard);
   await tabClick(page, '#nav button[data-go="round"]');
   await panelIsOn(page);
@@ -260,9 +249,8 @@ test('Switch off here forgets the code and the address on this device, and the n
   expect(sent).toHaveLength(1);
 });
 
-// Persistent profile: set it, close the whole browser, open it again on the same profile. Nothing typed the second time.
-test('closing and reopening the browser keeps saving on: the panel says on and a save asks for no code @regression', async ({ browserName }, testInfo) => {
-  test.setTimeout(120_000);   // two persistent browsers; 30s is the whole test and the first launch can use it up
+test('t-cdhub-staff-code-save-spec-6', async ({ browserName }, testInfo) => {
+  test.setTimeout(120_000);
   test.skip(browserName !== 'chromium', 'persistent profile check runs in Chromium');
   const { chromium } = require('@playwright/test');
   const gisStub = require('../support/gis-stub');
@@ -284,7 +272,7 @@ test('closing and reopening the browser keeps saving on: the panel says on and a
     });
     await ctx.route(SINK, async (r) => {
       const body = JSON.parse(r.request().postData() || '{}');
-      if (body.code) sent.push(body);   // the Google-only first try (refused in answer) is not a save
+      if (body.code) sent.push(body);
       await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer(body)) });
     });
     const page = ctx.pages()[0] || await ctx.newPage();
@@ -295,7 +283,6 @@ test('closing and reopening the browser keeps saving on: the panel says on and a
     return { ctx, page };
   }
 
-  // First open: the address comes from Drive, the code is typed once and accepted.
   let { ctx, page } = await launch(true);
   await tabClick(page, '#nav button[data-go="round"]');
   await page.locator('.racc').first().selectOption('limited');
@@ -303,7 +290,6 @@ test('closing and reopening the browser keeps saving on: the panel says on and a
   await expect(page.locator('.rsave').first()).toHaveText(/^Saved \d\d:\d\d$/);
   await ctx.close();
 
-  // Reopen: no Drive address this time, so only what this device kept can turn saving on.
   ({ ctx, page } = await launch(false));
   await tabClick(page, '#nav button[data-go="round"]');
   await panelIsOn(page);
@@ -314,15 +300,13 @@ test('closing and reopening the browser keeps saving on: the panel says on and a
   await ctx.close();
 });
 
-// Storage tidy, stage 2 (owner 15 Nov 2026, "go with recommendation"): new keys are written, every old key is still read,
-// and nothing old is deleted yet. A phone set up last week (old keys only) must carry on exactly as before.
 const OLD_SETUPS = {
   'the staff page (bld.device.code, bld.scriptUrl)': { 'bld.device.code': CODE, 'bld.scriptUrl': SINK },
   'the old round card (cdhub.sink.code, cdhub.sink.url)': { 'cdhub.sink.code': CODE, 'cdhub.sink.url': SINK }
 };
 
 async function openWithKeys(page, guard, keys) {
-  rooms(guard.world);   // no BLD-save-webapp.json and no address in the config: only what the phone kept can turn saving on
+  rooms(guard.world);
   const sent = [];
   await page.route(SINK, async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
@@ -345,7 +329,6 @@ for (const [from, keys] of Object.entries(OLD_SETUPS)) {
     await expect(page.locator('.rsave').first()).toHaveText(/^Saved \d\d:\d\d$/);
     await expect(page.getByRole('dialog', { name: 'Staff code' })).toHaveCount(0);
     expect(sent.map((b) => b.code)).toEqual([CODE]);
-    // the old keys are still there (removed only in the last stage)
     const kept = await page.evaluate((ks) => ks.map((k) => localStorage.getItem(k)), Object.keys(keys));
     expect(kept).toEqual(Object.values(keys));
   });
@@ -367,7 +350,6 @@ test('Switch off here writes only the new key cdhub.save.off; Use these clears i
   await expect(page.locator('#sinkcard')).toContainText('Saving on this device: off');
   expect(await page.evaluate(() => [localStorage.getItem('cdhub.save.off'), localStorage.getItem('cdhub.sink.off')])).toEqual(['1', null]);
 
-  // An old phone may hold both flags. Turning saving back on must clear both, or the old one keeps the phone off.
   await page.evaluate(() => localStorage.setItem('cdhub.sink.off', '1'));
   await page.locator('#sinkurl').fill(SINK);
   await page.locator('#sinkcode').fill(CODE);
@@ -379,7 +361,7 @@ test('Switch off here writes only the new key cdhub.save.off; Use these clears i
 
 test('BLD-save-webapp.json with optional set_at and set_by still gives the save address; nothing depends on them', async ({ page, guard }) => {
   rooms(guard.world);
-  setFile(guard.world, 'BLD-save-webapp.json', JSON.stringify({ url: SINK, set_at: '2026-11-15', set_by: 'owner' }));
+  setFile(guard.world, 'BLD-save-webapp.json', JSON.stringify({ url: SINK, set_at: '2026-11-15', set_by: 'user' }));
   const sent = [];
   await page.route(SINK, async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
@@ -397,7 +379,7 @@ test('BLD-save-webapp.json with optional set_at and set_by still gives the save 
 });
 
 test.describe('one copy for both pages', () => {
-  test.use({ allowedConsole: [/404/] });   // the staff page's optional module files may answer 404, as in its own specs
+  test.use({ allowedConsole: [/404/] });
   test('a phone set up on the staff page saves in CD Hub with no code prompt, and the hub reads the shared copy', async ({ page, guard }) => {
     rooms(guard.world);
     const sent = [];
@@ -405,7 +387,7 @@ test.describe('one copy for both pages', () => {
     await page.route(SINK, async (route) => {
       if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
       const body = JSON.parse(route.request().postData() || '{}');
-      if (body.action === 'read') {   // the staff page's reads; only saves are counted
+      if (body.action === 'read') {
         return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: [], tables: { area: [], subject: [], occupancy: [], subject_status: [], requirement: [] } } } });
       }
       if (body.code) sent.push(body);
@@ -416,7 +398,6 @@ test.describe('one copy for both pages', () => {
     expect(await page.evaluate(() => ['cdhub.staff.code', 'cdhub.save.url', 'bld.device.code', 'bld.scriptUrl'].map((k) => localStorage.getItem(k))))
       .toEqual([CODE, SINK, CODE, SINK]);
 
-    // Take the staff page's own copy away: CD Hub must still be on from the shared copy alone.
     await page.evaluate(() => { localStorage.removeItem('bld.device.code'); localStorage.removeItem('bld.scriptUrl'); });
     await page.goto('cdhub/');
     if (await page.locator('#signinbtn').isVisible()) await page.locator('#signinbtn').click();
@@ -428,3 +409,4 @@ test.describe('one copy for both pages', () => {
     expect(sent.map((b) => b.code)).toEqual([CODE]);
   });
 });
+

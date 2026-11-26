@@ -1,18 +1,11 @@
 #!/usr/bin/env node
-// Is branch protection on `main` still on, does it still require the check that actually exists, and can the alarm
-// still open an Issue (GitHub Issues switched on)? Also reports, as a note, how GitHub Pages is publishing.
-// Reads only what a normal read token can see (GET /branches/main). Needs no admin token and changes nothing.
-//   GITHUB_REPOSITORY=owner/repo GH_TOKEN=... node tests/support/check-protection.js
-// Exit 0 = fine, 1 = problem (the workflow then opens the one "protection-off" issue).
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
 const REQUIRED_JOB = 'Browser tests (pretend Google and Drive)';
-const PRIVACY_JOB = 'Privacy guard (public repo)'; // .github/workflows/privacy-guard.yml: blocks private material (repo is PUBLIC)
+const PRIVACY_JOB = 'Privacy guard (public repo)';
 
-/** Pure decision, so it can be tested without GitHub. branch = the JSON from GET /branches/main.
- *  privacyText = privacy-guard.yml (undefined = not checked, null = file missing). */
 function evaluate(branch, workflowText, repo, privacyText) {
   const problems = [];
   const notes = [];
@@ -44,7 +37,7 @@ module.exports = { evaluate, REQUIRED_JOB, PRIVACY_JOB };
 
 if (require.main === module) {
   const repo = process.env.GITHUB_REPOSITORY;
-  if (!repo) { console.error('Set GITHUB_REPOSITORY=owner/repo'); process.exit(2); }
+  if (!repo) { console.error('Set GITHUB_REPOSITORY=user/repo'); process.exit(2); }
   const branch = JSON.parse(execFileSync('gh', ['api', `repos/${repo}/branches/main`], { encoding: 'utf8' }));
   const wf = fs.readFileSync(path.join(__dirname, '..', '..', '.github', 'workflows', 'tests.yml'), 'utf8');
   let repoInfo = null;
@@ -54,7 +47,7 @@ if (require.main === module) {
   const { problems, notes } = evaluate(branch, wf, repoInfo, privacy);
   try {
     const type = execFileSync('gh', ['api', `repos/${repo}/pages`, '--jq', '.build_type'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    notes.push(type === 'workflow' ? 'Pages publishes through "Publish site (after tests)": the tests gate the live site.' : `Pages build type is "${type}": the live site is still published straight from the branch, NOT gated by the tests (needs Lisa's Settings click, see TESTS.md).`);
+    notes.push(type === 'workflow' ? 'Pages build type: workflow.' : ('Pages build type: ' + type));
   } catch (e) { notes.push('Could not read the Pages setting with this token.'); }
   const lines = [problems.length ? '## ❌ Branch protection needs a look' : '## ✅ Branch protection is on', ''];
   problems.forEach((p) => lines.push('- ' + p));
@@ -65,3 +58,4 @@ if (require.main === module) {
   process.stdout.write(text);
   process.exit(problems.length ? 1 : 0);
 }
+

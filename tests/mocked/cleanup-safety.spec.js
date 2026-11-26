@@ -1,6 +1,3 @@
-// Extra safety for the clean-up tools: kept-copy proof, folder contents, zero-byte,
-// odd prefixes, re-check before bin, resume, shortcuts, and sign-in expiry.
-// Every write stays inside the pretend Drive or the pretend plugged-in drive.
 const crypto = require('crypto');
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
@@ -338,3 +335,4 @@ test('a sign-in that expires during a personal scan is reported and stops the sc
   await expect(page.locator('#view')).toContainText('Sign-in expired');
   expect(patched(w)).toEqual([]);
 });
+

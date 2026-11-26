@@ -1,8 +1,4 @@
 'use strict';
-/**
- * 22 Nov 2026 (live: a job save spent 7.7-12.8 s in lookups_rules, 65% of 19.6 s): each list is read once per save, and
- * the whole job log is read for its note check only when the save is a note. Measured on a 1,079-row job log.
- */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
@@ -15,7 +11,7 @@ const NOW = Date.UTC(2026, 10, 22, 10, 0, 0);
 function env1079() {
   const env = standardEnv({ nowMs: NOW, props: { TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true' } });
   env.addFile('BLD-check_type.csv', fx.headerOnly(TYPE_H));
-  const t = save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: { type_key: 'bowls', label: 'Bowls', target: 'area', effective_from: '2026-01-01' } }));
+  const t = save(env, req(env, { code: env.codes.user, table: 'check_type', fields: { type_key: 'bowls', label: 'Bowls', target: 'area', effective_from: '2026-01-01' } }));
   assert.equal(t.ok, true, JSON.stringify(t));
   const rows = [LOG_H.join(',')];
   for (let i = 0; i < 1079; i++) {
@@ -36,8 +32,8 @@ test('a job save on a 1,079-row job log reads the log once (for the save itself)
   const reads = countReads(env);
   const r = save(env, req(env, { code: env.codes.staff, table: 'check_log', fields: { check_type_id: typeId, area_id: 'area-t1', outcome: 'ok' } }));
   assert.equal(r.ok, true, JSON.stringify(r));
-  assert.equal(reads['BLD-check_log.csv'], 1, JSON.stringify(reads));   // was 2: the save's own read + the note lookup
-  assert.ok((reads['BLD-check_type.csv'] || 0) <= 1, JSON.stringify(reads));   // was up to 4 (one per lookup on it)
+  assert.equal(reads['BLD-check_log.csv'], 1, JSON.stringify(reads));
+  assert.ok((reads['BLD-check_type.csv'] || 0) <= 1, JSON.stringify(reads));
 });
 
 test('a note still checks the record it points at: a real record saves, an unknown one is refused', () => {
@@ -56,3 +52,4 @@ test('a note with no record named is still refused, and a done job naming a reco
   const b = save(env, req(env, { code: env.codes.staff, table: 'check_log', fields: { check_type_id: typeId, area_id: 'area-t1', outcome: 'ok', note_for_id: 'clg-old5' } }));
   assert.equal(b.code, 'INVALID'); assert.match(b.fields.note_for_id, /Only a note/);
 });
+

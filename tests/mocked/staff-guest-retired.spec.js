@@ -35,3 +35,4 @@ test('the guest page still lists rooms when the need list cannot be read', async
   await page.goto('cdhub/staff/guest/');
   await expect(page.getByText('OLD9').first()).toBeVisible();
 });
+

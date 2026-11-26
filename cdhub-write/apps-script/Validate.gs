@@ -1,6 +1,4 @@
-/** Checking what the browser sends. Every message is plain English: staff read them. */
 
-/** Build an Error that carries a machine code and a plain-English message. */
 function err_(code, message, extra) {
   var e = new Error(message);
   e.code = code;
@@ -9,7 +7,7 @@ function err_(code, message, extra) {
   return e;
 }
 
-var TEMP_RE_ = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (Lisa, 7 Nov 2026)
+var TEMP_RE_ = /^-?\d{1,2}(\.\d)?$/;
 var ID_RE_ = /^[A-Za-z0-9][A-Za-z0-9_.\-]{0,80}$/;
 var DATE_RE_ = /^\d{4}-\d{2}-\d{2}$/;
 var ISO_DT_RE_ = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+\-]\d{2}:\d{2})$/;
@@ -23,17 +21,11 @@ function isRealDate_(s) {
   return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
 
-/**
- * Check browser input against a table spec.
- * @return {{clean:Object, errors:Object}} errors maps field name -> message.
- */
 function validateInput_(spec, fields, lookups, nowMs, opts) {
   var errors = {}, clean = {};
   fields = fields || {};
   var name;
 
-  // "Save anyway" (overseer 12 Nov 2026): an unusual value (temperature outside TEMP_MIN..TEMP_MAX, a time more than
-  // PERIOD_MAX_AGE_HOURS ago) is a warning, not a stop. Any table takes confirm_unusual = yes; it is never a column.
   var confirmed = String(fields.confirm_unusual == null ? '' : fields.confirm_unusual).trim() === 'yes', warn = false;
   if (!Object.prototype.hasOwnProperty.call(spec.input, 'confirm_unusual') && fields.confirm_unusual != null &&
       String(fields.confirm_unusual).trim() !== '' && !confirmed) errors.confirm_unusual = 'Not one of: yes.';
@@ -102,7 +94,7 @@ function validateInput_(spec, fields, lookups, nowMs, opts) {
           else clean[name] = v;
         }
         break;
-      case 'number':   // any measured value (readings, 14 Nov 2026): no unit in the number, no range here (limits are rows)
+      case 'number':
         if (!/^-?\d{1,9}(\.\d{1,6})?$/.test(v)) errors[name] = 'Type a number, e.g. 0.05 or 21.4.';
         else clean[name] = v;
         break;
@@ -111,8 +103,6 @@ function validateInput_(spec, fields, lookups, nowMs, opts) {
         else clean[name] = String(parseInt(v, 10));
         break;
       case 'idlist': {
-        // a pipe-separated list of ids, each of which must exist in the lookup. Sorted and de-duplicated so the
-        // same set of dogs always gives the same text (the repeat-tap guard relies on it).
         var parts = v.split('|').map(function (x) { return x.trim(); }).filter(String), seenIds = {}, uniq = [], badIds = [], j;
         for (j = 0; j < parts.length; j++) {
           if (seenIds[parts[j]]) continue;
@@ -144,11 +134,10 @@ function validateInput_(spec, fields, lookups, nowMs, opts) {
     }
   }
   if (spec.checkRow) spec.checkRow(clean, errors, lookups);
-  if (warn && !errors.confirm_unusual) errors.confirm_unusual = 'Save anyway?';   // the page shows a "Save anyway" button
+  if (warn && !errors.confirm_unusual) errors.confirm_unusual = 'Save anyway?';
   return { clean: clean, errors: errors };
 }
 
-/** Build a complete row object in table-column order from validated input. */
 function buildRow_(spec, clean, ctx) {
   var row = {}, i;
   for (i = 0; i < spec.columns.length; i++) row[spec.columns[i]] = '';
@@ -164,12 +153,6 @@ function rowValues_(columns, row) {
   return columns.map(function (c) { return row[c] === undefined ? '' : row[c]; });
 }
 
-/**
- * A new row's id: the table prefix and 8 random letters/digits, e.g. "sub-7k2q9xbm" (Lisa, 15 Nov 2026, Q4: every record
- * has a permanent meaningless id; the name is a separate, editable column). Never built from a name or a date, so the id
- * says nothing about the row and never needs to change. Existing ids are kept as they are. The second argument is
- * ignored (it was the date). Random bytes from two UUIDs, skipping their fixed version and variant digits.
- */
 function newId_(prefix) {
   var chars = 'abcdefghjkmnpqrstuvwxyz23456789', raw = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
   var at = [0, 2, 4, 6, 8, 10, 20, 22], id = '';
@@ -177,9 +160,9 @@ function newId_(prefix) {
   return prefix + '-' + id;
 }
 
-/** S4.2: a datetime as stored, in UTC: 'YYYY-MM-DDTHH:MM:SSZ'. Screens show London time. */
 function utcIso_(d) { return new Date(d.getTime()).toISOString().replace(/\.\d{3}Z$/, 'Z'); }
 
 function londonIso_(d) {
   return Utilities.formatDate(d, BLD.TZ, "yyyy-MM-dd'T'HH:mm:ssXXX");
 }
+

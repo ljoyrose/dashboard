@@ -82,3 +82,4 @@ test('setting on: Skip leaves the reading saved and sends nothing more', async (
   await expect(page.getByText('Photo for the records')).toHaveCount(0);
   expect(sent.map((b) => b.action)).toEqual(['add']);
 });
+

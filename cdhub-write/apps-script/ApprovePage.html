@@ -35,7 +35,7 @@
   <p class="sub">Nothing here is in the real tables yet. Approve adds one new row. Reject leaves the tables as they are. Approving never overwrites anything.</p>
   <div id="list"><div class="empty">Loading...</div></div>
 
-  <h1 style="margin-top:28px">Edit an entry (owner only)</h1>
+  <h1 style="margin-top:28px">Edit an entry (user only)</h1>
   <p class="sub">Overwrites a wrong entry <b>in place</b>. <b>No record of the old value is kept</b> by this system. Staff cannot do this: they can only add rows, and they tell you about a wrong entry.</p>
   <div class="card">
     <select id="ed-table" aria-label="Which list"><option value="area_reading">Room temperatures</option><option value="occupancy">Where the dogs are</option><option value="thermometer">Thermometers</option><option value="requirement">Needs</option><option value="area_link">Room links</option></select>
@@ -44,13 +44,13 @@
   </div>
   <div id="ed-list"></div>
 
-  <h1 style="margin-top:28px" id="codes">Staff codes (owner only)</h1>
+  <h1 style="margin-top:28px" id="codes">Staff codes (user only)</h1>
   <p class="sub">Switch off the code of someone who has left. It stops working at once for reading and saving. The entry stays in the list and the switch-off is noted in the approvals queue file. A code is shown once, when you make it, and never again.</p>
   <div class="card"><button class="ok" id="sc-show" type="button">Show staff codes</button><div class="msg" id="sc-msg"></div></div>
   <div class="card">
     <b>Give someone a code</b>
     <input id="sc-name" type="text" maxlength="60" autocomplete="off" placeholder="Their name" aria-label="Their name">
-    <select id="sc-role" aria-label="Role"><option value="STAFF">Staff</option><option value="OWNER">Owner</option><option value="VET">Vet</option><option value="TRAINER">Trainer</option></select>
+    <select id="sc-role" aria-label="Role"><option value="STAFF">Staff</option><option value="USER">User</option><option value="VET">Vet</option><option value="TRAINER">Trainer</option></select>
     <button class="ok" id="sc-issue" type="button">Make their code</button>
     <div class="msg" id="sc-imsg"></div>
   </div>
@@ -71,7 +71,7 @@
   <div class="card"><button class="ok" id="sc-sync" type="button">Fill the code register</button><div class="msg" id="sc-smsg"></div>
     <p class="sub">Adds every code that is not yet in BLD-code_register (names, roles and dates only). Safe to press again.</p></div>
 
-  <h1 style="margin-top:28px" id="inspect">Inspector links (owner only)</h1>
+  <h1 style="margin-top:28px" id="inspect">Inspector links (user only)</h1>
   <p class="sub">A link an inspector opens with no login. It shows only the dogs and fields you tick, never scores, and it cannot save anything. It ends by itself after its last day, or when you press Stop.</p>
   <div class="card">
     <button class="ok" id="in-new" type="button">Make a link</button>
@@ -121,7 +121,6 @@
   }
   load();
 
-  /* ---- staff codes: switch one off ---- */
   function scMsg(t){ document.getElementById('sc-msg').textContent=t; }
   /* the owner 16 Nov 2026: active codes only unless "Show switched-off and replaced" is ticked (starts off); search by name,
      role or name tag; active first, then by name. Ended codes stay stored; they are only hidden here. */
@@ -192,7 +191,6 @@
       });
   }
   document.getElementById('sc-show').onclick=showStaff;
-  // ?page=approve&section=codes (or #codes) opens the codes list. &section=inspect (or #inspect) opens Inspector links.
   try {
     google.script.url.getLocation(function(loc){
       if((loc.parameter && loc.parameter.section==='codes') || loc.hash==='codes'){ document.getElementById('codes').scrollIntoView(); showStaff(); }
@@ -200,7 +198,6 @@
     });
   } catch(e) { /* not inside Apps Script: nothing to do */ }
 
-  /* ---- staff codes: make one, or a new one for the same person. The code is shown once, here only. ---- */
   function showOnce(r){
     document.getElementById('sc-once-who').textContent='For '+r.who+' ('+r.role+'). Name tag '+r.id+'.';
     document.getElementById('sc-once-code').textContent=r.code;
@@ -232,7 +229,6 @@
       .withFailureHandler(function(e){ m.textContent='Failed: '+whyFailed(e); }).ui_codeRegisterSync();
   };
 
-  /* ---- owner edit ---- */
   function edMsg(t){ document.getElementById('ed-msg').textContent=t; }
   document.getElementById('ed-show').onclick=function(){
     edMsg('Loading...');
@@ -264,7 +260,6 @@
     go.onclick=function(){
       if(!cb.checked){ msg.textContent='Tick the box first.'; return; }
       var f={}; Object.keys(inputs).forEach(function(k){ f[k]=inputs[k].value; });
-      // Same rule and words as tempPairError_ in Specs.gs and BLDTempPair (staff/lib/temp-pair.js).
       var lo=parseFloat(f.min_c), hi=parseFloat(f.max_c);
       if(f.min_c!==undefined&&f.max_c!==undefined&&String(f.min_c).trim()!==''&&String(f.max_c).trim()!==''&&!isNaN(lo)&&!isNaN(hi)&&lo>hi){
         msg.textContent='The lowest reading cannot be higher than the highest reading.'; return;
@@ -277,9 +272,7 @@
     form.appendChild(go); form.appendChild(msg); card.appendChild(form);
   }
 
-  /* ---- inspector links (Inspect.gs) ---- */
   var IN_NAMES={subject:'Dog',microchip:'Microchip',health_screen:'Health tests',fit_to_breed:'Fit to Breed',litter:'Litters',subject_status:'Status',area_reading:'Temperatures',check_log:'Jobs: health checks, bowls, cleaning'};
-  // Suggested set (Breed Better spec S10): name, sex, DOB, chip last 4, health and Fit to Breed results, litters with date of birth
   var IN_DEFAULT={subject:['name','sex','dob'],microchip:['chip_number'],health_screen:'*',fit_to_breed:'*',litter:['dob'],
     area_reading:['room','reading_type','min_c','max_c','spot_c','taken_at','in_range','mitigation_note'],   // who typed it: off unless ticked
     check_log:['job','room','dog','outcome','amount','happened_at','note']};
@@ -382,3 +375,4 @@
 </script>
 </body>
 </html>
+

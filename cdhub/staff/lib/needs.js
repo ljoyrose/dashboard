@@ -17,11 +17,6 @@
       return r && r.need_type === needType && r.target_table === targetTable && String(r.target_id) === String(targetId);
     });
   }
-  /**
-   * True when the target is needed / in use on `on` (YYYY-MM-DD London day). opts.absentIs (default true) is the
-   * answer for a target with NO rows of that need_type: true = open (rooms, thermometers); false = only what a row
-   * names is covered (e.g. litter.jobs, so old litters with no row are never current).
-   */
   function coversDay(reqRows, needType, targetTable, targetId, on, opts) {
     var rows = rowsFor(reqRows, needType, targetTable, targetId);
     if (!rows.length) return !(opts && opts.absentIs === false);
@@ -29,14 +24,13 @@
     if (!d) return false;
     return rows.some(function (r) { var f = day(r.from_date), t = day(r.to_date); return (!f || f <= d) && (!t || d <= t); });
   }
-  /** The last day the target is covered, or '' when it has no rows or a row with no end. For "(retired 11/11/26)". */
   function endDay(reqRows, needType, targetTable, targetId) {
     var rows = rowsFor(reqRows, needType, targetTable, targetId), last = '';
     if (!rows.length) return '';
     for (var i = 0; i < rows.length; i++) { var t = day(rows[i].to_date); if (!t) return ''; if (t > last) last = t; }
     return last;
   }
-  /** Today in London as YYYY-MM-DD. */
   function today(now) { return new Date(now || Date.now()).toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); }
   return { coversDay: coversDay, endDay: endDay, today: today };
 }));
+

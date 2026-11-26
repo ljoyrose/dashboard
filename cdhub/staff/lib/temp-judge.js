@@ -25,11 +25,6 @@
   function num(v) { if (v === '' || v == null) return null; var s = String(v).trim(); return /^-?\d+(\.\d+)?$/.test(s) ? parseFloat(s) : null; }
   var BREACH = { cold: 1, spotcold: 1, spothot: 1 };
 
-  /**
-   * r: {min, max, spot}; band: the row the room's youngest dog picked {min, max}; adult: the open-ended row {min, max}
-   * or null; puppy: true when band is an age row with an upper age (the caller knows its own row shape).
-   * Returns 'ok' | 'cold' | 'warm' | 'spotcold' | 'spothot' | 'nospot' | 'unknown' (no row at all).
-   */
   function judge(r, band, adult, puppy) {
     var lo = num(r && r.min), hi = num(r && r.max), sp = num(r && r.spot);
     puppy = !!(puppy && band && adult && band !== adult);
@@ -45,7 +40,6 @@
     return room;
   }
   function isBreach(k) { return !!BREACH[k]; }
-  /** Plain words for a state, for screens and print. */
   function words(k, band, adult) {
     if (k === 'cold') return 'below the limit';
     if (k === 'warm') return 'over ' + (adult || band ? (adult || band).max : '') + ' °C: cooling action';
@@ -56,3 +50,4 @@
   }
   return { judge: judge, isBreach: isBreach, words: words, num: num };
 }));
+

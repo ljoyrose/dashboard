@@ -1,10 +1,4 @@
 name: Privacy guard
-# This repo is PUBLIC. Fails any PR or push that adds a denylisted term, an email address, a Drive id or link,
-# a phone number or a data path (rules: tools/privacy-guard/privacy_guard.py). The denylist lives ONLY in the
-# repo secret PRIVACY_DENYLIST (one term per line). Findings print file:line + rule, never the term.
-# The job "Privacy guard (public repo)" is a required check on main (see README). Do not rename it.
-# Dependabot PRs cannot read PRIVACY_DENYLIST: for them only (actor and dependabot/ branch), every rule except the terms rule still runs.
-# Anyone else with the secret missing still fails closed. Daily and hand-started runs are REPORT-ONLY: counts by rule in the log, never locations, never fail, upload nothing.
 on:
   push:
   pull_request:
@@ -21,8 +15,6 @@ on:
 permissions:
   contents: read
 
-# A newer push to the same pull request cancels the older PR run (the new head is scanned in full).
-# Pushes, the daily count and hand-started runs are never cancelled. Never path-filtered.
 concurrency:
   group: privacy-guard-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -61,7 +53,6 @@ jobs:
           MODE: ${{ inputs.mode || 'history' }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
-          # Dependabot PRs get no repo secrets, only "Dependabot secrets". Only for a Dependabot pull request: scan every OTHER rule.
           IS_DEPENDABOT: ${{ github.event_name == 'pull_request' && github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/') }}
         run: |
           G=tools/privacy-guard/privacy_guard.py
@@ -84,7 +75,6 @@ jobs:
                else python3 $G --range "$BEFORE..HEAD"; fi ;;
           esac
 
-      # A push to main that adds a finding: the run is red AND one issue opens (GitHub emails the owner).
       - name: Red on main? Open or update the one issue
         if: ${{ failure() && steps.scan.outcome == 'failure' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         continue-on-error: true
@@ -97,3 +87,4 @@ jobs:
         run: node tests/support/report-issue.js --state green --label privacy-red
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

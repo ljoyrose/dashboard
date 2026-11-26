@@ -62,3 +62,4 @@ test('no link_kind rule rows: no label (the page uses its own fallback); unsafe 
   assert.equal(P.safeUrl('javascript:alert(1)'), '');
   assert.equal(P.safeUrl('https://x.org/"onmouseover'), '');
 });
+

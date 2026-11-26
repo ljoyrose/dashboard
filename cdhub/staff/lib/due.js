@@ -1,12 +1,3 @@
-/*!
- * BLDDue - when each job was last done and when it is next due, from BLD-check_type and BLD-check_log rows.
- * Works everything out from rows the owner entered: nothing here names a job. No screen, no saving, no data.
- *
- * Reads two check_type columns that are NOT on the sheet yet. Until they are, every job is simply "as needed":
- *   every_days  whole number of days between jobs; blank means as needed
- *   includes    type_keys this job also covers, separated by | (a full groom can restart nails and ears;
- *               a whole-site clean can restart each room's daily clean, except rooms in its not_in_areas)
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.BLDDue = factory();
@@ -45,7 +36,6 @@
     return best;
   }
   function ruleOn(rules, key, day) { var row = ruleRow(rules, key, day); return !!(row && flagOn(row.value)); }
-  /** All-subject checks can leave juveniles out. No row and no setting = include them. */
   function excludeJuvenile(rules, typeKey, day, settings) {
     var best = null;
     (settings || []).forEach(function (r) {
@@ -112,7 +102,6 @@
     }
     return best;
   }
-  /** On site that day: a placement in force, and a status that is not sold, collected or deceased. No occupancy list = the caller already chose. */
   function onSite(subject, occupancy, statuses, day) {
     if (!subject || !subject.id) return false;
     if (!occupancy) return true;
@@ -151,7 +140,6 @@
     return '';
   }
 
-  /** A whole number of days above zero, or null for as needed. */
   function everyDays(v) {
     var s = String(v == null ? '' : v).trim();
     if (!/^[0-9]+$/.test(s)) return null;
@@ -162,19 +150,11 @@
     return String(row.includes || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean);
   }
 
-  /** type_key with dots and underscores ignored, so round.presence and round_presence are one check. */
   function canonKey(typeKey) { return String(typeKey || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ''); }
-  /** cty-water_bowls-2 and cty-water_bowls-1 share cty-water_bowls. A random id has no base. */
   function baseId(id) { var m = /^(cty-.+)-\d+$/.exec(String(id || '').trim()); return m ? m[1] : ''; }
   function normLabel(s) { return String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim(); }
-  /** 0 = the original (no trailing number, or -1). 2, 3… = a later copy such as cty-water_bowls-2. */
   function copyRank(id) { var m = /-(\d+)$/.exec(String(id || '')); if (!m) return 0; var n = parseInt(m[1], 10); return n <= 1 ? 0 : n; }
 
-  /**
-   * Rows that are the same check: the same type_key (punctuation ignored), the same base id
-   * (cty-water_bowls-1 and cty-water_bowls-2), or the same label on the same target.
-   * A real version change keeps one type_key and a later effective_from; that stays one group.
-   */
   function families(types) {
     var rows = (types || []).filter(function (r) { return r && (r.id || r.type_key); });
     var parent = [];
@@ -192,10 +172,6 @@
     return Object.keys(groups).map(function (k) { return groups[k]; });
   }
 
-  /**
-   * The row a new save should name. One type_key: the newest row in force (a real change of frequency or wording).
-   * Several type_keys that are the same check: the original, not the later copy.
-   */
   function mainOf(group, today) {
     var day = String(today || '9999-12-31').slice(0, 10);
     var live = (group || []).filter(function (r) { return !isOff(r.active) && (!r.effective_from || String(r.effective_from).slice(0, 10) <= day); });
@@ -210,7 +186,6 @@
     return reps[0];
   }
 
-  /** check_type id -> the type_key new saves and calendars use for that family. */
   function familyKeyOf(types, today) {
     var map = {};
     families(types).forEach(function (g) {
@@ -220,7 +195,6 @@
     return map;
   }
 
-  /** Every check_type id in the same family as this id or type_key. */
   function familyIds(types, keyOrId) {
     var want = String(keyOrId || ''), hit = null;
     families(types).forEach(function (g) {
@@ -233,8 +207,6 @@
     return g.some(function (r) { return String(r.type_key || '').indexOf('round.') === 0 || canonKey(r.type_key) === 'roundpresence'; });
   }
 
-  /** For each check, the row in force today. A later copy of the same check (same name or base id) is not a second job.
-   *  A job whose latest row of that type_key is switched off is left out. */
   function jobsInForce(types, today) {
     var best = {};
     (types || []).forEach(function (r) {
@@ -244,32 +216,26 @@
     var list = Object.keys(best).map(function (k) { return best[k]; }).filter(function (r) { return !isOff(r.active) && r.target !== 'item'; });
     var out = [];
     families(list).forEach(function (g) {
-      if (roundFamily(g)) return;   // Present and the rest of the round are written by The round, never a job
+      if (roundFamily(g)) return;
       var main = mainOf(g, today);
       if (main && best[main.type_key]) out.push(best[main.type_key]);
     });
     return out;
   }
 
-  /** Log rows that still stand: a corrected row gives way to the row that corrects it. */
   function standing(logs) {
     var replaced = {};
     (logs || []).forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = true; });
     return (logs || []).filter(function (r) { return !replaced[r.id]; });
   }
 
-  /* a room job about dogs: one room tap saves one line for each dog ticked */
   function perDogRoom(job) { return job.target === 'area' && job.site_scope === 'per_dog'; }
-  /* only_in_areas: room ids by |, the only rooms a room job belongs to (isolation jobs); blank = every room */
   function inRooms(job, areaId) { var only = listOf(job.only_in_areas); return !only.length || only.indexOf(areaId || '') >= 0; }
-  /* a whole-site job about dogs (health check): each dog as they go, or all at once; one line per dog either way */
   function perDogSite(job) { return job.target === 'none' && job.site_scope === 'per_dog'; }
-  /* the dogs such a job covers here: target.dogs ([{id, area_id}]) less those in rooms it never covers (isolation) */
   function dogsFor(job, target) {
     var never = listOf(job.not_in_areas);
     return (target.dogs || []).filter(function (x) { return never.indexOf(x.area_id || '') < 0 && inGroups(job, x.groups); });
   }
-  /** Subjects a whole-site job covers on one day: on site then, born, and juveniles only when the check still includes them. */
   function subjectsFor(job, subjects, day, opts) {
     opts = opts || {};
     day = ymd(day);
@@ -280,14 +246,11 @@
     if (perDogSite(job) && excludeJuvenile(opts.rules, job.type_key, day, opts.settings)) list = list.filter(function (d) { return !isJuvenile(d, day, opts.rules); });
     return list;
   }
-  /* only_groups: group keys by |, the only dogs a dog job belongs to (e.g. breeding dogs); blank = every dog. An owner row, dated by
-     effective_from like the rest of the job. groups = that dog's groups on the day (groupsOf); not given = the caller does not know, so the job shows */
   function inGroups(job, groups) {
     var only = listOf(job.only_groups);
     if (!only.length || !groups) return true;
     return only.some(function (k) { return groups.indexOf(k) >= 0; });
   }
-  /** A dog's groups on `day`: BLD-links rows role member_of from the dog (subject/subjects) to a group, open on that day. */
   function groupsOf(links, subjectId, day) {
     return (links || []).filter(function (k) {
       return k.role === 'member_of' && (k.from_table === 'subject' || k.from_table === 'subjects') && k.from_id === subjectId && k.to_table === 'group'
@@ -309,7 +272,6 @@
     return t === 'none';
   }
   function listOf(v) { return String(v || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean); }
-  /* a whole-site job (target none) that includes room jobs restarts them in every room, except the rooms it never covers (isolation) */
   function siteCoversRoom(version, target) {
     return !!target.area_id && !target.subject_id && version.target === 'none' && includesOf(version).length > 0 &&
       listOf(version.not_in_areas).indexOf(target.area_id) < 0;
@@ -320,37 +282,23 @@
     return (row.subject_id || '') === (target.subject_id || '') && (row.area_id || '') === (target.area_id || '');
   }
 
-  /* a visitor's record (taken_by visit:<link id>) is kept separate: it counts only when its counts_due stamp says true or, with no stamp,
-     when that visit's BLD-inspect_link row lists the job in record_counts */
   function visitCounts(visits) {
     var m = {};
     (visits || []).forEach(function (v) { if (v && v.id) m[v.id] = listOf(v.record_counts); });
     return m;
   }
-  /** The visit a record was saved under: taken_by 'visit:<link id>' (or its visit_id / grant_id column); '' for staff. */
   function visitOf(log) {
     var by = String(log.taken_by || '');
-    return log.visit_id || log.grant_id || (by.indexOf('visit:') === 0 ? by.slice(6) : '');   // grant_id: the planned name for visit_id (schema Q-N2)
+    return log.visit_id || log.grant_id || (by.indexOf('visit:') === 0 ? by.slice(6) : '');
   }
   function counts(log, version, vm) {
     var visit = visitOf(log);
     if (!visit) return true;
-    var stamp = String(log.counts_due || '').toLowerCase();   // stamped on the row when it was saved: what the visit granted then
+    var stamp = String(log.counts_due || '').toLowerCase();
     if (stamp === 'true' || stamp === 'false') return stamp === 'true';
     var keys = vm[visit];
     return !!keys && keys.indexOf(version.type_key) >= 0;
   }
-  /**
-   * Every job for one dog ({subject_id}; add everyDog: true, and dogArea: the dog's room, to count that dog on room jobs saved per dog), one room ({area_id}),
-   * Room: add roomDogIds: [dog ids in the room] so a room job saved per dog is due only with a dog there, and counted per dog.
-   * Add dogs: [{id, area_id}] (the dogs on site here) to show a whole-site job about dogs on a dog or room too, done once each of those dogs has a line.
-   * one litter ({litter_id}: jobs with target litter) or the whole site ({}).
-   * Status: late, today, ok, never (has a frequency, no record yet) or as_needed.
-   * visits: BLD-inspect_link rows (optional). A visitor's record counts only if stamped counts_due true or, unstamped, if its visit lists the job in record_counts;
-   * with no visits given, every visitor record is left out.
-   * reset_by is the type_key of the bigger job that last restarted this one, if it did.
-   */
-  /** Birth day as YYYY-MM-DD, or '' when none was given. */
   function oneBirth(x) {
     if (x == null) return '';
     if (typeof x !== 'object') {
@@ -361,7 +309,6 @@
     }
     return oneBirth(x.dob || x.born || x.born_on || x.birth_date || '');
   }
-  /** Birth days in scope, or null when the caller did not name anyone. '' is a missing birth date. */
   function listedBirths(scope) {
     if (scope == null) return null;
     if (Array.isArray(scope)) return scope.length ? scope.map(oneBirth) : null;
@@ -373,7 +320,6 @@
     if (!list.length && (scope.dob || scope.born || scope.born_on)) list.push(oneBirth(scope));
     return list.length ? list : null;
   }
-  /** Birth days for one due target. A litter uses its birth date. One dog uses that dog. Several dogs: each of them. */
   function scopeBirths(target) {
     if (!target) return null;
     if (target.litter_id) return [oneBirth(target.born || target.dob || '')];
@@ -393,7 +339,6 @@
     if (target.litters && target.litters.length) return target.litters.map(oneBirth);
     return null;
   }
-  /** "from-to:n|from-:n" -> [{from, to, n}]. Blank end age is open. Bad parts are skipped. */
   function mealBands(value) {
     var out = [];
     String(value || '').split('|').forEach(function (part) {
@@ -417,7 +362,6 @@
     });
     return parts.join('|');
   }
-  /** '' when every row is empty or complete. A half-filled row is an error. An empty list writes nothing. */
   function checkMealRows(rows) {
     var bad = '';
     (rows || []).forEach(function (r) {
@@ -432,10 +376,6 @@
     });
     return bad;
   }
-  /**
-   * Rule rows to add for a daily check. Empty times and an empty band table add nothing.
-   * Feeding bands are one job.times_per_day.feeding.by_age row. Incomplete bands are an error and add nothing.
-   */
   function timesRules(typeKey, timesRaw, bandRows) {
     var times = String(timesRaw == null ? '' : timesRaw).trim();
     var rules = [], error = '';
@@ -467,14 +407,6 @@
     });
     return !!(best && !isOff(best.active));
   }
-  /**
-   * Times a day a daily job must be done. The row in force on that day wins (newest effective_from; a later row never
-   * edits an older one). job.times_per_day.<type_key>.by_age is "from-to:n|from-:n" (whole days from birth, inclusive).
-   * Each dog or litter in scope uses the band for its age; the highest count wins. Feeding is the only banded check.
-   * No matching band, no bands, or no birth date: job.times_per_day.<type_key>, else job.times_per_day, else 1.
-   * food_bowls uses Feeding's count when that check is in force; otherwise its own row or 1.
-   * scope may be omitted.
-   */
   function timesPerDay(rules, typeKey, day, scope) {
     day = ymd(day) || String(day || '').slice(0, 10);
     if (typeKey === 'food_bowls' && feedingLive(scope && scope.types, day)) return timesPerDay(rules, 'feeding', day, scope);
@@ -525,8 +457,6 @@
     });
     return Object.keys(ages).map(Number).sort(function (x, y) { return x - y; }).map(function (x) { return addDays(born, x); });
   }
-  /* opts.rules: the owner's rule rows (optional), for times_per_day and by-age jobs. A litter target may carry born (its birth date).
-     opts.records: weight, dispense, vaccination, microchip rows, used for those jobs' last date. */
   function forTarget(types, logs, target, today, visits, opts) {
     var byId = {}, vm = visitCounts(visits), rules = (opts && opts.rules) || [], settings = (opts && opts.settings) || [], records = (opts && opts.records) || {}, todayCount = {}, dogToday = {};
     (types || []).forEach(function (r) { byId[r.id] = r; });
@@ -538,7 +468,7 @@
       return found;
     }
     var done = {};              // type_key -> { date, by }
-    var dogDone = {};           // per-dog whole-site job: type_key -> { dog id -> last date }
+    var dogDone = {};
     function mark(key, date, by) { if (!done[key] || date > done[key].date) done[key] = { date: date, by: by }; else if (date === done[key].date && !by) done[key].by = ''; }
     function coveredOf(log) { return String(log.covered_ids || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean); }
     function exceptionIds(log) { var m = {}; String(log.exceptions || '').split('|').forEach(function (p) { var id = String(p.split(':')[0] || '').trim(); if (id) m[id] = 1; }); return m; }
@@ -558,14 +488,13 @@
       });
       return best;
     }
-    /* How one tap is stored today. No setting, or a blank choice, keeps the check's own site_scope. */
     function scoped(job) {
       var s = settingNow(job.type_key), scope = s && String(s.site_scope || '').trim();
       return scope ? Object.assign({}, job, { site_scope: scope }) : job;
     }
     standing(logs).forEach(function (log) {
       var version = byId[log.check_type_id];
-      if (!version || log.outcome === 'not_done' || log.outcome === 'note' || log.outcome === 'part_done') return;   // a note, or part done, is never a done
+      if (!version || log.outcome === 'not_done' || log.outcome === 'note' || log.outcome === 'part_done') return;
       version = scoped(version);
       if (!counts(log, version, vm)) return;
       var date = londonDate(log.happened_at || log.taken_at);
@@ -580,9 +509,9 @@
           mark(key, date, '');
           includesOf(version).forEach(function (k) { mark(aliasType(k), date, key); });
         }
-        return;   // the dogs are on the list; a blank subject_id is not its own done
+        return;
       }
-      if ((cov.length || String(log.exceptions || '').trim()) && !log.subject_id) return;   // an older session row for that day
+      if ((cov.length || String(log.exceptions || '').trim()) && !log.subject_id) return;
       if (siteCoversRoom(version, target)) { includesOf(version).forEach(function (k) { mark(aliasType(k), date, key); }); return; }
       if (perDogSite(version) && target.dogs) {
         var m = dogDone[key] = dogDone[key] || {};
@@ -592,20 +521,19 @@
       if (!sameTarget(log, target, version)) return;
       if (date === today) {
         todayCount[key] = (todayCount[key] || 0) + 1;
-        if (perDogRoom(version) && !target.subject_id && log.subject_id) {   // a room tap writes a line per dog: count times per dog
+        if (perDogRoom(version) && !target.subject_id && log.subject_id) {
           var c = dogToday[key] = dogToday[key] || {};
           c[log.subject_id] = (c[log.subject_id] || 0) + 1;
         }
       }
       mark(key, date, '');
-      includesOf(version).forEach(function (k) { mark(aliasType(k), date, key); });   // the row in force when the job was done
+      includesOf(version).forEach(function (k) { mark(aliasType(k), date, key); });
     });
     function liveDogs(j) {
       var dogs = dogsFor(j, target);
       if (perDogSite(j) && excludeJuvenile(rules, j.type_key, today, settings)) dogs = dogs.filter(function (x) { return !isJuvenile(x, today, rules); });
       return dogs;
     }
-    /* done once every subject it covers here has a line: the date is the oldest one's last line */
     function allDogs(j) {
       var m = dogDone[j.type_key] || {}, dogs = liveDogs(j), date = '';
       for (var i = 0; i < dogs.length; i++) { var x = m[dogs[i].id]; if (!x) return undefined; if (!date || x < date) date = x; }
@@ -661,14 +589,12 @@
       var status = !every ? 'as_needed' : !d ? 'never' : next < today ? 'late' : next === today ? 'today' : 'ok';
       var times = every === 1 ? timesPerDay(rules, j.type_key, today, { births: scopeBirths(target), types: types }) : 1, doneToday = todayCount[j.type_key] || 0;
       if (perDogRoom(j) && target.area_id && !target.subject_id && dogToday[j.type_key]) {
-        /* a room job saved per dog: done as many times as its least-checked dog here (the dogs in the room if given) */
         var per = dogToday[j.type_key], ids = Array.isArray(target.roomDogIds) ? target.roomDogIds : Object.keys(per);
         doneToday = ids.length ? Math.min.apply(null, ids.map(function (id) { return per[id] || 0; })) : 0;
       }
-      if (times > 1 && d && d.date === today && doneToday < times) status = 'today';   // done, but not yet as many times as today needs
+      if (times > 1 && d && d.date === today && doneToday < times) status = 'today';
       var ages = target.litter_id && target.born ? ageDates(rules, j.type_key, today, target.born) : [];
       if (ages.length) {
-        /* due by the litter's age: the latest age date up to today needs a record on or after it */
         var past = ages.filter(function (x) { return x <= today; }), last = past[past.length - 1], coming = ages.filter(function (x) { return x > today; })[0] || '';
         every = null;
         status = !last ? 'ok' : d && d.date >= last ? 'ok' : last === today ? 'today' : 'late';
@@ -684,3 +610,4 @@
 
   return { forTarget: forTarget, timesPerDay: timesPerDay, ageDates: ageDates, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, subjectsFor: subjectsFor, onSite: onSite, excludeJuvenile: excludeJuvenile, isJuvenile: isJuvenile, ownKey: ownKey, ownDate: ownDate, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate, mealBands: mealBands, mealBandText: mealBandText, checkMealRows: checkMealRows, timesRules: timesRules, ruleValue: ruleValue, families: families, mainOf: mainOf, familyKeyOf: familyKeyOf, familyIds: familyIds, canonKey: canonKey };
 }));
+

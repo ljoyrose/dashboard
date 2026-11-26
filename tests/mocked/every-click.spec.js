@@ -1,6 +1,3 @@
-// Every button, tile and link on every page and route: it has a label, and clicking it does something
-// (goes somewhere, opens a tab, changes the page, or asks a question). No dead clicks, no missing pages, no errors.
-// Uses the pretend Google and Drive only. External links are checked (https, new tab) but not opened.
 const { test, expect } = require('../support/test');
 
 const ROUTES = [
@@ -8,7 +5,6 @@ const ROUTES = [
   ['money/', ['#/now', '#/money', '#/dates', '#/todo', '#/accountant', '#/control', '#/e/TESTCO', '#/register/R001'], '#signInBtn'],
   ['cdhub/', ['#/map', '#/work', '#/shape', '#/today', '#/round', '#/dogs', '#/areas', '#/litters', '#/buyers', '#/sops'], '#signinbtn'],
 ];
-// Not clicked here (each has its own test): signing out ends the session for the rest of the crawl.
 const SKIP = '[data-action="signout"], [data-signout], #signOutBtn, [data-skip], .skip';
 
 async function ready(page, base) {
@@ -17,7 +13,6 @@ async function ready(page, base) {
   await page.waitForTimeout(250);
 }
 
-// Tag every visible clickable thing in a fixed order so the same index means the same thing after a reload.
 function tag(withChrome) {
   const sel = 'a[href], button, [data-action], [data-go], [role="button"], summary';
   const seen = [];
@@ -27,14 +22,12 @@ function tag(withChrome) {
     const cs = getComputedStyle(el);
     if (!r.width || !r.height || cs.visibility === 'hidden' || cs.display === 'none') return;
     if (el.closest('[hidden], .hidden')) return;
-    // The header and menus are the same on every screen of a page: crawl them on the first screen only.
     if (!withChrome && el.closest('header, #nav, #next, nav')) return;
     el.setAttribute('data-audit', String(seen.length));
     const name = (el.getAttribute('aria-label') || el.textContent || el.getAttribute('title') || '').replace(/\s+/g, ' ').trim();
     const item = { i: seen.length, tag: el.tagName.toLowerCase(), name, href: el.getAttribute('href'), target: el.getAttribute('target'), disabled: !!el.disabled };
     item.sig = [item.tag, item.name, item.href || '', el.getAttribute('data-action') || '', el.getAttribute('data-go') || '', el.getAttribute('data-list') || ''].join('|');
     item.k = seen.filter((x) => x.sig === item.sig).length; // which copy of the same thing
-    // A plain in-page link (#/..., no data-* behaviour of its own): another one with the same address goes to the same place.
     item.fold = el.matches('button.house-fold');
     item.plain = el.tagName === 'A' && /^#\//.test(item.href || '') && !el.getAttributeNames().some((n) => n.startsWith('data-') && n !== 'data-audit') && !el.getAttribute('target');
     seen.push(item);
@@ -49,16 +42,11 @@ for (const [base, hashes, signBtn] of ROUTES) {
       // Money #/now and CD Hub #/map: every number and row there now opens what it counts (the owner, 2 Nov), so they hold the most links after #/bin.
       test.setTimeout(['#/bin', '#/now', '#/map'].includes(hash) && base !== './' || hash === '#/bin' ? 480_000 : 240_000);
       guard.allowedConsole = guard.allowedConsole || [];
-      // The Drive check opens the computer's folder picker; here it answers "not allowed" so the page shows its message.
       await page.addInitScript(() => { window.showDirectoryPicker = () => Promise.reject(Object.assign(new Error('test'), { name: 'NotAllowedError' })); });
-      // Temperature history is a real page link (cdhub/history.html). It reads a spreadsheet CSV export on load.
-      // Answer that export here so the crawl can follow the link. data-skip stays for skip-to-content only.
       if (base === 'cdhub/') {
         await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export/, (route) =>
           route.fulfill({ status: 200, contentType: 'text/csv', body: 'on_date\n' }));
       }
-      // Folds are remembered (toolkit.js 'dash-fold'): every fresh copy of the screen starts with nothing folded, so a fold clicked
-      // earlier never hides the buttons under it from the rest of the crawl.
       await page.addInitScript(() => { try { localStorage.removeItem('dash-fold'); } catch (e) {} });
       page.on('dialog', (d) => { page.__dialog = (page.__dialog || 0) + 1; d.dismiss().catch(() => {}); });
       await page.goto(base);
@@ -103,10 +91,9 @@ for (const [base, hashes, signBtn] of ROUTES) {
         if (it.disabled || it.fold) continue;
         if (it.plain && landed.has(it.href)) continue;
         if (it.tag === 'a' && it.href && /^(https?:|mailto|tel)/.test(it.href) && !it.href.startsWith('http://127.0.0.1')) continue;
-        // A fresh copy of the starting screen for each click (a click may have changed screen or opened a box).
         await page.goto('about:blank'); await page.goto(url); await ready(page, base);
         const now = await page.evaluate(tag, chrome);
-        const same = now.find((x) => x.sig === it.sig && x.k === it.k); // the same thing, even if the screen drew in a different order
+        const same = now.find((x) => x.sig === it.sig && x.k === it.k);
         if (!same) continue;
         const el = page.locator(`[data-audit="${same.i}"]`);
         if (!(await el.count()) || await el.evaluate((e, s) => !!e.closest(s), SKIP)) continue;
@@ -114,8 +101,6 @@ for (const [base, hashes, signBtn] of ROUTES) {
         const before = page.url();
         await page.evaluate(() => { window.__mut = 0; window.__obs && window.__obs.disconnect(); window.__obs = new MutationObserver((m) => { window.__mut += m.length; }); window.__obs.observe(document, { subtree: true, childList: true, attributes: true, characterData: true }); });
         const dialogs = page.__dialog || 0;
-        // A link that opens a new tab (target="_blank", like "Sample task ready now" -> Money Hub) MUST open one: wait for that
-        // tab's own event for as long as it takes (with 4 workers it can take well over a second), never a guessed short window.
         const opensTab = await el.evaluate((e) => { const a = e.closest('a[href]'); return !!a && a.getAttribute('target') === '_blank'; });
         if (opensTab) {
           const [p] = await Promise.all([context.waitForEvent('page', { timeout: 15_000 }), el.click({ timeout: 3000 })]);
@@ -141,7 +126,7 @@ for (const [base, hashes, signBtn] of ROUTES) {
   }
 }
 
-test('CD Hub Today: the temperature tile opens The round, where temperatures are entered @regression', async ({ page }) => {
+test('t-every-click-spec-1', async ({ page }) => {
   await page.goto('cdhub/');
   await page.locator('#signinbtn').click();
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
@@ -153,3 +138,4 @@ test('CD Hub Today: the temperature tile opens The round, where temperatures are
   await expect(page.locator('h2', { hasText: 'The round' })).toBeVisible();
   await expect(page.locator('.tmin').first()).toBeVisible();
 });
+

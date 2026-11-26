@@ -1,5 +1,3 @@
-// Web Estate alerts (30 Oct 2026): down, SSL or domain inside 30 days, DMARC missing and two SPF records are listed on
-// "Needs a look"; shown only, never written anywhere by the page. Pretend Google; invented rows.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -31,3 +29,4 @@ test('ACCEPT: Needs a look lists an SSL certificate expiring inside 30 days, the
   await expect(card.locator('[data-alert="spf"]')).toHaveCount(1);
   expect(methods.every((m) => m === 'GET')).toBe(true);
 });
+

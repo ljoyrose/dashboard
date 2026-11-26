@@ -1,13 +1,7 @@
-// Page-size budgets, one place for the rule (3 Nov 2026).
-// Each page has a BASE number in its spec. A PR that makes a page heavier does NOT edit that number: it adds ONE new file,
-// tests/budget-growth/<short-name>.json, like {"home": 3000, "why": "Personal Drive bin, PR 273"}. The budget is the base
-// plus every growth file. Two PRs add two different files, so they never conflict (editing the same line did, every time).
-// When a page is made smaller, lower its base in the spec and delete the growth files it no longer needs.
 const fs = require('fs');
 const path = require('path');
 
 const DIR = path.resolve(__dirname, '..', 'budget-growth');
-// Every page named in the two specs; a growth file may name pages from either spec, so a typo is caught here.
 const PAGES = ['home', 'cdhub', 'factory', 'food', 'marketplace', 'money', 'studio', 'privacy'];
 
 function withGrowth(base) {
@@ -27,3 +21,4 @@ function withGrowth(base) {
 }
 
 module.exports = { withGrowth, DIR };
+

@@ -1,7 +1,3 @@
-/* One table look for every app (Lisa 14 Nov 2026: "no jumping about on columns"). A table with class "house-table"
-   gets column widths set once from its headers, never from its rows, so columns stay put as rows load, filter or fold.
-   Numbers sit right in even-width figures. On a phone each row becomes label / value lines (house.css).
-   A header can set its own width in em: <th data-w="14">. Helpers only add the class: this file finds the tables itself. */
 (function (root) {
   'use strict';
   var NUM = /^[−+-]?[£$€]?\d[\d,]*(\.\d+)?\s?(%|kg|g|°C|days?|d|wk|wks)?$/;
@@ -37,7 +33,6 @@
       t.style.setProperty('--ht-min', sum + 'em');
     }
     Array.prototype.forEach.call(t.tBodies, function (b) { Array.prototype.forEach.call(b.rows, function (tr) { label(t, tr); }); });
-    // a column of numbers: its header sits right too (alignment only, the width never moves)
     hs.forEach(function (th, i) {
       var cells = Array.prototype.map.call(t.querySelectorAll('tbody tr'), function (tr) { return tr.cells[i]; }).filter(function (c) { return c && c.tagName === 'TD' && (c.textContent || '').trim(); });
       if (cells.length && cells.every(function (c) { return c.classList.contains('num'); })) th.classList.add('num');
@@ -59,3 +54,4 @@
   root.BLDTables = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : this);
+

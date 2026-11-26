@@ -1,6 +1,3 @@
-// Bin guard: the 00 CHECK list on the Bin page, against the pretend Drive only. Fake ids, never a real file.
-// The page only READS 00 CHECK. ZZ_DELETE and Refer to AI open the guard's own Google page (domain-only web app)
-// with the ticked ids; the page itself never changes Drive for these buttons.
 const { test, expect } = require('../support/test');
 
 const ctx = { window: {} };
@@ -32,7 +29,6 @@ test.describe('Bin page: 00 CHECK (bin guard)', () => {
     const card = page.locator('#checkCard');
     await expect(card).toContainText('back-from-bin-a.txt');
     await expect(card).toContainText('RR_sample-archive-note.txt');
-    // Stage 5: a protected row has no tick box at all, and with no web app there are no buttons to press, only "Waiting for the tidy bot".
     await expect(card.locator('li', { hasText: 'RR_sample-archive-note.txt' }).locator('input')).toHaveCount(0);
     await expect(card.locator('li', { hasText: 'RR_sample-archive-note.txt' })).toHaveAttribute('title', /RR_/);
     await expect(card.locator('[data-check-nourl]')).toBeVisible();
@@ -84,3 +80,4 @@ test.describe('Bin page: 00 CHECK (bin guard)', () => {
     await expect(card.locator('[data-action="checkai"]')).toHaveCount(0);
   });
 });
+

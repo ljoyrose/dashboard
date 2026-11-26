@@ -26,10 +26,8 @@ const ALL = {
     },
   },
 };
-// Pages whose sample data shows coloured left lines: at least one must be found there.
 const HAS_LINES = ['studio', 'marketplace', 'factory'];
 
-// Read every ringed count and every left colour line on the view.
 function scan() {
   const px = (v) => parseFloat(v) || 0;
   const alpha = (c) => { if (!c || c === 'transparent') return 0; const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return 1; const p = m[1].split(/[,/ ]+/).filter(Boolean); return p.length > 3 ? +p[3] : 1; };
@@ -58,7 +56,6 @@ function scan() {
       lines.push({ what: name(e), h, host: r.height, w: lw, radius: px(s.borderTopLeftRadius), radiusB: px(s.borderBottomLeftRadius), hostRadius: px(host.borderTopLeftRadius) });
       continue;
     }
-    // The old look: a thin coloured strip (2 to 4px wide) floating down the left, shorter than its card.
     const w = px(s.width);
     if (w >= 2 && w <= 4 && alpha(s.backgroundColor) > 0.5 && h >= 8 && h < r.height - 1.5) stubs.push(name(e) + ': ' + w + 'x' + Math.round(h) + ' in ' + Math.round(r.height));
   }
@@ -76,7 +73,6 @@ for (const [hub, H] of Object.entries(ALL)) {
       const m = await page.evaluate(scan);
       for (const c of m.counts) {
         if (c.broken) {
-          // Broken: the black badge (light look: #1E1C1A with a white number), its line the same colour, nothing else.
           expect([c.fill, c.ink], `${hub} #/${v}: the broken tokens (light look)`).toEqual(['#1E1C1A', '#FFFFFF']);
           expect([c.bg, c.line, c.color], `${hub} #/${v} ${c.what}: a broken count is the black badge`).toEqual(['rgb(30, 28, 26)', 'rgb(30, 28, 26)', 'rgb(255, 255, 255)']);
           expect(c.img, `${hub} #/${v} ${c.what}: a solid badge`).toBe('none');
@@ -89,8 +85,6 @@ for (const [hub, H] of Object.entries(ALL)) {
       for (const l of m.lines) {
         expect(l.w, `${hub} #/${v} ${l.what}: the line is 3px`).toBeCloseTo(3, 1);
         expect(Math.abs(l.h - l.host), `${hub} #/${v} ${l.what}: the line runs the full height (${l.h} vs ${l.host})`).toBeLessThanOrEqual(1);
-        // A card's line curves with the card's corner. A Needs-you row shell is rounded (12px) and its bar stays straight
-        // (5 Nov: rounded rows; the bar is not a "(" bracket). A host with square corners keeps a straight line.
         const rowShell = /(?:^|\.)hm-row(?:\.|$)/.test(l.what) || (/^li\./.test(l.what) && /(?:^|\.)house-lbar(?:\.|$)/.test(l.what));
         if (rowShell) {
           expect(l.hostRadius, `${hub} #/${v} ${l.what}: the row shell is rounded`).toBeCloseTo(12, 1);
@@ -109,7 +103,6 @@ for (const [hub, H] of Object.entries(ALL)) {
       await page.setViewportSize({ width: W, height: W > 600 ? 800 : 844 });
       await H.open(page, guard);
       await page.mouse.move(W / 2, 200);
-      // Every tab gets a two-digit count (the widest fixed ring), so every tab is checked, waiting, late and broken.
       const m = await page.evaluate(() => {
         const nav = [...document.querySelectorAll('nav.house-tabs')].find((n) => n.getBoundingClientRect().height > 0);
         const tabs = [...nav.querySelectorAll(':scope > .ht, :scope > .ht-more > .ht')];
@@ -182,3 +175,4 @@ test('pages colour their hover icons with the --ljr-N-icon shades, not the fill 
   expect((cd.match(/class="mcard[^"]*" id="\w+" style="--hc:var\(--ljr-\d-icon\)/g) || []).length).toBeGreaterThan(0);
   expect(fa, 'Factory card icons use --ljr-N-icon').toContain("style=\"--hc:var(--ljr-' + x[4] + '-icon)\"");
 });
+

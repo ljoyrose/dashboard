@@ -1,1 +1,1 @@
-{"cdhub": 5600, "why": "Checks register on Compliance and no internal codes in either register (PR 758): index.html hooks only, register code loads when Compliance opens; measured 1243363 against 1240349 allowed"}
+{"cdhub": 5600, "why": "size"}

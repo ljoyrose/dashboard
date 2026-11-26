@@ -1,8 +1,4 @@
 const { tabClick, tabTo } = require('../support/tabs');
-// JOB 34 (group C): Studio gaps only. studio.spec.js already covers tabs, find bar, forms, writes and looks;
-// this adds what it never presses or opens: Sign out and a working Read again (desktop and the phone More menu),
-// the Engine switch write (and a refused write), unknown addresses, two state files, every link, keyboard reach.
-// Invented data only (tests/fixtures/studio/state.js through HUBS.studio.open).
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -37,7 +33,7 @@ test.describe('JOB 34 Studio: header buttons', () => {
     await page.locator('#refreshBtn').click();
     await expect.poll(() => stateReads(guard)).toBeGreaterThan(before);
     await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
-    if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
+    if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
     await expect(page.locator('#banner')).toBeHidden();
     await page.locator('#signOutBtn').click();
     await expect(view(page).locator('[data-action="signin"]')).toBeVisible();
@@ -61,7 +57,7 @@ test.describe('JOB 34 Studio: header buttons', () => {
     await expect(look).toBeVisible();
     await look.getByRole('button', { name: 'Sign out', exact: true }).click();
     await expect(view(page).locator('[data-action="signin"]')).toBeVisible();
-    await expect(look).toBeHidden(); // a press outside the menu's own buttons closes it
+    await expect(look).toBeHidden();
   });
 });
 
@@ -83,7 +79,7 @@ test.describe('JOB 34 Studio: Engine switch', () => {
   });
 
   test('a write Drive refuses: "Not sent" banner and the switch goes back on', async ({ page, guard, allowedConsole }) => {
-    allowedConsole.push(/Failed to load resource: .*500/); // the browser's own line for the refused upload; the page says Not sent
+    allowedConsole.push(/Failed to load resource: .*500/);
     await uploads(page, { status: 500 });
     await HUBS.studio.open(page, guard);
     await go(page, 'engine');
@@ -140,7 +136,7 @@ test.describe('JOB 34 Studio: addresses and state', () => {
     await HUBS.studio.open(page, guard);
     for (const tab of ['me', 'decide', 'do', 'line', 'kits']) {
       const a = page.locator(`nav.tabs a[data-nav="${tab}"]`);
-      const reached = await tabTo(page, a, 150);   // a view under More: Tab to More, Enter, then Tab inside its menu
+      const reached = await tabTo(page, a, 150);
       expect(reached, tab + ' reached by Tab').toBe(true);
       await page.keyboard.press('Enter');
       await expect(a).toHaveAttribute('aria-current', 'page');
@@ -160,3 +156,4 @@ test.describe('JOB 34 Studio: phone', () => {
     }
   });
 });
+

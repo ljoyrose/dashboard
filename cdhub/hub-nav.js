@@ -16,7 +16,6 @@
    No nav rows: the app's starting layout (STARTER), reported as not set so Settings can say so. */
 (function (root) {
   'use strict';
-  /* Every view, by route. Temps opens the temperature history page. */
   var VIEWS = {
     today: { label: 'Today', icon: 't-cal' },
     work: { label: 'Do', icon: 't-do' },
@@ -36,7 +35,6 @@
     admin: { label: 'Settings', icon: 't-box' },
     qrprint: { label: 'Print QR cards', icon: 't-print', href: printCardsHref }
   };
-  /* Main, then the sections in colour order, then Settings. go = the view the tab opens. */
   var SECTIONS = [
     { id: 'main', label: 'Main', slot: '1', icon: 't-main', go: 'map', views: ['map', 'today', 'work'] },
     { id: 'compliance', label: 'Compliance', slot: '2', icon: 's-check', go: 'compliance', views: ['compliance', 'items', 'breed', 'yearly'] },   /* Breed Better: a welfare and standards scheme, its own brick. Yearly print: one A4 page per month for every record */
@@ -64,7 +62,6 @@
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
-  /* Same address as staffBase() + 'print/': origin + this directory + staff/print/. */
   function printCardsHref() {
     var loc = root.location || {};
     return String(loc.origin || '') + String(loc.pathname || '').replace(/[^/]*$/, '') + 'staff/print/';
@@ -74,7 +71,6 @@
   function sectionOf(view) { for (var i = 0; i < SECTIONS.length; i++) if (SECTIONS[i].views.indexOf(view) >= 0) return SECTIONS[i]; return null; }
   function day(v) { var s = String(v || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
 
-  /* The nav rows in force on `iso`: the latest effective_from per key wins; a to_date ends a row. Whole numbers only. */
   function inForce(rows, iso) {
     var on = {}, d = day(iso);
     (rows || []).forEach(function (r) {
@@ -86,7 +82,6 @@
     return on;
   }
 
-  /* layout({rows, iso, role, person, has}) -> {tabs:[section ids], on:{id:true}, set:bool}. has(view) says a view exists here. */
   function layout(o) {
     o = o || {};
     var rows = inForce(o.rows, o.iso), set = Object.keys(rows).length > 0;
@@ -107,7 +102,6 @@
     if (!tabs.length && o.role) tabs = picks('nav.tab.' + o.role + '.');
     if (!tabs.length) tabs = STARTER.tabs.slice();
     tabs = tabs.filter(function (id) { return on[id]; }).slice(0, MAX_TABS);
-    /* The view each section opens on: the person's pick, else the role's, else the section's own. */
     var first = {};
     SECTIONS.forEach(function (s) {
       var r = (o.person && rows['nav.first.person.' + o.person + '.' + s.id]) || (o.role && rows['nav.first.' + o.role + '.' + s.id]);
@@ -124,7 +118,6 @@
     return { tabs: tabs, on: on, set: set, first: first, start: start };
   }
 
-  /* The save address kept in this browser, same check as Settings. Empty when none is known. */
   function saveAddress() {
     var store;
     try { store = root.localStorage; } catch (e) { store = null; }
@@ -133,7 +126,6 @@
     try { u = store.getItem('cdhub.sink.url') || store.getItem('bld.scriptUrl') || store.getItem('cdhub.save.url') || ''; } catch (e) { u = ''; }
     return /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) ? u : '';
   }
-  /* Inspector links: the owner page section, or the set-up line when this browser has no save address. */
   function inspectItem(opts) {
     var u = saveAddress(), icon = '<svg class="hi" width="20" height="20" aria-hidden="true" focusable="false"><use href="#hi-search"/></svg>';
     if (u) {
@@ -154,11 +146,10 @@
     return '<button type="button" data-go="' + esc(id) + '" data-slot="' + esc(slot) + '"' + current + '>' + icon + '<span class="htl">' + esc(v.label) + '</span></button>';
   }
 
-  /* html(opts): opts.layout from layout(); opts.has(view); opts.current (href pages); opts.counts / opts.late keyed by view. */
   function html(opts) {
     opts = opts || {};
     var DK = root.DashKit;
-    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'qrprint'; };   /* pages without the rows (temperature history); Print QR cards are the owner's, like Settings */
+    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'qrprint'; };   /* pages without the rows (temperature history); Print QR cards are the user's, like Settings */
     var lay = opts.layout || layout({ has: has });
     var cur = opts.current ? sectionOf(opts.current) : null;
     var bar = [section('main')].concat(lay.tabs.map(section)), onBar = {};
@@ -178,8 +169,6 @@
       var h = DK.tabs.tab(o).replace(' class="ht"', ' class="ht" data-section="' + s.id + '"' + (cur && cur.id === s.id ? ' aria-current="page"' : ''));
       return h;
     }).join('');
-    /* More: every other view of every switched-on section, in colour order, each in its section's colour
-       (a view a bar tab already opens is not repeated). */
     var items = inspectItem(opts) + SECTIONS.filter(function (s) { return s.id === 'main' || lay.on[s.id]; }).map(function (s) {
       return s.views.map(function (id) { return onBar[id] ? '' : viewItem(id, s.slot, opts, has); }).join('');
     }).join('');
@@ -187,8 +176,6 @@
     return tabs + DK.tabs.more(opts.moreId || 'houseMore', items);
   }
 
-  /* chips(opts): the chip row for the section that holds opts.current. Every view of that section that exists here,
-     in order, each with its count (opts.counts[view]; opts.late[view] = late). '' when the section has one view or none. */
   function chips(opts) {
     opts = opts || {};
     var has = opts.has || function () { return true; };
@@ -212,30 +199,22 @@
      every move into a record or view is a real history entry, so the phone's Back works, and the entry remembers where
      you came from (its address, its name, how far down you were). Shape: history.state.from = {hash, label, y, id}. */
   var back = {
-    /* push(hash, {label, id, y}): go to hash and remember this place. Call it on any tap into a record. */
     push: function (hash, o) {
       o = o || {};
       var w = root, from = { hash: w.location.hash || '#/map', label: o.label || '', y: o.y != null ? o.y : (w.scrollY || 0), id: o.id || '' };   /* o.y: how far down, read before the page redrew */
       try { w.history.replaceState(Object.assign({}, w.history.state || {}, { y: from.y }), ''); } catch (e) { /* no history: fine */ }
       w.history.pushState(Object.assign({}, o.state || {}, { from: from }), '', hash);
     },
-    /* replace(hash): change the address without a new Back step (Prev / Next, tabs inside a record). Keeps where you came from. */
     replace: function (hash) { root.history.replaceState(root.history.state || {}, '', hash); },
-    /* from(): where this entry came from, or null (a link opened cold). */
     from: function () { var st = root.history && root.history.state; return st && st.from && st.from.hash ? st.from : null; },
-    /* button(fallback): "← Back to X". With no from (opened cold), a link to fallback = {hash, label} instead, or ''. */
     button: function (fallback) {
       var f = back.from();
       if (f && f.label) return '<button type="button" class="cb hback" data-hub-back>\u2190 Back to ' + esc(f.label) + '</button>';
       if (fallback && fallback.hash) return '<a class="cb hback" href="' + esc(fallback.hash) + '">\u2190 ' + esc(fallback.label || 'Back') + '</a>';
       return '';
     },
-    /* sync(el, fallback): the Back button in the top bar (one app-wide header: Home on the left, Back on the right, OV11 15 Nov
-       2026). Shown when there is somewhere in the hub to go back to: this entry's from, or else fallback = {label} for a page
-       opened from the hub (the temps page). Hidden on a link opened cold. A click goes back one real history step. */
     sync: function (el, fallback) {
       if (!el) return;
-      /* read out "Back (Dogs)": a page's own "← Back to Dogs" link keeps its own name, so the two are never confused */
       var f = back.from() || fallback || null;
       el.classList.toggle('hidden', !f);
       if (f) { el.setAttribute('aria-label', f.label ? 'Back (' + f.label + ')' : 'Back'); el.setAttribute('title', f.label ? 'Back to ' + f.label : 'Back'); }
@@ -246,9 +225,6 @@
     if (b) { e.preventDefault(); root.history.back(); }
   });
 
-  /* home({rows, iso, role, person, cards, starter}) -> the card ids on Main, in order. cards = every card this hub has;
-     starter = the pack's starting cards. The person's rows win, then the role's; a set of rows that takes every card off
-     leaves Main empty (that person chose it), only no rows at all falls back to the starter. */
   function home(o) {
     o = o || {};
     var rows = inForce(o.rows, o.iso), cards = o.cards || [];
@@ -263,3 +239,4 @@
 
   root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, home: home, viewOn: viewOn, STARTER_OFF: STARTER_OFF, sectionOf: sectionOf, html: html, chips: chips, back: back, viewHref: viewHref };
 })(typeof window !== 'undefined' ? window : this);
+

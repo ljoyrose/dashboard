@@ -1,5 +1,3 @@
-// Web Estate "DNS & Email" section (#/mail, JOB 6.3). Pretend Google; every domain and address is invented
-// (example.com, example.net, example.org, example.test). Read only: every request must be a GET.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -61,7 +59,7 @@ test.describe('Web Estate DNS & Email', () => {
     await expect(com.locator('[data-check="spf"]')).toHaveAttribute('data-level', 'bad');
     await expect(com.locator('[data-hop="a@example.com"]')).toContainText('2 hops');
     await expect(com.locator('[data-switch]')).toContainText('step 5 of 10: Switch MX to Google');
-    await expect(com.locator('[data-fix]')).toContainText('Lisa-only DNS change');
+    await expect(com.locator('[data-fix]')).toContainText('User-only DNS change');
 
     const net = page.locator('[data-mail-domain="example.net"]');
     await expect(net.locator('[data-check="dkim"]')).toHaveAttribute('data-level', 'bad');
@@ -76,7 +74,6 @@ test.describe('Web Estate DNS & Email', () => {
     await expect(page.locator('[data-mail-domain="fine.example.org"] [data-switch]')).toContainText('all steps done');
     await expect(page.locator('[data-mail-domain="blank.example.net"] [data-check="spf"]')).toContainText('not yet read');
 
-    // 360px: no sideways scroll and nothing under 13px inside the view
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const small = await page.locator('#view').evaluate((v) => [...v.querySelectorAll('*')].filter((e) => e.offsetParent !== null && (e.textContent || '').trim() && parseFloat(getComputedStyle(e).fontSize) < 13).map((e) => e.tagName + ':' + getComputedStyle(e).fontSize));
     expect(small).toEqual([]);
@@ -103,3 +100,4 @@ test.describe('Web Estate DNS & Email', () => {
     await expect(page.locator('[data-mail-domain="example.com"] [data-check="forward"]')).toContainText('Mail map not read');
   });
 });
+

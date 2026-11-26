@@ -13,8 +13,8 @@ const { build } = require('../fixtures/studio/state');
 const ctx = { window: {} };
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8'), ctx);
-const ST = ctx.window.DASH_CONFIG.studio; // folder ids and file name come from config.js, so the tests follow a change there
-const NOW = new Date('2026-10-28T10:10:00'); // fixed clock: the Undo window (until the engine's next run) is then known
+const ST = ctx.window.DASH_CONFIG.studio;
+const NOW = new Date('2026-10-28T10:10:00');
 const TABS = ['me', 'decide', 'do', 'line', 'ideas', 'assets', 'review', 'brands', 'library', 'kits', 'tools', 'new'];
 const KIT_SUBS = ['kits/playbooks', 'kits/packs', 'kits/kits', 'kits/bricks', 'kits/styles', 'kits/formats'];
 const UPLOAD = /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files/;
@@ -31,9 +31,8 @@ async function open(page, guard, hash, { state = true, change } = {}) {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
-  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
 }
-// Pretend Drive upload: records each request file and adds it to the pretend Drive, so Undo (PATCH trashed) can find it.
 async function uploads(page, guard) {
   const got = [];
   await page.route(UPLOAD, (route) => {
@@ -46,17 +45,14 @@ async function uploads(page, guard) {
   return got;
 }
 const rows = (page) => page.locator('#view .crow');
-// Calm rows (28 Oct 2026): chips, preview and small tools sit in the item's details, opened from its title.
 const details = async (page, id) => {
   const d = page.locator(`[data-more="${id}"]`);
-  if (await page.locator('#fpanel').count()) await page.keyboard.press('Escape'); // the Filter panel would cover the rows
+  if (await page.locator('#fpanel').count()) await page.keyboard.press('Escape');
   if (!(await d.count())) await page.locator(`.crow[data-row="${id}"] .ttl`).first().click();
   await expect(d).toBeVisible();
   return d;
 };
-// The find bar is one row (Search · Filter · Sort); every filter group sits in the Filter panel.
 const openFilters = async (page) => { await page.locator('#filtersBtn').click(); await expect(page.locator('#fpanel')).toBeVisible(); };
-// Old tab names are now pages under the five bottom tabs (Me, Decide, Do, Line, Kits): open them by address.
 
 const go = async (page, key) => { await page.evaluate((k) => { location.hash = '#/' + k; }, key); await expect(page.locator('#view')).toHaveAttribute('data-view', key.split('/')[0]); };
 
@@ -95,3 +91,4 @@ test.describe('Studio: template marker', () => {
     await expect(page.locator('[data-rights="sa-client"] [data-set="reuse"][data-val="template"]')).toBeDisabled();
   });
 });
+

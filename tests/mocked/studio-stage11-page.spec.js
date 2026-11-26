@@ -1,5 +1,3 @@
-// Studio Stage 11 page side (engine v0.2.24): item.proofCheck shows one check chip in an item's details in place of the
-// low-res + watermark reminder. Older state without proofCheck keeps the reminder as before. Invented data only.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -22,7 +20,7 @@ async function open(page, guard, change) {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
-  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
 }
 async function details(page, id) {
   const d = page.locator(`[data-more="${id}"]`);
@@ -30,7 +28,6 @@ async function details(page, id) {
   await expect(d).toBeVisible();
   return page.locator(`[data-delivery="${id}"]`);
 }
-// One protected sample item; proofCheck is set per case (undefined = the field is left out, as in older state).
 const sample = (proofCheck, needsWatermark) => (s) => {
   const c = s.assets.filter((a) => a.id === 'sa-client')[0];
   Object.assign(c, { protect: 'yes', paid: 'no', disclose: 'yes', hasProof: true, hasFinal: false, needsWatermark, proofLowRes: needsWatermark ? 'Proof: low-res (max 1200px wide) + watermark' : null });
@@ -72,3 +69,4 @@ test.describe('Studio Stage 11: proof check chip', () => {
     await expect(box.locator('[data-watermark]')).toHaveText('Add Studio watermark layer');
   });
 });
+

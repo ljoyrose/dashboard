@@ -1,18 +1,3 @@
-/*!
- * BLDYearlyPrint - one yearly (or one-month) A4 print and a CSV for every record the hub keeps.
- * Read only: it never writes a row. Check types come from BLD-check_type, so a future type prints
- * with no change here. Other industries pass their own check_type rows and the same fixed tables.
- *
- * Layout, same idea as the temperature history Print / PDF (temps-report.js):
- *   one A4 landscape page per month per record, shrunk to fit, signature line,
- *   header = business name, record, month.
- *   Daily jobs (every_days 1, or a per-dog / per-area job with no gap set) are a grid:
- *   dogs, areas or items down the side, days across, tick / part / concern / missed.
- *   The mark is a character, so it still reads in greyscale.
- *   Anything else is a list: date, what, who, outcome, note (or that table's own columns).
- *
- * No staff code or licence number is read out. A column whose name is a secret is left off.
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./staff/lib/due.js'));
   else root.BLDYearlyPrint = factory(root.BLDDue);
@@ -60,7 +45,6 @@
     if (at instanceof Date && !isNaN(at.getTime())) at = at.toISOString();
     var s = str(at);
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return { date: s, time: '' };
-    /* A date and time with no zone is the clock time as written (noon stays that day). Z or an offset is UK time. */
     var wall = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/.exec(s);
     if (wall && !/(Z|[+-]\d{2}:?\d{2})$/i.test(s)) return { date: wall[1], time: wall[2] + ':' + wall[3] };
     var d = new Date(s);
@@ -85,12 +69,6 @@
   function monthWords(ym) { var m = /^(\d{4})-(\d{2})$/.exec(ym || ''); return m ? MON[Number(m[2]) - 1] + ' ' + m[1] : ''; }
   function ymd(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1].slice(0, 3) + ' ' + m[1] : ''; }
 
-  /**
-   * Grid or list, from the check_type row alone (not from its name).
-   * Grid when the job is daily (every_days 1), or when every_days is blank and the job is per dog
-   * (site_scope per_dog) or per area (target area). A yearly or weekly per-dog job stays a list.
-   * Returns 'dogs' | 'areas' | 'items' | 'site' | 'list'.
-   */
   function layoutOf(type) {
     if (!type) return 'list';
     var every = everyDays(type.every_days);
@@ -106,7 +84,6 @@
     return 'site';
   }
 
-  /** Months that have started, as {y, m} with m 0-11. A future month is left out. */
   function monthsFor(o) {
     var y = parseInt(o.year, 10), today = str(o.today);
     var list = o.period === 'year' ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] : [parseInt(o.month, 10)];
@@ -114,7 +91,6 @@
       .map(function (m) { return { y: y, m: m, ym: ymOf(y, m) }; });
   }
 
-  /** How far to shrink a page so it fits one sheet. 1 means it already fits. */
   function zoomFor(scrollPx, pageMm) {
     var max = (pageMm || PAGE_H) * 96 / 25.4;
     if (!(scrollPx > max)) return 1;
@@ -151,7 +127,6 @@
     return (t[file] || []).concat(t[file.replace(/\.csv$/, '-Archive.csv')] || []);
   }
 
-  /* ---- catalogue ------------------------------------------------------- */
 
   var CHECK_PRINT = 'Compliance > Yearly print. Also: Compliance > Daily records > Print / PDF (the calendars), and Compliance > Checks register > Print / PDF';
   var CHECK_CSV = 'Compliance > Yearly print > Download CSV. The Checks register Download CSV is the one-month table';
@@ -159,7 +134,6 @@
   function canonKey(s) { return str(s).toLowerCase().replace(/[^a-z0-9]+/g, ''); }
   function baseId(id) { var m = /^(cty-.+)-\d+$/.exec(str(id)); return m ? m[1] : ''; }
   function normLabel(s) { return str(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim(); }
-  /** Exercise and play, Exercise all, and the enrichment key are one check. */
   function exerciseFamily(t) {
     var c = canonKey(t && t.type_key), lab = normLabel(t && t.label);
     return c === 'exerciseall' || c === 'exerciseandplay' || c === 'exerciseenrichment' || c === 'exercise' || /^exercise\b/.test(lab);
@@ -170,7 +144,6 @@
     var rows = (ctx.types || []).filter(function (t) {
       return t && str(t.type_key) && str(t.id) && str(t.type_key).toLowerCase() !== 'medicine';
     });
-    /* Same check: shared type key, base id (cty-water_bowls-1 and -2), or label. Exercise and play and Exercise all are one check too. */
     var parent = [], byKey = {}, byBase = {}, byLabel = {}, ex = null;
     function find(i) { if (parent[i] == null) parent[i] = i; if (parent[i] !== i) parent[i] = find(parent[i]); return parent[i]; }
     function unite(a, b) { a = find(a); b = find(b); if (a !== b) parent[Math.max(a, b)] = Math.min(a, b); }
@@ -252,7 +225,6 @@
     });
   }
 
-  /* ---- check logs ------------------------------------------------------ */
 
   function standing(logs) {
     var replaced = {};
@@ -260,7 +232,6 @@
     return (logs || []).filter(function (r) { return !replaced[str(r.id)]; });
   }
   function isNoteFor(r) { return str(r.outcome) === 'note' && !!str(r.note_for_id); }
-  /** The live log plus the archive, once each. A round row and a per-dog row both stay. */
   function allLogs(ctx) {
     var out = [], seen = {};
     function add(list) {
@@ -285,7 +256,6 @@
     if (!w.date) w = dateOf(row);
     return w;
   }
-  /** Dogs a row counts for: the dog on the row, and each dog named on a round row (covered_ids). */
   function dogsOf(row) {
     var ids = [], skip = {};
     str(row.exceptions).split('|').forEach(function (p) {
@@ -327,7 +297,6 @@
     if (Number(today.slice(8, 10)) < Number(dob.slice(8, 10))) m--;
     return m < 0 ? null : m;
   }
-  /** A litter puppy (kind Pup, still on its birth litter, or the generated "Dam x Sire 2026 - Black male 1" name). */
   function litterPup(dog, today) {
     if (!dog) return false;
     if (dog.puppy === true) return true;
@@ -353,7 +322,6 @@
     return true;
   }
 
-  /** The day the daily run starts. A gap of more than 60 days means the earlier entries did not start it. */
   function trackedFrom(dates) {
     var seen = {}, list = [];
     (dates || []).forEach(function (d) {
@@ -381,7 +349,6 @@
     var k = str(r.off_site_kind).toLowerCase(), c = str(r.classification).toLowerCase();
     return k === 'sold' || k === 'owned_by_family' || k === 'deceased' || c === 'sold' || c === 'collected' || c === 'deceased';
   }
-  /** On site during YYYY-MM. With no occupancy rows, the subject's current on-site flag is used. */
   function onSiteIn(dog, ym, ctx) {
     if (!dog) return false;
     var all = rowsOf(ctx, 'BLD-occupancy.csv');
@@ -427,7 +394,6 @@
     if (today && day > today) return today.slice(0, 7) === ym ? today : ym + '-01';
     return day;
   }
-  /** One row per active room id. Retired, empty and non-room kinds are left out. Names that clash get a suffix. */
   function activeAreas(ctx, ym) {
     var day = monthProbe(ym, ctx && ctx.today), req = reqRows(ctx), byId = {}, order = [];
     (ctx.areas || []).forEach(function (a) {
@@ -453,7 +419,6 @@
     });
   }
 
-  /** One month grid: {rows, days, marks, notes, entries, untracked}. */
   function gridMonth(source, ym, ctx) {
     var type = source.type || {}, all = logsFor(source, ctx), mine = all.filter(function (l) { return l.date && l.date.slice(0, 7) === ym; });
     var y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10) - 1, n = daysIn(y, m), days = [];
@@ -514,7 +479,6 @@
     return { date: l.date, time: l.time, what: what || 'Whole site', who: who(r.taken_by), outcome: RESULT[l.outcome] || l.outcome || '', note: l.note };
   }
 
-  /* ---- other tables ---------------------------------------------------- */
 
   var LIST5 = [['date', 'Date'], ['what', 'What'], ['who', 'Who'], ['outcome', 'Outcome'], ['note', 'Note']];
 
@@ -567,7 +531,6 @@
       base.what = [dogName(ctx, r.subject_id), pick(r, ['chip_number', 'number', 'chip', 'microchip_number'])].filter(Boolean).join(', ');
       base.outcome = pick(r, ['status', 'state']);
     } else if (id === 'microchip_registration') {
-      /* The registration row points at a chip (microchip_id). The number and the dog live on that chip row. */
       var chip = null;
       rowsOf(ctx, 'BLD-microchip.csv').forEach(function (c) { if (str(c.id) === str(r.microchip_id)) chip = c; });
       var wreg = london(r.registered_on || r.from_date);
@@ -677,9 +640,7 @@
     return LIST5;
   }
 
-  /* ---- pages ----------------------------------------------------------- */
 
-  /** The kennel name from the page, a Settings row, or the tenant row. A licence number is never used. */
   function kennelName(ctx) {
     ctx = ctx || {};
     function ok(v) { v = str(v); if (!v || /licen[cs]e/i.test(v)) return ''; return v; }
@@ -715,7 +676,6 @@
   function pageOpen(source, ym, layout) {
     return '<section class="yp-page" data-yp-page data-yp-id="' + e(source.id) + '" data-month="' + e(ym) + '" data-layout="' + e(layout) + '">';
   }
-  /** Heading stays with the first paragraph. The rest flows, and a new page starts only when the page is full. */
   function sheet(source, ym, layout, kennel, label, sub, body, printed) {
     var rest = body || '', lead = '';
     var m = /^\s*(<p\b[\s\S]*?<\/p>)/.exec(rest);
@@ -783,12 +743,6 @@
     return sheet(source, ym, 'list', ctx.kennel, source.label, title, body + n, ctx.printed);
   }
 
-  /**
-   * The pages for a choice: {period:'month'|'year', year, month:0-11, ids:[source id], today}.
-   * ctx: kennel, printed, today, types, logs, tables, dogs, areas, items, dogName, areaName, itemName, litterName,
-   *      meds: function(ym) -> {columns, lines, cell} | null
-   */
-  /** One month of room temperatures: each room, each day, the lowest and the highest. One sheet, not one row per reading. */
   function tempMonth(ym, ctx) {
     var y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10) - 1, n = daysIn(y, m), days = [];
     for (var d = 1; d <= n; d++) days.push(isoDay(y, m, d));
@@ -922,7 +876,6 @@
     return pack(pages);
   }
 
-  /* ---- CSV ------------------------------------------------------------- */
 
   function csvCell(v) {
     v = String(v == null ? '' : v);
@@ -937,7 +890,7 @@
     var year = choice.period === 'year';
     function keep(l) {
       if (l._skip) return false;
-      if (!l.date) return true;   // a chip number or a grade with no date is still part of the export
+      if (!l.date) return true;
       return !!allow[l.date.slice(0, 7)];
     }
     if (source.id === 'medicines') {
@@ -1001,7 +954,6 @@
     return 'yearly-' + (slug || 'records') + '-' + period + '.csv';
   }
 
-  /* ---- counts (rows already loaded; a missed day on a grid is not a row) -- */
 
   function monthAllow(choice) {
     var allow = {};
@@ -1062,7 +1014,6 @@
     return n;
   }
 
-  /** { source id: number of rows in the chosen months }. One pass over the logs. */
   function entryCounts(ctx, choice) {
     ctx = ctx || {};
     choice = choice || {};
@@ -1088,7 +1039,6 @@
     return '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + '" data-yp-n="' + e(id) + '">' + n + '</span>';
   }
 
-  /* ---- screen (existing card, button and field classes only) ---------- */
 
   function presetIds(sub, cat, ctx) {
     sub = str(sub);
@@ -1161,7 +1111,6 @@
     + '#ypReport .yp-t thead,#ypReport .yp-list thead{display:table-header-group}'
     + '#ypReport .yp-t tr,#ypReport .yp-list tr{break-inside:avoid;page-break-inside:avoid}}';
 
-  /** Grids are already one sheet tall. Chrome's print ignores zoom, so shrinking here turned each month into two sheets. */
   function fit(rep) {
     if (!rep || !rep.querySelectorAll) return;
     var nodes = rep.querySelectorAll('.yp-page');
@@ -1189,3 +1138,4 @@
     clean: clean, who: who, london: london
   };
 }));
+

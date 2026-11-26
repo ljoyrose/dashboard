@@ -1,12 +1,9 @@
-// Stage 14: conversion reporting. Run: node --test tests/enquiries/results.test.js
-// Invented months and invented people only. Every count and rate below is worked out by hand in the comments.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const C = require('../../enquiries/core.js');
 
 const ev = (k, type, at) => ({ event_key: 'V-' + k + type, enquiry_key: k, at_uk: at, type });
-// May 2026: 4 Calendly, 3 email (one adult-dog) and one junk row. June: nothing. July: one new email enquiry.
 const MAY = {
   Enquiries: [
     { key: 'K-A', channel: 'calendly', kind: 'puppy', stage: 'collected', received_uk: '2026-05-02T10:00:00' },
@@ -40,14 +37,12 @@ test('version is 1.15.0 and Results is the 14th tab', () => {
 test('ACCEPT: counts per month and source from invented rows', () => {
   const rows = C.resultsRows(MAY);
   const all = row(rows, '2026-05', 'all');
-  // A..H less the junk row G = 7. Booked: A B C D. Held: A B. Deposit, offer, balance, collected: A. Lost: C F.
   assert.deepEqual([all.enquiries, all.calls_booked, all.calls_held, all.deposits, all.offers, all.balances, all.collected, all.lost, all.junk, all.adult_sale],
     [7, 4, 2, 1, 1, 1, 1, 2, 1, 1]);
   const cal = row(rows, '2026-05', 'calendly');
   assert.deepEqual([cal.enquiries, cal.calls_booked, cal.calls_held, cal.deposits, cal.lost], [4, 4, 2, 1, 1]);
   const mail = row(rows, '2026-05', 'email');
   assert.deepEqual([mail.enquiries, mail.calls_booked, mail.junk, mail.adult_sale, mail.lost], [3, 0, 1, 1, 1]);
-  // First reply: A 2 h, B 24 h (the call), E 3 h: median 3.
   assert.equal(all.median_reply_h, 3);
   assert.equal(all.lost_reasons, 'timing:1 | went elsewhere:1');
   assert.equal(row(rows, '2026-06', 'all'), undefined, 'no row is made for an empty month');
@@ -57,7 +52,6 @@ test('ACCEPT: counts per month and source from invented rows', () => {
 test('ACCEPT: every rate right on invented months', () => {
   const r = C.resultRates(row(C.resultsRows(MAY), '2026-05', 'all'));
   const got = Object.fromEntries(r.steps.map((s) => [s.to, C.pct(s.rate)]));
-  // booked 4/7 = 57%, held 2/4 = 50%, deposit 1/2 = 50%, offer 1/1, balance 1/1, collected 1/1.
   assert.deepEqual(got, { calls_booked: '57%', calls_held: '50%', deposits: '50%', offers: '100%', balances: '100%', collected: '100%' });
   assert.equal(r.deposits_per_10_calls, 5);   // 1 deposit per 2 calls held
   assert.equal(C.pct(r.overall), '14%');      // 1 of 7
@@ -96,7 +90,6 @@ test('lost rows keep the steps their Events show; adult-dog stages never count a
   assert.equal(C.resultsRows(MAY, { from: '2026-07-01' }).filter((r) => r.source === 'all').length, 1, 'from leaves out earlier months');
 });
 
-// ---- History import ------------------------------------------------------------------------------------------
 const DEALS = C.parseCsv([
   'Deal Name,Deal Stage,Create Date,Email,First Name,Last Name,Closed Lost Reason',
   'Pup for Sam,closedwon,2025-11-03 10:00,sam.rivers@example.com,Sam,Rivers,',
@@ -129,8 +122,6 @@ test('HubSpot stages map to the hub stages', () => {
 
 test('HubSpot history: spam and test entries left out, contacts on a deal count once, only rows before the cut', () => {
   const h = C.hubspotHistoryFrom([CONTACTS, DEALS], { before: '2026-05-01', testDomains: [] });
-  // 8 deals + 3 contacts read. Junk: random name, test domain, "Test deal" = 3. Later: Max. Sam's contact is on a deal.
-  // Ria has no date. Counted: Sam, Ann, Joe, Kim (deals) + Pat (contact) = 5.
   assert.deepEqual([h.read, h.junk, h.later, h.undated, h.counted], [11, 3, 1, 1, 5]);
   assert.deepEqual(h.stages, { collected: 1, 'call-booked': 1, lost: 1, deposit: 1, new: 1 });
   const nov = h.rows.find((r) => r.month === '2025-11'), dec = h.rows.find((r) => r.month === '2025-12');
@@ -161,3 +152,4 @@ test('history rows join the view: months before May are listed and added to "all
   assert.ok(v.months.find((m) => m.month === '2026-01').empty, 'a gap month between history and live shows no data');
   assert.ok(v.sources.includes('hubspot-legacy'));
 });
+

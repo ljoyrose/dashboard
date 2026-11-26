@@ -1,12 +1,8 @@
-/*!
- * BLDQr - makes a QR code (byte mode, error correction M, versions 1-10) and draws it as SVG. No network.
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.BLDQr = factory();
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  // version: [total codewords, ec per block, group 1 blocks, group 1 data, group 2 blocks, group 2 data]
   var V = [null, [26, 10, 1, 16, 0, 0], [44, 16, 1, 28, 0, 0], [70, 26, 1, 44, 0, 0], [100, 18, 2, 32, 0, 0], [134, 24, 2, 43, 0, 0], [172, 16, 4, 27, 0, 0], [196, 18, 4, 31, 0, 0], [242, 22, 2, 38, 2, 39], [292, 22, 3, 36, 2, 37], [346, 26, 4, 43, 1, 44]];
   var ALIGN = [null, [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50]];
   var EXP = new Array(512), LOG = new Array(256);
@@ -76,7 +72,6 @@
     for (var m = 0; m < 8; m++) { var G = build(m), p = penalty(G); if (p < bestS) { bestS = p; best = G; } }
     return { size: size, version: ver, modules: best };
   }
-  /** An SVG string with a white quiet zone, always black on white so it scans in any theme. */
   function svg(text, label) {
     var q = encode(text), z = 4, n = q.size + z * 2, d = '';
     for (var r = 0; r < q.size; r++) for (var c = 0; c < q.size; c++) if (q.modules[r][c]) d += 'M' + (c + z) + ' ' + (r + z) + 'h1v1h-1z';
@@ -84,3 +79,4 @@
   }
   return { encode: encode, svg: svg };
 }));
+

@@ -50,3 +50,4 @@ if (state === 'red') {
   console.error('Use --state red or --state green');
   process.exit(2);
 }
+

@@ -1,6 +1,3 @@
-// Studio stage 5 (engine v0.2.24), page side: each piece's Steps (item.tasks) in its details and on its own page, and a quiet
-// line on the merit (stage 0) and approve (stage 7) gates from item.autoGate. Nothing shows when the engine sends neither field.
-// Pretend Google and Drive only; the data is tests/fixtures/studio/state.js (invented).
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -23,7 +20,7 @@ async function open(page, guard, hash, change) {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
-  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
 }
 const details = async (page, id) => {
   const d = page.locator(`[data-panelbox="${id}"]`);
@@ -39,7 +36,7 @@ const stepsIn = async (box) => {
   await expect(li.nth(0).locator('.tw')).toHaveText('Claude');
   await expect(li.nth(1).locator('.tw')).toHaveText('Grok');
   await expect(li.nth(2).locator('.tw')).toHaveText('Studio helper'); // plain words: never "Engine"
-  await expect(li.nth(3).locator('.tw')).toHaveText('Lisa');
+  await expect(li.nth(3).locator('.tw')).toHaveText('User');
   await expect(li.locator('[data-chip="fit"]')).toHaveText(['AUTO', 'AUTO', 'AUTO', 'HAND']);
   await expect(li.nth(0).locator('[data-done]')).toBeVisible();
   await expect(li.nth(1)).toHaveAttribute('data-status', 'skipped');
@@ -80,7 +77,7 @@ test.describe('Studio stage 5: steps and auto gates', () => {
   test('old state without the new fields shows nothing new', async ({ page, guard }) => {
     await open(page, guard, '#/asset/sa-rev1', (s) => {
       s.assets.concat(s.ideas).forEach((a) => { delete a.tasks; delete a.autoGate; });
-      delete s.studio.autoGates; delete s.studio.lisaCap;
+      delete s.studio.autoGates; delete s.studio.userCap;
     });
     await expect(page.locator('#view')).toContainText('Sample checklist PDF');
     await expect(page.locator('#view [data-steps], #view [data-autogate]')).toHaveCount(0);
@@ -99,3 +96,4 @@ test.describe('Studio stage 5: steps and auto gates', () => {
     expect(w.doc).toBeLessThanOrEqual(w.screen + 1);
   });
 });
+

@@ -66,18 +66,17 @@ test('freePlaces: lists remaining places of the incoming size, and 0 when the ro
   assert.equal(medOk.free, 1);
 });
 
-// LD-SC audit, OV11 15 Nov 2026: the flap and the sign's limits read the dated rows in force, never just the last row.
 test('accessOn: from_date (or an older effective_from), to_date ended, a future row ignored, latest start wins, undated is oldest', () => {
   const A = [
     { area_id: 'r1', access_type: 'limited', from_date: '2026-11-01' },
-    { area_id: 'r1', access_type: 'free' },                                        // undated: oldest, never beats a dated row
+    { area_id: 'r1', access_type: 'free' },
     { area_id: 'r1', access_type: 'free', from_date: '2026-11-20' },               // not started yet on 15 Nov
     { area_id: 'r2', access_type: 'free', effective_from: '2026-10-01', to_date: '2026-11-10' },
     { area_id: 'r2', access_type: 'limited', effective_from: '2026-09-01' }];
   assert.equal(C.accessOn(A, 'r1', '2026-11-15'), 'limited');
   assert.equal(C.accessOn(A, 'r1', '2026-11-20'), 'free');
   assert.equal(C.accessOn(A, 'r2', '2026-11-05'), 'free');
-  assert.equal(C.accessOn(A, 'r2', '2026-11-11'), 'limited');   // the free row ended on 10 Nov
+  assert.equal(C.accessOn(A, 'r2', '2026-11-11'), 'limited');
   assert.equal(C.accessOn(A, 'r3', '2026-11-11'), '');
   assert.equal(C.accessOn([{ area_id: 'r1', access_type: 'free', from_date: '2026-11-01' }, { area_id: 'r1', access_type: 'limited', from_date: '2026-11-01' }], 'r1', '2026-11-15'), 'limited');   // same start: the later row
 });
@@ -114,7 +113,6 @@ test('flap set to limited but limits only recorded for free access: unknown, and
   assert.doesNotMatch(ok.message, /flap is set/);
 });
 
-// The Space Rules poster as BLD-breeding_rule holds it (rule keys as in the live sheet, 11 Nov 2026). Invented ids.
 const POSTER = [];
 [['free', { small: [2.5, 2.5, 4.5, 6.0], medium: [2.5, 4.5, 6.0], large: [4.5, 6.0] }, { small: 5, medium: 5, large: 9 }],
  ['limited', { small: [4.5, 4.5, 6.5, 8.5], medium: [4.5, 6.5, 8.5], large: [6.5, 8.5] }, { small: 9, medium: 9, large: 13 }]].forEach(([mode, t, p]) => {
@@ -131,7 +129,7 @@ test('space rules: 3A.1/2 (9 m²) with the flap shut gets 4 small, 3 medium or 2
   assert.equal(free.small, '2'); assert.equal(free.medium, '1'); assert.equal(free.large, '0');   // matches 4A on the Cabin List
 });
 
-test('check: a flap setting with no rows of its own uses the space rules and says so; the owner\'s own rows still win', () => {
+test('check: a flap setting with no rows of its own uses the space rules and says so; the user\'s own rows still win', () => {
   const space = C.spaceRules(POSTER, '2026-11-17');
   const own = [{ area_id: 'r3', access_type: 'free', size_band: '10-25kg (medium)', max_dogs: '3' }];
   const two = [{ id: 'a', size: 'medium' }, { id: 'b', size: 'medium' }];
@@ -139,6 +137,7 @@ test('check: a flap setting with no rows of its own uses the space rules and say
   assert.equal(r.status, 'ok'); assert.equal(r.limit, 3);
   assert.match(r.message, /worked out from the room size \(9 m²\)/);
   const mine = C.check({ areaId: 'r3', access: 'free', capacity: [{ area_id: 'r3', access_type: 'free', size_band: '10-25kg (medium)', max_dogs: '1' }], dogs: two, date: '2026-11-17', m2: 9, space });
-  assert.equal(mine.status, 'over');   // the owner's row (1) is used, not the derived 3
+  assert.equal(mine.status, 'over');
   assert.equal(C.spaceRules([], '2026-11-17').free, undefined);   // no poster rows: nothing is invented
 });
+

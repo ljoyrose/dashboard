@@ -18,7 +18,6 @@
     if (t !== tag) { tag = t; cache = {}; }
     return tag;
   }
-  /** month word for 1-12, from the locale row's language */
   function month(n) {
     if (cache[n]) return cache[n];
     var w;
@@ -33,3 +32,4 @@
   function long(v) { var p = parts(v); return p ? p.d + ' ' + month(p.m) + ' ' + p.y : String(v == null ? '' : v); }
   return { long: long, setLocale: setLocale, month: month };
 }));
+

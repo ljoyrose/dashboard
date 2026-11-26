@@ -1,13 +1,7 @@
-/*!
- * Print room signs, dog kennel cards (not collars) and litter cards, and show the phone set-up QR.
- * Owner page: needs an OWNER code on this device. Each QR holds only a random id, kept in BLD-qr_tag.
- */
 (function () {
   'use strict';
   var CODE_KEY = 'bld.device.code', ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', LEN = 8;
   var screen = document.getElementById('screen'), save = BLDSave.create({});
-  /* Printed QR codes open the staff page on this site, not this print page. A configured https address
-     (cdhub.publicStaffBase, ending in /) wins over that. An owner qr.base_url row in force wins over both. */
   function staffPublicBase() {
     var cfg = '';
     try { cfg = (typeof DASH_CONFIG !== 'undefined' && DASH_CONFIG.cdhub && DASH_CONFIG.cdhub.publicStaffBase) || ''; } catch (e) { cfg = ''; }
@@ -25,12 +19,11 @@
     return best ? best.v : staffPublicBase();
   }
   save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer', 'item'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
-  save.TABLES.breeding_rule = { label: 'Owner settings', file: 'BLD-breeding_rule.csv', fields: { rule_key: { type: 'text', required: true, label: 'Setting' }, value: { type: 'text', required: true, label: 'Value' }, effective_from: { type: 'date', required: true, label: 'From' }, source: { type: 'text', label: 'Source' } } };   // item card fields choice (print.fields.item), owner only
+  save.TABLES.breeding_rule = { label: 'User settings', file: 'BLD-breeding_rule.csv', fields: { rule_key: { type: 'text', required: true, label: 'Setting' }, value: { type: 'text', required: true, label: 'Value' }, effective_from: { type: 'date', required: true, label: 'From' }, source: { type: 'text', label: 'Source' } } };
   save.TABLES.thermometer = { label: 'Thermometers', file: 'BLD-thermometer.csv', fields: { name: { type: 'text', required: true, label: 'Name' }, area_id: { type: 'text', required: true, label: 'Room' } } };   // the save checks the room exists
   function h(t, a, k) { var e = document.createElement(t); Object.keys(a || {}).forEach(function (x) { if (x === 'text') e.textContent = a[x]; else if (x === 'class') e.className = a[x]; else if (x === 'html') e.innerHTML = a[x]; else if (x.slice(0, 2) === 'on') e.addEventListener(x.slice(2), a[x]); else e.setAttribute(x, a[x]); }); (k || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
-  /* tags and which tag an item already has: the one shared helper (staff/lib/qr-rules.js), also used by the back-fill tool */
   function newTag() { var taken = {}; (T && T.qr_tag || []).forEach(function (t) { taken[t.tag] = 1; }); return BLDQrRules.newTag(taken, function (n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return a; }); }
-  function say(t, k) { msg.className = 'msg noprint ' + (k || ''); msg.textContent = t; }   // noprint kept: the status line never prints
+  function say(t, k) { msg.className = 'msg noprint ' + (k || ''); msg.textContent = t; }
   var msg = h('p', { class: 'msg noprint', role: 'status' });
   screen.appendChild(h('h1', { class: 'noprint', text: 'Print QR cards' }));
   var code = ''; try { code = localStorage.getItem(CODE_KEY) || ''; } catch (e) { /* no storage */ }
@@ -56,8 +49,6 @@
     thermo: BASE.concat(['thermometer', 'requirement', 'area']),
     items: BASE.concat(['items', 'item_kinds', 'links', 'files'])   /* item cards (print any item, the owner 15 Nov 2026) */
   };
-  /* a save needs the script's status (is saving on?): asked once, only when a code or thermometer is to be saved, never
-     before the buttons show (the status call also runs the script's waiting room moves, which can be slow) */
   var statusP = null, rawSubmit = save.submit;
   save.submit = function (table, fields) { statusP = statusP || save.checkStatus(); return statusP.then(function () { return rawSubmit(table, fields); }); };
   var asOf = h('p', { class: 'mut noprint', 'data-print-asof': '' });
@@ -78,7 +69,7 @@
       var k = left.shift();
       return save.read(k).then(function (r) {
         if (r.ok) { T[k] = r.rows || []; readBlock[k] = ''; }
-        else if (!REQUIRED[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED')) { T[k] = []; readBlock[k] = r.code; }   /* owner-only or not switched on: the card leaves those lines out */
+        else if (!REQUIRED[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED')) { T[k] = []; readBlock[k] = r.code; }   /* user-only or not switched on: the card leaves those lines out */
         else fail = fail || r;
         done++; if (!fail) say('Loading lists: ' + done + ' of ' + keys.length + '...');
         return worker();
@@ -87,7 +78,7 @@
     return Promise.all([worker(), worker(), worker(), worker()]).then(function () {
       if (fail) {
         var said = fail.message || 'Could not load the lists.';
-        if (save.usingGoogle && save.usingGoogle() && (fail.code === 'NO_CODE' || /staff code/i.test(said))) said = 'Sign in again on CD Hub, then open this page. An owner is not asked for a staff code.';
+        if (save.usingGoogle && save.usingGoogle() && (fail.code === 'NO_CODE' || /staff code/i.test(said))) said = 'Sign in again on CD Hub, then open this page. An user is not asked for a staff code.';
         say(said, 'bad'); return false;
       }
       readAt = Date.now(); showAsOf(); say(''); return true;
@@ -95,10 +86,9 @@
   }
   function siteMaps() {
     var onSite = {}, roomOf = {};
-    BLDOccupancy.dailyList(T).dogs.forEach(function (d) { onSite[d.id] = true; if (d.known && !d.out && d.areaLabel) roomOf[d.id] = d.areaLabel; });   // same list as The Board: not dogs that have left
+    BLDOccupancy.dailyList(T).dogs.forEach(function (d) { onSite[d.id] = true; if (d.known && !d.out && d.areaLabel) roomOf[d.id] = d.areaLabel; });
     return { onSite: onSite, roomOf: roomOf };
   }
-  /** A button that reads what its cards need, then draws them. */
   function markKind(b) {
     Array.prototype.forEach.call(opts.children, function (x) {
       if (x.classList && x.classList.contains('btn')) x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
@@ -117,12 +107,12 @@
     items.forEach(function (it) { if (!it || seenId[it.id]) return; seenId[it.id] = 1; list.push(it); });
     items = list;
     sheet.textContent = '';
-    if (kind !== 'item') pickBox.textContent = '';   // the item field picker shows with item cards only
+    if (kind !== 'item') pickBox.textContent = '';
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
     // 15 Nov 2026 (the owner): printing never shows a code that is not saved. New codes need an owner code, so say so before trying.
     var role = typeof save.role === 'function' ? save.role() : '';
-    if (missing.length && role && role !== 'OWNER' && !(save.usingGoogle && save.usingGoogle())) {
-      say('Not printed. ' + missing.length + ' new code' + (missing.length === 1 ? '' : 's') + ' must be saved first, and only an owner code can save them. This device has a ' + role.toLowerCase() + ' code: set it up again on the staff page with your owner code.', 'bad');
+    if (missing.length && role && role !== 'USER' && !(save.usingGoogle && save.usingGoogle())) {
+      say('Not printed. ' + missing.length + ' new code' + (missing.length === 1 ? '' : 's') + ' must be saved first, and only an user code can save them. This device has a ' + role.toLowerCase() + ' code: set it up again on the staff page with your user code.', 'bad');
       if (done) done();
       return;
     }
@@ -148,7 +138,6 @@
       if (gen !== makeGen) return;
       sheet.textContent = '';
       var seen = {};
-      // only codes already saved are drawn (a code whose save failed is never shown); the rest are named as not printed
       items.forEach(function (it) {
         if (seen[it.id]) return;
         seen[it.id] = 1;
@@ -186,7 +175,6 @@
     (T.weight || []).forEach(function (r) { if (r.subject_id === s.id && !isNaN(parseFloat(r.weight_kg)) && (!w || String(r.performed_on || '') >= String(w.performed_on || ''))) w = r; });
     return BLDCapacity.sizeForDog({ id: s.id, kg: w ? w.weight_kg : null, sizeText: s.size_band, rules: T.breeding_rule || [], today: BLDNeeds.today() }).size || sizeKey(s.size_band);
   }
-  /* the size word only, in the owner's size_label.* words (default Small, Medium, Large, shared with the hub): never the kg range typed in the old size cell */
   function sizeWord(k) { return k ? (BLDCapacity.sizeLabels(T.breeding_rule || [], BLDNeeds.today())[k] || '') : ''; }
   function sizeColour(b) {
     var k = sizeKey(b), c = '';
@@ -206,7 +194,6 @@
     return days >= 0 && days < wk * 7;
   }
   function dogColour(s, sz) { return (isPup(s) && colourVar(ruleNow('size_colour.puppy'))) || sizeColour(sz); }
-  /* what a pup's Size tile says: the owner's dated puppy.size_tile row, "size" (Small/Medium/Large, the default) or "puppy" */
   function tileWord(s, sz) { return isPup(s) && /^puppy$/i.test(ruleNow('puppy.size_tile')) ? 'Puppy' : sizeWord(sz); }
   /* one date format everywhere: 2 Mar 2026 (the owner 13 Nov 2026; never DD/MM/YY) */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -221,8 +208,6 @@
   /* the jobs in force for this kind of card (the owner's job rows) */
   function jobsFor(kinds) { return (typeof BLDDue !== 'undefined' ? BLDDue.jobsInForce(T.check_type || [], BLDNeeds.today()) : []).filter(function (j) { return kinds.indexOf(j.target) >= 0; }); }
   function howOften(j) { var n = parseInt(j.every_days, 10); return j.frequency || (n === 1 ? 'daily' : n === 7 ? 'weekly' : n > 0 ? 'every ' + n + ' days' : 'as needed'); }
-  /* Photo: the dog's photo cell holds a Drive file id (or a Drive link). The card shows Drive's own picture of it, which
-     loads for whoever is signed in to Google with access to the photos folder; otherwise the empty Photo box stays. */
   function photoId(v) { v = String(v == null ? '' : v).trim(); var m = /\/file\/d\/([A-Za-z0-9_-]+)/.exec(v) || /[?&]id=([A-Za-z0-9_-]+)/.exec(v);
     return m ? m[1] : (!/^https?:/i.test(v) && /^[A-Za-z0-9_-]{8,}$/.test(v) ? v : ''); }
   /* the main photo is the 'main' link row in force (the owner 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
@@ -255,8 +240,6 @@
       .then(function (m) { var link = m && m.thumbnailLink; if (link && /^https:\/\//i.test(link)) img.src = link.replace(/=s\d+$/, '=s800'); else bytes(); })
       .catch(bytes);
   }
-  /* the photo as saved (the hub's crop step saves a square); printing never crops it again: it is fitted whole (contain).
-     No photo, or one that fails to load: the size-colour frame stays and is left blank (no placeholder word on paper) */
   function photoBox(s, table) {
     var id = mainPhoto(s, table), box = h('div', { class: 'photo' + (id ? '' : ' none'), 'data-k': 'photo' });
     if (id) {
@@ -275,7 +258,6 @@
     var svg = BLDQr.svg(url, label), m = /viewBox="0 0 (\d+) /.exec(svg), n = m ? +m[1] : 0;
     return h('div', { class: 'code', html: svg, style: n > 8 ? '--qz:' + (n / (n - 8)).toFixed(4) : '' });
   }
-  /* a long name steps down a size so it stays on two lines at most */
   function nameFit(name) { var n = String(name).length; return n > 28 ? ' n3' : n > 16 ? ' n2' : ''; }
   function cardName(s) {
     var n = s.name || s.id;
@@ -328,14 +310,13 @@
     if (/_on$/.test(col)) return dmy(v) || v;
     return v;
   }
-  /* one card per item: the latest row of each item (a correction row, corrects_id, replaces the first); its QR is the first row's */
   function itemList() {
     var latest = {};
     (T.items || []).forEach(function (r) { var first = r.corrects_id || r.id; if (first) latest[first] = r; });
     return Object.keys(latest).map(function (id) { var r = latest[id]; return { id: id, label: r.name || r.item_no || id, r: r }; })
       .sort(function (a, b) { return String(a.r.item_no || a.label).localeCompare(String(b.r.item_no || b.label), 'en', { numeric: true }); });
   }
-  var itemPick = null;   // columns chosen on this page for this print (null = the owner's rule rows)
+  var itemPick = null;
   function itemCard(tag, it) {
     var r = it.r, cols = itemPick || itemFields(r.kind_key), facts = [];
     cols.forEach(function (c) { var v = itemValue(c, r); if (v) facts.push(h('div', { 'data-k': c }, [h('dt', { text: itemLabel(c) }), h('dd', { text: v })])); });
@@ -390,11 +371,8 @@
   }
   function jobList(kinds) { var js = jobsFor(kinds); return js.length ? h('ul', { class: 'lst', 'data-k': 'jobs' }, js.sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); })
     .map(function (j) { return h('li', {}, [j.label || j.type_key, h('span', { text: howOften(j) })]); })) : null; }
-  /* a dated row counts from its from_date (older rows: effective_from) until its to_date */
   function fromOf(r) { return String(r.from_date || r.effective_from || ''); }
   function inForceOn(r, day) { var f = fromOf(r); return (!f || f <= day) && (!r.to_date || String(r.to_date) >= day); }
-  /* The room card's limits: the flap setting and capacity rows in force today, by the shared rule in capacity.js
-     (accessOn / limitsOn, LD-SC audit 15 Nov 2026). Mum + pups: the "+ pups" rows in force for that setting. */
   function limitsOf(areaId) {
     var day = BLDNeeds.today(), acc = BLDCapacity.accessOn(T.area_access || [], areaId, day), out = { access: acc, any: false, dogs: { small: 0, medium: 0, large: 0 }, pups: [] };
     if (!acc) return out;
@@ -415,11 +393,10 @@
   }
   var DOG = '<svg viewBox="0 0 32 24" aria-hidden="true"><path d="M3 9l3-5 2 4h9l3-6 3 3h4l2 3-3 2h-3l-1 3v9h-3l-1-6h-9l-2 6H7l1-8-3-3z"/></svg>';
   function roomSize(a) { var v = parseFloat(a && a.area_value); return v > 0 ? String(v) + (a.area_unit_id === 'u-m2' || !a.area_unit_id ? ' m²' : '') : ''; }
-  /* A live read can omit area_value. The device copy keeps the last full area rows, so the size still prints. */
   function areaFromCopy() {
     return new Promise(function (res) {
       if (!window.indexedDB) { res(); return; }
-      var req; try { req = indexedDB.open('cdhub-owner-copy', 1); } catch (e) { res(); return; }
+      var req; try { req = indexedDB.open('cdhub-user-copy', 1); } catch (e) { res(); return; }
       req.onerror = function () { res(); };
       req.onsuccess = function () {
         var db = req.result, rows = [];
@@ -468,7 +445,6 @@
   }
   function beginPrint() { makeGen++; sheet.textContent = ''; }
   function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: function () { BLDPick.clear(pick); beginPrint(); fn(); } }); }
-  /** Draws one person's code as a QR on this screen only: nothing is saved, printed, logged or sent. */
   function privateQr() {
     var url = '', timer = 0; try { url = localStorage.getItem('bld.scriptUrl') || ''; } catch (e) { /* none */ }
     sheet.textContent = ''; sheet.className = 'sheet'; say('');
@@ -491,11 +467,10 @@
     [input, show, holder, h('button', { class: 'btn quiet', type: 'button', text: 'Remove QR', onclick: clear })].forEach(function (n) { box.appendChild(n); });
     sheet.appendChild(box);
   }
-  /** Every thermometer whose need rows have not all ended, A to Z by name, each with its QR card. */
   function thermoCards() {
     sheet.className = 'sheet per' + per;
     if (!T.thermometer) { say('The thermometer list is not switched on yet.', 'warn'); return; }
-    var today = BLDNeeds.today();   // a thermometer whose need rows all ended before today gets no card
+    var today = BLDNeeds.today();
     pickThen('thermometer', T.thermometer.filter(function (t) { var end = BLDNeeds.endDay(T.requirement, 'reading.temperature', 'thermometer', t.id); return !end || end >= today; })
       .map(function (t) { return { id: t.id, label: t.name || t.id }; })
       .sort(function (a, b) { return String(a.label).localeCompare(String(b.label), 'en', { numeric: true }); }));
@@ -509,7 +484,7 @@
     var places = T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement); }).sort(function (a, b) {
       var x = parseFloat(a.group_sort), y = parseFloat(b.group_sort); x = isNaN(x) ? Infinity : x; y = isNaN(y) ? Infinity : y;
       return x !== y ? (x < y ? -1 : 1) : String(a.code || a.id).localeCompare(String(b.code || b.id), 'en', { numeric: true });
-    });   // every area in use: rooms and corridors alike (a corridor is its own place)
+    });
     var room = h('select', { class: 'inp', 'aria-label': 'Place' }, [h('option', { value: '', text: 'Place' })].concat(places.map(function (a) { return h('option', { value: a.id, text: a.code || a.id }); })));
     var go = h('button', { class: 'btn', type: 'button', text: 'Save', onclick: function () {
       if (!name.value.trim() || !room.value) { say('Name and place, please.', 'bad'); return; }
@@ -544,7 +519,6 @@
       if (!(T.litter || []).length) { sheet.className = 'sheet'; say('The litter list is not switched on yet.', 'warn'); return; }
       var subj = {}, pups = {}, pupsHere = {};
       T.subject.forEach(function (s) { subj[s.id] = s; if (s.birth_litter_id) { pups[s.birth_litter_id] = (pups[s.birth_litter_id] || 0) + 1; if (onSite[s.id]) pupsHere[s.birth_litter_id] = true; } });
-      /* litters still here: a pup on site, or the dam on site with no pups entered yet. No date cut-off. */
       var list = T.litter.filter(function (l) { return pupsHere[l.id] || (!pups[l.id] && onSite[l.dam_subject_id]); })
         .sort(function (a, b) { return String(b.born_on || b.dob || '').localeCompare(String(a.born_on || a.dob || '')); });
       if (!list.length) { sheet.className = 'sheet'; sheet.textContent = ''; say('No litters on site.', 'warn'); return; }
@@ -561,10 +535,9 @@
       sheet.appendChild(h('div', { class: 'qcard big' }, [h('div', { html: BLDQr.svg(qrBase() + '#setup=' + encodeURIComponent(url), 'Phone set-up QR') }), h('b', { text: 'Set up a phone' }), h('small', { text: 'Show on screen. Do not pin up or photograph.' })]));
       say('Staff scan this once, then type their own code.', 'good');
     }));
-    opts.appendChild(lazy('Private set-up QR', 'site', privateQr));   /* both QRs use the owner's qr.base_url row */
+    opts.appendChild(lazy('Private set-up QR', 'site', privateQr));   /* both QRs use the user's qr.base_url row */
     var add = ''; try { add = new URLSearchParams(location.search).get('add') || ''; } catch (e) { /* old browser */ }
     if (add === 'thermometer') need('thermo').then(function (ok) { if (ok) addThermometer(); });   // from the hub's "+ Thermometer"
-    /* from a room's "Print sign" in CD Hub (?sign=<area id>, 21 Nov 2026): the room list with only that room ticked, its card ready to print */
     var sign = ''; try { sign = new URLSearchParams(location.search).get('sign') || ''; } catch (e) { /* old browser */ }
     if (sign) need('rooms').then(function (ok) {
       if (!ok) return;
@@ -577,3 +550,4 @@
     });
   }());
 }());
+

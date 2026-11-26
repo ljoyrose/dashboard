@@ -1,11 +1,7 @@
 const { tabClick, tabTo } = require('../support/tabs');
-// JOB 34 (group C): Factory gaps only. Views reached by address that no other spec opens, the header buttons,
-// the New idea and Problem forms end to end, the Health switch, Today / Week, the Apps table, hub-specific
-// state-file messages, a failed write, links and keyboard reach. Invented data only (tests/fixtures/factory/state.js).
 const { test, expect, HUBS, go } = require('../fixtures/job34/load');
 
 const UPLOAD = /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files/;
-// Pretend Drive upload: records each request file the page writes ({meta, body}).
 async function uploads(page, { status = 200 } = {}) {
   const got = [];
   await page.route(UPLOAD, (route) => {
@@ -40,11 +36,11 @@ test.describe('JOB 34 Factory: views reached only by address', () => {
       await expect(page).toHaveURL(/#\/rooms$/);
     }
     await go(page, 'zz-unknown');
-    await expect(view(page).locator('section.room').first()).toBeVisible(); // an unknown address falls back to Rooms
+    await expect(view(page).locator('section.room').first()).toBeVisible();
   });
 
   test('every in-page link on every view opens a real view (never Not found); every new-tab link is https with noopener', async ({ page, guard, allowedConsole }) => {
-    allowedConsole.push(/Failed to load resource: .*404/); // an app card whose Drive card file is missing: the page shows the card without it
+    allowedConsole.push(/Failed to load resource: .*404/);
     await HUBS.factory.open(page, guard);
     const seen = new Set();
     for (const v of HUBS.factory.views) {
@@ -87,7 +83,6 @@ test.describe('JOB 34 Factory: forms', () => {
     await expect(view(page).locator('.ferr').first()).toBeVisible();
     await expect(view(page)).toContainText('Add a name');
     expect(got).toHaveLength(0);
-    // Answer every question that says it is missing: type in its box, or pick its first chip.
     await view(page).locator('[data-f="name"]').fill('APP-A');
     await view(page).locator('[data-action="sendidea"]').click();
     await expect(view(page)).not.toContainText('Add a name');
@@ -103,7 +98,7 @@ test.describe('JOB 34 Factory: forms', () => {
     expect(got).toHaveLength(1);
     expect(got[0].meta.name).toMatch(/^idea-\d+\.json$/);
     expect(got[0].body).toMatchObject({ kind: 'idea', name: 'APP-A' });
-    expect(got[0].body.by).toMatch(/@/); // who clicked: the signed-in email and device
+    expect(got[0].body.by).toMatch(/@/);
     await expect(page.locator('#banner')).toContainText(/✓ \d\d:\d\d · card by/);
   });
 
@@ -150,7 +145,7 @@ test.describe('JOB 34 Factory: Health, Today and Apps', () => {
   });
 
   test('a write Drive refuses: "Not sent" banner and the switch goes back', async ({ page, guard, allowedConsole }) => {
-    allowedConsole.push(/Failed to load resource: .*500/); // the browser's own line for the refused upload; the page says Not sent
+    allowedConsole.push(/Failed to load resource: .*500/);
     const got = await uploads(page, { status: 500 });
     await HUBS.factory.open(page, guard);
     await go(page, 'health');
@@ -185,7 +180,7 @@ test.describe('JOB 34 Factory: Health, Today and Apps', () => {
     await view(page).locator('[data-f="pfq"]').fill('vet');
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText('Vet Converter');
-    await expect(view(page).locator('[data-f="pfq"]')).toBeFocused(); // typing keeps the cursor in the box
+    await expect(view(page).locator('[data-f="pfq"]')).toBeFocused();
     await view(page).locator('[data-action="pfclear"]').click();
     await expect(rows).toHaveCount(all);
     const chip = view(page).locator('[data-pf="h"]').first();
@@ -223,7 +218,7 @@ test.describe('JOB 34 Factory: keyboard', () => {
     await HUBS.factory.open(page, guard);
     for (const tab of ['me', 'rooms', 'decide', 'do', 'docs', 'today']) {
       const a = page.locator(`nav a[data-nav="${tab}"]`);
-      const reached = await tabTo(page, a, 120);   // a view under More: Tab to More, Enter, then Tab inside its menu
+      const reached = await tabTo(page, a, 120);
       expect(reached, tab + ' reached by Tab').toBe(true);
       await page.keyboard.press('Enter');
       await expect(a).toHaveAttribute('aria-current', 'page');
@@ -233,7 +228,7 @@ test.describe('JOB 34 Factory: keyboard', () => {
 
 test.describe('JOB 34 Factory: phone', () => {
   test('390px: the address-only views (card, problem, queue, stuck, Not found) fit with no sideways scroll', async ({ page, guard, allowedConsole }) => {
-    allowedConsole.push(/Failed to load resource: .*404/); // a card whose Drive card file is missing: the page shows the card without it
+    allowedConsole.push(/Failed to load resource: .*404/);
     const { sideScroll } = require('../fixtures/job34/load');
     await page.setViewportSize({ width: 390, height: 844 });
     await HUBS.factory.open(page, guard);
@@ -241,7 +236,8 @@ test.describe('JOB 34 Factory: phone', () => {
       await go(page, v);
       expect(await sideScroll(page), v).toBe(false);
     }
-    await view(page).locator('a[href="#/rooms"]').first().click(); // and the way back still works at phone width
+    await view(page).locator('a[href="#/rooms"]').first().click();
     await expect(page).toHaveURL(/#\/rooms$/);
   });
 });
+

@@ -21,7 +21,7 @@
   else root.BLDTempImport = factory();
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  var TEMP_MIN = -30, TEMP_MAX = 60;   // the save script's usual range (Config.gs TEMP_MIN / TEMP_MAX): outside is a warning
+  var TEMP_MIN = -30, TEMP_MAX = 60;
   var SLOT = { overnight: '00', night: '00', morning: '00', am: '00', day: '12', afternoon: '12', pm: '12' };
 
   function csvRows(text) {
@@ -44,18 +44,14 @@
     if ((m = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/.exec(d))) return pad(m[3].length === 2 ? '20' + m[3] : m[3], m[2], m[1]);
     return '';
   }
-  /** "18,5" -> "18.5"; '' stays ''; anything not a temperature with at most 1 decimal -> null. */
   function temp(v) {
     v = String(v == null ? '' : v).trim().replace(',', '.');
     if (v === '') return '';
     return /^-?\d{1,2}(\.\d)?$/.test(v) ? parseFloat(v).toFixed(1) : null;
   }
   function low(s) { return String(s == null ? '' : s).trim().toLowerCase(); }
-  /** The slot a period_start names, as London day + hour (module.js slotId): "2026-11-22 12". */
   function slotId(s) { s = String(s || ''); return /^\d{4}-\d{2}-\d{2}[T ]\d{2}/.test(s) ? s.slice(0, 10) + ' ' + s.slice(11, 13) : s; }
 
-  /** o: { today, nowHour (London), areas [{id, code, label}], thermos [{id, name, area_id}], readings (saved rows),
-      londonIso(dateIso, hh) }. Returns [{line, ok, why, warn, ...fields}]. Nothing is saved here. */
   function parse(o, text) {
     var rows = csvRows(text), out = [], seen = {}, filled = {};
     var areas = o.areas || [], thermos = o.thermos || [];
@@ -65,7 +61,7 @@
     (o.readings || []).forEach(function (r) {
       if (r.corrects_id) return;
       var mine = thermos.filter(function (t) { return t.area_id === r.area_id; });
-      var tid = r.thermometer_id || (mine.length === 1 ? mine[0].id : '');   // an older row names no thermometer: the room's only one
+      var tid = r.thermometer_id || (mine.length === 1 ? mine[0].id : '');
       filled[thermoKey(r.area_id, tid) + '|' + slotId(r.period_start)] = 1;
     });
     var week = new Date(Date.parse(o.today + 'T12:00:00Z') - 7 * 864e5).toISOString().slice(0, 10);
@@ -117,20 +113,17 @@
     return out;
   }
 
-  /** What one ready row sends to area_reading (the save script stamps taken_at and taken_by: the owner). */
   function fields(x) {
     var f = { area_id: x.areaId, period_start: x.periodStart, read_method: 'typed' };
     if (x.thermoId) f.thermometer_id = x.thermoId;
     if (x.minC !== '') { f.min_c = x.minC; f.max_c = x.maxC; }
     if (x.empty) f.room_empty = 'yes';
     if (x.note) f.mitigation_note = x.note;
-    if (x.past || x.warn) f.confirm_unusual = 'yes';   // seen in the preview before the press: the script's "save anyway"
+    if (x.past || x.warn) f.confirm_unusual = 'yes';
     return f;
   }
-  /** A request id per slot, so a retried or repeated save is one row (the save script's request guard). */
   function requestId(x) { return 'rimp-' + x.areaId + '-' + (x.thermoId || 'room') + '-' + x.iso + '-' + x.hh; }
 
-  /** A starter file: the heading row and one example per thermometer in use (yesterday, overnight), to fill in. */
   function template(o) {
     var y = new Date(Date.parse(o.today + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10), lines = ['date,room,thermometer,slot,min,max,room_empty,note'];
     var q = function (s) { s = String(s == null ? '' : s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
@@ -143,3 +136,4 @@
 
   return { parse: parse, fields: fields, requestId: requestId, template: template, isoOf: isoOf, temp: temp, slotId: slotId, TEMP_MIN: TEMP_MIN, TEMP_MAX: TEMP_MAX };
 }));
+

@@ -10,8 +10,6 @@ const { HUBS, go } = require('../support/hubs');
 // Pictures for the owner only when asked: FOLD_SHOTS=<folder>.
 const SHOTS = process.env.FOLD_SHOTS || '';
 
-// Checks every fold button on the screen now: named, open, its parts real; click folds (parts hidden, heading row still shown),
-// Enter opens, Space folds, Space opens. Returns how many it checked.
 async function checkFolds(page, where) {
   const btns = page.locator('button.house-fold:visible');
   const n = await btns.count();
@@ -52,7 +50,6 @@ test.describe('Fold: every section heading on every page and tab', () => {
         total += await checkFolds(page, hub + ' #/' + v);
       }
       expect(total, hub + ': at least one section folds').toBeGreaterThan(0);
-      // Every card or section whose first part is a heading (and has more under it) has its fold.
       for (const v of h.views) {
         await go(page, v);
         const missing = await page.evaluate(() => [...document.querySelectorAll('.card, section')].filter((c) => {
@@ -91,13 +88,12 @@ test('a fold survives a reload, and a folded Needs you still shows its count rin
   const b = needs.locator('button.house-fold');
   await b.click();
   await expect(b).toHaveAttribute('aria-expanded', 'false');
-  await page.reload();   // a fresh page load (still signed in)
+  await page.reload();
   await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
   await expect(needs.locator('button.house-fold')).toHaveAttribute('aria-expanded', 'false');
   await expect(needs.locator('.hm-rows')).toBeHidden();
   await expect(needs.locator('.hm-head .cnt')).toBeVisible();
   await expect(needs.locator('.hm-head .cnt')).toHaveText(/^\d+$/);
-  // The other sections were never folded, so they stay open.
   await expect(page.locator('[data-hm="next"] button.house-fold')).toHaveAttribute('aria-expanded', 'true');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('dash-fold')));
   expect(Object.keys(saved).some((k) => /money\/#\/now\|Needs you$/.test(k))).toBe(true);
@@ -108,19 +104,16 @@ test('the heading row folds; the heading link still opens Do; a row still opens 
   await page.goto('money/#/now');
   const needs = page.locator('[data-hm="needs"]');
   const b = needs.locator('button.house-fold');
-  // A tap on the heading row's empty middle folds and opens.
   const head = await needs.locator('.hm-head').boundingBox();
   const h3 = await needs.locator('.hm-head h3').boundingBox();
   await page.mouse.click(h3.x + h3.width + 20, head.y + head.height / 2);
   await expect(b).toHaveAttribute('aria-expanded', 'false');
   await page.mouse.click(h3.x + h3.width + 20, head.y + head.height / 2);
   await expect(b).toHaveAttribute('aria-expanded', 'true');
-  // The heading's own link still goes to Do.
   const href = await needs.locator('h3 a').getAttribute('href');
   await needs.locator('h3 a').click();
   await expect(page).toHaveURL(new RegExp(href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'));
   await page.goBack();
-  // Clicking anywhere on a [data-open-row] row (its pill, its empty edge) still opens its item.
   const rows = page.locator('[data-hm="needs"] li.hm-row[data-open-row]');
   await expect(rows.first()).toBeVisible();
   const n = await rows.count();
@@ -137,7 +130,6 @@ test('the heading row folds; the heading link still opens Do; a row still opens 
     checked++;
   }
   expect(checked, 'a row with an in-page item was clicked').toBeGreaterThan(0);
-  // The Next card opens its item from its heading too (a row that opens keeps doing that); its chevron folds.
   const next = page.locator('[data-hm="next"]');
   const to = await next.locator('.house-open').getAttribute('href');
   if (/^#\//.test(to) && !(await next.locator('.house-open').getAttribute('target'))) {
@@ -164,7 +156,7 @@ test('the chevron: grey outline icon in a house control (1px line); hover = the 
   expect(rest.motion).toBe('0s');
   await b.hover();
   const hov = await read();
-  expect(hov.bg, 'the pale grey fill on hover (Lisa, 12 Nov 2026)').toBe(hov.hov); expect(hov.box, 'nothing moves on hover').toBe(rest.box);
+  expect(hov.bg, 'the pale grey fill on hover (User, 12 Nov 2026)').toBe(hov.hov); expect(hov.box, 'nothing moves on hover').toBe(rest.box);
   expect(hov.os, 'no line on hover').toBe('none');
   await page.mouse.move(0, 0);
   await b.focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
@@ -212,7 +204,7 @@ test.describe('on a phone (390px)', () => {
     await more.click();
     await expect(list.locator(':scope > li:visible')).toHaveCount(all);
     await expect(page.locator('button.house-fold-more')).toHaveCount(0);
-    await page.reload();   // a fresh load (still signed in): the opened list stays open
+    await page.reload();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
     const again = page.locator('[data-fold-box="' + sec + '"] li:visible');
     await expect(again.first()).toBeVisible();
@@ -234,3 +226,4 @@ test.describe('on a phone (390px)', () => {
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'dashboard-main-390-folded.png'), fullPage: true });
   });
 });
+

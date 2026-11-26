@@ -1,4 +1,3 @@
-// One temperature-pair rule. Run: node --test cdhub/staff/lib/test/temp-pair.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -33,3 +32,4 @@ test('the shared check matches the save-script words and refuses only lowest abo
     assert.doesNotMatch(src, /The lowest cannot be higher than the highest\./);
   }
 });
+

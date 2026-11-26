@@ -93,13 +93,13 @@ test('Print records for a month keeps that month’s mating and leaves last mont
 test.describe('CD Hub: SOP record and print', () => {
   const URL_ = 'https://script.google.com/macros/s/AKfyTEST_only_123/exec';
 
-  test('an SOP with no linked check still records Checked today and prints @regression', async ({ page, guard }) => {
+  test('t-cdhub-sop-records-spec-1', async ({ page, guard }) => {
     await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) { /* private */ } }, URL_);
     await page.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
     const sent = [];
     await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => {
       const b = JSON.parse(route.request().postData() || '{}'); sent.push(b);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'new-' + sent.length, at: '2026-11-25T12:00:00.000Z', who: 'Test Owner' } }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'new-' + sent.length, at: '2026-11-25T12:00:00.000Z', who: 'Test User' } }) });
     });
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'sops');
@@ -124,7 +124,7 @@ test.describe('CD Hub: SOP record and print', () => {
     await expect.poll(() => page.evaluate(() => window.__printed || 0)).toBe(1);
   });
 
-  test('SOP Print records opens the print view and does not print the list @regression', async ({ page, guard }) => {
+  test('t-cdhub-sop-records-spec-2', async ({ page, guard }) => {
     await page.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'sops');
@@ -137,7 +137,7 @@ test.describe('CD Hub: SOP record and print', () => {
     await expect(page.locator('#soprows')).toHaveCount(0);
   });
 
-  test('a check whose SOP name was left blank still shows its record control @regression', async ({ page, guard }) => {
+  test('t-cdhub-sop-records-spec-3', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, [
       't-feed,t,feeding,Feeding,none,true,2020-01-01,,1,,,'
     ]));
@@ -150,3 +150,4 @@ test.describe('CD Hub: SOP record and print', () => {
     await expect(body.getByRole('link', { name: 'Print records' })).toBeVisible();
   });
 });
+

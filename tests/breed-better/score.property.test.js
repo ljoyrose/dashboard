@@ -1,9 +1,4 @@
 'use strict';
-/**
- * Breed Better calculator: property tests on generated rows (JOB BB-FIN.1, 12 Nov 2026).
- * Every animal, test, grade and date here is invented by a seeded generator: same seed, same rows, every run.
- * No new dependency. Each property runs RUNS times; a failure names its seed so it can be replayed.
- */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const Score = require('../../breed-better/score');
@@ -12,7 +7,6 @@ const { score, validateScheme, addMonths, targetFor } = Score;
 
 const RUNS = 150;
 
-/** mulberry32: a tiny seeded random number source. */
 function rng(seed) {
   let a = seed >>> 0;
   const next = () => {
@@ -24,7 +18,7 @@ function rng(seed) {
   };
   const int = (lo, hi) => lo + Math.floor(next() * (hi - lo + 1));
   const pick = (xs) => xs[int(0, xs.length - 1)];
-  const date = (from, to) => { // YYYY-MM-DD between two years, any real day
+  const date = (from, to) => {
     const y = int(from, to), m = int(1, 12), last = new Date(Date.UTC(y, m, 0)).getUTCDate();
     return y + '-' + String(m).padStart(2, '0') + '-' + String(int(1, last)).padStart(2, '0');
   };
@@ -42,10 +36,6 @@ function forAll(name, fn) {
 const AS_OF = '2026-06-01';
 const exam = (id, kind, result, on, subject_id = 'a1') => ({ id, subject_id, kind, result, on });
 
-/**
- * A random scheme: 1-3 gates (ok = pass, bad = fail, nr = unverified) and 1-4 points lines (top, mid, low).
- * Returns the rows plus a helper to make a record for any line.
- */
 function makeScheme(r, opts = {}) {
   const gates = [], lines = [], points = [];
   const nG = opts.gates ?? r.int(1, 3), nP = opts.lines ?? r.int(1, 4);
@@ -74,7 +64,6 @@ function makeScheme(r, opts = {}) {
 const recent = (r) => r.date(2024, 2025);
 const run = (set, rows, extra = {}) => score(Object.assign({}, set, { subject: { id: 'a1', sex: 'female', dob: '2020-01-01' }, evidence: { exam: rows }, asOf: AS_OF }, extra));
 
-/* 1. Missing evidence never passes */
 forAll('property: a gate with no record (and no skip) is never a Pass', (r) => {
   const set = makeScheme(r);
   const missing = r.int(0, set.gates.length - 1);
@@ -88,7 +77,6 @@ forAll('property: a gate with no record (and no skip) is never a Pass', (r) => {
   assert.equal(line.unknown_reason, 'no_record');
 });
 
-/* 2. Any fail is Fail */
 forAll('property: one failed gate makes the verdict Fail, whatever else is true', (r) => {
   const set = makeScheme(r, { target: String(r.int(0, 30)), targetIs: r.pick(['points', 'percent', '']) });
   const failing = r.int(0, set.gates.length - 1);
@@ -103,7 +91,6 @@ forAll('property: one failed gate makes the verdict Fail, whatever else is true'
   assert.equal(out.verdict, 'fail');
 });
 
-/* 3. An answer that matches no rule is flagged, never scored 0 and never a Fail */
 forAll('property: an answer no rule matches is flagged and held as unverified, never 0 and never Fail', (r) => {
   const set = makeScheme(r, { gateMissing: r.pick(['unknown', 'zero']), lineMissing: r.pick(['unknown', 'zero']) });
   const odd = 'odd-' + r.int(1, 999);
@@ -119,7 +106,6 @@ forAll('property: an answer no rule matches is flagged and held as unverified, n
   assert.notEqual(out.verdict, 'fail');
 });
 
-/* 4. Overlapping dated versions of one check are refused; neat hand-overs are allowed */
 forAll('property: two versions of one check whose dates overlap are refused; a clean hand-over is accepted', (r) => {
   const set = makeScheme(r, { gates: 1, lines: 1 });
   const a = r.date(2020, 2026), b = r.date(2020, 2026);
@@ -137,7 +123,6 @@ forAll('property: two versions of one check whose dates overlap are refused; a c
   if (overlap) assert.throws(() => run(rules, []), /overlap/);
 });
 
-/* 5. A rule change never turns an old record into a Fail */
 forAll('property: a stricter rule from a later date never fails a record made under the old rule', (r) => {
   const change = r.date(2022, 2025);
   const old = { id: 'h1', key: 'hip', band_id: 'G', label: 'Hips', evidence_source: 'exam', evidence_match: 'kind=hip', answer_field: 'result', date_field: 'on', to_date: change };
@@ -153,13 +138,11 @@ forAll('property: a stricter rule from a later date never fails a record made un
   assert.equal(out.lines[0].gate_outcome, 'pass');
   assert.equal(out.lines[0].rules_then, true);
   assert.equal(out.lines[0].criterion_id, 'h1');
-  // the same answer recorded after the change is graded by the new rule
   const after = score(Object.assign({}, set, { subject: { id: 'a1' }, evidence: { exam: [exam('y', 'hip', 'C', asOf)] }, asOf }));
   assert.equal(after.lines[0].gate_outcome, 'fail');
 });
 function nextDay(d) { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + 1); return x.toISOString().slice(0, 10); }
 
-/* 6. A target in points and the same target as a percent give the same verdict, at and around the boundary */
 forAll('property: target as points and as the matching percent give the same verdict at the boundary', (r) => {
   const set = makeScheme(r, { gates: 1, lines: r.int(1, 4) });
   const available = set.lines.reduce((s, l) => s + Math.max(...set.points.filter((p) => p.criterion_id === l.id).map((p) => Number(p.points))), 0);
@@ -189,7 +172,6 @@ forAll('property: earned exactly on the target passes; one short does not', (r) 
   assert.equal(run(Object.assign({}, set, { scheme: { id: 's1', target_points: String(pctAt), target_is: 'percent' } }), rows).verdict, 'pass');
 });
 
-/* points with tenths must not drift: 0.1 + 0.2 is not 0.30000000000000004 on screen or against a target */
 forAll('property: points with tenths add up exactly, so a target equal to the sum passes', (r) => {
   const n = r.int(2, 5), crits = [], pts = [], rows = [];
   let tenths = 0;
@@ -209,7 +191,6 @@ forAll('property: points with tenths add up exactly, so a target equal to the su
   assert.equal(pct.verdict, 'pass', 'a 100% target is reachable when every line is at its best');
 });
 
-/* 7. Maidens skip litter lines */
 forAll('property: a line set to skip leaves the total when there is no record, and changes nothing else', (r) => {
   const set = makeScheme(r, { lines: r.int(1, 3), target: String(r.int(0, 15)) });
   const litter = { id: 'lit', band_id: 'P', label: 'Last litter', evidence_source: 'exam', evidence_match: 'kind=lit', answer_field: 'result', date_field: 'on', when_missing: 'skip', applies_to: 'sex=female' };
@@ -219,12 +200,10 @@ forAll('property: a line set to skip leaves the total when there is no record, a
   const a = run(set, rows), b = run(withLitter, rows);
   assert.equal(b.lines.some((x) => x.criterion_id === 'lit'), false);
   for (const k of ['verdict', 'gate_result', 'points_earned', 'points_available', 'points_unverified', 'unknown_count']) assert.deepEqual(b[k], a[k], k);
-  // a male is not asked at all, record or not
   const male = run(withLitter, rows.concat(exam('lx', 'lit', 'yes', recent(r))), { subject: { id: 'a1', sex: 'male' } });
   assert.equal(male.lines.some((x) => x.criterion_id === 'lit'), false);
 });
 
-/* 8. age_weight boundaries */
 forAll('property: age_weight 0-11:0.5 halves a record made up to 11 whole months old, and not from 12 months', (r) => {
   const dob = r.date(2018, 2022);
   const set = { scheme: { id: 's1' }, bands: [{ id: 'P', kind: 'points' }],
@@ -240,13 +219,11 @@ forAll('property: age_weight 0-11:0.5 halves a record made up to 11 whole months
   assert.equal(d11.age_months, 11, dob + ' -> ' + dayBefore);
   assert.equal(d11.points, full / 2);
   const d12 = one(at12);
-  // 12 whole months, except when the birthday is 29-31 and the month is shorter (then the day has not come round yet)
   if (Number(dob.slice(8)) <= 28) { assert.equal(d12.age_months, 12); assert.equal(d12.points, full); }
   assert.equal(one(addMonths(dob, 13 + r.int(0, 30))).points, full);
 });
 function prevDay(d) { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() - 1); return x.toISOString().slice(0, 10); }
 
-/* 9. lapsed_affects_verdict FALSE never changes the verdict */
 forAll('property: with lapsed_affects_verdict FALSE an out-of-date record scores as if it were in date', (r) => {
   const set = makeScheme(r, { target: String(r.int(0, 20)) });
   const months = r.int(6, 36);
@@ -257,14 +234,12 @@ forAll('property: with lapsed_affects_verdict FALSE an out-of-date record scores
   const a = run(set, fresh), b = run(set, stale);
   for (const k of ['verdict', 'gate_result', 'points_earned', 'points_available', 'points_unverified']) assert.deepEqual(b[k], a[k], k);
   assert.ok(b.lines.every((l) => l.due === 'overdue'));
-  // and with the column TRUE or blank, the same stale records are held as Unverified
   set.criteria.forEach((c) => { c.lapsed_affects_verdict = r.pick(['TRUE', '']); });
   const c = run(set, stale);
   assert.ok(c.lines.every((l) => l.unknown_reason === 'expired'));
   assert.notEqual(c.verdict, 'pass');
 });
 
-/* no peeking: a record dated after the scoring date never changes the result */
 forAll('property: records dated after the scoring date are ignored', (r) => {
   const set = makeScheme(r);
   const rows = set.criteria.map((c, i) => exam('n' + i, c.id, c.band_id === 'G' ? r.pick(['ok', 'nr']) : r.pick(['top', 'mid']), recent(r)));
@@ -274,7 +249,6 @@ forAll('property: records dated after the scoring date are ignored', (r) => {
   assert.deepEqual(b.points_earned, a.points_earned);
 });
 
-/* 10. verdict_words renames labels only */
 forAll('property: verdict_words changes the words on screen, never the verdict, points or order', (r) => {
   const n = r.int(2, 5), subjects = [], enrol = [], exams = [];
   for (let i = 0; i < n; i++) {
@@ -293,7 +267,6 @@ forAll('property: verdict_words changes the words on screen, never the verdict, 
       { id: 'p3', criterion_id: 'c', answer_match: 'is:nr', gate_outcome: 'unverified' }, { id: 'p4', criterion_id: 'd', answer_match: 'is:hi', points: '8' }, { id: 'p5', criterion_id: 'd', answer_match: 'is:lo', points: '2' }],
     'BLD-score_enrolment.csv': enrol, 'BLD-subject.csv': subjects, 'BLD-exam.csv': exams
   });
-  // two different days so the view's memo cannot hand back the first answer
   const plain = View.compute({ T: T(''), today: '2026-06-01' });
   const named = View.compute({ T: T(words), today: '2026-06-02' });
   const strip = (c) => c.results.map((x) => [x.subject_id, x.verdict, x.gate_result, x.points_earned, x.points_available, x.target]);
@@ -303,8 +276,7 @@ forAll('property: verdict_words changes the words on screen, never the verdict, 
   for (const k of Object.keys(expect)) assert.ok(expect[k].length > 0, 'a blank word never replaces a label');
 });
 
-/* the view must not hand back a stale answer when a row changes but the row counts do not */
-test('@regression the hub view re-scores when a row value changes but the number of rows stays the same', () => {
+test('t-score-property-test-1', () => {
   const base = {
     'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01' }],
     'BLD-score_band.csv': [{ id: 'g', scheme_id: 's1', kind: 'gate' }],
@@ -319,7 +291,6 @@ test('@regression the hub view re-scores when a row value changes but the number
   assert.equal(View.compute({ T: changed, today: '2026-07-01' }).results[0].verdict, 'fail');
 });
 
-/* the order rows arrive in never changes the answer (records with distinct dates) */
 forAll('property: shuffling the record rows never changes the result', (r) => {
   const set = makeScheme(r, { target: String(r.int(0, 20)) });
   const rows = [];
@@ -335,7 +306,6 @@ forAll('property: shuffling the record rows never changes the result', (r) => {
   for (const k of ['verdict', 'gate_result', 'points_earned', 'points_available', 'points_unverified']) assert.deepEqual(b[k], a[k], k);
 });
 
-/* a draft, retired or future scheme is never used; a breed's own scheme beats the species one */
 forAll('property: only an active scheme in force is picked, and the breed scheme wins', (r) => {
   const asOf = r.date(2025, 2026);
   const species = { id: 'sp', status: 'active', species_id: 'x', effective_from: r.date(2020, 2024) };
@@ -352,7 +322,6 @@ forAll('property: only an active scheme in force is picked, and the breed scheme
   assert.equal(Score.pickScheme(noise, 'x', 'B1', asOf), null);
 });
 
-/* bad rule rows are always caught before anything is scored */
 forAll('property: a rule row with a broken value is refused, never scored', (r) => {
   const set = makeScheme(r, { gates: 1, lines: 1 });
   const breakers = [
@@ -378,13 +347,11 @@ forAll('property: a rule row with a broken value is refused, never scored', (r) 
   assert.equal(validateScheme(set).length, 0);
 });
 
-/* pinned regressions for the fixes made in this job */
-test('@regression an unmatched gate answer is Unverified, never Fail', () => {
+test('t-score-property-test-2', () => {
   const set = makeScheme(rng(1), { gates: 1, lines: 1, gateMissing: 'unknown' });
   const out = run(set, [exam('e', 'g0', 'Grade Q', '2025-01-01'), exam('l', 'p0', 'top', '2025-01-01')]);
   assert.equal(out.lines[0].gate_outcome, 'unverified');
   assert.equal(out.verdict, 'unverified');
-  // and a missing record is Unverified too, never Fail (D7)
   assert.equal(run(set, [exam('l', 'p0', 'top', '2025-01-01')]).verdict, 'unverified');
 });
 
@@ -395,14 +362,13 @@ forAll('property: when_missing fail is refused on any line; a missing record is 
   all[r.int(0, all.length - 1)].when_missing = 'fail';
   assert.match(validateScheme(set).join(';'), /cannot be fail/);
   assert.throws(() => run(set, []), /The rules have problems/);
-  // with no fail setting, records missing everywhere never give a Fail
   all.forEach((c) => { c.when_missing = r.pick(['unknown', '', c.band_id === 'P' ? 'zero' : 'unknown']); });
   const none = run(set, []);
   assert.notEqual(none.verdict, 'fail');
   assert.notEqual(none.gate_result, 'fail');
 });
 
-test('@regression an unmatched points answer with when_missing zero is held, a missing record is 0', () => {
+test('t-score-property-test-3', () => {
   const set = makeScheme(rng(2), { gates: 1, lines: 1, lineMissing: 'zero' });
   const odd = run(set, [exam('e', 'g0', 'ok', '2025-01-01'), exam('l', 'p0', 'Grade Q', '2025-01-01')]);
   assert.equal(odd.lines[1].points, '');
@@ -411,7 +377,7 @@ test('@regression an unmatched points answer with when_missing zero is held, a m
   assert.equal(none.lines[1].points, 0);
 });
 
-test('@regression tenths add up to tidy totals (0.1 + 0.2 + 0.3 = 0.6) and 100% of 0.6 is 0.6', () => {
+test('t-score-property-test-4', () => {
   const crits = [0, 1, 2].map((i) => ({ id: 'p' + i, band_id: 'P', evidence_source: 'exam', evidence_match: 'kind=p' + i, answer_field: 'result', date_field: 'on' }));
   const pts = [0, 1, 2].map((i) => ({ id: 'x' + i, criterion_id: 'p' + i, answer_match: 'any', points: ['0.1', '0.2', '0.3'][i] }));
   const out = run({ scheme: { id: 's1', target_points: '100', target_is: 'percent' }, bands: [{ id: 'P', kind: 'points' }], criteria: crits, points: pts },
@@ -423,9 +389,10 @@ test('@regression tenths add up to tidy totals (0.1 + 0.2 + 0.3 = 0.6) and 100% 
   assert.equal(targetFor({ target_points: '70', target_is: 'percent' }, 7), 5, 'whole points still round up');
 });
 
-test('@regression a must-pass check set to skip is refused, so a missing record can never let an animal Pass', () => {
+test('t-score-property-test-5', () => {
   const set = makeScheme(rng(3), { gates: 1, lines: 1 });
   set.criteria[0].when_missing = 'skip';
   assert.match(validateScheme(set).join(';'), /must-pass check cannot be skipped/);
   assert.throws(() => run(set, [exam('l', 'p0', 'top', '2025-01-01')]), /The rules have problems/);
 });
+

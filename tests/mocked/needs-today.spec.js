@@ -22,7 +22,7 @@ test.describe('Needs you today', () => {
     expect(order.slice(0, 3)).toEqual(['homeTop', 'needsToday', 'hubTiles']);
   });
 
-  test('shows at most 5 rows, overdue (red) first, each row a link, and the tab title carries the count @regression', async ({ page }) => {
+  test('t-needs-today-spec-1', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const rows = page.locator('#needsToday li');
@@ -49,7 +49,7 @@ test.describe('Needs you today', () => {
 
   test('after the Bin is read, files ready to bin are one row that opens the Bin', async ({ page, guard }) => {
     const w = guard.world;
-    // Someone other than the Money owner: no money rows, so the Bin row (it ranks last) fits in the 5.
+    // no money rows
     w.email = buildWorld({ email: 'someone.else@example.test' }).email;
     w.file('zz-ready-n', 'ZZ_DELETE_ready-for-needs.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
     w.byId(IDS.ledger).content = 'file_id\nzz-ready-n\n';
@@ -69,3 +69,4 @@ test.describe('Needs you today', () => {
     await expect(page.locator('#needsToday a[href^="money/"]')).toHaveCount(0);
   });
 });
+

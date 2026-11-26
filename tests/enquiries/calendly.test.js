@@ -1,5 +1,3 @@
-// Calendly capture (JOB 13 Stage 3). Run: node --test tests/enquiries/calendly.test.js
-// Invented Calendly JSON only (tests/fixtures/enquiries/calendly.json).
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -80,3 +78,4 @@ test('UK time follows the clocks (BST in summer, GMT in winter)', () => {
   assert.equal(C.toUk('2026-11-01T12:00:00Z'), '2026-11-01T12:00:00');
   assert.equal(C.toUk('nonsense'), '');
 });
+

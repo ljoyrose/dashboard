@@ -1,31 +1,8 @@
-/**
- * Dog card saves (12 Nov 2026, DRAFT): Add weight, Add vaccination, and Remove the newest vaccination.
- *
- *   action 'weighing'          adds one row to BLD-weight.csv. A correction sends corrects_id and adds a new row
- *                              pointing at the old one; the old row is never overwritten. The weight file needs a
- *                              corrects_id column for that, and this script has to be published before it takes effect.
- *   action 'vaccination'       adds one row to BLD-vaccination.csv (one row per vaccination; a dog can have many)
- *   action 'vaccination_void'  OWNER ONLY (Lisa 17 Nov 2026: "Archive"). Hides ANY one vaccination row of the dog by filling
- *                              voided_on, voided_by. The row stays in the sheet.
- *   action 'vaccination_delete' OWNER ONLY (Lisa 17 Nov 2026: "Delete forever"; the records are the owner's). Takes ONE
- *                              vaccination row of the dog out of the sheet. Every other row must read back unchanged.
- *   action 'dog_details'       OWNER ONLY. Changes the dog card header in place: name, sex, date of birth, colour,
- *                              entire/neutered (BLD-subject.csv) and the microchip number (BLD-microchip.csv).
- *                              Switch: TABLE_ON_dog_details. Size is NOT here: it is worked out from the latest weight.
- *   action 'subject_create'    OWNER ONLY (13 Nov 2026, field list agreed by DOGCARD + BB). Adds one dog: one BLD-subject row,
- *                              an optional BLD-microchip row and one BLD-subject_status row (Active, from today).
- *                              Switch: TABLE_ON_subject_create. No photo and no room here: Photo.gs and the occupancy
- *                              action do those afterwards. Sex and kind come from rows, never a list in this file.
- *
- * Every one needs SAVE_ENABLED = true AND its own switch: TABLE_ON_weighing or TABLE_ON_vaccination = true. Both are OFF
- * until Lisa sets them. Columns are found by header NAME, never by position; a missing column is refused, not guessed.
- * The page sends the same staff code as The round. Nothing here makes anything public.
- */
 var DOGCARD_ = {
   weighing:    { file: 'BLD-weight.csv',      on: 'weighing',    idPrefix: 'wt',  need: ['id', 'subject_id', 'performed_on', 'weight_kg'] },
   vaccination: { file: 'BLD-vaccination.csv', on: 'vaccination', idPrefix: 'vax', need: ['id', 'subject_id', 'given_on', 'product'] },
-  dog_details: { file: 'BLD-subject.csv',     on: 'dog_details', idPrefix: 'mc',  need: ['id', 'name', 'sex', 'dob'], owner: true },
-  subject_create: { file: 'BLD-subject.csv',  on: 'subject_create', idPrefix: 'sub', need: ['id', 'name', 'sex', 'dob', 'species', 'kind', 'source'], owner: true }
+  dog_details: { file: 'BLD-subject.csv',     on: 'dog_details', idPrefix: 'mc',  need: ['id', 'name', 'sex', 'dob'], user: true },
+  subject_create: { file: 'BLD-subject.csv',  on: 'subject_create', idPrefix: 'sub', need: ['id', 'name', 'sex', 'dob', 'species', 'kind', 'source'], user: true }
 };
 var STATUS_FILE_ = 'BLD-subject_status.csv';
 var SPECIES_FILE_ = 'BLD-species.csv';
@@ -33,7 +10,6 @@ var CHIP_FILE_ = 'BLD-microchip.csv';
 var DETAIL_COLS_ = ['name', 'sex', 'dob', 'coat_colour_id', 'neuter_status'];
 var VOID_COLS_ = ['voided_on', 'voided_by'];
 
-/** Files these saves may write. The dog record and microchip files are only on the list while TABLE_ON_dog_details is true. */
 function dogcardFiles_() {
   var out = [DOGCARD_.weighing.file, DOGCARD_.vaccination.file];
   if (prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.dog_details.on) === 'true') out.push(DOGCARD_.dog_details.file, CHIP_FILE_);
@@ -63,7 +39,6 @@ function dogcardSubject_(subjectId) {
   if (!hit) throw err_('NOT_FOUND', 'That dog was not found, so nothing was saved.');
 }
 
-/** Shared entry: switches, code, repeat-tap guard, one lock. */
 function sinkDogcard_(req, kind, fn) {
   if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off.');
   if (!req || typeof req !== 'object') throw err_('BAD_REQUEST', 'That request was not understood.');
@@ -72,7 +47,7 @@ function sinkDogcard_(req, kind, fn) {
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
   var who = authSaver_(req);
-  if (who.role !== 'OWNER' && (spec.owner || who.role !== 'STAFF')) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
+  if (who.role !== 'USER' && (spec.user || who.role !== 'STAFF')) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask User.');
   var cache = CacheService.getScriptCache(), cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
   var f = req.fields && typeof req.fields === 'object' ? req.fields : {};
@@ -145,9 +120,8 @@ function sinkVaccination_(req) {
   });
 }
 
-/** The row index of one vaccination of one dog (owner only), or a plain refusal. */
 function vaxOwnRow_(spec, f, who, cols) {
-  if (who.role !== 'OWNER') throw err_('NOT_ALLOWED', 'Only the owner can archive or delete a vaccination.');
+  if (who.role !== 'USER') throw err_('NOT_ALLOWED', 'Only the user can archive or delete a vaccination.');
   var subjectId = String(f.subject_id || '').trim(), rowId = String(f.id || '').trim();
   if (!ID_RE_.test(subjectId) || !ID_RE_.test(rowId)) throw err_('INVALID', 'Say which vaccination this is.');
   var read = store_read_(spec.file, true);
@@ -158,7 +132,6 @@ function vaxOwnRow_(spec, f, who, cols) {
   return { read: read, at: at, subjectId: subjectId, rowId: rowId };
 }
 
-/** Archive one vaccination (owner only): fills voided_on and voided_by in that row only. The row stays. */
 function sinkVaccinationVoid_(req) {
   return sinkDogcard_(req, 'vaccination', function (spec, f, who, now) {
     var x = vaxOwnRow_(spec, f, who, VOID_COLS_), rec = x.read.records[x.at];
@@ -173,7 +146,6 @@ function sinkVaccinationVoid_(req) {
   });
 }
 
-/** Delete one vaccination for good (owner only): the row leaves the sheet; nothing else may change. */
 function sinkVaccinationDelete_(req) {
   return sinkDogcard_(req, 'vaccination', function (spec, f, who) {
     var x = vaxOwnRow_(spec, f, who, []);
@@ -182,11 +154,6 @@ function sinkVaccinationDelete_(req) {
   });
 }
 
-/**
- * Change the header of one dog card (owner only). Only the fields sent are looked at; a field equal to what is there
- * is left alone. The subject row is replaced in place by header name. The chip goes in the dog's microchip row
- * (replaced in place if there is one, otherwise one new row).
- */
 function sinkDogDetails_(req) {
   return sinkDogcard_(req, 'dog_details', function (spec, f, who, now) {
     var errors = {}, subjectId = String(f.subject_id || '').trim(), want = {}, tenant = prop_(BLD.PROP.TENANT_ID);
@@ -238,34 +205,24 @@ function sinkDogDetails_(req) {
   });
 }
 
-/** The rows of a lookup file for this tenant (rows with no tenant_id count for everyone). Missing file = []. */
 function dogcardRows_(file) {
   var r = store_read_(file, false), tenant = prop_(BLD.PROP.TENANT_ID);
   if (!r) return [];
   return r.records.filter(function (x) { return !tenant || !x.tenant_id || x.tenant_id === tenant; });
 }
 
-/** The word as the rows spell it, matched without caring about case; '' if no row has it. */
 function dogcardPick_(word, allowed) {
   var w = String(word || '').trim().toLowerCase(), hit = '';
   allowed.forEach(function (a) { if (!hit && String(a).trim().toLowerCase() === w) hit = String(a).trim(); });
   return hit;
 }
 
-/** A new dog's id: sub- and random letters (Q4, 15 Nov 2026), never the name. Unique against the ids already in the file. */
 function dogcardSubjectId_(ids) {
   var id = newId_('sub');
   while (ids[id]) id = newId_('sub');
   return id;
 }
 
-/**
- * Add one dog (owner only). Required: name, sex, species, kind. dob is required for a pup (a birth litter, or a kind
- * equal to the species row's young_word). Optional: breed, neuter_status (default entire), coat_type, coat_colour_id,
- * coat_pattern_id, nose_pigment_id, birth_litter_id, chip_number. Every id must be an existing row.
- * Sex: a value the dog rows already use, or the species row's adult_female_word / adult_male_word.
- * Kind: a value the dog rows already use. Refused (DUPLICATE) when an active dog has the same name and date of birth.
- */
 function sinkSubjectCreate_(req) {
   return sinkDogcard_(req, 'subject_create', function (spec, f, who, now) {
     var errors = {}, tenant = prop_(BLD.PROP.TENANT_ID), today = todayLondon_(now);
@@ -283,7 +240,6 @@ function sinkSubjectCreate_(req) {
       if ([r.id, r.code, r.common_name].some(function (v) { return String(v || '').trim().toLowerCase() === spWord; })) sp = r;
     });
     if (!spWord || !sp) errors.species = 'Pick a species from the list.';
-    // keep the spelling the dog rows already use for this species
     var species = '';
     if (sp) {
       var names = [sp.id, sp.code, sp.common_name].map(function (v) { return String(v || '').trim().toLowerCase(); });
@@ -328,7 +284,6 @@ function sinkSubjectCreate_(req) {
     if (chip && !/^\d{15}$/.test(chip)) errors.chip_number = 'A microchip number is 15 digits.';
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
 
-    // an active dog with the same name and date of birth = a second copy of the same dog
     var st = store_read_(STATUS_FILE_, false), latest = {};
     if (st) st.records.forEach(function (r) {
       var cur = latest[r.subject_id];
@@ -364,9 +319,7 @@ function sinkSubjectCreate_(req) {
     dogcardAppend_({ file: STATUS_FILE_, need: ['id', 'subject_id', 'state', 'from_date'], idPrefix: 'sst' },
       { subject_id: id, state: activeWord, from_date: today, to_date: '', reason: 'added in ' + host });
     if (chip) dogcardAppend_({ file: CHIP_FILE_, need: ['id', 'subject_id', 'chip_number'], idPrefix: 'mc' }, { subject_id: id, chip_number: chip, source: 'CD Hub, ' + who.who });
-    // 15 Nov 2026 (BB): a pup gets its parents' open links of kinds the owner set to inherit at birth (e.g. a scheme)
     var inherited = litterId ? linkInheritAtBirth_(id, litterId, dob, who, now) : [];
-    // 15 Nov 2026 (print job, Addendum 2): the dog's QR code is made now when the owner's qr.on_add.subject rule says yes (QrTag.gs)
     var qr = qrOnAdd_('subject', id, '', who, now);
     var out = inherited.length ? { status: 'saved', id: id, links: inherited } : { status: 'saved', id: id };
     out.qr = qr.qr;
@@ -374,23 +327,13 @@ function sinkSubjectCreate_(req) {
   });
 }
 
-/* ---------------------------------------------------------------------------------------------------------------
- * Dog links (13 Nov 2026, DOGCARD plan AA_DOGCARD_2026-11-13-1500): "BFFs" / "Fren." on the dog card and print card.
- *   action 'subject_link'      OWNER ONLY. Adds one BLD-subject_link row: subject_id, other_subject_id, kind, from_date
- *                              (blank = today), source, note. One row per pair, read both ways.
- *   action 'subject_link_end'  OWNER ONLY. Ends one link by filling its to_date (blank = today). Never deletes.
- * kind is a link_kind.<kind> row in BLD-breeding_rule in force today (e.g. link_kind.bff = BFFs), never a list here.
- * A second open link of the same kind for the same pair (either way round) is refused as DUPLICATE.
- * Switch: TABLE_ON_subject_link, OFF by default.
- * --------------------------------------------------------------------------------------------------------------- */
-DOGCARD_.subject_link = { file: 'BLD-subject_link.csv', on: 'subject_link', idPrefix: 'slk', owner: true,
+DOGCARD_.subject_link = { file: 'BLD-subject_link.csv', on: 'subject_link', idPrefix: 'slk', user: true,
   need: ['id', 'tenant_id', 'subject_id', 'other_subject_id', 'kind', 'from_date', 'to_date', 'source', 'note', 'set_at', 'set_by'] };
 
 function subjectLinkFiles_() {
   return prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.subject_link.on) === 'true' ? [DOGCARD_.subject_link.file] : [];
 }
 
-/** The link kinds in force on `day`: { bff: 'BFFs', not_with: 'Fren.' } from link_kind.* rule rows. */
 function linkKinds_(day) {
   var out = {}, best = {}, rules;
   try { rules = store_read_('BLD-breeding_rule.csv', true); } catch (e) { return out; }
@@ -458,3 +401,4 @@ function sinkSubjectLinkEnd_(req) {
     return { status: 'saved', id: rowId, ended: to };
   });
 }
+

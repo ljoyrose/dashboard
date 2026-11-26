@@ -22,9 +22,9 @@
   var URL_OK = /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.\-]+|macros)\/s\/[A-Za-z0-9_\-]+\/exec$/;
   var URL_KEY = 'bld.scriptUrl';
   var CODE_KEY = 'bld.staffCode';
-  var OWNER_SKIP_KEY = 'bld.owner.skip';   // this tab chose "Use a staff code instead" (sessionStorage)
+  var USER_SKIP_KEY = 'bld.user.skip';
   var READ_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
-  var TIMEOUT_MS = 150000;  // live saves took 17-127 s (17 Nov 2026); a shorter wait said "could not reach" for saves that landed
+  var TIMEOUT_MS = 150000;
 
   /* ----- mirror of the server rules, for instant feedback only. The server is the judge. ----- */
   var TEMP_RE = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (the owner, 7 Nov 2026)
@@ -33,7 +33,7 @@
       label: 'Room temperatures', file: 'BLD-area_reading.csv',
       fields: {
         area_id: { type: 'ref', lookup: 'area', required: true, label: 'Room' },
-        min_c: { type: 'temp', label: 'Lowest (min) C' },    // needed unless room_empty = yes (as the save, Specs.gs)
+        min_c: { type: 'temp', label: 'Lowest (min) C' },
         max_c: { type: 'temp', label: 'Highest (max) C' },
         spot_c: { type: 'temp', label: 'Spot reading C' },
         mitigation_note: { type: 'text', label: 'What was done about it' },
@@ -93,14 +93,13 @@
   function ownerToken() {
     var g = root_(), A = g.DashAuth;
     if (!A || typeof A.valid !== 'function') return '';
-    try { if (g.sessionStorage && g.sessionStorage.getItem(OWNER_SKIP_KEY)) return ''; } catch (e) { /* no storage: carry on */ }
+    try { if (g.sessionStorage && g.sessionStorage.getItem(USER_SKIP_KEY)) return ''; } catch (e) { /* no storage: carry on */ }
     var s = A.valid();
     if (!s || (A.hasScope && !A.hasScope(s, READ_SCOPE))) return '';
     return s.access_token || '';
   }
-  /** Stop (true) or allow again (false) the owner sign-in on this tab. */
-  function ownerSkip(on) {
-    try { var ss = root_().sessionStorage; if (ss) { if (on) ss.setItem(OWNER_SKIP_KEY, '1'); else ss.removeItem(OWNER_SKIP_KEY); } } catch (e) { /* ignore */ }
+  function userskip(on) {
+    try { var ss = root_().sessionStorage; if (ss) { if (on) ss.setItem(USER_SKIP_KEY, '1'); else ss.removeItem(USER_SKIP_KEY); } } catch (e) { /* ignore */ }
   }
 
   function create(opts) {
@@ -131,19 +130,16 @@
     function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; if (c && typeof scheduleRetry === 'function') scheduleRetry(1000); }
     var inMemoryCode = get(session, CODE_KEY);
     function getCode() { return inMemoryCode; }
-    var googleFn = typeof opts.google === 'function' ? opts.google : (opts.google === false ? function () { return ''; } : ownerToken);
-    /** A staff code, or an owner's Google sign-in. */
+    var googleFn = typeof opts.google === 'function' ? opts.google : (opts.google === false ? function () { return ''; } : userToken);
     function hasAuth() { return !!getCode() || !!googleFn(); }
-    /** Adds the owner's Google token to a request body when there is one (the code still goes too, as the fallback). */
     function withGoogle(body) { var g = googleFn(); if (g) body.google_token = g; return body; }
-    var lastName = '';   // the name held against this code, from the last read (Welcome line only)
-    var lastRole = '';   // the role the script reported for this code on the last read: OWNER, STAFF, GUEST... ('' until a read). For showing buttons only; the script still decides.
+    var lastName = '';
+    var lastRole = '';
     function clearCode() { inMemoryCode = ''; lastRole = ''; lastName = ''; put(session, CODE_KEY, ''); }
 
     function setLookups(l) { lookups = l || {}; }
     function lookupSize(name) { var l = lookups[name]; return !l ? 0 : (Array.isArray(l) ? l.length : Object.keys(l).length); }
 
-    /** Ask the script whether saving is on. Reads only switches, no data. */
     function checkStatus() {
       if (!scriptUrl) { status = { checked: true, reachable: null, saveEnabled: false, tables: {}, version: '' }; return Promise.resolve(status); }
       if (!doFetch) return Promise.resolve(status);
@@ -153,8 +149,6 @@
           var t = {};
           (j.tables || []).forEach(function (x) { t[x.key] = { on: !!x.on, mode: x.mode, file: x.file }; });
           status = { checked: true, reachable: true, saveEnabled: !!j.saveEnabled, readEnabled: !!j.readEnabled, tables: t, proposed: j.proposed || [], version: j.version || '' };
-          // the tenant's time zone from its locale row (14 Nov 2026): screens show days and times in it.
-          // Until the first status check the pages use London, the only tenant's zone today.
           if (typeof j.timeZone === 'string' && /^[A-Za-z]+(\/[A-Za-z0-9_+\-]+){1,2}$|^UTC$/.test(j.timeZone)) {
             status.timeZone = j.timeZone;
             if (typeof self !== 'undefined') self.BLD_TZ = j.timeZone;
@@ -190,8 +184,6 @@
       p.then(done, done);
       return p;
     }
-    // Leaving the page while saves are still waiting their turn would drop them (OV12 16 Nov 2026): the browser asks
-    // "Leave site?" first. Nothing is kept on the device: the staff code never goes into storage for this.
     var win = root_();
     if (win.addEventListener) win.addEventListener('beforeunload', function (e) {
       if (sending > 0) { e.preventDefault(); e.returnValue = ''; return ''; }
@@ -230,10 +222,7 @@
        - A save the script refuses (a check failed) leaves the box and is listed as "Not saved" with the reason.
        - The staff code and any Google token are never kept with an entry: they are added again when it is sent. */
     var OUTBOX_KEY = 'bld.outbox', REFUSED_KEY = 'bld.outbox.refused';
-    var OUTBOX_AUTO_MS = 23 * 3600000;   // inside the script's 6-hour memory of request ids
-    // Answers that mean "not this time" (no signal, script busy or switched off, not set up yet): the entry stays kept
-    // and is tried again. No answer at all, or one with no code, counts the same. Every other answer from the script is
-    // a refusal (the entry or the code is wrong): it leaves the box and is listed as "Not saved" with the reason.
+    var OUTBOX_AUTO_MS = 23 * 3600000;
     var RETRY_ON = { NETWORK: 1, UNREACHABLE: 1, BAD_ANSWER: 1, TIMEOUT: 1, BUSY: 1, CHANGED_DURING_WRITE: 1, LOG_FAILED: 1, SAVE_OFF: 1, TABLE_OFF: 1, NOT_CONFIGURED: 1, NOT_SET_UP: 1, GOOGLE_UNREACHABLE: 1, FOLDER_UNREACHABLE: 1, NO_CODE: 1 };
     /* SIGN IN AGAIN (the owner 22 Nov 2026, owner sign-in): a Google sign-in lasts about an hour. When it has ended, or the
        script says this sign-in may not save (or no one is signed in), nothing was wrong with the entry, so it is never refused for
@@ -241,7 +230,7 @@
        again with the same sign-in. A wrong staff code is still refused and said plainly ("not recognised"). */
     var SIGN_IN = { GOOGLE_NOT_OWNER: 1, NO_CODE: 1 };
     var SIGNIN_MSG = 'Not sent yet: sign in again (or enter your code). It is kept on this phone and goes by itself once you do, so do not type it again.';
-    var authWait = null;   // the sign-in that was turned down; nothing is sent with it again
+    var authWait = null;
     function authNow() { return getCode() + '|' + googleFn(); }
     function refused(j) { return !!(j && !j.ok && j.code && !RETRY_ON[j.code] && !SIGN_IN[j.code]); }
     var outboxFns = [], inFlight = {};
@@ -258,10 +247,6 @@
       a.push(item);
       outboxWrite(a);
     }
-    /* SAVED, NOT "NOT SAVED" (OV13 22 Nov 2026: live saves took 19-60 s; the first try saved, its answer never came,
-       the resend was answered DUPLICATE and the page said Not saved). A try that got no answer may have saved. When
-       an entry sent again after such a try is answered DUPLICATE, its first try saved it: it counts as saved, with a
-       tick. A DUPLICATE for an entry whose every try was answered is still shown as before (a different entry). */
     function markUnsure(id) {
       var a = outboxRead(), hit = false;
       a.forEach(function (x) { if (x.id === id && !x.unsure) { x.unsure = true; hit = true; } });
@@ -280,7 +265,6 @@
       rf.push({ id: id, at: item.at, table: item.body.table || '', action: item.body.action || '', fields: item.body.fields || {}, code: (j && j.code) || '', message: (j && j.message) || '' });
       put(local, REFUSED_KEY, JSON.stringify(rf.slice(-50)));
     }
-    /** After an answer: saved (or already saved) and refused leave the box; anything else keeps it for another try. */
     function alreadyEnded(j) { return !!(j && !j.ok && j.code === 'NOT_ALLOWED' && /already ended/i.test(j.message || '')); }
     function settle(id, j, auth) {
       if (j && (j.ok || j.code === 'DUPLICATE' || alreadyEnded(j))) { authWait = null; dropEntry(id); return true; }
@@ -289,20 +273,15 @@
       scheduleRetry(60000);
       return false;
     }
-    /* While entries wait for the owner to sign in again: if the page has the shared quiet renewal
-       (BLDSave.refreshOwnerToken, CLOUD SPEED 22 Nov 2026), try it at most every 5 minutes and send once it gives a new
-       sign-in. Without it, or when Google cannot renew quietly, they stay kept and the line asks to sign in again. */
     var renewAt = 0;
     function quietRenew() {
       var B = root_().BLDSave;
-      if (googleFn !== ownerToken || !B || typeof B.refreshOwnerToken !== 'function' || Date.now() - renewAt < 300000 || !outboxRead().length) return;
+      if (googleFn !== userToken || !B || typeof B.refreshUserToken !== 'function' || Date.now() - renewAt < 300000 || !outboxRead().length) return;
       renewAt = Date.now();
-      try { Promise.resolve(B.refreshOwnerToken()).then(function (t) { if (t && hasAuth() && authNow() !== authWait) flush(); }, function () { /* stays kept */ }); }
+      try { Promise.resolve(B.refreshUserToken()).then(function (t) { if (t && hasAuth() && authNow() !== authWait) flush(); }, function () { /* stays kept */ }); }
       catch (e) { /* stays kept */ }
     }
-    /** true while kept entries wait for someone to sign in again (or enter a code). */
     function needsSignIn() { return outboxRead().length > 0 && (!hasAuth() || authWait === authNow()); }
-    /** An entry pressed while no one is signed in: kept, not sent, and goes once someone signs in. */
     function keptForSignIn(body) {
       keepEntry(body); scheduleRetry(60000);
       return Promise.resolve({ ok: false, code: 'NO_CODE', kept: true, signIn: true, requestId: body.request_id, message: SIGNIN_MSG });
@@ -311,11 +290,10 @@
     function postOnce(body) {
       return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // keeps it a "simple" request: no pre-flight needed
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(body)
       })).then(function (r) { return r.json(); }); });
     }
-    /** One kept entry, sent with its own request id and the code held now. Never sent twice at once from this page. */
     function sendKept(item) {
       if (inFlight[item.id]) return inFlight[item.id];
       var auth = authNow(), body = withGoogle(Object.assign({}, item.body, { code: getCode() }));
@@ -327,7 +305,6 @@
       return p;
     }
     var flushing = null;
-    /** Send every kept entry younger than 5 hours again, oldest first. Resolves to how many are still kept. */
     function flush(o) {
       if (flushing) return flushing;
       var now = Date.now(), all = outboxRead();
@@ -343,17 +320,12 @@
       count: function () { return outboxRead().length; },
       items: function () { return outboxRead().map(function (x) { return { id: x.id, at: x.at, table: x.body.table || '', action: x.body.action || '', fields: x.body.fields || {}, old: isOld(x) }; }); },
       refused: function () { return jsonList(REFUSED_KEY); },
-      /** true while kept entries wait for someone to sign in again (or enter a code). */
       needsSignIn: needsSignIn,
       dismissRefused: function (id) { put(local, REFUSED_KEY, JSON.stringify(jsonList(REFUSED_KEY).filter(function (x) { return x.id !== id; }))); outboxNotify(); },
-      /** Send now. {old: true} also sends entries past 5 hours, after the person has checked the records. */
       flush: flush,
-      /** The person checked the records and the entry is there (or not wanted): take it out of the box. */
       remove: function (id) { dropEntry(id); },
       onChange: function (fn) { if (typeof fn === 'function') outboxFns.push(fn); }
     };
-    // On a real page: try the box soon after opening, then every minute while something waits, and when the signal
-    // comes back. An empty box sets no timer. Tests pass their own fetch and get no timers.
     var autoOn = opts.autoFlush !== false && !opts.fetch && typeof document !== 'undefined', retryTimer = null;
     function scheduleRetry(ms) {
       if (!autoOn || retryTimer || !outboxRead().length) return;
@@ -365,24 +337,22 @@
     }
     var KEPT_MSG = 'No answer yet. It is kept on this phone and sent again by itself, so do not type it again.';
 
-    /** Plain-English state for the banner and for disabling buttons. */
     function banner(tableKey) {
       var tb = status.tables[tableKey];
-      if (!scriptUrl) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. Lisa switches it on when it is ready.' };
+      if (!scriptUrl) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. User switches it on when it is ready.' };
       if (status.checked && status.reachable === false) return { kind: 'off', canSave: false, text: 'Cannot reach the save service right now, so nothing can be saved. Try again in a moment.' };
       if (!status.checked) return { kind: 'checking', canSave: false, text: 'Checking whether saving is on...' };
-      if (!status.saveEnabled) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. Lisa switches it on when it is ready.' };
+      if (!status.saveEnabled) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. User switches it on when it is ready.' };
       if (tableKey && !tb && status.proposed && status.proposed.indexOf(tableKey) >= 0) {
-        return { kind: 'off', canSave: false, text: '"' + ((TABLES[tableKey] || {}).label || tableKey) + '" is only a proposal so far. Nothing can be saved to it until Lisa agrees it.' };
+        return { kind: 'off', canSave: false, text: '"' + ((TABLES[tableKey] || {}).label || tableKey) + '" is only a proposal so far. Nothing can be saved to it until User agrees it.' };
       }
       if (tableKey && (!tb || !tb.on)) {
         return { kind: 'off', canSave: false, text: 'Saving to "' + ((TABLES[tableKey] || {}).label || tableKey) + '" is not switched on yet.' };
       }
-      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving on. Lisa approves each entry.' };
-      return { kind: 'on', canSave: true, text: 'Saving on. If one is wrong, tell the owner.' };
+      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving on. User approves each entry.' };
+      return { kind: 'on', canSave: true, text: 'Saving on. If one is wrong, tell the user.' };
     }
 
-    /** Same rule and words as tempPairError_ in Specs.gs. The shared file is loaded when this page has it. */
     function pairLib() {
       if (typeof module === 'object' && module.exports) {
         var tries = ['./temp-pair.js', '../../cdhub/staff/lib/temp-pair.js'];
@@ -401,7 +371,6 @@
       return '';
     }
 
-    /** Check the fields on the page. */
     function validate(tableKey, fields) {
       var spec = TABLES[tableKey], errors = {};
       if (!spec) return { ok: false, errors: { _: 'Unknown table.' } };
@@ -410,7 +379,6 @@
         if (v === '') { if (def.required) errors[name] = 'This is needed.'; return; }
         if (def.type === 'temp') {
           if (!TEMP_RE.test(v)) errors[name] = 'Type degrees C with at most 1 decimal, e.g. 21.4.';
-          // an unusual temperature is a warning the script gives (confirm_unusual "Save anyway?"), not a stop here
         } else if (def.type === 'text') {
           if (v.length > 500) errors[name] = 'Too long (500 characters at most).';
           else if (/^[=+\-@\t]/.test(v)) errors[name] = 'Please do not start with = + - or @.';
@@ -460,12 +428,6 @@
       return s;
     }
 
-    /**
-     * Send one entry. Resolves (never rejects) with:
-     *   {ok:true, status:'saved'|'queued', id, pending_id?, message}
-     *   {ok:false, code, message, fields?}
-     * Pass the SAME requestId when retrying after a network failure: the server will not save twice.
-     */
     function submit(tableKey, fields, o) {
       o = o || {};
       var spec = TABLES[tableKey];
@@ -481,7 +443,7 @@
       };
       withGoogle(body);
       if (action === 'correct') { body.corrects_id = o.correctsId || ''; body.reason = o.reason || ''; }
-      if (o.values && action === 'add') body.values = o.values;   // a check's form answers {field_key: value}, saved with the record
+      if (o.values && action === 'add') body.values = o.values;
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
       if (!signedIn) return keptForSignIn(body);
       var auth = authNow();
@@ -498,7 +460,7 @@
           res.ok = true;
           res.requestId = body.request_id;
           res.message = res.status === 'queued'
-            ? 'Sent. It is in the approvals queue until Lisa approves it; then it joins the records.'
+            ? 'Sent. It is in the approvals queue until User approves it; then it joins the records.'
             : 'Saved.';
           return res;
         }
@@ -510,10 +472,6 @@
       });
     }
 
-    /**
-     * Send one named save that is not a table row (e.g. link_add, link_end). Same code, same no-double-save reference.
-     * Resolves (never rejects): {ok:true, ...result, message:'Saved.'} or {ok:false, code, message, fields}.
-     */
     function act(action, fields, requestId, onTurn) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: 'Saving is off.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
@@ -536,9 +494,7 @@
         return { ok: false, code: 'NETWORK', kept: true, requestId: body.request_id, message: KEPT_MSG };
       });
     }
-    /** Record-to-record links (14 Nov 2026): {from_table, from_id, role, to_table, to_id, sort?, note?, from_date?}. */
     function linkAdd(fields, requestId) { return act('link_add', fields, requestId); }
-    /** End one link: {id, to_date?} (blank = today). */
     function linkEnd(fields, requestId) { return act('link_end', fields, requestId); }
 
     /**
@@ -548,7 +504,7 @@
      * Nothing is cached or kept: the rows live only in the page.
      */
     function read(tableKey, filter) {
-      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. Lisa switches it on when it is ready.' });
+      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. User switches it on when it is ready.' });
       if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
       if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
@@ -561,12 +517,6 @@
       }).catch(function () { return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' }; });
     }
 
-    /**
-     * Read the lists the daily location check needs. area, subject and occupancy are required;
-     * subject_status is optional (the check still works without it). Resolves {ok, tables} or {ok:false, message}.
-     */
-    /* Codes vault: is this typed code the one held for this public id? Sent once, like a sign-in; the reply is
-       { ok, match } only. The script never logs or echoes it; misses count towards the sign-in limit. */
     function codeCheck(codeId, typed) {
       if (!scriptUrl || !doFetch) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: 'The save script is not set up on this device.' });
       if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
@@ -646,5 +596,6 @@
     };
   }
 
-  return { create: create, TABLES: TABLES, URL_OK: URL_OK, ownerToken: ownerToken, ownerSkip: ownerSkip };
+  return { create: create, TABLES: TABLES, URL_OK: URL_OK, userToken: userToken, userskip: userskip };
 }));
+

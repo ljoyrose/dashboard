@@ -1,9 +1,3 @@
-// "No DASH_CONFIG.json on Drive = the same as today."
-// Every page that loads config.js is booted twice on the same pretend Drive, signed out and signed in:
-//   as on main   = config.js with the private settings loader cut off and auth.js without its sign-in signal
-//   as shipped   = this branch, with no DASH_CONFIG.json on Drive
-// The headings (and whether each one shows), the Drive calls, the outside calls and the console must match exactly.
-// The only extra thing allowed is the loader's one look for the file after sign-in.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -14,7 +8,6 @@ const MARK = '\n// ---- Private settings loader';
 const NAME = 'DASH_CONFIG.json';
 const TOKEN = { access_token: 'FAKE-TEST-TOKEN', scope: 'https://www.googleapis.com/auth/drive.readonly' };
 
-// Found by reading the repo, so a new page that loads config.js is covered without touching this file.
 const PAGES = (function walk(dir, out) {
   fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).forEach((e) => {
     const rel = dir ? dir + '/' + e.name : e.name;
@@ -66,8 +59,6 @@ const boot = async (page, guard, url, signedIn) => {
 const both = async (page, guard, url) => {
   const out = await boot(page, guard, url, false);
   const inn = await boot(page, guard, url, true);
-  // 22 Nov 2026: also the device copy (IndexedDB). CD Hub now reuses a kept file whose Drive time is unchanged, so a run
-  // after a run with the copy left in place reads fewer files; both runs must start with nothing kept.
   await page.evaluate(async () => {
     localStorage.clear(); sessionStorage.clear();
     const dbs = indexedDB.databases ? await indexedDB.databases() : [];
@@ -90,8 +81,6 @@ for (const rel of PAGES) {
     await page.unroute('**/config.js');
     await page.unroute('**/auth.js');
     const shipped = await both(page, guard, url);
-    // This test compares two boots of one page. What a page may call or log is owned by that page's own specs,
-    // so the shared end-of-test checks are cleared here once the comparison has been made.
     guard.outside.length = 0; guard.consoleSeen.length = 0; guard.problems.length = 0;
 
     expect(main.out.looks + main.inn.looks, 'main never looks for the file').toBe(0);
@@ -107,3 +96,4 @@ for (const rel of PAGES) {
     }
   });
 }
+

@@ -1,13 +1,3 @@
-/*!
- * Wiring for the Bloodline redesign page (index.html from Bloodline.zip).
- * Adds three stages, "Where is everyone?" (daily location check), "Enter temperatures" and "Staff input",
- * that use the write-path screens.
- *
- * Bloodline on its own is not connected to Drive, so these screens start with honest empty states
- * ("No rooms are loaded"). Once the redesign lifts the CD Hub sign-in and CSV reading, call
- *     BLDWire.provide(BLDLookups.fromTables(T, todayIso))
- * with the tables it has loaded and the screens fill in. Nothing else needs to change.
- */
 (function () {
   'use strict';
   var save = BLDSave.create({});
@@ -18,14 +8,13 @@
   function settingsBox() {
     var d = document.createElement('div');
     d.className = 'bs-card'; d.style.maxWidth = '560px';
-    d.innerHTML = '<b>Turn saving on</b> (Lisa only). Paste the Script URL; it is kept on this device only.' +
+    d.innerHTML = '<b>Turn saving on</b> (User only). Paste the Script URL; it is kept on this device only.' +
       '<input class="bs-in" id="bw-url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" aria-label="Script URL">' +
       '<button class="bs-btn" id="bw-on" type="button" style="margin-top:8px">Use this address</button> ' +
       '<button class="bs-link" id="bw-off" type="button">Switch off on this device</button><div id="bw-msg" role="status"></div>';
     return d;
   }
 
-  /** The Board's fonts, added once. If they cannot load the screens fall back to system fonts. */
   function addFonts() {
     if (document.getElementById('bld-fonts') || !document.head) return;
     var l = document.createElement('link');
@@ -80,3 +69,4 @@
     provide: function (lookups) { L = lookups; L.dogs = L.dogs || []; save.setLookups({ area: L.areas, person: L.people, subject: L.subjects || [] }); mount(lastStage || (location.hash || '').replace('#/', '')); }
   };
 }());
+

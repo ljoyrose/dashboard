@@ -1,5 +1,3 @@
-// Web Estate "Shops & ads" tab (30 Oct 2026): a card per shop with product count, channels and feed from the private
-// Shops tab; "not reported" when there is no report; ClickFunnels funnels by workspace. Pretend Google; invented rows.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -7,7 +5,6 @@ const F = require('../fixtures/estate/rows.js');
 
 const CONFIG = fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8');
 
-// tabs: { Properties: values, Shops: values | null (missing tab) }
 async function open(page, tabs, hash) {
   const seen = [];
   await page.route(/\/config\.js$/, (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: CONFIG.replace(/estate: \{\s*sheetId: ''/, "estate: {\n      sheetId: 'SHEET_TEST'") }));
@@ -55,3 +52,4 @@ test.describe('Web Estate shops', () => {
     await expect(funnels.first().locator('.badge.no')).toContainText('1');
   });
 });
+

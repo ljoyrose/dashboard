@@ -20,7 +20,6 @@ test.describe('CD Hub: find and sort on Areas and Do', () => {
     await expect(page.locator('[data-find-of="areas"] [data-room]:visible')).toHaveCount(1);
     await expect(page.locator('[data-find-of="areas"] [data-room]:visible')).toContainText('Test Cabin B');
     await expect(page.locator('[data-find-count="areas"]')).toHaveText('1 of ' + all);
-    // Sort A to Z keeps the words and the hiding
     await page.locator('[data-find-sort="areas"]').selectOption('name');
     await expect(page.locator('[data-find-in="areas"]')).toHaveValue('cabin b');
     await expect(page.locator('[data-find-of="areas"] [data-room]:visible')).toHaveCount(1);
@@ -40,6 +39,7 @@ test.describe('CD Hub: find and sort on Areas and Do', () => {
     await expect(page.locator('[data-find-of="work"] tr[data-find]:visible')).toHaveCount(1);
     await expect(page.locator('[data-find-of="work"] tr[data-find]:visible')).toContainText('Sample item waiting on Claude');
     await expect(page.locator('[data-find-of="work"] [data-find-group]:visible')).toHaveCount(1);
-    await expect(page.locator('[data-find-count="work"]')).toHaveText('1 of 2');   // finished items are not listed (17 Nov 2026)
+    await expect(page.locator('[data-find-count="work"]')).toHaveText('1 of 2');
   });
 });
+

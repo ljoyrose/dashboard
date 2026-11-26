@@ -1,10 +1,9 @@
-// Main dashboard: https://ljoyrose.github.io/dashboard/
 const { test, expect, buildWorld } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 const { at } = require('../support/site');
 
 const signIn = async (page) => {
-  await expect(page.locator('#signInBtn')).toBeEnabled(); // the page found the (pretend) Google script
+  await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#mainNav')).toBeVisible();
   await expect(page.locator('#readStamp')).toContainText(/^Read \d/); // finished reading Drive
@@ -17,7 +16,6 @@ test.describe('Main dashboard: loads', () => {
     await expect(page).toHaveTitle(/^Dashboard$/); // "the owner Dashboard" became "Dashboard" (the owner, 2 Nov: the phone cut it off)
     await expect(page.locator('#signInBtn')).toBeVisible();
     await expect(page.locator('#readStamp')).toHaveText('Not signed in');
-    // README: signed out shows no tabs, labels or data
     await expect(page.locator('#mainNav')).toBeHidden();
     await expect(page.locator('#hereBox')).toBeHidden();
     await expect(page.locator('#pageFoot')).toHaveCount(0); // the footer explainer is gone (the owner, 2 Nov)
@@ -37,7 +35,6 @@ test.describe('Main dashboard: sign-in (mocked)', () => {
     const cfg = await page.evaluate(() => window.__GIS_LAST_CONFIG);
     expect(cfg.scope).toBe('https://www.googleapis.com/auth/drive.readonly');
     expect(cfg.client_id).toMatch(/\.apps\.googleusercontent\.com$/);
-    // Browsing never writes: only GET calls hit the pretend Drive.
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
@@ -76,8 +73,6 @@ test.describe('Main dashboard: sign-in (mocked)', () => {
 });
 
 test.describe('Main dashboard: navigation', () => {
-  // [label, route, data-view, title, how to get there]. The bottom bar holds Dashboard, Drives, Bin, Changes and More;
-  // the Drives pages open from the Drives pill row (Read first is pinned inside Shared drives).
   const tabs = [
     ['Dashboard', 'map', 'map', 'Dashboard', 'tab'],
     ['Drives', 'drives', 'drives', 'Drives', 'tab'],
@@ -292,7 +287,6 @@ test.describe('Main dashboard: Bin', () => {
     await expect(view.locator('[data-bin-list="rename"]')).toContainText('ZZ_sample-dupe.txt');
     await expect(page.locator('#sweepCard')).toContainText('Nothing is ready to bin.');
     await expect(page.locator('[data-action="sweep"]')).toBeDisabled();
-    // the archive file must not appear anywhere on the Bin page
     await expect(view).not.toContainText('RR_sample-archive.txt');
   });
 
@@ -308,7 +302,7 @@ test.describe('Main dashboard: Bin', () => {
     await expect(sweep).toBeDisabled();
     await page.locator('[data-action="selectall"][data-group="bin"]').click();
     await expect(sweep).toContainText('Allow access, then bin (1)');
-    await sweep.click(); // first click only asks for the extra (pretend) permission
+    await sweep.click();
     await expect(page.locator('[data-action="sweep"]')).toContainText('Bin these (1)');
     await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => dialogs.length).toBe(1);
@@ -362,7 +356,6 @@ test.describe('Main dashboard: Bin', () => {
 
 test.describe('Main dashboard: PC-Personal (mocked)', () => {
   test('scan compares personal files with shared drives and reports matches', async ({ page, guard }) => {
-    // Two identical files (same checksum + size): one in a shared drive, one in the personal drive.
     guard.world.file('sh-dup', 'shared-copy.pdf', 'x', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', md5Checksum: 'abc123', size: 10, mimeType: 'application/pdf' });
     guard.world.file('me-dup', 'personal-copy.pdf', 'x', { parents: ['my-root'], driveId: null, md5Checksum: 'abc123', size: 10, mimeType: 'application/pdf' });
     guard.world.file('me-unique', 'only-mine.pdf', 'y', { parents: ['my-root'], driveId: null, md5Checksum: 'zzz999', size: 12, mimeType: 'application/pdf' });
@@ -372,7 +365,6 @@ test.describe('Main dashboard: PC-Personal (mocked)', () => {
     await expect(page.locator('#view')).toContainText(/Finished/);
     await expect(page.locator('#view')).toContainText('personal-copy.pdf');
     await expect(page.locator('#view')).not.toContainText('only-mine.pdf');
-    // The scan only reads.
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 });
@@ -417,7 +409,6 @@ test.describe('Main dashboard: sign-in problems and Drive errors', () => {
   });
 
   test('Drive refusing access (403) shows a friendly message, not a crash', async ({ page, guard, allowedConsole }) => {
-    // Chrome logs every failed network call as a console error. Expected here, so allowed for this one test.
     allowedConsole.push(/Failed to load resource: the server responded with a status of 403/);
     guard.world.failWith = { status: 403, reason: 'forbidden', message: 'Sample refusal' };
     await page.goto('./');
@@ -437,3 +428,4 @@ test.describe('Main dashboard: a different Google account', () => {
     await expect(page.locator('#view')).not.toContainText('TESTCO');
   });
 });
+

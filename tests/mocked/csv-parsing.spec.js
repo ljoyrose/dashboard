@@ -1,6 +1,3 @@
-// The two CSV readers, tried directly with awkward inputs (no sign-in needed).
-//  - CD Hub reader:   parseCSV()           in cdhub/index.html
-//  - Money Hub reader: MoneyCore.parseCSV / parseTable in money/core.js
 const { test, expect } = require('../support/test');
 
 test.describe('CD Hub CSV reader', () => {
@@ -30,7 +27,6 @@ test.describe('CD Hub CSV reader', () => {
     expect(await parse(page, 'id,name\n')).toEqual([]);
   });
   test('a file with a byte-order mark (BOM) still reads the first column name correctly', async ({ page }) => {
-    // The page strips the BOM before parsing; check the same strip works on a BOM-prefixed sample.
     const rows = await page.evaluate(() => parseCSV(String('﻿id,name\na,Alpha\n').replace(/^﻿/, '')));
     expect(rows[0].id).toBe('a');
   });
@@ -76,7 +72,6 @@ test.describe('Money Hub CSV reader', () => {
     expect(t.rows[0].id).toBe('a');
   });
   test('a BOM in front of the "CURRENT: n rows held" line is ignored, and the count is still checked', async ({ page }) => {
-    // Regression-style gap found by the teeth check: with the BOM left in, the count line was no longer recognised.
     const t = await table(page, '\uFEFFCURRENT: 2 rows held 2026-03-09\nid,name\na,Alpha\nb,Beta\n', 'id');
     expect(t.hasCountLine).toBe(true);
     expect(t.held).toBe(2);
@@ -97,3 +92,4 @@ test.describe('Money Hub CSV reader', () => {
     expect(out.blank).toBeNull();
   });
 });
+

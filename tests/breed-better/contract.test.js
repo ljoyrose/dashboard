@@ -1,9 +1,4 @@
 'use strict';
-/**
- * Breed Better schema contract (JOB BB-FIN.1, 12 Nov 2026). Fails if a column the calculator or the hub view needs
- * is renamed or dropped. Header fixture only (tests/fixtures/breed-better/headers.json): no values, nothing real.
- * REQUIRED = the page cannot work without it. OPTIONAL = read when present, blank when absent (dated rows, new settings).
- */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -16,7 +11,7 @@ const SOURCE = ['breed-better/score.js', 'breed-better/hub-view.js'].map((f) => 
 
 const CONTRACT = {
   'BLD-score_scheme.csv': { required: ['id', 'name', 'species_id', 'breed', 'version', 'effective_from', 'status'], optional: ['target_points', 'target_is', 'verdict_words', 'to_date', 'signed_off_on'] },
-  'BLD-score_band.csv': { required: ['id', 'scheme_id', 'kind', 'label'], optional: ['colour', 'sort_order', 'icon'] },   /* icon: optional (owner, 18 Nov 2026): target, star, heart, stethoscope, smile, family */
+  'BLD-score_band.csv': { required: ['id', 'scheme_id', 'kind', 'label'], optional: ['colour', 'sort_order', 'icon'] },   /* icon: optional (user, 18 Nov 2026): target, star, heart, stethoscope, smile, family */
   'BLD-score_criterion.csv': { required: ['id', 'scheme_id', 'band_id', 'label', 'evidence_source', 'answer_field'],
     optional: ['key', 'subject_field', 'evidence_match', 'date_field', 'reads', 'applies_to', 'valid_months', 'when_missing', 'lapsed_affects_verdict', 'due_soon_days', 'age_weight', 'from_date', 'to_date'] },
   'BLD-score_point.csv': { required: ['id', 'criterion_id', 'answer_match', 'points', 'gate_outcome'], optional: ['from_date', 'to_date'] },
@@ -24,7 +19,6 @@ const CONTRACT = {
   'BLD-subject.csv': { required: ['id', 'name'], optional: ['dob'] }  /* sex and others are named by applies_to rows, not by code */
 };
 
-/** The checker: which required columns are missing from a header row. */
 function missing(file, header) { return CONTRACT[file].required.filter((c) => header.indexOf(c) < 0); }
 
 test('contract: every required column is in the live-shaped header rows', () => {
@@ -66,3 +60,4 @@ test('contract: optional columns may be absent; the calculator reads them as bla
     subject: { id: 'a' }, evidence: { exam: [{ id: 'x', subject_id: 'a', r: 'ok' }] }, asOf: '2026-06-01' });
   assert.equal(out.verdict, 'pass');
 });
+

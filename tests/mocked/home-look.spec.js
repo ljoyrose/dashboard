@@ -1,11 +1,8 @@
-// Home (the Dashboard) in the house look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026): 1px lines, hover never moves anything,
-// nothing under 13px, two weights, no coloured words, no solid colour fills, dark frame, phone without sideways scroll,
-// dark mode contrast. Plus the home improvements: Needs you split, the Next card and the green-tick empty state.
 const { test, expect, buildWorld } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 const { settle } = require('../support/settle');
 
-const SHOTS = process.env.HOME_SHOTS; // folder for screenshots (optional; off in CI)
+const SHOTS = process.env.HOME_SHOTS;
 
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
@@ -24,9 +21,8 @@ const goTab = async (page, key, title) => {
   await expect(page.locator('#hereTitle')).toHaveText(title);
 };
 
-// Shared page helpers: colour parsing and WCAG contrast, run inside the browser.
 const HELPERS = () => {
-  const rgb = (s) => { s = String(s); const srgb = /^color\(srgb/.test(s); const m = s.replace(/^color\(srgb/, '').match(/[\d.]+/g); if (!m) return null; // color-mix() computes to color(srgb 0-1 ...)
+  const rgb = (s) => { s = String(s); const srgb = /^color\(srgb/.test(s); const m = s.replace(/^color\(srgb/, '').match(/[\d.]+/g); if (!m) return null;
     const k = srgb ? 255 : 1; const a = srgb ? (s.includes('/') ? +m[3] : 1) : (m[3] == null ? 1 : +m[3]); return { r: +m[0] * k, g: +m[1] * k, b: +m[2] * k, a }; };
   const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
@@ -56,10 +52,9 @@ test.describe('Home: house look', () => {
       if (after.os !== 'none') expect(after.ow, sel + ': hover line').toBeLessThanOrEqual(1);
       expect(after.b.split(' ').every((v) => parseFloat(v) <= 1), sel + ': borders are 1px at most').toBe(true);
     }
-    // Bottom tab: no outline; the colour bar under the label widens instead (same height).
     const tab = page.locator('#mainNav [data-house-more]');
     await page.mouse.move(2, 400);
-    await settle(tab); // the hover from the loop above has gone and the line is back to its resting width
+    await settle(tab);
     const bar0 = await tab.locator('.bar').boundingBox();
     expect(bar0.width, 'short grey line at rest').toBeCloseTo(18, 0);
     await tab.hover(); await settle(tab); // the bar's width transition has finished
@@ -110,7 +105,6 @@ test.describe('Home: house look', () => {
         const o = await el.evaluate((e) => { const c = getComputedStyle(e); const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; (e.parentElement || document.body).appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return [c.outlineStyle, c.backgroundColor === hov]; });
         expect(o, sel + ' hover').toEqual(['none', true]);
       }
-      // Read-only pills: hovering changes nothing.
       for (const sel of ['#needsToday .mtag >> nth=0']) {
         const el = page.locator(sel);
         if (!(await el.count())) continue;
@@ -137,7 +131,7 @@ test.describe('Home: house look', () => {
   // House hover rule (the owner, 12 Nov 2026, replaces 28 Oct): every control, meaning-coloured or neutral, hovers with the pale grey fill
   // (--hov) and no line; a meaning colour keeps its resting line. Checked in light and dark.
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: hover is the pale grey fill and no line, coloured and neutral controls alike (Lisa, 12 Nov 2026)`, async ({ page }) => {
+ test(`${scheme}: hover is the pale grey fill and no line, coloured and neutral controls alike `, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.goto('./');
       await signIn(page);
@@ -159,7 +153,6 @@ test.describe('Home: house look', () => {
             rest, coloured };
         }, [coloured, rest]);
       };
-      // Stage 2c: the home tiles and the More tab are gone, so the coloured and neutral checks use what remains.
       const coloured = [['a.ment.bad', 'rose money entity'], ['a.ment:not(.bad)', 'copper money entity']];
       const run = async (list) => { for (const [sel, name] of list) {
         const r = await check(sel, true);
@@ -232,7 +225,6 @@ test.describe('Home: house look', () => {
   test('every count pill is one fixed size: 1 and 2 digits match exactly (30 x 24, line 22px, radius 12px, 14px number), even in a wider font; tab counts are the 24 x 24 corner ring', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    // Fonts are not loaded in tests, so CI's fallback can be wider than Lexend: probe in the page font AND in a forced wide font.
     for (const font of ['', 'Verdana, "DejaVu Sans", sans-serif']) {
       const sizes = await page.evaluate((font) => {
         const probe = (txt, cls) => { const s = document.createElement('span'); s.className = cls; s.textContent = txt; if (font) { s.style.fontFamily = font; s.style.letterSpacing = '0.5px'; }
@@ -246,7 +238,6 @@ test.describe('Home: house look', () => {
       expect(sizes.c3[0], '3 digits may grow').toBeGreaterThan(30);
       expect(sizes.n3[0], '3 digits may grow').toBeGreaterThan(sizes.n1[0]);
     }
-    // The real tab count gets .wide only at 3+ digits.
     const n = page.locator('#n-map');
     if ((await n.textContent()).trim().length <= 2) await expect(n).not.toHaveClass(/\bwide\b/);
   });
@@ -303,7 +294,7 @@ test.describe('Home: house look', () => {
       expect(c.b).toBe('1px');
       // Rose = late only (the owner's sweep, 3 Nov 2026): a rose count is read out as "N late", so it is rose only when it says late.
       const late = await n.evaluate((e) => e.classList.contains('need'));
-      expect(c.bc).toBe(late ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)'); // rose ring (late) or the grey read-only ring
+      expect(c.bc).toBe(late ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)');
       await expect(page.locator('#mainNav a[data-nav="map"]')).toHaveAttribute('aria-label', late ? /late$/ : /waiting$/);
       expect(c.bg).toBe('rgba(0, 0, 0, 0)'); // ring only, no fill (the owner's tab picks, 2 Nov)
       expect([c.h, c.w], 'tab count 24 x 24 (a 14px number, Lisa\'s pick A)').toEqual([24, 24]);
@@ -334,7 +325,6 @@ test.describe('Home: house look', () => {
       expect(mb, '+N more is a plain text link, not a box').toEqual(['0px', 'underline']);
     }
     await expect(next).not.toContainText('in Needs you, below');
-    // Each pill opens Do showing exactly the rows it counted.
     for (const el of await split.all()) {
       const [n, word] = (await el.textContent()).match(/^(\d+) (.+)$/).slice(1);
       await el.click();
@@ -446,3 +436,4 @@ if (SHOTS) {
     }
   }
 }
+

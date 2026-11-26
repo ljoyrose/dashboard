@@ -1,7 +1,5 @@
-// Reads Playwright's results file into a plain list of tests. Shared by summary.js and report-issue.js.
 const fs = require('fs');
 
-// [file name fragment, plain name, where]. First match wins.
 const GROUPS = [
   ['main-dashboard', 'Main dashboard', '/dashboard/'],
   ['bin-safety', 'Bin safety (RR_ archives never taken)', '/dashboard/#/bin'],
@@ -44,3 +42,4 @@ const isFailed = (t) => t.status === 'unexpected' || t.status === 'timedOut' || 
 const isRegression = (t) => /@regression\b/.test(t.title);
 
 module.exports = { GROUPS, groupOf, load, isFailed, isRegression };
+

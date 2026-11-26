@@ -22,9 +22,6 @@ const ROUTES = {
   food: ['#/orders?late', '#/invoices?unpaid', '#/orders?today'], dogs: ['#/round', '#/today/unplaced', '#/today/bitches'],
   apps: ['#/decide/questions', '#/decide/gates', '#/all/live'], market: ['#/do?post', '#/reply', '#/sold'], studio: ['#/review', '#/me/today', '#/library'],
 };
-// Order, colour (the 3px line; Projects has the rainbow line) and link for each tile. Projects opens config.js projectsHub.webAppUrl.
-// The 4th field is the folder the three numbers append their hash to. The header uses that same link, except when a 6th field
-// names Main separately (Apps: factory/#/me). Putting Main on the folder field would make Questions/Gates/Live factory/#/me#/….
 const TILES = [
   ['projects', 'Projects', 'gradient', CFG.projectsHub.webAppUrl, ['Stuck', 'Waiting', 'Running']],
   ['web', 'Web', 'rgb(230, 68, 61)', 'estate/', ['Down', 'Expiring', 'Live']],
@@ -36,7 +33,6 @@ const TILES = [
   ['studio', 'Studio', 'rgb(165, 112, 209)', 'studio/', ['Approve', 'Due Today', 'Sold']],
 ];
 
-// Food: the shared sample book plus one order placed today. `lateOrder` false turns the Not at GA order into Matched.
 function food(lateOrder = true) {
   const b = foodBook();
   const orders = b.orders.map((r) => r.slice());
@@ -44,9 +40,6 @@ function food(lateOrder = true) {
   orders.push(['9010', 'Shopify', 'DDF', 'GA', 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '40.00', '1', new Date().toISOString(), '[]', 'Matched']);
   return { valueRanges: [{ values: b.cards }, { values: orders }, { values: b.invoices }] };
 }
-// Pretend Sheets for Food (batchGet) and Marketplace, and the Apps and Studio state files in the pretend Drive.
-// Needs you hub cards: nothing moves on hover or focus, one icon x down the cards, a 3px line that curves with the card's corner
-// (the house rule in lines-and-counts.spec.js: a card's line follows its corner; only row shells keep a straight bar).
 async function steadyCards(page) {
   const cards = page.locator('#needsToday .needhub');
   const n = await cards.count();
@@ -113,7 +106,6 @@ test.describe('Dashboard Main', () => {
       await expect(go).toContainText(name);
       await expect(go).toHaveAttribute('href', head);
       expect(href.startsWith('https://ljoyrose.github.io'), 'relative links only').toBe(false);
-      // Every piece of info is clickable: the name and each number are links, all opening in a new tab.
       for (const a of await t.locator('a').all()) await expect(a).toHaveAttribute('target', '_blank');
       const ks = t.locator('a.hk');
       await expect(ks).toHaveCount(3);
@@ -131,20 +123,17 @@ test.describe('Dashboard Main', () => {
       expect((await nums(page, key)).map((n) => n[0]), name + ' labels').toEqual(labels);
       for (const lab of labels) expect(lab.split(' ').length, 'labels are 1-2 words').toBeLessThanOrEqual(2);
     }
-    // Sizes: every number 18px (late ones too, in a rose ring sized to them), labels 14px.
     const sz = await page.locator('#hubTiles .hubtile[data-hub="apps"] .hk').first().evaluate((k) => [getComputedStyle(k.firstElementChild).fontSize, getComputedStyle(k.lastElementChild).fontSize]);
     expect(sz).toEqual(['18px', '14px']);
-    // The numbers, from the shared samples (see each hub's own spec for the same rules).
     expect(await nums(page, 'food')).toEqual([['Late', '1', true], ['Owe GA', '£207.23', false], ['Today', '1', false]]);
     expect(await nums(page, 'apps')).toEqual([['Questions', '2', false], ['Gates', '1', false], ['Live', '0', false]]);
     expect(await nums(page, 'market')).toEqual([['To Post', '3', true], ['To Reply', '1', false], ['Sold', '3', false]]);
     expect(await nums(page, 'studio')).toEqual([['Approve', '2', false], ['Due Today', '1', true], ['Sold', '–', false]]);
-    expect(await nums(page, 'dogs')).toEqual([['Temps', '–', false], ['Unplaced', '1', false], ['Bitches', '0', false]]); // the sample pup has no cabin; the sample bitch is sex F, not Female
+    expect(await nums(page, 'dogs')).toEqual([['Temps', '–', false], ['Unplaced', '1', false], ['Bitches', '0', false]]);
     const money = await nums(page, 'money');
     expect(money.map((n) => n[0])).toEqual(['Overdue', 'Due Soon', 'Cash']);
     expect(money[2][1]).toMatch(/^−?£[\d.]+k?$/);
     await expect(page.locator('#hubTiles .hk b.need').first()).toHaveCSS('font-size', '18px');
-    // Web: the RR_WEB-ESTATE sheet id is empty in config.js, so nothing is read and every number is "–".
     expect(await nums(page, 'web')).toEqual([['Down', '–', false], ['Expiring', '–', false], ['Live', '–', false]]);
   });
 
@@ -155,7 +144,6 @@ test.describe('Dashboard Main', () => {
       expect((await nums(page, k)).map((n) => n[1]), k).toEqual(['–', '–', '–']);
     }
     await expect(page.locator('#hubTiles [data-xml]')).toHaveCount(0);
-    // An empty Marketplace tab is a real read: zeros, not dashes.
     expect((await nums(page, 'market')).map((n) => n[1])).toEqual(['0', '0', '0']);
   });
 
@@ -173,8 +161,8 @@ test.describe('Dashboard Main', () => {
     await expect(page.locator('#hubTiles [data-xml]')).toHaveCount(0);
   });
 
-  test('Food tile: an order waiting for its Send tap shows "1 to send" (to Do), never ✓ XML; a Send card for an order already at GA does not count @regression', async ({ page, guard }) => {
-    const ans = food(false);   // no order Not at GA: before 8 Nov this alone showed ✓ XML
+  test('t-dashboard-main-spec-1', async ({ page, guard }) => {
+    const ans = food(false);
     ans.valueRanges[0].values = ans.valueRanges[0].values.concat([
       ['SEND-9010', 'send', 'Orders', 'Send order #9010 to GA?', JSON.stringify({ why: '1 x AAA0012KZPSXZZZ' }), new Date().toISOString()],
       ['SEND-9001', 'send', 'Orders', 'Send order #9001 to GA?', JSON.stringify({ why: '1 x AAA0012KZPSXZZZ' }), new Date().toISOString()]]);   // 9001 already has S1000001
@@ -186,7 +174,7 @@ test.describe('Dashboard Main', () => {
     await expect(tile.locator('[data-xml]')).toHaveCount(0);
   });
 
-  test('Apps tile header opens Factory Main, and Food tick opens Not at GA yet @regression', async ({ page, guard }) => {
+  test('t-dashboard-main-spec-2', async ({ page, guard }) => {
     await seed(page, guard, { foodAnswer: food(false) });
     await signIn(page);
     const apps = page.locator('#hubTiles .hubtile[data-hub="apps"]');
@@ -198,8 +186,7 @@ test.describe('Dashboard Main', () => {
     await expect(page.locator('#hubTiles .hubtile[data-hub="food"] [data-xml]')).toHaveAttribute('href', 'food/#/orders?ga');
   });
 
-  // The square was only a link on the name. A tap on the card (not a number, not the tick) must open the hub.
-  test('the whole hub tile opens the hub; numbers and the Food tick keep their own pages @regression', async ({ page, guard }) => {
+  test('t-dashboard-main-spec-3', async ({ page, guard }) => {
     await seed(page, guard, { foodAnswer: food(false) });
     await signIn(page);
     await page.setViewportSize({ width: 390, height: 844 });
@@ -281,7 +268,6 @@ test.describe('Dashboard Main', () => {
       rows: [...c.querySelectorAll('ol > li')].map((l) => ({ k: (l.className.match(/n-(risk|fin|ops|bin)/) || [])[1], hub: l.getAttribute('data-hub'), rowIcon: !!l.querySelector('svg.hico') })),
     })));
     const rank = { risk: 0, fin: 1, ops: 2, bin: 3 };
-    // One card per hub; the cards keep the urgency order of their first row, and rows keep it inside a card.
     expect(new Set(got.map((g) => g.hub)).size, 'one card per hub').toBe(got.length);
     expect(got.length, 'rows come from more than one hub').toBeGreaterThan(1);
     for (let i = 1; i < got.length; i++) expect(rank[got[i].rows[0].k]).toBeGreaterThanOrEqual(rank[got[i - 1].rows[0].k]);
@@ -345,7 +331,6 @@ test.describe('Dashboard Main', () => {
     await expect(page.locator('#moneyTile, #minsCard, #pageFoot')).toHaveCount(0);
     await expect(page.locator('a.keytile')).toHaveCount(0);
     await expect(page.locator('body')).not.toContainText('You are here');
-    // The page name stays for screen readers only: a 1px box, clipped.
     const box = await page.locator('#hereTitle').boundingBox();
     expect(box.width).toBeLessThanOrEqual(1);
     await expect(page.locator('header h1')).toHaveText('Dashboard');
@@ -398,8 +383,6 @@ test.describe('Dashboard Main', () => {
         }
         await page.evaluate(() => { location.hash = '#/map'; });
         await expect(page.locator('#view')).toHaveAttribute('data-view', 'map');
-        // Wait for the tiles to be drawn with their line class before reading colours (read too early, every colour came back
-        // blank about 1 run in 6: the map re-renders after the hash change).
         const tiles = page.locator('#hubTiles .hubtile.house-lbar');
         await expect(tiles).toHaveCount(TILES.length);
         await expect.poll(() => tiles.evaluateAll((ts) => ts.map((t) => { const b = getComputedStyle(t, '::before'); return /linear-gradient/.test(b.backgroundImage) ? 'gradient' : b.borderLeftColor; })))
@@ -435,3 +418,4 @@ test.describe('Dashboard Main', () => {
     await page.screenshot({ path: path.join(SHOTS, 'main-390-dark.png'), fullPage: true });
   });
 });
+

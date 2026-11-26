@@ -1,6 +1,3 @@
-// Web Estate Hub, Stage 11: alerts and suggested open-work rows. Pure: no network, no Drive, no DOM.
-// Suggested rows are for the slip only; code never writes them anywhere. Reuses estate/core.js.
-// Nothing here changes DNS, a registrar or a mailbox.
 (function (root, factory) {
   'use strict';
   var core = (typeof module === 'object' && module.exports) ? require('./core.js') : root.EstateCore;
@@ -12,8 +9,8 @@
 })(this, function (E, S, M) {
   'use strict';
 
-  var WITHIN = 30; // days; 30 is inside, 31 is not
-  var RED_WITHIN = 7; // an expiry this close (or passed) is red
+  var WITHIN = 30;
+  var RED_WITHIN = 7;
   var TAGS = [['ga4', 'GA4'], ['gtm', 'GTM'], ['meta_pixel', 'Meta pixel']];
 
   function label(r) { return r.url_or_domain || r.key; }
@@ -28,10 +25,6 @@
   }
   function mailRow(r) { return r.kind === 'email-domain' || r.spf || r.dmarc || r.dkim || r.mx; }
 
-  // rows, today ('2026-10-29' or a Date), previousRows (last scan, optional), mailMap (Mail map rows that passed the
-  // header contract, optional) -> [{ key, kind, level, text }]. Red first, then amber; inside a level the row order is kept.
-  // With a Mail map: no MX is only flagged on a domain that has addresses on it (2.5), and each address on a mail
-  // domain is followed (2.6): a loop is red, an unknown target or 3 or more stops is amber.
   function alerts(rows, today, previousRows, mailMap) {
     var out = [], prev = {};
     (previousRows || []).forEach(function (p) { if (p && p.key) prev[p.key] = p; });
@@ -79,7 +72,6 @@
     return out.filter(function (a) { return a.level === 'red'; }).concat(out.filter(function (a) { return a.level === 'amber'; }));
   }
 
-  // alerts -> suggested RR_OPEN-WORK rows for the slip. One row per key and kind.
   function openWorkRows(list, todayUk) {
     var seen = {};
     return (list || []).filter(function (a) {
@@ -100,3 +92,4 @@
 
   return { WITHIN: WITHIN, RED_WITHIN: RED_WITHIN, alerts: alerts, openWorkRows: openWorkRows };
 });
+

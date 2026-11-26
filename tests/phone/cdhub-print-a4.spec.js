@@ -1,5 +1,3 @@
-// CD Hub print on A4 from a phone (13 Nov 2026): Print or Save as PDF on a phone gives the same pages as on a
-// computer. Chrome's PDF of the phone page is the print preview. Invented rows only. CDHUB_PRINT_PDF=<folder> keeps them.
 const { test, expect } = require('../support/test');
 const P = require('../support/print-a4');
 
@@ -17,7 +15,7 @@ test.describe('Phone: CD Hub print on A4', () => {
     await P.openHub(page, guard);
     await page.evaluate(() => go('dogs'));
     await expect(page.locator('#rows > article.dc')).toHaveCount(P.DOGS);
-    await expect(page.locator('img.dogphoto:not(.off)')).toHaveCount(4);   // the photos are on the cards before printing
+    await expect(page.locator('img.dogphoto:not(.off)')).toHaveCount(4);
     await page.waitForFunction(() => Array.from(document.querySelectorAll('img.dogphoto:not(.off)')).every((i) => i.complete && i.naturalWidth > 0));
     const pdf = await P.printPdf(page, 'phone-cdhub-dogs');
     expect(pdf.boxes.every((b) => P.isA4(b))).toBe(true);
@@ -34,3 +32,4 @@ test.describe('Phone: CD Hub print on A4', () => {
     }
   });
 });
+

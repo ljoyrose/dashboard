@@ -1,4 +1,3 @@
-// Jobs on Compliance, SOP cards, dog cards and room cards. Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
 
@@ -6,7 +5,6 @@ const tab = async (page, id) => {
   await tabClick(page, `#nav button[data-go="${id}"]`);
   await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
 };
-// Replaces a sample table that already exists (two files with one name stop the hub), else adds it.
 const addTable = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
   if (f) { f.content = content; f.size = String(content.length); }
@@ -34,7 +32,6 @@ test.describe('CD Hub: jobs', () => {
     const fewer = await msg(9, '10');
     expect(fewer.ok).toBe(false);
     expect(fewer.msg).toContain('1 table has fewer rows than the manifest: pretend');
-    // the copy on this device can be older than the manifest: no warning while it shows
     const onCopy = await msg(9, '10', true);
     expect(onCopy.ok).toBe(true);
     expect(onCopy.msg).toBe('Checking tables\u2026');
@@ -45,7 +42,7 @@ test.describe('CD Hub: jobs', () => {
     await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok' && !LOAD.copy);
     const x = await page.evaluate(() => {
       const n = LOAD.rowCounts.subject;
-      CD.counts.subject = 0;   // what a copy or half read would show
+      CD.counts.subject = 0;
       CD.manifest = [{ file: 'BLD-subject.csv', table: 'subject', rows: String(n) }];
       return checks().filter((k) => k.k === 'tables')[0];
     });
@@ -112,7 +109,7 @@ test.describe('CD Hub: jobs', () => {
     // the owner 22 Nov 2026: "entered later" words show only when the owner's row display.entered_later is on (none here)
     await expect(hist).not.toContainText('entered earlier');
     await expect(hist).not.toContainText('time not given');
-    await expect(hist).toContainText('Pretend morning');   // a part of the day: the owner's label for it
+    await expect(hist).toContainText('Pretend morning');
     await expect(hist).not.toContainText(/verified|attended/i);
     expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Care Check'))).toContain('Pretend nails');
     expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Nothing here'))).toBe('');
@@ -128,14 +125,14 @@ test.describe('CD Hub: record an SOP check', () => {
     't-pup,t,pup_microchip,Puppy microchips checked,litter,true,2020-01-01,,,,,Microchip Audit'
   ]);
 
-  test('Mark all saves each ticked dog, and a litter check saves litter_id @regression', async ({ page, guard }) => {
+  test('t-cdhub-jobs-spec-1', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-check_type.csv', REC);
     await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) { /* private */ } }, URL_);
     const sent = [];
     await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => {
       const b = JSON.parse(route.request().postData() || '{}'); sent.push(b);
       const dogs = b.fields && b.fields.dog_ids ? b.fields.dog_ids.split('|') : null;
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'clg-test', ids: dogs ? dogs.map((_, i) => 'clg-' + i) : undefined, at: '2026-11-25T12:00:00.000Z', who: 'Test Owner' } }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'clg-test', ids: dogs ? dogs.map((_, i) => 'clg-' + i) : undefined, at: '2026-11-25T12:00:00.000Z', who: 'Test User' } }) });
     });
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'sops');
@@ -170,7 +167,7 @@ test.describe('CD Hub: record an SOP check', () => {
     await expect(body.locator('[data-sop-save="pup_microchip"]')).toHaveText('Done');
   });
 
-  test('a Jobs row tick saves like a Board tap, and a dog job opens the chooser @regression', async ({ page, guard }) => {
+  test('t-cdhub-jobs-spec-2', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, [
       't-bowls,t,bowls,Pretend bowls,none,true,2020-01-01,,1,,,Cleaning',
       't-nails,t,nails,Pretend nails,dog,true,2020-01-01,,28,,,Care Check'
@@ -179,7 +176,7 @@ test.describe('CD Hub: record an SOP check', () => {
     const sent = [];
     await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => {
       const b = JSON.parse(route.request().postData() || '{}'); sent.push(b);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'clg-' + sent.length, at: '2026-11-20T12:00:00.000Z', who: 'Test Owner' } }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'clg-' + sent.length, at: '2026-11-20T12:00:00.000Z', who: 'Test User' } }) });
     });
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'compliance');
@@ -223,3 +220,4 @@ test.describe('CD Hub: record an SOP check', () => {
     await expect(page.locator('#compJobs tr[data-job="nails"] td[data-n="due"]')).toHaveText(String(dueBefore - 1));
   });
 });
+

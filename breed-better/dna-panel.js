@@ -1,11 +1,3 @@
-/*!
- * Breed Better DNA panel (its on-screen name from 13 Nov 2026). Read only.
- * Everything about a test comes from its BLD-dna_marker row: name, inheritance_mode, the meaning of 0, 1 and 2 copies,
- * the breeding rule and its source. Results come from BLD-dna_result. Nothing about any test is written here.
- * Works the same in the standalone app, the BLD suite and the CD Hub: it only needs the two tables.
- * Grade-to-colour bands for health results (hips, elbows, patella, eyes ...) come from BLD-grade_band rows, never from code:
- * each row names a test, an answer rule (the calculator's forms: is:, in:, range:, any) and a level (good, watch or poor).
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.BBDnaPanel = factory();
@@ -19,13 +11,11 @@
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function day(d) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(d)); if (m && typeof BLDDates !== 'undefined') return BLDDates.long(t(d)); return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1] + ' ' + m[1] : t(d); }
 
-  /** Marker rows by code (case kept, matched without case). */
   function markers(T) {
     var out = {};
     (T['BLD-dna_marker.csv'] || []).forEach(function (m) { if (t(m.code)) out[t(m.code).toLowerCase()] = m; });
     return out;
   }
-  /** How many copies a result shows: the copies cell, else the lab's words read against the marker's own words. */
   function copiesOf(r) {
     var c = t(r.copies);
     if (/^[012]$/.test(c)) return Number(c);
@@ -35,7 +25,6 @@
     if (/affected|at[- ]?risk/.test(w)) return 2;
     return null;
   }
-  /** Recessive: 1 copy carries, 2 affects. Any dominant or risk-factor mode: 1 copy is enough. From inheritance_mode. */
   function dominant(m) { return /dominant|risk factor/i.test(t(m && m.inheritance_mode)); }
   function kindOf(m, copies) {
     if (copies === null || copies === undefined) return 'unknown';
@@ -43,7 +32,6 @@
     if (copies === 2 || dominant(m)) return 'affected';
     return 'carrier';
   }
-  /** One animal's DNA results, worst first, each with the marker's own words. */
   function results(T, id) {
     var M = markers(T);
     return (T['BLD-dna_result.csv'] || []).filter(function (r) { return r.subject_id === id; }).map(function (r) {
@@ -57,7 +45,6 @@
   }
   function worst(list) { return list.reduce(function (w, x) { return RANK[x.kind] < RANK[w] ? x.kind : w; }, 'clear'); }
 
-  /** Two copies drawn as two circles: filled = the variant. A dominant test draws squares. */
   function glyph(x, size) {
     var s = size || 22, col = 'var(' + COLOUR[x.kind] + ')', sq = /dominant|risk factor/i.test(x.mode), out = '';
     for (var i = 0; i < 2; i++) {
@@ -70,8 +57,6 @@
   }
   var WORD = { clear: 'Clear', carrier: 'Carrier', affected: 'Affected or at risk', unknown: 'Not read' };
 
-  /** The DNA panel on an animal's Breed Better page: health grades in their band colour, then DNA results.
-   *  Empty when the animal has neither. */
   function card(T, id, esc) {
     var list = results(T, id), gr = grades(T, id);
     if (!list.length && !gr.length) return '';
@@ -98,7 +83,6 @@
 
   /* ---- grade-to-colour bands (settings rows) ---- */
   var LEVEL = { good: { c: '--ljr-5', tx: '--ljr-5-text', d: 'M5 12l5 5l10 -10' }, watch: { c: '--ljr-3', tx: '--ljr-3-text', d: 'M12 5v9 M12 18v.01' }, poor: { c: '--ljr-2', tx: '--ljr-2-text', d: 'M18 6l-12 12 M6 6l12 12' } };
-  /** The calculator's answer forms, read the same way: any, is:x, in:a|b, range:lo-hi. */
   function matchRule(rule, answer) {
     var r = t(rule), a = t(answer), m;
     if (r === 'any') return true;
@@ -108,7 +92,6 @@
     return false;
   }
   function inForce(row, d) { var f = t(row.from_date), to = t(row.to_date); return (!f || !d || f <= d) && (!to || !d || to >= d); }
-  /** Band rows grouped by test, in their own order: [{test, label, scale, bands:[{label, level, match}]}]. */
   function gradeBands(T, today) {
     var by = {}, order = [];
     (T['BLD-grade_band.csv'] || []).filter(function (b) { return t(b.test) && t(b.grade_match) && inForce(b, today); })
@@ -119,13 +102,11 @@
       });
     return order.map(function (k) { return by[k]; });
   }
-  /** The band a grade falls in for a test, or null. */
   function bandFor(T, test, grade, today) {
     var g = gradeBands(T, today).filter(function (x) { return x.test.toLowerCase() === t(test).toLowerCase(); })[0];
     if (!g) return null;
     return g.bands.filter(function (b) { return matchRule(b.match, grade); })[0] || null;
   }
-  /** One animal's newest health result per banded test, with its band. Health results are always tested, never by parentage. */
   function grades(T, id) {
     var tests = gradeBands(T, '');
     if (!tests.length) return [];
@@ -149,7 +130,6 @@
         + '<span class="bb-why">' + (g.on ? esc(day(g.on)) : '') + (g.band ? '' : ' · grade not in the bands') + '</span></div>';
     }).join('') + '</div>';
   }
-  /** Grade to colour: every banded test with its bands, from the rows. */
   function bandsHtml(T, esc, today) {
     var gs = gradeBands(T, today);
     return '<div class="card bb-gradebands"><h4 class="bb-h4">Grade to colour</h4><p class="bb-pts">From the grade band rows. Health results are always tested, never by parentage.</p>'
@@ -160,7 +140,6 @@
       }).join('') : '<p class="mut">No grade bands set up yet.</p>') + '</div>';
   }
 
-  /* ---- set-up: a test is a row. Read only here; the fields are shown as the row holds them. ---- */
   var SETUP = [['species_id', 'Species'], ['breeds', 'Breeds'], ['kind', 'Kind'], ['group_label', 'Category'], ['inheritance_mode', 'Inheritance'],
     ['gene', 'Gene or locus'], ['alleles', 'Allele names'], ['at_risk', 'Reduced penetrance (at risk)'], ['generations', 'Generations allowed by parentage'],
     ['copies_0', 'No copies'], ['copies_1', 'One copy'], ['copies_2', 'Two copies'], ['breeding_rule', 'Breeding rule'], ['source', 'Source of the rule'], ['scored', 'In the score']];
@@ -172,25 +151,21 @@
           + '<dl class="bb-dl">' + SETUP.filter(function (f) { return t(m[f[0]]); }).map(function (f) { return '<dt>' + f[1] + '</dt><dd>' + esc(t(m[f[0]])) + '</dd>'; }).join('') + '</dl></details>';
       }).join('') : '<p class="mut">No DNA tests set up yet.</p>') + '</div>';
   }
-  /** The DNA panel screen under More: key, grade-to-colour bands, probability per puppy, set-up. */
   function screen(T, pick, esc, today) {
     return '<h3 class="bb-h">DNA panel</h3><p class="bb-pts">Colour is the result; shape is how it is known. DNA is not in the score for the trial dogs.</p>'
       + key() + bandsHtml(T, esc, today) + '<div class="card">' + calc(T, pick || {}, esc) + '</div>' + setupHtml(T, esc);
   }
 
-  /** The key: the three results, read from the drawing alone. */
   function key() {
     return '<div class="bb-dnakey">' + [['clear', 0], ['carrier', 1], ['affected', 2]].map(function (k) {
       return '<span class="bb-tag">' + glyph({ kind: k[0], copies: k[1], mode: '' }, 16) + ' ' + WORD[k[0]] + '</span>';
     }).join('') + '<span class="bb-pts">Filled = a copy of the variant. Square = one copy is enough.</span></div>';
   }
 
-  /** Probability per puppy for one autosomal test: each parent passes the variant with chance copies / 2. */
   function perPuppy(sire, dam) {
     var a = sire / 2, b = dam / 2;
     return { 0: (1 - a) * (1 - b), 1: a * (1 - b) + b * (1 - a), 2: a * b };
   }
-  /** Tests the calculator can work: any marker whose mode is autosomal or dominant (not X-linked or mitochondrial). */
   function calcMarkers(T) {
     return (T['BLD-dna_marker.csv'] || []).filter(function (m) {
       var mode = t(m.inheritance_mode);
@@ -235,8 +210,6 @@
     ].join('');
   }
 
-  /** A pup's chances per test from its parents' results (each passes the variant at copies / 2). Only tests the calculator
-   *  can work and where both parents have a known result. [{code, name, kinds:{clear,carrier,affected}}], percentages. */
   function pupOdds(T, sireId, damId) {
     if (!sireId || !damId) return [];
     var got = function (id) { var o = {}; results(T, id).forEach(function (x) { if (x.copies !== null) o[x.code.toLowerCase()] = x.copies; }); return o; };
@@ -251,3 +224,4 @@
   return { pupOdds: pupOdds, markers: markers, copiesOf: copiesOf, kindOf: kindOf, results: results, worst: worst, card: card, key: key, perPuppy: perPuppy, calcMarkers: calcMarkers, calc: calc, css: css,
     gradeBands: gradeBands, bandFor: bandFor, grades: grades, bandsHtml: bandsHtml, setupHtml: setupHtml, screen: screen, matchRule: matchRule };
 }));
+

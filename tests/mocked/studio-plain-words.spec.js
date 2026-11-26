@@ -1,6 +1,3 @@
-// Studio Stage 8 (29 Oct 2026): plain words and calmer screens. Visible text only; code ids (routes, data keys) stay.
-// "Spec lock" reads "Agree the brief", "Bricks" read "Parts", "Engine" reads "Studio helper".
-// Pretend Google and Drive only; the data is tests/fixtures/studio/state.js (invented).
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -30,10 +27,9 @@ async function open(page, guard, hash, { state = true, change } = {}) {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
-  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
 }
 const go = async (page, key) => { await page.evaluate((k) => { location.hash = '#/' + k; }, key); await expect(page.locator('#view')).toHaveAttribute('data-view', key.split('/')[0]); };
-// Words a reader meets: the text on screen plus the names a screen reader says (aria-label, title, placeholder).
 const visibleWords = (page) => page.evaluate(() => {
   const out = [document.body.innerText];
   document.querySelectorAll('[aria-label],[title],[placeholder]').forEach((el) => {
@@ -89,7 +85,6 @@ test.describe('Studio plain words (Stage 8)', () => {
     }
   });
 
-  // Calmer screens: every page is at most two taps from a bottom tab (tap the tab, then one link on that page or its sub-row).
   test('every page is two taps or fewer from a bottom tab', async ({ page, guard }) => {
     await open(page, guard, '#/me');
     const tabs = await page.locator('nav.tabs a[data-nav]').evaluateAll((l) => l.map((a) => a.getAttribute('data-nav')));
@@ -126,3 +121,4 @@ test.describe('Studio plain words (Stage 8)', () => {
     }
   });
 });
+

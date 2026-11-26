@@ -1,7 +1,3 @@
-// JOB 35b Stage 0 audit (30 Oct 2026): the second half of the pages (marketplace, marketplace/privacy, money, studio).
-// Report only, never fails: axe (WCAG 2.2 AA tags) on every view at 1280px and 390px, buttons and links under the
-// 24px tap target, and load weight (requests, bytes, longest script, layout shift) with the pretend Google, Drive and Sheets.
-// Runs only with JOB35B_AUDIT=<file.json>; writes one row per page x view x width to that file. Every row is invented.
 const fs = require('fs');
 const { test } = require('../support/test');
 const AxeBuilder = require('@axe-core/playwright').default;
@@ -51,3 +47,4 @@ for (const p of PAGES) {
     });
   }
 }
+

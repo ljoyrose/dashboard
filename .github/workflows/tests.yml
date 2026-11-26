@@ -1,17 +1,5 @@
 name: Dashboard tests
 
-# Runs the browser tests on every pull request (each new push to it), once a night, and on demand
-# (Actions tab > Dashboard tests > Run workflow, on any branch). Minutes trim, 20 Nov 2026:
-#  - NOT on a plain push any more. A branch with no pull request runs nothing here, and a push to main does not run the
-#    suite twice: "Publish site (after tests)" already runs the same suite on every push to main before it publishes.
-#  - A newer push to the same pull request cancels the older run.
-#  - The nightly run is skipped when main has had no new commit for 26 hours.
-#  - The privacy guard is NOT trimmed: it still runs on every push, because a pushed branch is public at once.
-# Once the repo is PRIVATE (Actions minutes are metered), pull requests run only the no-browser checks; the browser
-# suite runs nightly and on demand, and in a session before every PR (tools/ci-local/run-all.sh). See docs-only.sh.
-# Google sign-in and Google Drive are pretend in these tests. No secrets are used or needed.
-# The job called "Browser tests (pretend Google and Drive)" is the one branch protection requires on main.
-# Do not rename it without also changing the branch protection rule (see TESTS.md).
 on:
   pull_request:
   merge_group: # if a merge queue is ever switched on for main, the required check still reports there
@@ -47,8 +35,6 @@ jobs:
         with:
           fetch-depth: 0 # to compare the whole branch with main
 
-      # Docs-only branch (only docs/ or *.md, never TESTS.md, .github/ or tests/): skip the browser, still run the
-      # no-browser checks (secret scan of every file, CI guards). main, schedules and hand-started runs always run everything.
       - name: Docs-only branch? (the browser is skipped, the file checks still run)
         id: scope
         run: bash tools/ci-local/docs-only.sh
@@ -83,8 +69,6 @@ jobs:
       - name: Run tests (desktop suite, then the small phone-sized set)
         if: steps.scope.outputs.browser == 'true'
         id: run
-        # The desktop suite includes the route crawl (tests/mocked/route-crawl.spec.js): every top-level page,
-        # and every hash route, tab, chip and SOP row, must stay on this origin and paint without hanging.
         run: npx playwright test --project=mocked --project=phone
 
       - name: Docs-only branch or private-repo push - run the checks that need no browser (secret scan, CI guards)
@@ -106,8 +90,6 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-      # Failure surface. Scheduled (Monday) or hand-started runs on main only. No Slack, no webhooks, no new secrets:
-      # the run's own built-in token opens ONE GitHub Issue (GitHub emails the owner) and closes it when green again.
       - name: Red on a scheduled run? Open or update the one issue
         continue-on-error: true # bookkeeping must never change the result of the tests
         if: ${{ failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
@@ -121,8 +103,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Optional extra: opens the three real web addresses (signed out) to check the live site is up.
-  # Weekly and on demand only. Never blocks anything: a red tick here is a hint, not a failure of the code.
   live-smoke:
     name: Live site check (optional, never blocks)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -171,3 +151,4 @@ jobs:
         run: node tests/support/report-issue.js --state green --label live-site-red
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

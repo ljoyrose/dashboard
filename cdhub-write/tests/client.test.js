@@ -8,7 +8,6 @@ const BLDBands = require(CODE + '/client/bands.js');
 
 const GOOD_URL = 'https://script.google.com/macros/s/AKfycbxTESTTESTTEST/exec';
 
-/** A fake fetch that behaves like the Apps Script web app. */
 function fakeServer(over = {}) {
   const calls = [];
   const state = Object.assign({
@@ -54,7 +53,7 @@ test('only a real Apps Script address is accepted as the Script URL', () => {
   assert.equal(s.getScriptUrlSet(), true);
 });
 
-test('a Workspace save address (/a/macros/<domain>/) is accepted too; look-alikes are not (16 Nov 2026)', () => {
+test('a Workspace save address (/a/macros/<domain>/) is accepted too; look-alikes are not ', () => {
   const s = mk(fakeServer());
   ['https://script.google.com/a/macros/example.com/s/ABC/dev', 'https://script.google.com/a/macros/ex ample.com/s/ABC/exec',
     'https://script.google.com/a/example.com/s/ABC/exec', 'https://evil.example/a/macros/example.com/s/ABC/exec'].forEach((u) => {
@@ -181,7 +180,6 @@ test('config file in Drive: only a clean, single, switched-on file with a real S
   assert.equal((await run([{ id: 'a' }], { saving: 'on', scriptUrl: GOOD_URL })).set, true);
 });
 
-// ------------------------------------------------------------------ bands
 const BANDS = BLDBands.parseBands([
   { id: 'tb-u4', band: 'under four weeks', age_from_days: '0', age_to_days: '28', min_temp: '26.0', max_temp: '28.0' },
   { id: 'tb-o4', band: 'four weeks and over', age_from_days: '29', age_to_days: '', min_temp: '10.0', max_temp: '26.0' }
@@ -213,8 +211,6 @@ test('bands: verdicts and the action ladder', () => {
   assert.equal(BLDBands.actionFor('20', ACTIONS), '');
 });
 
-// ------------------------------------------------------------------ screens (DOM)
-// jsdom is a required dev dependency: these screen tests must run, never be skipped. (`npm install` first.)
 const { JSDOM } = require('jsdom');
 const domTest = test;
 
@@ -243,7 +239,7 @@ domTest('temperature screen: honest empty state when no rooms are loaded', () =>
   assert.equal(host.querySelectorAll('.bs-btn').length, 0);
 });
 
-domTest('temperature screen: save, show the result, no staff correction path, "Wrong entry? Tell the owner"; out-of-band asks what was done', async () => {
+domTest('temperature screen: save, show the result, no staff correction path, "Wrong entry? Tell the user"; out-of-band asks what was done', async () => {
   global.BLDBands = BLDBands;
   const Screens = require(CODE + '/screens/screens.js');
   const { doc, host } = page();
@@ -278,8 +274,8 @@ domTest('temperature screen: save, show the result, no staff correction path, "W
   assert.match(card.querySelector('.bs-result').textContent, /approvals queue/);
   assert.equal(card.querySelector('.bs-link'), null);                                        // no "send a correction" for staff
   assert.equal([...host.querySelectorAll('button')].some((b) => /correction/i.test(b.textContent)), false);
-  assert.match(card.querySelector('.bs-wrong').textContent, /Wrong entry\? Tell the owner \u2013 she can fix it\./);
-  assert.match(host.querySelector('.bs-sub').textContent, /Wrong entry\? Tell the owner \u2013 she can fix it\./);
+  assert.match(card.querySelector('.bs-wrong').textContent, /Wrong entry\? Tell the user \u2013 she can fix it\./);
+  assert.match(host.querySelector('.bs-sub').textContent, /Wrong entry\? Tell the user \u2013 she can fix it\./);
   assert.equal(minIn.value, ''); // cleared after a successful send
 });
 
@@ -317,27 +313,23 @@ domTest('Board drop-in: opens the temperature screen from tables the Board alrea
   board.open('temp', host);
   assert.match(host.querySelector('.bs-band').textContent, /room unknown/);
   assert.equal(board.lookups.roomsWithDogs, 0);
-  const h2 = new JSDOM('<div id="s"></div>'); // staff with no people: honest empty state
+  const h2 = new JSDOM('<div id="s"></div>');
   const b2 = Board.create({ tables: T, document: h2.window.document, save: mk(fakeServer()) });
   b2.open('staff', h2.window.document.getElementById('s'));
   assert.match(h2.window.document.querySelector('.bs-empty').textContent, /No people are loaded/);
 });
 
-// ------------------------------------------------------------------ Bloodline wiring (the screens as they run inside the Bloodline page)
 const fs = require('node:fs');
 const path = require('node:path');
 const read = (p) => fs.readFileSync(path.join(CODE, p), 'utf8');
 
-/** A Bloodline-like page: its own palette variables, a #main, and the wiring scripts loaded as the patch loads them. */
 function bloodlinePage(fakeFetch) {
   const dom = new JSDOM('<!doctype html><html><head></head><body><main id="main"></main></body></html>',
     { runScripts: 'outside-only', url: 'https://ljoyrose.github.io/dashboard/bloodline/' });
   const w = dom.window;
   if (fakeFetch) w.fetch = fakeFetch;
-  // load exactly the scripts the patch adds to Bloodline, in the order it adds them
   read('wired/bloodline-wiring.patch').split('\n').filter((l) => /^\+<script src="/.test(l))
     .map((l) => /src="([^"]+)"/.exec(l)[1]).forEach((f) => w.eval(read(f)));
-  // what Bloodline's render() does for these stages, per the patch
   w.show = (stage) => {
     const pages = { confirm: w.BLDWire.pageConfirm, entertemp: w.BLDWire.pageTemp, staffin: w.BLDWire.pageStaff };
     w.document.getElementById('main').innerHTML = pages[stage]();
@@ -354,7 +346,7 @@ domTest('Bloodline: "Enter temperatures" opens with saving OFF and an honest "no
   assert.match(d.querySelector('h2').textContent, /Enter temperatures/);
   assert.match(d.querySelector('.bs-banner').textContent, /Saving is off/);
   assert.match(d.querySelector('.bs-empty').textContent, /No rooms are loaded/);
-  assert.equal(d.querySelectorAll('.bs-btn[aria-disabled]').length, 0); // no room cards, so nothing to press
+  assert.equal(d.querySelectorAll('.bs-btn[aria-disabled]').length, 0);
 });
 
 domTest('Bloodline: "Staff input" opens with saving OFF and an honest "no people" message', () => {
@@ -398,7 +390,7 @@ domTest('Bloodline: pasting a wrong address is refused; a right one turns saving
   d.querySelector('#bw-url').value = 'https://script.google.com/macros/s/AKfycbxTESTTEST/exec';
   d.querySelector('#bw-on').click();
   await tick();
-  assert.match(d.querySelector('.bs-banner').textContent, /Lisa approves each entry/);
+  assert.match(d.querySelector('.bs-banner').textContent, /User approves each entry/);
   const card = d.querySelector('.bs-card[data-area="area-t1"]');
   assert.equal(card.querySelector('.bs-btn').disabled, false);
 
@@ -417,29 +409,26 @@ domTest('Bloodline: pasting a wrong address is refused; a right one turns saving
   assert.ok(!post.url.includes('CODE123456'));
 });
 
-domTest('Bloodline patch: only ADDS lines (two stages, the scripts, one mount call); touches nothing of Lisa\'s page', () => {
+domTest('Bloodline patch: only ADDS lines (two stages, the scripts, one mount call); touches nothing of User\'s page', () => {
   const patch = read('wired/bloodline-wiring.patch');
   const body = patch.split('\n').filter((l) => /^[+-]/.test(l) && !/^(\+\+\+|---)/.test(l));
   const removed = body.filter((l) => l.startsWith('-'));
   const added = body.filter((l) => l.startsWith('+'));
-  // the only removed line is the one PAGES line, re-added with two extra entries in front
   assert.equal(removed.length, 1);
   assert.match(removed[0], /var PAGES=\{relations:pageRelations/);
   assert.ok(added.some((l) => /\['entertemp','Enter temperatures'/.test(l)));
   assert.ok(added.some((l) => /\['staffin','Staff input'/.test(l)));
   assert.ok(added.some((l) => /BLDWire\.mount\(CUR\)/.test(l)));
   assert.ok(added.some((l) => /var PAGES=\{confirm:.*entertemp:.*staffin:/.test(l) && l.includes('relations:pageRelations')));
-  assert.equal(added.filter((l) => /<script src=/.test(l)).length, 6);   // + client/occupancy.js
+  assert.equal(added.filter((l) => /<script src=/.test(l)).length, 6);
   assert.ok(added.some((l) => /\['confirm','Where is everyone\?'/.test(l)));
   assert.ok(added.some((l) => /var PAGES=\{confirm:/.test(l) && l.includes('relations:pageRelations')));
 });
 
-// ================================================================== daily location check (Where is everyone?)
 const BLDOcc = require(CODE + '/client/occupancy.js');
 const BLDLook = require(CODE + '/client/drive-lookups.js');
 const fxc = require('./fixtures');
 
-/** FAKE tables parsed from the same fake CSVs the script tests use. */
 function fakeTables() {
   const files = fxc.csvFiles(), out = {};
   Object.keys(files).forEach((n) => { out[n] = BLDLook.parseCsv(files[n]); });
@@ -450,20 +439,17 @@ test('daily list: dogs on site with their last recorded room; sold, collected, f
   const T = fakeTables();
   const d = BLDOcc.dailyList({ area: T['BLD-area.csv'], subject: T['BLD-subject.csv'], subject_status: T['BLD-subject_status.csv'], occupancy: T['BLD-occupancy.csv'] });
   const byId = {}; d.dogs.forEach((x) => { byId[x.id] = x; });
-  assert.deepEqual(d.dogs.map((x) => x.id).sort(), ['sub-test-a', 'sub-test-b']);        // C sold, D owned_by_family, E has no row and no status
+  assert.deepEqual(d.dogs.map((x) => x.id).sort(), ['sub-test-a', 'sub-test-b']);
   assert.equal(d.skipped, 1);                                                             // E is counted, not guessed
-  assert.equal(byId['sub-test-a'].areaId, 'area-t2');                                     // latest moved_in beats the earlier t1 row
+  assert.equal(byId['sub-test-a'].areaId, 'area-t2');
   assert.equal(byId['sub-test-a'].areaLabel, 'T2');
-  assert.equal(byId['sub-test-b'].areaId, 'area-t1');                                     // an undated legacy row still gives a room
-  // a dog with no occupancy row but a status of Active is listed with "room not recorded"
+  assert.equal(byId['sub-test-b'].areaId, 'area-t1');
   const T2 = { area: T['BLD-area.csv'], subject: T['BLD-subject.csv'], occupancy: T['BLD-occupancy.csv'], subject_status: T['BLD-subject_status.csv'].concat([{ subject_id: 'sub-test-e', state: 'Active' }]) };
   const d2 = BLDOcc.dailyList(T2);
   assert.equal(d2.dogs[0].id, 'sub-test-e');                                              // unknown rooms come first
   assert.equal(d2.dogs[0].known, false);
-  // a status of Sold or Collected removes a dog even if its occupancy row says nothing
   const T3 = { area: T2.area, subject: T2.subject, occupancy: T2.occupancy, subject_status: [{ subject_id: 'sub-test-a', state: 'Collected' }, { subject_id: 'sub-test-b', state: 'sold' }] };
   assert.equal(BLDOcc.dailyList(T3).dogs.length, 0);
-  // moving a dog (a NEW row with a later moved_in) changes where it is; the old rows are never consulted again
   const moved = T2.occupancy.concat([{ subject_id: 'sub-test-b', area_id: 'area-t3-1', moved_in: '2026-10-15' }]);
   assert.equal(BLDOcc.latestRow(moved, 'sub-test-b').area_id, 'area-t3-1');
   assert.equal(BLDOcc.latestRow(moved, 'sub-test-nobody'), null);
@@ -481,7 +467,6 @@ test('the same rule in the browser and in the script: latest moved_in, undated r
   assert.equal(BLDOcc.latestRow(rows, 'y').area_id, 'b');
 });
 
-/** A fake Apps Script web app that understands status, saves and reads. */
 function scriptFake(over = {}) {
   const calls = [];
   const st = Object.assign({
@@ -504,7 +489,7 @@ function scriptFake(over = {}) {
     const b = JSON.parse(init.body);
     if (b.action === 'read') {
       if (st.reads && st.reads[b.table]) return { json: async () => st.reads[b.table] };
-      if (!rd[b.table]) return { json: async () => ({ ok: false, code: 'NOT_ALLOWED', message: 'Lisa has not allowed your role to see this list.' }) };
+      if (!rd[b.table]) return { json: async () => ({ ok: false, code: 'NOT_ALLOWED', message: 'User has not allowed your role to see this list.' }) };
       return { json: async () => ({ ok: true, result: { table: b.table, fields: Object.keys(rd[b.table][0] || {}), rows: rd[b.table], count: rd[b.table].length, scope: 'all rows' } }) };
     }
     return { json: async () => st.saveReply };
@@ -515,7 +500,7 @@ const mkSave = (srv, extra = {}) => BLDSave.create(Object.assign({ fetch: srv.f,
 
 test('read: needs the Script URL, the switch and a code; the code goes in the body never the address; a bad code returns no rows', async () => {
   const none = BLDSave.create({ fetch: scriptFake().f, localStorage: null, sessionStorage: null });
-  assert.equal((await none.read('area')).code, 'READ_OFF');                       // no Script URL: nothing is even sent
+  assert.equal((await none.read('area')).code, 'READ_OFF');
   const srv = scriptFake({ readEnabled: false });
   const s = mkSave(srv); await s.checkStatus(); s.setCode('SECRETCODE1');
   assert.equal((await s.read('area')).code, 'READ_OFF');                          // the script says reading is off
@@ -542,7 +527,7 @@ test('readMany: area, subject and occupancy are required; subject_status may be 
   const s = mkSave(srv); await s.checkStatus(); s.setCode('C');
   const ok = await s.readMany(['area', 'subject', 'occupancy', 'subject_status']);
   assert.equal(ok.ok, true); assert.deepEqual(ok.tables.subject_status, []);
-  const srv2 = scriptFake({ reads: { occupancy: { ok: false, code: 'NOT_ALLOWED', message: 'Lisa has not allowed your role to see this list.' } } });
+  const srv2 = scriptFake({ reads: { occupancy: { ok: false, code: 'NOT_ALLOWED', message: 'User has not allowed your role to see this list.' } } });
   const s2 = mkSave(srv2); await s2.checkStatus(); s2.setCode('C');
   const no = await s2.readMany(['area', 'subject', 'occupancy', 'subject_status']);
   assert.equal(no.ok, false); assert.match(no.message, /not allowed/);
@@ -564,14 +549,14 @@ test('readMany (speed): a wrong code costs one try; the rest go together; the fi
   most = 0;
   const all = await s3.readMany(['area', 'subject', 'occupancy', 'subject_status']);
   assert.equal(all.ok, true);
-  assert.equal(most, 3);                                                          // after the first, the other three at once
+  assert.equal(most, 3);
 });
 
 test('banners for the live occupancy list, the daily check log and the still-proposed staff roster', async () => {
   const srv = scriptFake();
   const s = mkSave(srv); await s.checkStatus();
   assert.equal(s.banner('occupancy').kind, 'pending');
-  assert.match(s.banner('occupancy').text, /Lisa approves each entry/);
+  assert.match(s.banner('occupancy').text, /User approves each entry/);
   assert.equal(s.banner('occupancy_check').canSave, true);                          // on the allow-list now, straight in
   assert.equal(s.banner('occupancy_check').kind, 'on');
   assert.equal(s.banner('staff').canSave, false);                                      // still only a proposal
@@ -619,12 +604,10 @@ domTest('location check: each dog shows its last room, pre-filled; only a Moved 
   assert.match(e.querySelector('.bs-dog-was').textContent, /Room not recorded yet/);
   assert.equal(e.querySelector('.bs-no').hidden, true);
   assert.equal(e.querySelector('.bs-move').hidden, false);                                 // goes straight to picking a room
-  // Away: shown, keeps its room, no buttons, not counted as something to do
   assert.ok(f.className.includes('bs-away'));
   assert.match(f.textContent, /Off-site/); assert.match(f.textContent, /keeps its room: T1/);
   assert.equal(f.querySelectorAll('button').length, 0);
   assert.match(host.querySelector('.bs-away-h').textContent, /Off-site/);
-  // exactly ONE confirm button, with the count of dogs it will confirm (a and b; not e, not the away dog)
   assert.equal(host.querySelectorAll('.bs-rest').length, 1);
   assert.match(restBtn(host).textContent, /All the rest unmoved \(2\)/);
 });
@@ -642,7 +625,7 @@ domTest('location check: "All the rest unmoved" sends ONE entry listing every do
   assert.equal(p.length, 1);
   assert.equal(p[0].table, 'occupancy_check');
   assert.equal(p[0].action, 'add');
-  assert.deepEqual(p[0].fields, { dog_ids: ['sub-test-a', 'sub-test-b'], moved_count: 0 });   // no date, no name: the script sets those
+  assert.deepEqual(p[0].fields, { dog_ids: ['sub-test-a', 'sub-test-b'], moved_count: 0 });
   assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /Confirmed 2 dogs unmoved\. 1 dog\(s\) still have no room recorded/);
   assert.ok(host.querySelector('[data-dog="sub-test-a"]').className.includes('bs-done'));
   assert.equal(host.querySelector('[data-dog="sub-test-f"]').className.includes('bs-done'), false);   // the Away dog is not "done"
@@ -667,7 +650,7 @@ domTest('location check: a Moved dog is saved as a move (dog + room only) and is
   await new Promise((r) => setTimeout(r, 30));
   const occ = srv.posts().filter((x) => x.table === 'occupancy');
   assert.equal(occ.length, 1);
-  assert.deepEqual(occ[0].fields, { subject_id: 'sub-test-b', area_id: 'area-t3-1' });     // no dates, no moved_out, no file name
+  assert.deepEqual(occ[0].fields, { subject_id: 'sub-test-b', area_id: 'area-t3-1' });
   assert.equal(occ[0].action, 'add');
   assert.match(b.querySelector('.bs-result').textContent, /Move to T3\.1 sent.*approvals queue/);
   assert.match(host.querySelector('.bs-prog-t').textContent, /1 of 3 dogs done/);
@@ -677,7 +660,7 @@ domTest('location check: a Moved dog is saved as a move (dog + room only) and is
   await new Promise((r) => setTimeout(r, 30));
   const chk = checkPosts(srv);
   assert.equal(chk.length, 1);
-  assert.deepEqual(chk[0].fields, { dog_ids: ['sub-test-a'], moved_count: 1 });            // b moved, so it is not "unmoved"
+  assert.deepEqual(chk[0].fields, { dog_ids: ['sub-test-a'], moved_count: 1 });
   assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /Confirmed 1 dog unmoved, 1 moved/);
 });
 
@@ -732,7 +715,7 @@ domTest('location check: if the daily log is switched off the button says so and
   restBtn(host).click();
   await new Promise((r) => setTimeout(r, 30));
   const ids = [...new Set(srv2.calls.filter((c) => c.init.method === 'POST').map((c) => JSON.parse(c.init.body).request_id))];
-  assert.equal(ids.length, 1);                                                             // same request id, so the script cannot save twice
+  assert.equal(ids.length, 1);
 });
 
 domTest('location check: a refused move shows the script\'s plain message and can be tried again', async () => {
@@ -749,7 +732,7 @@ domTest('location check: a refused move shows the script\'s plain message and ca
   assert.match(b.querySelector('.bs-err').textContent, /has not moved/);
   assert.equal(b.className.includes('bs-done'), false);
   assert.equal(b.querySelector('.bs-btn').disabled, false);
-  assert.match(restBtn(host).textContent, /\(2\)/);                                        // a refused move does not take the dog out of the list
+  assert.match(restBtn(host).textContent, /\(2\)/);
 });
 
 domTest('away and gone dogs in the daily list (browser side): off_site_temp is Away and keeps its room; deceased, sold, family, collected are dropped', () => {
@@ -763,12 +746,11 @@ domTest('away and gone dogs in the daily list (browser side): off_site_temp is A
   ]);
   const d = BLDOcc.dailyList({ area: T['BLD-area.csv'], subject: subj, subject_status: status, occupancy: occ });
   const ids = d.dogs.map((x) => x.id).sort();
-  assert.deepEqual(ids, ['sub-test-a', 'sub-test-b', 'sub-v']);                           // sub-h, sub-g, sub-r (deceased) and sold/family/collected are gone
+  assert.deepEqual(ids, ['sub-test-a', 'sub-test-b', 'sub-v']);
   const v = d.dogs.filter((x) => x.id === 'sub-v')[0];
   assert.equal(v.away, true); assert.equal(v.areaId, 'area-t1'); assert.equal(v.known, true);   // keeps its room
   assert.equal(d.dogs[d.dogs.length - 1].id, 'sub-v');                                    // Away dogs are listed last
   assert.equal(d.dogs.filter((x) => x.away).length, 1);
-  // an Away dog still counts in its room for the temperature band
   const lk = BLDLook.fromTables(Object.assign({}, T, { 'BLD-subject.csv': subj, 'BLD-subject_status.csv': status, 'BLD-occupancy.csv': occ }), '2026-10-15');
   assert.ok(lk.dogs.some((x) => x.away));
 });
@@ -849,7 +831,7 @@ domTest('Bloodline: staff load the dogs with their personal code, no Google sign
   srv.calls.forEach((c) => assert.ok(!c.url.includes('STAFFCODE12')));
   assert.equal(d.querySelectorAll('.bs-dog').length, 2);
   assert.match(d.querySelector('[data-dog="sub-test-b"] .bs-dog-was').textContent, /Last recorded: T1/);
-  assert.equal(d.querySelector('[data-dog="sub-test-a"] .bs-no').disabled, false);    // occupancy is switched on in this fake script
+  assert.equal(d.querySelector('[data-dog="sub-test-a"] .bs-no').disabled, false);
   assert.match(d.querySelector('.bs-rest').textContent, /All the rest unmoved \(2\)/);
   assert.equal(d.querySelector('.bs-rest').disabled, false);
 });
@@ -858,25 +840,22 @@ test('rooms and bands: after a move the dog is in its NEW room only (the old row
   const T = fakeTables();
   T['BLD-temperature_band.csv'] = [{ id: 'b1', band: 'four weeks and over', age_from_days: '29', age_to_days: '', min_temp: '10.0', max_temp: '26.0' }];
   const before = BLDLook.fromTables(T, '2026-10-15');
-  assert.equal(before.bandForArea('area-t2').dogId, 'sub-test-a');                      // Test A is in T2 (latest row)
-  assert.equal(before.bandForArea('area-t1').dogId, 'sub-test-b');                      // T1 has Test B (undated legacy row)
+  assert.equal(before.bandForArea('area-t2').dogId, 'sub-test-a');
+  assert.equal(before.bandForArea('area-t1').dogId, 'sub-test-b');
   T['BLD-occupancy.csv'] = T['BLD-occupancy.csv'].concat([{ id: 'occ-n', subject_id: 'sub-test-a', area_id: 'area-t3-1', moved_in: '2026-10-15', moved_out: '' }]);
   const after = BLDLook.fromTables(T, '2026-10-15');
   assert.equal(after.bandForArea('area-t3-1').dogId, 'sub-test-a');
   assert.match(after.bandForArea('area-t2').reason, /room unknown/);                      // no longer counted in T2
-  assert.equal(after.roomsWithDogs, 2);                                                   // T1 (Test B) and T3.1 (Test A)
+  assert.equal(after.roomsWithDogs, 2);
 });
 
 test('Bloodline patch: no escaped-newline text anywhere, and `git apply --check` accepts it on the page it was made for', () => {
   const { execFileSync } = require('node:child_process');
   const os = require('node:os');
   const patch = read('wired/bloodline-wiring.patch');
-  // 1. real text, not escaped text: no literal backslash-n / backslash-t / backslash-r pairs (the original page's own
-  //    \uXXXX escapes appear only on unchanged context lines, where they must stay exactly as they are)
   assert.equal(/\\[ntr]/.test(patch), false, 'a literal \\n, \\t or \\r in the patch');
   assert.equal(patch.includes('\r'), false);
   patch.split('\n').filter((l) => /^\+/.test(l) && !/^\+\+\+/.test(l)).forEach((l) => assert.equal(/\\u[0-9a-fA-F]{4}/.test(l), false, 'an added line carries an escape: ' + l));
-  // 2. rebuild the page the patch expects (every context and removed line at its line number, filler elsewhere) and ask git
   const lines = [], hunks = patch.split('\n').reduce((acc, l) => { const m = /^@@ -(\d+),(\d+) \+(\d+),(\d+) @@/.exec(l); if (m) acc.push({ start: +m[1], body: [] }); else if (acc.length && /^[ -]/.test(l) && !/^---/.test(l)) acc[acc.length - 1].body.push(l.slice(1)); return acc; }, []);
   assert.equal(hunks.length, 4);
   hunks.forEach((h) => { h.body.forEach((t, i) => { lines[h.start - 1 + i] = t; }); });
@@ -886,7 +865,7 @@ test('Bloodline patch: no escaped-newline text anywhere, and `git apply --check`
     execFileSync('git', ['init', '-q', dir]);
     fsx.writeFileSync(pathx.join(dir, 'index.html'), lines.join('\n') + '\n');
     fsx.writeFileSync(pathx.join(dir, 'p.patch'), patch);
-    execFileSync('git', ['-C', dir, 'apply', '--check', 'p.patch']);          // throws (non-zero exit) if it does not apply
+    execFileSync('git', ['-C', dir, 'apply', '--check', 'p.patch']);
     execFileSync('git', ['-C', dir, 'apply', 'p.patch']);
     const after = fsx.readFileSync(pathx.join(dir, 'index.html'), 'utf8');
     assert.equal((after.match(/<script src="/g) || []).length, 7);           // bld-schema.js (context) + the six added
@@ -894,17 +873,17 @@ test('Bloodline patch: no escaped-newline text anywhere, and `git apply --check`
   } finally { fsx.rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('role(): the role the script reported on the last read, for showing owner-only buttons; cleared with the code (TEMPS, 12 Nov 2026)', async () => {
-  const srv = scriptFake({ reads: { area: { ok: true, result: { table: 'area', fields: ['id'], rows: [], count: 0, role: 'OWNER' } } } });
+test('role: the role the script reported on the last read, for showing user-only buttons; cleared with the code', async () => {
+  const srv = scriptFake({ reads: { area: { ok: true, result: { table: 'area', fields: ['id'], rows: [], count: 0, role: 'USER' } } } });
   const s = mkSave(srv); await s.checkStatus();
   assert.equal(s.role(), '');
   s.setCode('SECRETCODE1');
   assert.equal(s.role(), '');
   await s.read('area');
-  assert.equal(s.role(), 'OWNER');
+  assert.equal(s.role(), 'USER');
   srv.st.reads.area = { ok: false, code: 'BAD_CODE', message: 'no' };
   await s.read('area');
-  assert.equal(s.role(), 'OWNER');   // a refusal does not change it; a new code does
+  assert.equal(s.role(), 'USER');
   s.setCode('OTHER');
   assert.equal(s.role(), '');
   srv.st.reads.area = { ok: true, result: { table: 'area', fields: ['id'], rows: [], count: 0, role: 'STAFF' } };
@@ -914,7 +893,7 @@ test('role(): the role the script reported on the last read, for showing owner-o
   assert.equal(s.role(), '');
 });
 
-test('name(): the name held against this code from the last read (Welcome line); cleared with the code (13 Nov 2026)', async () => {
+test('name: the name held against this code from the last read (Welcome line); cleared with the code', async () => {
   const srv = scriptFake({ reads: { area: { ok: true, result: { table: 'area', fields: ['id'], rows: [], count: 0, role: 'STAFF', name: 'Sam Staff' } } } });
   const s = mkSave(srv); await s.checkStatus();
   s.setCode('SECRETCODE1');
@@ -944,10 +923,9 @@ test('saves sent together go one at a time; a failed one does not stop the next'
   const rs = await Promise.all(['a', 'b', 'c'].map((id) => s.act('link_end', { id })));
   assert.deepEqual(rs.map((r) => r.ok), [true, false, true]);
   assert.equal(most, 1);
-  assert.equal(s.sending(), 0);   // all answered: leaving the page no longer asks first
+  assert.equal(s.sending(), 0);
 });
 
-// OV12 16 Nov 2026: leaving the page while saves wait their turn dropped them. sending() counts the saves not yet answered.
 test('saves still waiting are counted until each is answered', async () => {
   let release;
   const gate = new Promise((r) => { release = r; });
@@ -966,8 +944,6 @@ test('saves still waiting are counted until each is answered', async () => {
   assert.equal(s.sending(), 0);
 });
 
-// OV12 20 Nov 2026: a round of saves all said "Saving..." for minutes. Each save is told how many are ahead of it,
-// again as that changes, and 0 when it is actually sent.
 test('each save is told its place in the line: 2 ahead, 1 ahead, then 0 when sent', async () => {
   const f = async (url, init = {}) => {
     if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
@@ -992,7 +968,6 @@ test('submit passes its place in the line too, and a screen error in onTurn neve
   assert.deepEqual(told, [0]);
 });
 
-// NEVER LOSE AN ENTRY (OV12 20 Nov 2026: most of a temperature round was still waiting its turn when the app closed).
 function memStore() { const m = {}; return { getItem: (k) => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: (k) => { delete m[k]; }, m }; }
 test('outbox: every save is kept on the phone the moment it is pressed, without the code, and leaves once saved', async () => {
   const local = memStore(); let release; const gate = new Promise((r) => { release = r; });
@@ -1017,7 +992,7 @@ test('outbox: saves dropped when the phone sleeps or the app closes are sent whe
   const local = memStore();
   const hang = async (url, init = {}) => {
     if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
-    throw new TypeError('Load failed');   // the phone slept: the browser drops every waiting save (20 Nov 2026)
+    throw new TypeError('Load failed');
   };
   const a = BLDSave.create({ fetch: hang, localStorage: local, sessionStorage: null });
   a.setScriptUrl(GOOD_URL); a.setCode('ABC');
@@ -1122,8 +1097,7 @@ test('owner sign-in ends mid-round: every reading is kept, none refused, and all
   const f = async (url, init = {}) => {
     if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }], proposed: [] }) };
     const b = JSON.parse(init.body); posts.push(b);
-    // the script: the first sign-in has ended on its side once the second reading arrives
-    if (b.google_token !== 'ya29.second-sign-in' && posts.length > 1) return { json: async () => ({ ok: false, code: 'GOOGLE_NOT_OWNER', message: 'This Google account is not on the owner list. Enter your staff code. Nothing was saved.' }) };
+    if (b.google_token !== 'ya29.second-sign-in' && posts.length > 1) return { json: async () => ({ ok: false, code: 'GOOGLE_NOT_USER', message: 'This Google account is not on the user list. Enter your staff code. Nothing was saved.' }) };
     saved[b.request_id] = (saved[b.request_id] || 0) + 1;
     return { json: async () => ({ ok: true, result: { status: 'saved', id: 'rdg-' + b.request_id } }) };
   };
@@ -1131,14 +1105,11 @@ test('owner sign-in ends mid-round: every reading is kept, none refused, and all
   s.setScriptUrl(GOOD_URL); await s.checkStatus(); s.setLookups({ area: [{ id: 'area-1' }, { id: 'area-2' }, { id: 'area-3' }, { id: 'area-4' }] });
   const r1 = await s.submit('area_reading', { area_id: 'area-1', min_c: '18.0', max_c: '21.0' });
   assert.equal(r1.ok, true, JSON.stringify(r1));
-  // the script turns down the sign-in: kept, never listed as Not saved, and the person is asked to sign in again
   const r2 = await s.submit('area_reading', { area_id: 'area-2', min_c: '18.5', max_c: '21.5' });
   assert.equal(r2.ok, false); assert.equal(r2.kept, true); assert.equal(r2.signIn, true); assert.match(r2.message, /sign in again/);
   assert.equal(s.outbox.refused().length, 0, 'never refused for an ended sign-in');
   assert.equal(s.outbox.needsSignIn(), true);
-  // it is not sent again with the same sign-in
   const before = posts.length; await s.outbox.flush(); assert.equal(posts.length, before);
-  // the sign-in ends on the phone too: the next readings are kept without being sent
   token = '';
   const r3 = await s.submit('area_reading', { area_id: 'area-3', min_c: '19.0', max_c: '22.0' });
   const r4 = await s.submit('area_reading', { area_id: 'area-4', min_c: '19.5', max_c: '22.5' });
@@ -1146,7 +1117,6 @@ test('owner sign-in ends mid-round: every reading is kept, none refused, and all
   assert.equal(posts.length, before, 'nothing is sent while no one is signed in');
   assert.equal(s.outbox.count(), 3);
   assert.ok(!local.m['bld.outbox'].includes('ya29.'), 'the Google sign-in is never kept');
-  // signed in again: every kept reading goes, each saved exactly once, and the box is empty
   token = 'ya29.second-sign-in';
   assert.equal(s.outbox.needsSignIn(), false);
   assert.equal(await s.outbox.flush(), 0);
@@ -1156,11 +1126,11 @@ test('owner sign-in ends mid-round: every reading is kept, none refused, and all
 });
 
 
-test('owner sign-in ended: with the shared quiet renewal on the page, waiting readings renew it and go by themselves', async () => {
+test('user sign-in ended: with the shared quiet renewal on the page, waiting readings renew it and go by themselves', async () => {
   const local = memStore(); let tok = ''; const posts = [];
   global.window = {
     DashAuth: { valid: () => (tok ? { access_token: tok } : null) },
-    BLDSave: { refreshOwnerToken: async () => { tok = 'ya29.renewed'; return tok; } }
+    BLDSave: { refreshUserToken: async () => { tok = 'ya29.renewed'; return tok; } }
   };
   try {
     const f = async (url, init = {}) => { const b = JSON.parse(init.body); posts.push(b); return { json: async () => ({ ok: true, result: { status: 'saved' } }) }; };
@@ -1168,28 +1138,25 @@ test('owner sign-in ended: with the shared quiet renewal on the page, waiting re
     s.setScriptUrl(GOOD_URL);
     const r = await s.act('link_end', { id: 'a' });
     assert.equal(r.kept, true); assert.equal(r.signIn, true); assert.equal(posts.length, 0);
-    await s.outbox.flush();   // asks for a quiet renewal, then sends with it
+    await s.outbox.flush();
     for (let i = 0; i < 20 && s.outbox.count(); i++) await new Promise((res) => setTimeout(res, 5));
     assert.equal(s.outbox.count(), 0);
     assert.equal(posts.length, 1); assert.equal(posts[0].google_token, 'ya29.renewed'); assert.equal(posts[0].request_id, r.requestId);
   } finally { delete global.window; }
 });
 
-// OV13 22 Nov 2026: saves took 19-60 s; the first try saved but its answer never came; the resend (same entry) was
-// answered DUPLICATE and the page said "Not saved". A DUPLICATE after a try with no answer means that try saved it.
 test('first try saved but its answer was lost: the resend answered DUPLICATE counts as saved, with nothing left kept', async () => {
   const local = memStore(); const tries = [];
   const f = async (url, init = {}) => {
     if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }], proposed: [] }) };
     const b = JSON.parse(init.body); tries.push(b.request_id);
-    if (tries.length === 1) throw new TypeError('Load failed');   // the script saved it, but the answer never reached the phone
-    return { json: async () => ({ ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved. If that one is wrong, tell the owner.' }) };
+    if (tries.length === 1) throw new TypeError('Load failed');
+    return { json: async () => ({ ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved. If that one is wrong, tell the user.' }) };
   };
   const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, google: false });
   s.setScriptUrl(GOOD_URL); await s.checkStatus(); s.setLookups({ area: [{ id: 'area-1' }] }); s.setCode('ABC');
   const r1 = await s.submit('area_reading', { area_id: 'area-1', min_c: '18.0', max_c: '21.0' });
   assert.equal(r1.kept, true);
-  // the screen keeps the same request id and the person presses Save again
   const r2 = await s.submit('area_reading', { area_id: 'area-1', min_c: '18.0', max_c: '21.0' }, { requestId: r1.requestId });
   assert.equal(r2.ok, true, JSON.stringify(r2)); assert.equal(r2.message, 'Saved.');
   assert.equal(s.outbox.count(), 0); assert.equal(s.outbox.refused().length, 0);
@@ -1216,3 +1183,4 @@ test('a kept entry resent after a lost answer and answered DUPLICATE leaves the 
   assert.equal(await s.outbox.flush(), 0);
   assert.equal(s.outbox.refused().length, 0);
 });
+

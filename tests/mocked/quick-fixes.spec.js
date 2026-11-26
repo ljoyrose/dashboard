@@ -1,5 +1,3 @@
-// Quick fixes from the 18 Oct 2026 review: CD Hub link and text cleaning, sign-out on the Bin,
-// and the 5-minute refresh that used to wipe your ticks. Pretend Google and Drive only.
 const { test, expect } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 const { IDS } = require('../support/world');
@@ -14,7 +12,7 @@ const A = { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plai
 const ledger = (world, ids) => { world.byId(IDS.ledger).content = 'file_id\n' + ids.join('\n') + '\n'; };
 
 test.describe('CD Hub: table text can never become code', () => {
-  test('CD Hub cleans quote marks and refuses javascript: links from the tables @regression', async ({ page }) => {
+  test('t-quick-fixes-spec-1', async ({ page }) => {
     await page.goto('cdhub/');
     const r = await page.evaluate(() => ({
       esc: window.esc('x" onmouseover="alert(1)\' <b>'),
@@ -47,7 +45,7 @@ test.describe('CD Hub: table text can never become code', () => {
 });
 
 test.describe('Main dashboard: sign-out and the timed refresh', () => {
-  test('signing out on the Bin and back in draws the Bin with no errors @regression', async ({ page }) => {
+  test('t-quick-fixes-spec-2', async ({ page }) => {
     await page.goto('./#/bin');
     await signIn(page);
     await expect(page.locator('#sweepCard')).toBeVisible();
@@ -55,10 +53,9 @@ test.describe('Main dashboard: sign-out and the timed refresh', () => {
     await expect(page.locator('#signInBtn')).toBeVisible();
     await signIn(page);
     await expect(page.locator('#sweepCard')).toBeVisible();
-    // the guard fails the test on any page error ("Cannot read properties of undefined")
   });
 
-  test('the 5-minute refresh keeps your ticks and waits while you have any @regression', async ({ page, guard }) => {
+  test('t-quick-fixes-spec-3', async ({ page, guard }) => {
     const w = guard.world;
     w.file('zz-tick', 'ZZ_DELETE_tick-me.txt', 'invented', A);
     ledger(w, ['zz-tick']);
@@ -106,3 +103,4 @@ test.describe('Readable text', () => {
     }
   });
 });
+

@@ -1,5 +1,3 @@
-// Stage 13: registration expiry via RDAP. Run: node --test tests/estate/rdap.test.js
-// Every domain, name and handle here is invented. Only RDAP server hostnames are real.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const R = require('../../estate/rdap.js');
@@ -157,3 +155,4 @@ test('fillRows matches by registrable domain, accepts parsed or raw replies', ()
 test('VERSION is a version string', () => {
   assert.match(R.VERSION, /^\d+\.\d+\.\d+$/);
 });
+

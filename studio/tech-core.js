@@ -22,17 +22,13 @@
   ];
   var DEV_SLOT_DEFAULT = 6;
 
-  // The tools tab's columns (TECH-HUB-1a column table, plus logo_url). Matched by name, any order; extra columns are ignored.
-  // tool_name may instead be Studio's own first column, "tool", so the tab is extended, not duplicated.
   var COLUMNS = ['tool_key', 'tool_name', 'group', 'sort_order', 'plan_or_tier', 'allowance_amount', 'allowance_unit', 'used_period',
     'unused_period', 'period', 'renewal_or_expiry', 'flag_unused_month', 'status', 'verified', 'source_name', 'last_updated',
     'review_file_id', 'review_file_name', 'review_count', 'ai_share_used_week', 'ai_unused_premium_images', 'ai_higher_spec_runs',
     'ai_outputs_in_drive', 'ai_outputs_waiting_review', 'ai_right_first_time', 'logo_url'];
-  // The least a row needs to draw a tile (1a "minimum required set"). A header without one of these fails the whole section closed.
   var REQUIRED = ['tool_key', 'tool_name', 'group', 'status', 'period', 'verified', 'last_updated'];
   var STATUSES = { live: 'Live', trial: 'Trial', expired: 'Expired', refunded: 'Refunded', superseded: 'Superseded' };
   var PERIODS = { week: 'week', month: 'month', lifetime: 'lifetime' };
-  // AI-only lines (1a G16): drawn only when that row has a value. Counts must be whole numbers (G17: never names or ids).
   var AI_FIELDS = [
     ['ai_share_used_week', 'Paid allowance used this week', 'pct'],
     ['ai_unused_premium_images', 'Unused premium images', 'int'],
@@ -55,7 +51,6 @@
   function devSlot(opts) { var s = Number(opts && opts.devHostingSlot); return s >= 0 && s <= 8 && Math.floor(s) === s ? s : DEV_SLOT_DEFAULT; }
   function slotOf(g, opts) { return g.slot == null ? devSlot(opts) : g.slot; }
 
-  // A figure from the sheet. Blank = unknown (null), never 0. "1,000" reads as 1000. Text that is not a number is kept as text.
   function figure(v) {
     var s = str(v);
     if (!s) return { n: null, text: '' };
@@ -64,7 +59,6 @@
     return { n: null, text: s.slice(0, 24) };
   }
   function wholeCount(v) { var s = str(v).replace(/,/g, ''); return /^\d{1,7}$/.test(s) ? Number(s) : null; }
-  // Dates: 2026-12-01 or 01/12/2026 (UK). Anything else is unknown. Returns ms at UTC midnight.
   function day(v) {
     var s = str(v), m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (m) return Date.UTC(+m[1], +m[2] - 1, +m[3]);
@@ -76,9 +70,7 @@
   function dmy(ms) { var d = new Date(ms); return d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear(); }
   function todayUtc(now) { var d = new Date(now); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); }
   function fmtNum(n) { return n == null ? '' : Number(n).toLocaleString('en-GB', { maximumFractionDigits: 2 }); }
-  // A logo address from the sheet: https only, no quotes, spaces or angle brackets. Otherwise none (initials instead).
   function safeLogo(v) { var s = str(v); return /^https:\/\/[^\s"'<>\\]+$/i.test(s) && s.length < 500 ? s : ''; }
-  // The review file's id is used only to build the link; it is never shown as text (1a G6).
   function reviewHref(v) {
     var s = str(v);
     if (/^[A-Za-z0-9_-]{10,200}$/.test(s)) return 'https://drive.google.com/file/d/' + encodeURIComponent(s) + '/view';
@@ -91,7 +83,6 @@
     return (w.length > 1 ? w[0].charAt(0) + w[w.length - 1].charAt(0) : w[0].slice(0, 2)).toUpperCase();
   }
 
-  // ---- Header check: which column is where, and which required ones are missing. ----
   function header(row) {
     var h = (row || []).map(function (x) { return str(x).toLowerCase(); }), idx = {};
     COLUMNS.forEach(function (c) { var i = h.indexOf(c); if (i >= 0) idx[c] = i; });
@@ -101,7 +92,6 @@
   }
   function rowOf(cells, idx) { var o = {}; Object.keys(idx).forEach(function (k) { o[k] = str(cells[idx[k]]); }); return o; }
 
-  // ---- One tile's view-model. opts: { now, devHostingSlot, freshDays }. Returns null for a row with no name (skipped, 1a G8). ----
   function tile(raw, opts) {
     opts = opts || {};
     var now = opts.now || Date.now(), fresh = (Number(opts.freshDays) > 0 ? Number(opts.freshDays) : 35) * DAY;
@@ -119,24 +109,19 @@
     t.status = STATUSES[st] ? st : '';
     t.statusWord = STATUSES[st] || '';
     t.period = PERIODS[per] || '';
-    // Paid = live or trial, with a plan (1a G12). Ended or plan-less rows stay in the sheet but draw no tile.
     t.paid = (st === 'live' || st === 'trial') && !!t.plan;
     t.show = t.broken || t.paid;
     t.verified = ver === 'VERIFIED';
     t.updated = upd;
     t.stale = upd != null && todayUtc(now) - upd > fresh;
-    // Allowance, used, left (1a G4): left is worked out here, only when both figures are numbers.
     t.allow = figure(raw.allowance_amount); t.used = figure(raw.used_period);
     t.unit = str(raw.allowance_unit).slice(0, 20);
     t.left = t.allow.n != null && t.used.n != null ? t.allow.n - t.used.n : null;
-    // Renewal or expiry (1a G14): the word lifetime, or a date, or unknown.
     var rv = str(raw.renewal_or_expiry), rd = day(rv);
     t.lifetime = /^lifetime$/i.test(rv) || t.period === 'lifetime';
     t.renew = t.lifetime ? null : rd;
     t.renewDays = t.renew == null ? null : Math.round((t.renew - todayUtc(now)) / DAY);
-    // Unused this month (1a G5): worked out here, never read from the sheet. Live, monthly, a cap, nothing used, row not stale.
     t.unused = !t.broken && st === 'live' && t.period === 'month' && t.allow.n != null && t.allow.n > 0 && t.used.n === 0 && upd != null && !t.stale;
-    // Reviews (1a G6): count 0 = needs review, 1 = one, 2+ = duplicates. Blank count: one if there is a file, else none.
     var rc = wholeCount(raw.review_count), href = reviewHref(raw.review_file_id);
     t.reviews = rc != null ? rc : href ? 1 : 0;
     t.needsReview = t.reviews === 0;
@@ -163,9 +148,6 @@
     return f;
   }
 
-  // ---- The whole tab. values = the Sheets answer's rows (row 1 = header). ----
-  // mode: 'live' (tiles from the tab), 'example' (the tab has none of the Tech columns yet: invented tiles, stamped Example),
-  // 'header' (a Tech column the tiles need is missing: nothing drawn, the section fails closed).
   function read(values, opts) {
     values = values || [];
     var h = header(values[0]);
@@ -177,13 +159,12 @@
       var t = tile(rowOf(cells || [], h.idx), opts);
       if (!t) { if ((cells || []).some(function (c) { return str(c); })) skipped++; return; }
       t.row = i;
-      keys.push(t.key, slug(t.name)); // every named row, shown or not, so Add tech never asks for a tool twice
+      keys.push(t.key, slug(t.name));
       if (t.show) tiles.push(t); else hidden++;
     });
     return { mode: 'live', missing: [], tiles: tiles, hidden: hidden, skipped: skipped, keys: keys };
   }
 
-  // Invented tiles for the Example view (shown, stamped, until the tab has the Tech columns). Fake names only.
   function example() {
     var H = ['tool_key', 'tool_name', 'group', 'sort_order', 'plan_or_tier', 'allowance_amount', 'allowance_unit', 'used_period', 'period', 'renewal_or_expiry',
       'status', 'verified', 'last_updated', 'review_file_id', 'review_count', 'ai_share_used_week', 'ai_outputs_waiting_review'];
@@ -198,7 +179,6 @@
     ];
   }
 
-  // ---- Find: search words, group chips, flag chips, sort. state: { q, groups: [key], flags: [key], sort } ----
   function hit(t, q) {
     var hay = [t.name, t.groupName, t.plan, t.unit, t.statusWord].join(' ').toLowerCase();
     return str(q).toLowerCase().split(/\s+/).filter(Boolean).every(function (w) { return hay.indexOf(w) >= 0; });
@@ -219,7 +199,6 @@
       return oa - ob || byName(a, b);
     };
   }
-  // The groups to draw, in the fixed order, each with its tiles sorted. Counts for the chips ignore their own row's choice.
   function view(tiles, s, opts) {
     s = s || {};
     var out = GROUPS.map(function (g) { return { key: g.key, name: g.name, slot: slotOf(g, opts), tiles: [] }; }), at = {};
@@ -234,7 +213,6 @@
     return { groups: out.filter(function (g) { return g.tiles.length; }), shown: shown, total: tiles.length, groupCounts: gcount, flagCounts: fcount };
   }
 
-  // ---- Add tech: check an entry and build the row it asks for. now: ms. keys: tool_keys already on the tab. ----
   function newRow(d, now, keys) {
     d = d || {};
     var e = {}, name = str(d.tool_name), g = groupOf(d.group), st = str(d.status).toLowerCase(), per = str(d.period).toLowerCase();
@@ -261,7 +239,6 @@
     } };
   }
 
-  // ---- The tile (one reusable component). icon(name) gives an <svg> from the house sprite. ----
   function tileHtml(t, icon) {
     icon = icon || function () { return ''; };
     var c = 'var(--ljr-' + t.slot + ')', ic = 'var(--ljr-' + t.slot + '-icon)';
@@ -300,3 +277,4 @@
   if (root) root.TechCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : this);
+

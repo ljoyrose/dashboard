@@ -1,12 +1,9 @@
-// JOB 34b (Marketplace): phone width and keyboard reach on the screens tests/phone and job34-marketplace-states do not
-// visit (packing, label sheet, drop-off code window, Stock, Temu, Suppliers, a section list), the phone's one Filter
-// button, and doing the main jobs with the keyboard alone. Pretend Google and Sheets only; every row is invented.
 const { test, expect, go, sheets, sideScroll, SHEETS } = require('../fixtures/job34/load');
 
 const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
 const ROWS = [
   ['PO|1', 'post', 'Clothes', 'Sample jumper with a long title that wraps onto a second line on a phone', JSON.stringify({ platform: 'ebay', parcel_id: 'L-07', courier: 'InPost', shelf: 'B2', post_by: '2026-10-20', found: true, qr: 'VN-SAMPLE-LONGCODE-0001' }), ago(5)],
-  ['PO|2', 'post', 'Clothes', 'Sample lead', JSON.stringify({ platform: 'vinted', owner: 'CY', parcel_id: 'L-08', courier: 'Evri', shelf: 'A1' }), ago(5)],
+  ['PO|2', 'post', 'Clothes', 'Sample lead', JSON.stringify({ platform: 'vinted', user: 'CY', parcel_id: 'L-08', courier: 'Evri', shelf: 'A1' }), ago(5)],
   ['RM|1', 'remove', 'Clothes', 'Sample cap', JSON.stringify({ platform: 'Vinted', url: 'https://www.vinted.co.uk/items/2' }), ago(5)],
   ['RM|2', 'remove', 'Clothes', 'Sample bow', JSON.stringify({ platform: 'eBay', url: 'https://www.ebay.co.uk/itm/123456' }), ago(5)],
   ['GO|1', 'go', 'Treats', 'Sample biscuits', JSON.stringify({ price: '£12.00' }), ago(5)],
@@ -31,7 +28,6 @@ async function open(page, hash = '#/me') {
   await expect(page.locator('#readAt')).toContainText(/^Read \d/);
 }
 const focused = (page) => page.evaluate(() => { const a = document.activeElement; return a ? (a.getAttribute('aria-label') || a.textContent || '').trim() : ''; });
-// Press Tab until focus lands on `sel` (inside #view or #qr); fails if it never does.
 async function tabTo(page, sel, max = 60) {
   for (let i = 0; i < max; i++) {
     if (await page.evaluate((s) => document.activeElement && document.activeElement.matches(s), sel)) return;
@@ -127,7 +123,6 @@ test.describe('Marketplace (JOB 34b): keyboard only', () => {
     await expect(page.locator('#qr')).toBeHidden();
   });
 
-  // J34b-F41 fixed: the drop-off code window takes focus on open, Escape shuts it, focus returns to Show QR.
   test('J34b-F41 drop-off code window takes the keyboard: focus moves into it on open and Escape shuts it', async ({ page }) => {
     await book(page);
     await open(page, '#/do');
@@ -169,3 +164,4 @@ test.describe('Marketplace (JOB 34b): keyboard only', () => {
     expect(writes.map((w) => w.values[0])).toEqual(['ok']);
   });
 });
+

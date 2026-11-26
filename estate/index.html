@@ -35,8 +35,6 @@
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
 <style>
-  /* House look: colours from ../tokens.css only, shapes from ../house.css. Same frame, cards, badges and tabs as GA Hub.
-     Colour lives only in dots, 1px rings and light tints; words stay ink. */
   :root { --rose: var(--house-risk); --rose-tint: var(--house-risk-tint); --amber: var(--house-soon); --amber-tint: var(--house-soon-tint);
     --green: var(--house-ok); --green-tint: var(--house-ok-tint); }
   * { box-sizing: border-box; }
@@ -65,7 +63,6 @@
   :focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
   .top :focus-visible { outline-color: var(--frame-ink); }
 
-  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
 
   main.wrap { padding: 16px var(--house-gutter) 120px; display: flex; flex-direction: column; gap: 12px; }
   #view { display: flex; flex-direction: column; gap: 12px; }
@@ -117,7 +114,6 @@
   input.txtin { font: inherit; font-size: var(--fs-body); padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
   input.txtin:focus { border-color: var(--ink); }
   .queued { font-size: var(--fs-small); margin: 0; }
-  /* Traffic this month (13 Nov 2026): a light-framed bar, amber from 80%, red from 95%. No upgrade prompt. */
   .traffic { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .tline { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; min-width: 0; }
   .tbar { display: inline-block; flex: 0 1 140px; min-width: 80px; height: 8px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: transparent; }
@@ -133,7 +129,7 @@
   details.tdet dt { color: var(--muted); }
   details.tdet dd { margin: 0; overflow-wrap: anywhere; }
   details.tdet ol { margin: 6px 0 0; padding-left: 20px; font-size: var(--fs-small); }
-  details.tdet .lisa { margin: 8px 0 0; font-size: var(--fs-small); font-weight: 600; }
+  details.tdet .user { margin: 8px 0 0; font-size: var(--fs-small); font-weight: 600; }
   /* DNS & Email cards (#/mail) */
   .mailc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-width: 0; overflow-wrap: anywhere; }
   .mailc .m { font-size: var(--fs-small); color: var(--muted); margin: 0; }
@@ -197,7 +193,6 @@
   var CLIENT_ID = CFG.clientId, SCOPE = (CFG.scopes || {}).read, WRITE = (CFG.scopes || {}).write, A = window.EstateAdd;
   var VIEWS = ['home', 'all', 'look', 'unchecked', 'shops', 'access', 'client', 'mail'];
   var FILTER_WORD = { company: 'Company', brand: 'Brand', client: 'Client', kind: 'Kind', platform: 'Platform', flag: 'Flag' };
-  // Invented rows shown until the sheet id is in config.js. Nothing is read or sent while these show.
   var EXAMPLE = [
     { key: 'example.com', kind: 'site', company: 'Example Co', brand: 'Example Brand', url_or_domain: 'https://example.com', platform: 'Example builder', dns_host: 'Cloudflare', live_status: 'live', http_code: '200', ssl_expires: day(120), domain_expires: day(200), spf: 'pass', dkim: 'found', dmarc: 'none', ga4: 'found (1)', gtm: 'not found in page source', source: 'example' },
     { key: 'shop.example.org', kind: 'shop', company: 'Example Co', brand: 'Example Brand', url_or_domain: 'https://shop.example.org', platform: 'Shopify', live_status: 'live', http_code: '200', ssl_expires: day(25), ga4: 'found (1)', merchant_center: 'linked (per the owner, not machine-checked)', feed: 'not reported', source: 'example' },
@@ -205,7 +200,6 @@
     { key: 'app.example.test', kind: 'app', company: 'Example Ltd', client: 'Client A', url_or_domain: 'https://app.example.test', platform: 'Example app builder', live_status: 'blocked to scripts', http_code: '403', source: 'example' },
     { key: 'email-domain:example.com', kind: 'email-domain', company: 'Example Co', url_or_domain: 'example.com', spf: 'two records', dkim: 'not found', dmarc: 'missing', source: 'example' }
   ];
-  // Invented traffic for the example rows: 80% amber, 0%, 96% red, and one site with no stats. Shown with the example rows only.
   var EXAMPLE_TRAFFIC = [
     { key: 'example.com', source: 'Example CDN', period: thisMonth(), visits: '1860', used_gb: '8.0', quota_gb: '10', updated_uk: ukStamp(-3), note: 'example' },
     { key: 'shop.example.org', source: 'Example analytics', period: thisMonth(), visits: '0', used_gb: '0', quota_gb: '10', updated_uk: ukStamp(-5), note: 'example' },
@@ -250,7 +244,6 @@
           extra[tab] = got; extraMissing[tab] = !r.ok || r.missing; render();
         });
       });
-      // Private mail tabs: read only, through the header contracts in mail.js. A changed header shows nothing from that tab.
       [['Mail map', 'mailMapFromValues'], ['Mail switch', 'mailSwitchFromValues']].forEach(function (t) {
         if (have.indexOf(t[0]) === -1) { mailTabs[t[0]] = { state: 'missing', rows: null, problem: '' }; return; }
         R.readTab(o, t[0], true).then(function (r) {
@@ -275,11 +268,9 @@
   var SHOW = { live: ['Live', function (r) { return E.statusOf(r) === 'live'; }], down: ['Down', function (r) { return E.statusOf(r) === 'down'; }],
     blocked: ['Blocked to scripts', function (r) { return E.statusOf(r) === 'blocked'; }], unchecked: ['Not checked', function (r) { var s = E.statusOf(r); return s === 'not checked' || s === 'parked'; }],
     expiring: ['Expiring in 60 days', function (r) { return E.expiringSoon(r, today(), 60); }], email: ['Email checks failing', function (r) { return E.emailProblems(r).length > 0; }] };
-  // One property, opened from a Main row: #/look?key=<key> shows just that row.
   function keyOf() { var m = /[?&]key=([^&]+)/.exec(location.hash); return m ? decodeURIComponent(m[1]) : ''; }
   function showOf() { var m = /[?&]show=(\w+)/.exec(location.hash); return m && SHOW[m[1]] ? m[1] : ''; }
   function showHash(key) { var h = E.filterHash(view, filters); return h + (h.indexOf('?') < 0 ? '?' : '&') + 'show=' + key; }
-  // cls: 'amber', or the broken word ('down', 'failed'): a broken count is the black badge, read out as "1 down" (../toolkit.js DashKit.count).
   function tile(k, v, cls, key) { var bw = DashKit.count.kind(v, cls) === 'broken', c = bw ? 'broken' : DashKit.count.why(1, cls) ? '' : cls;
     var inner = '<span class="k">' + esc(k) + '</span><span class="v' + (v && c ? ' ' + c : '') + '" data-count="' + esc(k) + '">' + v + '</span>';
     return key ? '<a class="tile" href="' + esc(showHash(key)) + '" data-show="' + key + '" aria-label="' + esc(k) + ': ' + (bw ? DashKit.count.say(v, cls) : v) + '. Open the list">' + inner + '</a>' : '<div class="tile">' + inner + '</div>'; }
@@ -295,8 +286,6 @@
         opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (filters[k] === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></label>';
     }).join('') + (Object.keys(filters).length ? '<button class="btn" type="button" data-action="clear">Clear filters</button>' : '') + '</div>';
   }
-  // Expiry badge: red at 7 days or less (including passed), amber through 60 days, else plain.
-  // The 30-day alert still lists 8 to 30 days; that band is amber here, matching the alert.
   function expiryBadge(name, v) {
     if (!v) return '';
     var d = E.daysUntil(v, today()), cls = '';
@@ -341,7 +330,7 @@
   // details fold. No stats: "Traffic stats not connected" and the the owner-only setup step. Free plans stay free: no upgrade words.
   function trafficBlock(r) {
     var t = TR.trafficFor(r, extra.Traffic, today()), id = 'tr-' + String(r.key).replace(/[^a-z0-9]+/gi, '-');
-    var steps = function (s) { return '<p class="lisa">Lisa-only step' + (s.property ? ' (Script Property ' + esc(s.property) + ')' : ' (typed by hand)') + '</p><ol data-tr-steps>' + s.steps.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>'; };
+    var steps = function (s) { return '<p class="user">User-only step' + (s.property ? ' (Script Property ' + esc(s.property) + ')' : ' (typed by hand)') + '</p><ol data-tr-steps>' + s.steps.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>'; };
     if (!t.connected) {
       return '<div class="traffic" data-traffic="' + esc(r.key) + '" data-level="none"><div class="tline"><span class="badge" data-tr="none"><b>Traffic</b>stats not connected</span></div>' +
         '<details class="tdet" data-tr-details><summary aria-controls="' + id + '">Traffic details</summary><div id="' + id + '"><dl>' +
@@ -364,8 +353,6 @@
       '<dt>Source</dt><dd>' + esc(t.source) + '</dd>' + (t.note ? '<dt>Note</dt><dd>' + esc(t.note) + '</dd>' : '') + '</dl>' +
       (t.visits === null || t.used_gb === null ? steps(t.setup) : '') + '</div></details></div>';
   }
-  // Add: paste a web address or a bare domain, pick who it belongs to. The page drops one request file for the engine,
-  // which scans it (DNS, SSL, live, tags, and email for a bare domain) and writes one row with source "Add".
   function addBox() {
     var f = function (k, label, list) {
       return '<label>' + label + '<input class="txtin" data-add="' + k + '" value="' + esc(addDraft[k]) + '"' + (list ? ' list="dl-' + k + '"' : '') + ' autocomplete="off">' +
@@ -401,7 +388,6 @@
       }).catch(function (e) { addBusy = false; addMsg = 'Not sent: ' + e.message + '.'; render(); });
     });
   }
-  // Shops & ads: a card per shop (report from the free listings job, else "not reported"), then funnels by workspace.
   function shopsPage(list) {
     var shops = list.filter(function (r) { return r.kind === 'shop'; }), h = '';
     h += '<p class="grp">Shops<span class="sr"> · </span><span class="cnt">' + shops.length + '</span></p><div class="card" data-card="shops">';
@@ -420,8 +406,6 @@
     h += keywordsCard(list);
     return h;
   }
-  // Tracked keywords and ads accounts: manual rows in the private Keywords tab for now. Semrush, Search Console and
-  // Google Ads readers are not connected yet, so a source with no rows says "not connected" and never shows a 0.
   function keywordsCard(list) {
     var keys = list.map(function (r) { return r.key; }), rows = extra.Keywords.filter(function (k) { return !k.key || keys.indexOf(k.key) !== -1; });
     var cards = KW.keywordCard(rows), ads = KW.adsAccounts(list), h = '<p class="grp">Keywords</p><div class="card" data-card="keywords">';
@@ -433,13 +417,12 @@
       (ads.length ? ads.map(function (a) { return '<div class="prop"><div class="pline"><span class="addr">' + esc(a.account_label) + '</span><span class="m">' + esc(a.client || '') + '</span></div>' + (a.access_note ? '<div class="badges"><span class="badge"><b>Access</b>' + esc(a.access_note) + '</span></div>' : '') + '</div>'; }).join('') : '<p class="empty">No ads accounts with these filters.</p>') + '</div>';
     return h;
   }
-  // Access: who holds which login role per property. Role names only; anything that looks like a login is hidden.
   function accessPage(list) {
     var acc = V.accessRows(list), by = {};
     list.forEach(function (r) { by[r.key] = r; });
     var h = '<p class="needs">Access</p>' + filterRow();
     h += '<div class="card" data-card="access">' + acc.map(function (a) {
-      var r = by[a.key] || {}, roles = (r.owner_role ? ['you: ' + r.owner_role] : []).concat(a.roles);
+      var r = by[a.key] || {}, roles = (r.user_role ? ['you: ' + r.user_role] : []).concat(a.roles);
       return '<div class="prop" data-access="' + esc(a.key) + '"><div class="pline"><span class="addr">' + esc((r.url_or_domain || a.key).replace(/^https?:\/\//, '')) + '</span><span class="m">' + esc(r.kind || '') + '</span></div><div class="badges">' +
         (roles.length ? roles.map(function (x) { return '<span class="badge">' + esc(x) + '</span>'; }).join('') : '<span class="badge">no roles noted</span>') +
         (a.hidden ? '<span class="badge soon">' + a.hidden + ' hidden (looked like a login)</span>' : '') + '</div></div>';
@@ -453,7 +436,6 @@
       '</div>';
     return h;
   }
-  // Client view: one client's rows, stripped of every internal field, with no filters that would name others.
   function clientPage() {
     var who = filters.client || '', list = V.clientView(rows, who);
     var h = '<p class="needs" data-client-view="' + esc(who) + '">' + esc(who || 'No client picked') + '</p><p class="hint">Client view: only this client\'s properties. <a href="#/access">Back to Access</a></p>';
@@ -463,10 +445,6 @@
     E.groupRows(list, today()).forEach(function (g) { h += '<div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>'; });
     return h;
   }
-  // Alerts: down; certificate or domain inside 30 days (red at 7 days or less); DMARC missing or weak;
-  // two SPF records or broken SPF; DKIM missing on Google Workspace; no MX; more than one forward hop
-  // or an unknown forward target; nameservers changed when a previous set is known (tag lost is scan to scan).
-  // Shown here only. Each becomes a suggested RR_OPEN-WORK row in the progress slip, never written by code.
   function alertsCard(list) {
     var al = AL.alerts(list, today());
     if (!al.length) return '';   // one empty line per view (the owner, 2 Nov): no alerts, no Alerts card
@@ -529,7 +507,7 @@
   function tabLine(name) {
     var t = mailTabs[name];
     if (t.state === 'ok') return '';
-    var w = t.state === 'missing' ? 'not set up yet: Lisa OKs it first' : t.state === 'bad-header' ? t.problem : t.state === 'error' ? 'could not be read: ' + t.problem : 'not yet read';
+    var w = t.state === 'missing' ? 'not set up yet: User OKs it first' : t.state === 'bad-header' ? t.problem : t.state === 'error' ? 'could not be read: ' + t.problem : 'not yet read';
     return '<p class="hint" data-mail-tab="' + esc(name) + '" data-state="' + t.state + '">' + esc(name) + ' tab: ' + esc(w) + '.</p>';
   }
   function mailCards(list) { return M && M.domainCards ? M.domainCards(list, mailTabs['Mail map'].rows, mailTabs['Mail switch'].rows, today()) : []; }
@@ -537,7 +515,7 @@
     var cards = mailCards(list), one = domOf(), all = esc(E.filterHash('mail', filters));
     if (one) cards = cards.filter(function (c) { return c.domain === one; });
     var bad = cards.filter(function (c) { return c.faults.length; }).length;
-    var h = '<p class="needs">DNS &amp; Email</p><p class="hint">' + (one ? 'One domain. <a href="' + all + '">Show all</a>' : 'Read only. Every fix here is a Lisa-only DNS change, made by hand.') + '</p>' +
+    var h = '<p class="needs">DNS &amp; Email</p><p class="hint">' + (one ? 'One domain. <a href="' + all + '">Show all</a>' : 'Read only. Every fix here is a User-only DNS change, made by hand.') + '</p>' +
       tabLine('Mail map') + tabLine('Mail switch') + filterRow();
     if (!cards.length) return h + '<div class="card" data-empty-one><p class="empty">' + (one ? 'Nothing here' : 'No mail domains yet.') + '</p></div>';
     h += '<p class="grp">Domains<span class="sr"> · </span><span class="cnt" data-mail-faulty="' + bad + '">' + cards.length + '</span></p>';
@@ -549,7 +527,7 @@
         '<div class="badges">' + c.checks.map(function (k) { return '<span class="badge' + lv[k.level] + '" data-check="' + k.id + '" data-level="' + k.level + '"><b>' + k.name + '</b>' + esc(k.value) + '</span>'; }).join('') + '</div>' +
         '<p class="m" data-switch="' + esc(c.progress.cls) + '"' + (c.progress.step ? ' data-step="' + c.progress.step + '"' : '') + '>Move to Workspace: ' + esc(c.progress.text) + '</p>' +
         (c.faults.length ? '<ul class="mfaults">' + c.faults.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') +
-        (c.fix ? '<div class="mfix" data-fix><b>Lisa-only DNS change</b>' + c.fix.split('\n').map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('') + '</div>' : '') +
+        (c.fix ? '<div class="mfix" data-fix><b>User-only DNS change</b>' + c.fix.split('\n').map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('') + '</div>' : '') +
         (c.chains.length ? '<div class="mmap"><b>Mail map</b>' + c.chains.map(function (x) { return '<p class="' + (x.flag ? 'flag' : '') + '" data-hop="' + esc(x.address) + '">' + esc(x.text) + '</p>'; }).join('') + '</div>' : '') +
         '</div>';
     }).join('');
@@ -607,7 +585,6 @@
   }
   window.addEventListener('hashchange', route);
 
-  /* ---------- sign-in: the shared DashAuth, read scope only ---------- */
   var auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE,
     onToken: function (resp) {
       if (resp.error) return banner('Sign-in did not complete.');
@@ -624,3 +601,4 @@
 </script>
 </body>
 </html>
+

@@ -3,7 +3,6 @@ const test = require('node:test');
 const assert = require('node:assert');
 const Add = require('../../breed-better/add-dog.js');
 
-/* a pretend adapter: records what it was asked to write */
 function adapter(can) {
   const log = [];
   return {
@@ -55,3 +54,4 @@ test('a pup carries its litter; a name is needed and a birth date cannot be in t
   assert.equal(a.log[0][1].species, 'sp-dog');
   await assert.rejects(Add.save(a, opts, { mode: 'new', fields: { dob: '2027-01-01', species: 'sp-dog' } }), (e) => !!(e.fields.name && e.fields.dob && e.fields.sex));
 });
+

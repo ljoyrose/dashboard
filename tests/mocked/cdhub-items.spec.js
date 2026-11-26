@@ -1,8 +1,6 @@
-// Items page (ITEMS, 14 Nov 2026): list, card, status, filters, CSV. Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
 
-// Replaces a sample table that already exists (two files with one name stop the hub), else adds it.
 const addTable = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
   if (f) { f.content = content; f.size = String(content.length); }
@@ -31,12 +29,12 @@ test.describe('CD Hub: items', () => {
     const rowsIn = page.locator('#itmPage .itm-row');
     await expect(rowsIn).toHaveCount(2);
     await expect(rowsIn.nth(0)).toContainText('Pretend CO2');        // in date first
-    await expect(rowsIn.nth(1)).toContainText('Overdue');           // tested 2020, every 365 days
+    await expect(rowsIn.nth(1)).toContainText('Overdue');
     await page.locator('[data-itm-filter="due"]').click();
     await expect(page.locator('#itmPage .itm-row')).toHaveCount(1);
     await page.locator('#itmPage .itm-row').first().click();
     await expect(page.locator('#itmCard')).toContainText('Pretend PAT');
-    await expect(page.locator('#itmCard')).toContainText('outside');  // 0.2 Ω above the 0.1 limit
+    await expect(page.locator('#itmCard')).toContainText('outside');
     await expect(page.locator('#itmCard [data-itm-form="archive"]')).toBeVisible();
     await page.locator('#itmCard [data-itm-form="test:pretend_pat"]').click();
     await page.locator('[name="r_r1"]').fill('0.09');
@@ -98,3 +96,4 @@ test.describe('CD Hub: items', () => {
     await pop.close();
   });
 });
+

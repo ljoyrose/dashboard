@@ -15,8 +15,8 @@ const setFile = (world, name, content) => {
   else world.file('bld-extra-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
 };
 const WORK = [
-  'id,area,item,status,owner,blocked_on,evidence,note',
-  'W001,sample,Sample item waiting on Lisa,BLOCKED,Lisa,a sample answer,,',
+  'id,area,item,status,user,blocked_on,evidence,note',
+  'W001,sample,Sample item waiting on User,BLOCKED,User,a sample answer,,',
   'W002,sample,Sample open item that has a much longer name than the others,OPEN,Claude,,,',
   'W043,ccp,Pretend webinar document corrections,DONE,Claude,,"closed 13/11/26: not CD Hub (pretend webinar)",',
   'W044,other,Pretend other-project item,OPEN,Claude,,closed: not CD Hub,',
@@ -49,5 +49,6 @@ test('every table is tidied: short values stay on one line, long text wraps, and
   await expect(done).toHaveClass(/tstack/);
   expect(await done.locator('tbody tr').first().evaluate((e) => getComputedStyle(e).display)).toBe('block');
   const item = done.locator('td[data-label="Item"]').first();
-  expect(await item.evaluate((e) => getComputedStyle(e, '::before').content)).toContain('Item');   // sentence case (audit 17 Nov 2026)
+  expect(await item.evaluate((e) => getComputedStyle(e, '::before').content)).toContain('Item');
 });
+

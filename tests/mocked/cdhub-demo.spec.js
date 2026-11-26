@@ -11,7 +11,6 @@ const csv = (h, rows) => [h].concat(rows).join('\r\n') + '\r\n';
 const ITEMS_H = 'id,tenant_id,item_no,name,kind_key,make,model,serial_no,size,made_on,expires_on,photo,note,corrects_id,created_at,created_by';
 const KINDS = csv('id,tenant_id,kind_key,label,source,set_by,set_on', ['k1,t,pretend_plug,Pretend plug,x,o,2026-01-01']);
 
-/** The live folder gets a LIVE item; the demo folder gets a copy of every live file with a DEMO item instead. */
 function worlds(world) {
   const put = (folder, name, content) => {
     const f = world.files.find((x) => x.name === name && (x.parents || []).includes(folder));
@@ -107,3 +106,4 @@ test('in demo, links to live pages (history, The Board, print cards) are a plain
       .filter((p) => /\/cdhub\/(history[^/]*\.html|staff\/)/.test(p)))).toEqual([]);
   }
 });
+

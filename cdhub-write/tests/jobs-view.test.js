@@ -1,10 +1,9 @@
 'use strict';
-/** Compliance job counts: litter jobs count only for the litters the caller passes as current; every job in force is listed. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const V = require('../../cdhub/jobs-view.js');
 
-const T = (key, target, every) => ({ id: 'cty-' + key, type_key: key, label: key, target, every_days: every, active: 'true', effective_from: '2026-01-01', sop: 'Socialisation' });
+const T = (key, target, every) => ({ id: 'cty-' + key, type_key: key, label: key, target, every_days: every, active: 'true', effective_from: '2026-01-01', sop: 'Socialization' });
 const base = { today: '2026-03-02', types: [T('socialise', 'litter', '1')], dogs: [], areas: [] };
 const logs = [{ id: 'l1', check_type_id: 'cty-socialise', litter_id: 'lit1', outcome: 'ok', taken_at: '2026-03-02T09:00:00Z' }];
 
@@ -120,7 +119,6 @@ test('a record\'s linked file (e.g. a vet certificate) opens from the history; e
   assert.match(shown, /imported/);
   const off = Object.assign({}, on, { rules: [{ rule_key: 'display.entered_later', value: 'on', effective_from: '2026-01-01' }, { rule_key: 'display.entered_later', value: 'off', effective_from: '2026-02-01' }] });
   assert.doesNotMatch(V.historyHtml(off, { subject_id: 'd1' }, ''), /time not given|imported/);   // the later row wins
-  // the record itself is unchanged: how_recorded and time_given are still on the row
   assert.equal(V.history(v, { subject_id: 'd1' })[0].how, 'import');
   assert.equal(V.history(v, { subject_id: 'd1' })[0].noTime, true);
 });
@@ -139,19 +137,19 @@ test('Compliance counts a breeding-only job for breeding dogs only', () => {
   assert.equal(row.late, 0);
 });
 
-test('an owner note covering a past period shows once on the Jobs card, with the day it was entered (checks A, 17 Nov 2026)', () => {
+test('a user note covering a past period shows once on the Jobs card, with the day it was entered ', () => {
   const note = 'All daily and weekly checks were done 1 Jan 2025 to 16 Nov 2026; not recorded at the time.';
   const v = Object.assign({}, base, {
     litters: [{ id: 'lit1' }], esc: (s) => String(s), dmy: (s) => s,
     logs: logs.concat([
-      { id: 'n1', check_type_id: 'cty-socialise', outcome: 'ok', how_recorded: 'owner_note', note, taken_at: '2026-11-17T10:00:00Z', taken_by: 'Pat' },
-      { id: 'n2', check_type_id: 'cty-socialise', outcome: 'ok', how_recorded: 'owner_note', note, taken_at: '2026-11-17T10:00:00Z', taken_by: 'Pat' },
+      { id: 'n1', check_type_id: 'cty-socialise', outcome: 'ok', how_recorded: 'user_note', note, taken_at: '2026-11-17T10:00:00Z', taken_by: 'Pat' },
+      { id: 'n2', check_type_id: 'cty-socialise', outcome: 'ok', how_recorded: 'user_note', note, taken_at: '2026-11-17T10:00:00Z', taken_by: 'Pat' },
     ]),
   });
   const html = V.complianceHtml(v, () => '');
-  assert.equal(html.split('data-owner-note').length - 1, 1);
-  assert.match(html, /Owner’s note: All daily and weekly checks/);
-  assert.doesNotMatch(html, /entered 2026-11-17/);   // 22 Nov 2026: hidden unless the owner's row display.entered_later is on
+  assert.equal(html.split('data-user-note').length - 1, 1);
+  assert.match(html, /User’s note: All daily and weekly checks/);
+  assert.doesNotMatch(html, /entered 2026-11-17/);
   const on = V.complianceHtml(Object.assign({}, v, { rules: [{ rule_key: 'display.entered_later', value: 'on', effective_from: '2026-01-01' }] }), () => '');
   assert.match(on, /entered 2026-11-17 by Pat/);
 });
@@ -169,8 +167,6 @@ test('how a record was made is shown in the owner\'s words, hidden with "off", s
   assert.equal(V.howLabel(v, '', '2026-11-17'), '');
 });
 
-// 22 Nov 2026 (guardrail): the "entered later" setting lives in jobs-view.js, which only the owner hub loads. Inspector
-// pages, prints, registers and exports never load it, so what they show about back-filled records cannot change with it.
 const NOW = '2026-11-25T12:00:00.000Z';
 const esc = (s) => String(s == null ? '' : s);
 const world = (type, extra) => Object.assign({
@@ -359,7 +355,7 @@ test('the jobs table counts subjects on site that day, occupied rooms, and own-t
   assert.equal(V.summary(ruled).find((r) => r.key === 'health_check_all').ok, 1);
 });
 
-test('only the owner hub loads jobs-view.js: inspector, print, temperature and register pages do not', () => {
+test('only the user hub loads jobs-view.js: inspector, print, temperature and register pages do not', () => {
   const fs = require('node:fs'), path = require('node:path');
   const root = path.join(__dirname, '..', '..', 'cdhub');
   const pages = [];
@@ -367,3 +363,4 @@ test('only the owner hub loads jobs-view.js: inspector, print, temperature and r
   const users = pages.filter((p) => /jobs-view\.js/.test(fs.readFileSync(p, 'utf8')) && !/jobs-view\.js$/.test(p)).map((p) => path.relative(root, p));
   assert.deepEqual(users, ['index.html']);
 });
+

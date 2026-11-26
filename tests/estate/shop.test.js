@@ -1,5 +1,3 @@
-// Shop and funnel logic (Stages 7 and 8). Run: node --test tests/estate/shop.test.js
-// Every row and page here is invented. Today is pinned so expiry days never drift.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const E = require('../../estate/core.js');
@@ -7,7 +5,6 @@ const S = require('../../estate/shop.js');
 const F = require('../fixtures/estate/rows.js');
 const TODAY = '2026-10-29';
 
-// An invented page carrying invented ids and a platform app marker.
 const PAGE = '<html><script>gtag("config","G-ABC1234XYZ");gtag("config","G-QQQ9999RRR");</script>' +
   '<script src="https://example.com/gtm.js?id=GTM-AB12CD3"></script>' +
   '<script>fbq("init","123456789012345");</script>' +
@@ -31,10 +28,9 @@ test('tagSummary: empty page is "not found in page source", unchecked is "not ch
   assert.doesNotMatch(JSON.stringify([empty, un]), /\bnone\b/);
 });
 
-// The first test shop's required fields, on an invented row.
 const GOOD = {
   key: 'shop.example.org', kind: 'shop', platform: 'Shopify', live_status: 'live', ga4: 'found (1)',
-  source: 'seed + Google & YouTube app', target_country: 'GB', merchant_center: 'linked (per Lisa, not machine-checked)',
+  source: 'seed + Google & YouTube app', target_country: 'GB', merchant_center: 'linked (per User, not machine-checked)',
   ssl_expires: '2027-02-01', dmarc: 'missing'
 };
 
@@ -91,3 +87,4 @@ test('funnelsByWorkspace: groups ClickFunnels rows only, workspace from access_n
   ]);
   assert.deepEqual(S.funnelsByWorkspace([]), []);
 });
+

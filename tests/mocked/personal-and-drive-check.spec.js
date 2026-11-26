@@ -1,9 +1,3 @@
-// PC-Personal (rename, then bin) and Drive check (rename on a plugged-in drive).
-// These are the pages with the most "blast radius": they rename and bin real files.
-// Here every write goes to something that only exists in memory:
-//   - PC-Personal writes go to the pretend Drive (tests/support/fake-drive.js).
-//   - Drive check writes go to a pretend plugged-in drive made inside the page (nothing on any disk).
-// Real Drive and real disks are never reachable: outside addresses are blocked and a test fails if one is tried.
 const crypto = require('crypto');
 const { test, expect } = require('../support/test');
 const { tabClick } = require('../support/tabs');
@@ -19,19 +13,15 @@ const signIn = async (page) => {
   await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
 };
 
-// ---------------------------------------------------------------- PC-Personal
 function personalWorld(world) {
   const shared = { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'application/pdf' };
   const mine = { parents: ['my-root'], driveId: null, mimeType: 'application/pdf' };
-  // Two personal files that also exist (same checksum + size) in a shared drive: these are the matches.
   world.file('sh-a', 'invoice-a.pdf', 'x', { ...shared, md5Checksum: 'md5-aaa', size: 100 });
   world.file('sh-b', 'invoice-b.pdf', 'x', { ...shared, md5Checksum: 'md5-bbb', size: 200 });
-  ['sh-a', 'sh-b'].forEach((id) => { world.byId(id).mine = false; }); // shared-drive files are not owned by the signed-in person
+  ['sh-a', 'sh-b'].forEach((id) => { world.byId(id).mine = false; });
   world.file('me-a', 'invoice-a.pdf', 'x', { ...mine, md5Checksum: 'md5-aaa', size: 100 });
   world.file('me-b', 'invoice-b.pdf', 'x', { ...mine, md5Checksum: 'md5-bbb', size: 200 });
-  // A personal file that is NOT in a shared drive: must never be renamed.
   world.file('me-only', 'only-mine.pdf', 'y', { ...mine, md5Checksum: 'md5-zzz', size: 300 });
-  // A personal file already marked: the scan skips it (and the bin step is what picks it up).
   world.file('me-marked', PCP + 'older.pdf', 'x', { ...mine, md5Checksum: 'md5-aaa', size: 100 });
 }
 const writes = (world) => world.calls.filter((c) => c.method !== 'GET');
@@ -40,7 +30,6 @@ const askForWriteThen = async (page, action) => {
   await expect.poll(() => page.evaluate(() => window.__GIS_CALLS.request)).toBeGreaterThan(1);
 };
 const allow = (world, ids) => { world.byId(IDS.ledger).content = 'file_id\n' + ids.join('\n') + '\n'; };
-// Work My Drive (#/drives/work) only scans and lists; the rename and bin steps sit on #/bin (stage 2b).
 const toBin = async (page) => {
   await tabClick(page, '#mainNav a[data-nav="bin"]');
   await expect(page.locator('#hereTitle')).toHaveText('Bin');
@@ -86,11 +75,10 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
     expect(guard.world.byId('me-only').name).toBe('only-mine.pdf');
     expect(guard.world.byId('sh-a').name).toBe('invoice-a.pdf'); // the shared-drive copy is never changed
     expect(guard.world.byId('sh-b').name).toBe('invoice-b.pdf');
-    // every write was a rename of one of the two matches. No deletes, no bin.
     const w = writes(guard.world);
     expect(w.map((c) => c.method)).toEqual(['PATCH', 'PATCH']);
     expect(w.map((c) => c.path).sort()).toEqual(['/files/me-a', '/files/me-b']);
-    expect(guard.world.files.filter((f) => f.trashed && f.id !== 'bin-1').map((f) => f.id)).toEqual([]); // bin-1 was already binned before the test
+    expect(guard.world.files.filter((f) => f.trashed && f.id !== 'bin-1').map((f) => f.id)).toEqual([]);
   });
 
   test('Bin: finds only ZZ_DELETE_DRIVE_ files, asks first, and Cancel changes nothing', async ({ page, guard }) => {
@@ -124,7 +112,7 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
     expect(guard.world.byId('me-marked').trashed).toBe(true);
     for (const id of ['me-a', 'me-b', 'me-only', 'sh-a', 'sh-b', 'rr-1']) expect(guard.world.byId(id).trashed, id).toBeFalsy();
     const w = writes(guard.world);
-    expect(w.map((c) => c.method)).toEqual(['PATCH']); // a move to the bin, never a delete
+    expect(w.map((c) => c.method)).toEqual(['PATCH']);
   });
 
   test('a read-only sign-in never writes: scanning only reads', async ({ page, guard }) => {
@@ -207,14 +195,13 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
   });
 });
 
-// ---------------------------------------------------------------- Drive check (pretend plugged-in drive)
 const bytes = (ch, n) => ch.repeat(n);
 const md5 = (s) => crypto.createHash('md5').update(s).digest('hex');
 const FILES = {
   'match-one.bin': bytes('a', 2048),
   'sub/match-two.bin': bytes('b', 4096),
   'unique.bin': bytes('c', 3000), // not in any shared drive
-  'tiny.txt': bytes('d', 100), // under 1 KB: ignored by the page
+  'tiny.txt': bytes('d', 100),
   '.DS_Store': bytes('e', 5000), // system file: skipped by the page
 };
 
@@ -267,7 +254,7 @@ test.describe('Drive check: rename on a plugged-in drive (pretend drive in memor
     await expect(view).toContainText('are NOT in a shared drive');
     await expect(view).toContainText('match-one.bin');
     await expect(view).toContainText('sub/match-two.bin');
-    await expect(view).not.toContainText('unique.bin\n'); // the unique file is not offered for renaming
+    await expect(view).not.toContainText('unique.bin\n');
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]); // only reads Drive
     expect(await page.evaluate(() => window.__USB_MOVES)).toEqual([]); // and renames nothing yet
   });
@@ -336,3 +323,4 @@ test.describe('Drive check: rename on a plugged-in drive (pretend drive in memor
     await expect(page.locator('[data-action="usbmark"]')).toContainText('Rename selected (2)');
   });
 });
+

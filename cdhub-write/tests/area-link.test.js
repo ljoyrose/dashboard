@@ -11,7 +11,7 @@ const fx = require('./fixtures');
 const HEADER = ['id', 'tenant_id', 'from_area_id', 'to_area_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'];
 const fv = (table, field, aud) => `fv-x,${fx.TENANT},${table},${field},${aud},yes,,,t,2026-11-12,t`;
 const env1 = (props) => {
-  const env = standardEnv({ props: Object.assign({ TABLE_ON_area_link: 'true', READ_ENABLED: 'true', OWNER_EDIT_ENABLED: 'true' }, props || {}) });
+  const env = standardEnv({ props: Object.assign({ TABLE_ON_area_link: 'true', READ_ENABLED: 'true', USER_EDIT_ENABLED: 'true' }, props || {}) });
   env.addFile('BLD-area_link.csv', fx.headerOnly(HEADER));
   return env;
 };
@@ -24,9 +24,9 @@ function read(env, over) {
 }
 function addVis(env, lines) { const f = env.file('BLD-field_visibility.csv')[0]; f.content = f.content.replace(/\r?\n?$/, '\r\n') + lines.join('\r\n') + '\r\n'; }
 
-test('area_link: the owner adds one straight in, stamped; the columns are the link-row standard', () => {
+test('area_link: the user adds one straight in, stamped; the columns are the link-row standard', () => {
   const env = env1();
-  const r = link(env, env.codes.owner, { source: 'Lisa 12 Nov' });
+  const r = link(env, env.codes.user, { source: 'User 12 Nov' });
   assert.equal(r.ok, true, JSON.stringify(r)); assert.match(r.result.id, /^alk-/);
   const [row] = recs(env);
   assert.deepEqual(Object.keys(row), HEADER);
@@ -36,15 +36,15 @@ test('area_link: the owner adds one straight in, stamped; the columns are the li
 
 test('area_link: refused when a room does not exist, both rooms are the same, the end is before the start, or From is missing; a repeat is refused', () => {
   const env = env1();
-  assert.equal(link(env, env.codes.owner, { to_area_id: 'area-nope' }).ok, false);
-  const same = link(env, env.codes.owner, { to_area_id: 'area-t1' });
+  assert.equal(link(env, env.codes.user, { to_area_id: 'area-nope' }).ok, false);
+  const same = link(env, env.codes.user, { to_area_id: 'area-t1' });
   assert.equal(same.ok, false); assert.equal(same.fields.to_area_id, 'Choose a different room.');
-  const back = link(env, env.codes.owner, { to_date: '2026-11-11' });
+  const back = link(env, env.codes.user, { to_date: '2026-11-11' });
   assert.equal(back.ok, false); assert.match(back.fields.to_date, /before the start/);
-  assert.equal(link(env, env.codes.owner, { from_date: '' }).ok, false);
-  assert.equal(link(env, env.codes.owner).ok, true);
-  assert.equal(link(env, env.codes.owner).code, 'DUPLICATE');
-  assert.equal(link(env, env.codes.owner, { from_date: '2026-12-01' }).ok, true);   // a later spell is a new row
+  assert.equal(link(env, env.codes.user, { from_date: '' }).ok, false);
+  assert.equal(link(env, env.codes.user).ok, true);
+  assert.equal(link(env, env.codes.user).code, 'DUPLICATE');
+  assert.equal(link(env, env.codes.user, { from_date: '2026-12-01' }).ok, true);
   assert.equal(recs(env).length, 2);
 });
 
@@ -53,14 +53,14 @@ test('area_link: staff and guests cannot add; the switch is off by default', () 
   assert.equal(link(env, env.codes.staff).code, 'NOT_ALLOWED');
   assert.equal(link(env, env.ctx.adminAddGuestCode()).code, 'NOT_ALLOWED');
   const off = env1({ TABLE_ON_area_link: 'false' });
-  assert.equal(link(off, off.codes.owner).code, 'TABLE_OFF');
+  assert.equal(link(off, off.codes.user).code, 'TABLE_OFF');
   assert.equal(recs(env).length, 0);
 });
 
-test('area_link: the owner edit ends a link by filling in to_date, never before its start, never to the same room', () => {
+test('area_link: the user edit ends a link by filling in to_date, never before its start, never to the same room', () => {
   const env = env1();
-  const id = link(env, env.codes.owner).result.id;
-  env.email = 'owner@example.test';
+  const id = link(env, env.codes.user).result.id;
+  env.email = 'user@example.test';
   assert.equal(env.ctx.ui_edit('area_link', id, { to_date: '2026-11-11' }).ok, false);
   assert.equal(env.ctx.ui_edit('area_link', id, { to_area_id: 'area-t1' }).ok, false);
   assert.equal(env.ctx.ui_edit('area_link', id, { to_date: '2026-11-20' }).ok, true);
@@ -70,7 +70,7 @@ test('area_link: the owner edit ends a link by filling in to_date, never before 
 
 test('area_link: staff read it only through visibility rows, never who set it; guests never', () => {
   const env = env1();
-  link(env, env.codes.owner);
+  link(env, env.codes.user);
   assert.equal(read(env, { table: 'area_link' }).code, 'NOT_ALLOWED');
   addVis(env, ['*', 'id', 'from_area_id', 'to_area_id', 'from_date', 'to_date'].map((f) => fv('area_link', f, 'aud-staff')));
   const r = read(env, { table: 'area_link' });
@@ -93,7 +93,7 @@ const envE = (o) => {
     const f = env.file('BLD-breeding_rule.csv');
     if (f.length) { f[0].content = text; f[0].sheet = undefined; } else env.addFile('BLD-breeding_rule.csv', text);
   }
-  link(env, env.codes.owner, { source: 'first' });
+  link(env, env.codes.user, { source: 'first' });
   return env;
 };
 const call = (env, fn, r) => { try { return { ok: true, result: env.ctx[fn](Object.assign({ table: 'area_link', record_id: recs(env)[0].id }, r)) }; } catch (e) { return env.ctx.errorBody_(e); } };
@@ -101,15 +101,15 @@ const audit = (env) => { const f = env.file('BLD-audit_log.csv')[0]; const [h, .
 
 test('record edit: off by default; the status lists its switch; nothing changes while off', () => {
   const env = envE({ props: { RECORD_EDIT_ON: '' } });
-  const r = call(env, 'sinkRecordEdit_', { code: env.codes.owner, fields: { source: 'changed' } });
+  const r = call(env, 'sinkRecordEdit_', { code: env.codes.user, fields: { source: 'changed' } });
   assert.equal(r.code, 'EDIT_OFF');
   assert.equal(recs(env)[0].source, 'first');
   assert.ok(Array.from(env.ctx.switchesStatus_()).some((s) => s.name === 'RECORD_EDIT_ON' && s.on === false));
 });
 
-test('record edit: the owner may by default and it is logged (old and new values); staff may not unless a row says so; a person "no" beats the role', () => {
+test('record edit: the user may by default and it is logged (old and new values); staff may not unless a row says so; a person "no" beats the role', () => {
   const env = envE();
-  const r = call(env, 'sinkRecordEdit_', { code: env.codes.owner, fields: { source: 'changed' } });
+  const r = call(env, 'sinkRecordEdit_', { code: env.codes.user, fields: { source: 'changed' } });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(recs(env)[0].source, 'changed');
   const [a] = audit(env);
@@ -122,80 +122,75 @@ test('record edit: the owner may by default and it is logged (old and new values
   const p = envE({ perm: ['STAFF,,*,edit,yes,,,t,'] });
   p.file('BLD-permission.csv')[0].content += `pm-y,${fx.TENANT},,${p.ids.staff},area_link,edit,no,,,t,\r\n`;
   assert.equal(call(p, 'sinkRecordEdit_', { code: p.codes.staff, fields: { source: 'x' } }).code, 'NOT_ALLOWED');
-  // a permission row that has ended no longer counts
   const ended = envE({ perm: ['STAFF,,area_link,edit,yes,2026-01-01,2026-02-01,t,'] });
   assert.equal(call(ended, 'sinkRecordEdit_', { code: ended.codes.staff, fields: { source: 'x' } }).code, 'NOT_ALLOWED');
 });
 
 test('record edit: rule rows decide logging and reasons; unlogged needs edit_unlogged; no change log file = nothing changed', () => {
   const quiet = envE({ rules: [['edit.log.area_link', 'no']] });
-  assert.equal(call(quiet, 'sinkRecordEdit_', { code: quiet.codes.owner, fields: { source: 'q' } }).result.logged, false);
+  assert.equal(call(quiet, 'sinkRecordEdit_', { code: quiet.codes.user, fields: { source: 'q' } }).result.logged, false);
   assert.equal(audit(quiet).length, 0);
   const why = envE({ rules: [['edit.reason_required', 'yes']] });
-  assert.equal(call(why, 'sinkRecordEdit_', { code: why.codes.owner, fields: { source: 'w' } }).fields.reason.length > 0, true);
-  assert.equal(call(why, 'sinkRecordEdit_', { code: why.codes.owner, fields: { source: 'w' }, reason: 'paper record says so' }).ok, true);
+  assert.equal(call(why, 'sinkRecordEdit_', { code: why.codes.user, fields: { source: 'w' } }).fields.reason.length > 0, true);
+  assert.equal(call(why, 'sinkRecordEdit_', { code: why.codes.user, fields: { source: 'w' }, reason: 'paper record says so' }).ok, true);
   assert.equal(audit(why)[0].reason, 'paper record says so');
   const un = envE();
-  assert.equal(call(un, 'sinkRecordEdit_', { code: un.codes.owner, fields: { source: 'u' }, unlogged: true }).code, 'NOT_ALLOWED');
-  const un2 = envE({ perm: ['OWNER,,*,edit_unlogged,yes,,,t,'] });
-  assert.equal(call(un2, 'sinkRecordEdit_', { code: un2.codes.owner, fields: { source: 'u' }, unlogged: true }).result.logged, false);
+  assert.equal(call(un, 'sinkRecordEdit_', { code: un.codes.user, fields: { source: 'u' }, unlogged: true }).code, 'NOT_ALLOWED');
+  const un2 = envE({ perm: ['USER,,*,edit_unlogged,yes,,,t,'] });
+  assert.equal(call(un2, 'sinkRecordEdit_', { code: un2.codes.user, fields: { source: 'u' }, unlogged: true }).result.logged, false);
   const none = envE({ audit: false });
-  assert.equal(call(none, 'sinkRecordEdit_', { code: none.codes.owner, fields: { source: 'n' } }).code, 'NOT_CONFIGURED');
+  assert.equal(call(none, 'sinkRecordEdit_', { code: none.codes.user, fields: { source: 'n' } }).code, 'NOT_CONFIGURED');
   assert.equal(recs(none)[0].source, 'first');
-  // only editable fields, checked as on add
   const bad = envE();
-  assert.equal(call(bad, 'sinkRecordEdit_', { code: bad.codes.owner, fields: { to_date: '2026-11-01' } }).ok, false);
-  assert.equal(call(bad, 'sinkRecordEdit_', { code: bad.codes.owner, fields: { set_by: 'me' } }).ok, false);
+  assert.equal(call(bad, 'sinkRecordEdit_', { code: bad.codes.user, fields: { to_date: '2026-11-01' } }).ok, false);
+  assert.equal(call(bad, 'sinkRecordEdit_', { code: bad.codes.user, fields: { set_by: 'me' } }).ok, false);
 });
 
-test('record archive: the owner may by default; the row stays with an end date; logged; staff may not', () => {
+test('record archive: the user may by default; the row stays with an end date; logged; staff may not', () => {
   const env = envE();
   assert.equal(call(env, 'sinkRecordArchive_', { code: env.codes.staff }).code, 'NOT_ALLOWED');
-  const r = call(env, 'sinkRecordArchive_', { code: env.codes.owner, to_date: '2026-11-20', reason: 'room rebuilt' });
+  const r = call(env, 'sinkRecordArchive_', { code: env.codes.user, to_date: '2026-11-20', reason: 'room rebuilt' });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(recs(env).length, 1); assert.equal(recs(env)[0].to_date, '2026-11-20');
   const [a] = audit(env);
   assert.equal(a.action, 'archive'); assert.deepEqual(JSON.parse(a.after), { to_date: '2026-11-20' }); assert.equal(a.reason, 'room rebuilt');
-  assert.equal(call(env, 'sinkRecordArchive_', { code: env.codes.owner, to_date: '2026-11-25' }).code, 'NOTHING_CHANGED');
-  assert.equal(call(env, 'sinkRecordArchive_', { code: env.codes.owner, to_date: '2026-11-01' }).ok, false);
+  assert.equal(call(env, 'sinkRecordArchive_', { code: env.codes.user, to_date: '2026-11-25' }).code, 'NOTHING_CHANGED');
+  assert.equal(call(env, 'sinkRecordArchive_', { code: env.codes.user, to_date: '2026-11-01' }).ok, false);
 });
 
-test('record delete: nobody by default, the owner included; with a row it removes the entry and the log keeps its last values', () => {
+test('record delete: nobody by default, the user included; with a row it removes the entry and the log keeps its last values', () => {
   const env = envE();
-  assert.equal(call(env, 'sinkRecordDelete_', { code: env.codes.owner, reason: 'made in error' }).code, 'NOT_ALLOWED');
-  // inside its kept period (no retention row: the fallback years) a delete is refused; archive still works
-  const kept = envE({ perm: ['OWNER,,area_link,delete,yes,,,t,'] });
-  const k = call(kept, 'sinkRecordDelete_', { code: kept.codes.owner, reason: 'made in error' });
+  assert.equal(call(env, 'sinkRecordDelete_', { code: env.codes.user, reason: 'made in error' }).code, 'NOT_ALLOWED');
+  const kept = envE({ perm: ['USER,,area_link,delete,yes,,,t,'] });
+  const k = call(kept, 'sinkRecordDelete_', { code: kept.codes.user, reason: 'made in error' });
   assert.equal(k.code, 'KEPT'); assert.equal(recs(kept).length, 1); assert.equal(audit(kept).length, 0);
-  assert.equal(call(kept, 'sinkRecordArchive_', { code: kept.codes.owner, to_date: '2026-11-20', reason: 'kept, ended' }).ok, true);
-  // an owner retention row of 1 year for the section, and a row from 2024: past its kept period, so it may go
-  const d = envE({ perm: ['OWNER,,area_link,delete,yes,,,t,'] });
-  d.addFile('BLD-retention_setting.csv', ['id,tenant_id,section,keep_years,from_date,to_date,source', `rs-1,${fx.TENANT},area_link,1,,,owner`].join('\r\n') + '\r\n');
+  assert.equal(call(kept, 'sinkRecordArchive_', { code: kept.codes.user, to_date: '2026-11-20', reason: 'kept, ended' }).ok, true);
+  const d = envE({ perm: ['USER,,area_link,delete,yes,,,t,'] });
+  d.addFile('BLD-retention_setting.csv', ['id,tenant_id,section,keep_years,from_date,to_date,source', `rs-1,${fx.TENANT},area_link,1,,,user`].join('\r\n') + '\r\n');
   { const f = d.file('BLD-area_link.csv')[0]; f.content = f.content.replace(',2026-11-12,', ',2024-01-01,'); }
-  link(d, d.codes.owner, { to_area_id: 'area-t3-1', source: 'second' });
+  link(d, d.codes.user, { to_area_id: 'area-t3-1', source: 'second' });
   const id = recs(d)[0].id;
-  assert.equal(call(d, 'sinkRecordDelete_', { code: d.codes.owner }).fields.reason.length > 0, true);
-  const r = call(d, 'sinkRecordDelete_', { code: d.codes.owner, reason: 'made in error' });
+  assert.equal(call(d, 'sinkRecordDelete_', { code: d.codes.user }).fields.reason.length > 0, true);
+  const r = call(d, 'sinkRecordDelete_', { code: d.codes.user, reason: 'made in error' });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.deepEqual(recs(d).map((x) => x.source), ['second']);
   const [a] = audit(d);
   assert.equal(a.action, 'delete'); assert.equal(a.record_id, id);
   assert.equal(JSON.parse(a.before).source, 'first'); assert.ok(!('tenant_id' in JSON.parse(a.before)));
-  assert.equal(call(d, 'sinkRecordDelete_', { code: d.codes.owner, reason: 'again', record_id: id }).code, 'NOT_FOUND');
-  // the change log itself can never be removed through this
+  assert.equal(call(d, 'sinkRecordDelete_', { code: d.codes.user, reason: 'again', record_id: id }).code, 'NOT_FOUND');
   assert.throws(() => d.ctx.store_removeRow_('BLD-audit_log.csv', AUDIT_H, 0, d.ctx.store_read_('BLD-audit_log.csv', true)));
 });
 
-/* Printed dog cards (22 Nov 2026, DOGCARD): the print page reads the photo files a main link points at. Invented rows only. */
-test('files: readable only through visibility rows (owner print), never who set it; guests never', () => {
+test('files: readable only through visibility rows (user print), never who set it; guests never', () => {
   const env = env1();
   env.addFile('BLD-files.csv', ['id,tenant_id,kind,drive_file_id,url,mime,name,size_bytes,taken_on,sha256,source,set_by,set_on,created_at,updated_at',
-    `fil-t1,${fx.TENANT},photo,pretendDriveId123,,image/jpeg,Pretend_main.jpg,,,,drive,Pretend Owner,2026-11-15,,`].join('\r\n') + '\r\n');
-  assert.equal(read(env, { table: 'files', code: env.codes.owner }).code, 'NOT_ALLOWED');
+    `fil-t1,${fx.TENANT},photo,pretendDriveId123,,image/jpeg,Pretend_main.jpg,,,,drive,Pretend User,2026-11-15,,`].join('\r\n') + '\r\n');
+  assert.equal(read(env, { table: 'files', code: env.codes.user }).code, 'NOT_ALLOWED');
   addVis(env, ['*', 'id', 'drive_file_id', 'kind', 'name'].map((f) => fv('files', f, 'aud-admin')));
-  const r = read(env, { table: 'files', code: env.codes.owner });
+  const r = read(env, { table: 'files', code: env.codes.user });
   assert.equal(r.ok, true, JSON.stringify(r)); assert.equal(r.result.count, 1);
   assert.equal(r.result.fields.includes('set_by'), false);
   assert.equal(read(env, { table: 'files' }).code, 'NOT_ALLOWED');   // no staff rows
   assert.equal(read(env, { table: 'files', code: env.ctx.adminAddGuestCode() }).code, 'NOT_ALLOWED');
 });
+

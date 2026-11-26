@@ -44,15 +44,12 @@
   .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .wrap { max-width: none; margin: 0 auto; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }   /* the full window, the house side gap */
 
-  /* Frame: dark top bar (never black). */
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--c-mute)); flex: none; display: inline-block; }
   .top h1 .dot { --c: var(--c-fin); }
-  /* Signed out (auth.js hides the page): the dark bar itself stays, so the sign-in and Dashboard buttons keep their frame. */
   html.dash-locked header { visibility: visible; }
   html.dash-locked .top > .readstamp, html.dash-locked .top > [data-search-open] { display: none; }
 
-  /* Everything you press, the hover rule, focus, the bottom tabs and the counts: ../house.css. Money's layout only below. */
   .btn, details > summary { display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--surface); line-height: 1.2; }
   .btn:disabled { opacity: .6; cursor: default; }
   details > summary { list-style: none; width: max-content; max-width: 100%; min-height: var(--house-btn); border: 1px solid var(--press); border-radius: var(--radius);
@@ -64,7 +61,6 @@
   details[open] > summary { margin-bottom: 12px; }
   @media (hover: hover) { a.ent:hover, details > summary:hover { background:var(--hov); } }
 
-  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
   @media (max-width: 600px) { html { scroll-padding-bottom: 120px; } }
   .cnt { flex: none; }
 
@@ -75,10 +71,8 @@
   .here h2 { margin: 0; font-size: var(--fs-head); line-height: 1.25; }
   #view { display: flex; flex-direction: column; gap: 12px; }
 
-  /* Cards: one white panel, the softer 1px line, 12px padding; 16px under the header line before the first item. */
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); min-width: 0; }
   .card.pending { border-style: dashed; box-shadow: none; }
-  /* Section colour: one small dot before the card title (dots may be solid; words stay ink). */
   .c-risk { --c: var(--c-risk); } .c-fin { --c: var(--c-fin); } .c-ops { --c: var(--c-ops); } .c-ok { --c: var(--c-ok); }
   .c-sales { --c: var(--c-sales); } .c-ideas { --c: var(--c-ideas); } .c-ink, .c-mute { --c: var(--c-mute); }
   .card h3:not(.sr)::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--c-mute)); flex: none; }
@@ -97,7 +91,6 @@
   .gate-note { overflow-wrap: anywhere; } /* J34b-F20: a long signed-in address wraps on a phone */
   .go { display: flex; flex-wrap: wrap; gap: 8px; }
 
-  /* Flags and small pills: 24px, 13px, a 1px ring that shows the meaning, light tint, ink words. Read-only: no hover. */
   .tag, .chip, .date { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: var(--radius); font-size: var(--fs-small); font-weight: 600; line-height: 1;
     color: var(--ink); background: transparent; border: 1px solid var(--ctl); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .chip, .date { font-weight: 400; color: var(--muted); }
@@ -105,14 +98,10 @@
   .tag.c-ops { border-color: var(--r-warn); background: var(--t-warn); }
   .tag.c-ok { border-color: var(--r-ok); background: var(--t-ok); }
   .tag.c-fin, .tag.c-mute, .tag.c-ink, .tag.c-ideas, .tag.c-sales { border-color: var(--ctl); background: transparent; }
-  /* Every date wears a plain 1px ring; urgency only changes the ring (and a light tint). */
-  /* A negative amount: a minus sign and a rose ring marker, never red words. */
   .neg { display: inline-flex; align-items: center; border: 1px solid var(--r-risk); background: var(--t-risk); border-radius: var(--radius); padding: 0 6px; color: var(--ink); }
-  /* Friendly empty state with a small green-ring check. */
   .empty { margin: 0; display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: var(--fs-body); }
   .empty::before { content: "\2713"; flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--r-ok); background: var(--t-ok); color: var(--ink); font-size: 13px; }
 
-  /* Calm rows: a small entity line, the title (2 lines, then …), then ONE flag, a date pill and plain details. */
   ul.items { list-style: none; margin: 0; padding: 0; }
   ul.items > li { padding: 12px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   ul.items > li:first-child { border-top: none; padding-top: 0; }
@@ -125,7 +114,6 @@
   .meta > span { overflow-wrap: anywhere; }
   .lbl { font-size: var(--fs-small); color: var(--muted); }
 
-  /* Summary strip: On track / Needs you / Overdue, each a big ringed number. */
   .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   a.sum { color: inherit; text-decoration: none; }
   .sum { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 12px; min-width: 0; box-shadow: var(--shadow); }
@@ -164,7 +152,6 @@
   .stat .label { font-size: var(--fs-small); color: var(--ink); }
   .stat .sub { font-size: var(--fs-small); color: var(--muted); }
 
-  /* Forecast chart: the line and a ringed marker; words stay ink or grey. */
   .chart svg { display: block; width: 100%; height: auto; max-height: 260px; }
   .chart .ln { fill: none; stroke: var(--c-fin); stroke-width: 2; }
   .chart .zero { stroke: var(--r-risk); stroke-width: 1; stroke-dasharray: 5 4; }
@@ -179,7 +166,6 @@
   th { font-size: var(--fs-small); color: var(--muted); border-top: none; }
   td.r, th.r { text-align: right; white-space: nowrap; }
   .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  /* Month bars: thin, a light tint inside a 1px ring (never solid). */
   .bar.in, .bar.out { display: inline-block; height: 8px; border-radius: var(--radius); vertical-align: middle; }
   .bar.in { background: var(--t-ok); box-shadow: inset 0 0 0 1px var(--r-ok); }
   .bar.out { background: var(--t-warn); box-shadow: inset 0 0 0 1px var(--r-warn); }
@@ -201,7 +187,6 @@
     th, td { padding: 6px 4px; font-size: var(--fs-small); }
   }
 
-  /* Calm focus: a typing box shows a slightly darker line; keyboard focus is the 1px ink line inside (never the browser blue). */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus, button:focus, summary:focus { outline: none; }
   :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
@@ -288,16 +273,11 @@
   function tag(cls, text) { return '<span class="tag ' + cls + '">' + esc(text) + '</span>'; }
   function chip(text) { return '<span class="chip">' + esc(text) + '</span>'; }
   function entList(s) { return String(s || '').split(';').map(function (e) { return e.trim(); }).filter(Boolean); }
-  // Calm rows: the entity on its own small line above the title (dot + name), never run into it.
   function bline(s, extra) { var l = entList(s); if (extra) l.unshift(extra); return l.length ? '<div class="bline"><span class="dot" aria-hidden="true" style="--c:var(--c-fin)"></span>' + esc(l.join(' · ')) + '</div>' : ''; }
   function plain(list) { return list.filter(Boolean).map(function (x) { return '<span>' + esc(x) + '</span>'; }).join(''); }
-  // Every date wears a 1px ring; late = rose ring + tint, soon = amber ring + tint. The words stay ink or grey.
   function datePill(text, urg) { return '<span class="date' + (urg ? ' ' + urg : '') + '">' + esc(text) + '</span>'; }
-  // Counts: a grey 1px ring; "needs you" counts add a rose ring and tint.
   function cnt(n, need) { return '<span class="cnt' + (need && n ? ' need' : '') + (String(n).length > 2 ? ' wide' : '') + '">' + esc(String(n)) + '</span>'; }
-  // Money: tabular figures; a negative keeps its minus sign and wears a rose ring marker, never red words.
   function cash(v, dp) { var t = esc(gbp(v, dp)); return v != null && !isNaN(v) && v < 0 ? '<span class="neg">' + t + '</span>' : t; }
-  // Friendly empty state with a small green-ring check.
   function empty(text) { return '<p class="empty">' + esc(text) + '</p>'; }
   function src(name, m) {
     var bits = [];
@@ -308,7 +288,6 @@
     return '<div class="source">' + bits.map(function (b) { return '<span>' + b + '</span>'; }).join('') + '</div>';
   }
   function meta(k) { return R && R.meta[k] || null; }
-  // Every file read failed (e.g. Drive down): the stamp must not look like a good read (J34-F80).
   function allReadsFailed() { var ks = R && R.meta ? Object.keys(R.meta) : []; return ks.length > 0 && ks.every(function (k) { return /fail/i.test(R.meta[k].error || ''); }); }
   function emoney(code) { return R ? R.money.filter(function (m) { return m.code === code; })[0] : null; }
   function efile(code, k) { return R && R.files[code] && R.files[code][k] || null; }
@@ -362,18 +341,17 @@
   function dateLi(x) {
     var urg = x.gap ? '' : x.days !== null && x.days < 0 ? 'late' : x.sev === 'risk' ? 'late' : x.sev === 'soon' || (x.days !== null && x.days <= 14) ? 'soon' : '';
     var word = x.gap ? 'Date unknown' : x.days < 0 ? 'Overdue ' + (-x.days) + 'd' : x.days === 0 ? 'Today' : 'In ' + x.days + 'd';
-    var ent = String(x.r.entity || '').split(';')[0].trim();   // a date opens its entity's page (its Dates card); there is no page per date
+    var ent = String(x.r.entity || '').split(';')[0].trim();
     return '<li data-open-row>' + bline(x.r.entity) + '<div class="itext"><a class="house-open" href="' + (ent && emoney(ent) ? '#/e/' + esc(ent) : '#/dates') + '">' + esc(x.r.filing) + '</a></div><div class="meta">' + datePill(x.gap ? word : word + ' · ' + M.fmtDate(x.due, R.today), urg) +
-      (x.recurring ? chip('repeats') : '') + plain([x.r.owner, x.r.status, x.r.id]) + '</div></li>';
+      (x.recurring ? chip('repeats') : '') + plain([x.r.user, x.r.status, x.r.id]) + '</div></li>';
   }
   function turnLi(x) {
     var r = x.r, urgent = /urgent/i.test(r.priority), high = /high/i.test(r.priority);
     var body = [['Why / evidence', r.evidence], ['What happened', r.incident], ['Believed before', r.previously_believed], ['Starts when', r.trigger_or_event], ['Opened', r.opened_on], ['Closed', r.closed_on]]
       .filter(function (p) { return p[1]; }).map(function (p) { return '<div><span class="lbl">' + esc(p[0]) + ':</span> ' + esc(p[1]) + '</div>'; }).join('');
-    // One flag: urgent first, else whether it can start now. Everything else is plain grey words.
     var flag = urgent ? tag('c-risk', 'Urgent') : x.ready === 'ready' ? tag('c-ok', 'Ready') : tag('c-mute', x.ready);
     return '<li id="row-' + esc(r.id) + '" data-open-row>' + bline(r.entity) + '<div class="itext"><a class="house-open" href="#/register/' + esc(r.id) + '">' + esc(r.subject) + '</a></div><div class="meta">' + flag +
-      plain([urgent ? (x.ready === 'ready' ? 'Ready' : x.ready) : '', high ? 'High priority' : '', r.kind, r.owner, r.state, r.id]) + '</div>' +
+      plain([urgent ? (x.ready === 'ready' ? 'Ready' : x.ready) : '', high ? 'High priority' : '', r.kind, r.user, r.state, r.id]) + '</div>' +
       (body ? '<details><summary class="more">Details</summary>' + body + '</details>' : '') + '</li>';
   }
   function listWithMore(items, show, render1, key) {
@@ -383,14 +361,13 @@
   function notReady() {
     if (!signedIn) return '<div class="card c-ink now"><h3>Sign in</h3><div><button class="btn main" type="button" data-action="signin"><svg class="icon"><use href="#i-in"/></svg><span>Sign in with Google</span></button></div></div>';
     if (err) return '<div class="card c-risk pending"><h3>Could not read Drive</h3><p class="note">' + esc(err) + '</p><div><button class="btn" type="button" data-action="refresh">Try again</button></div></div>';
-    if (R && R.gate === 'denied') return '<div class="card c-risk"><h3>This page is for Lisa only</h3><p class="note gate-note">Signed in as ' + esc(R.email) + '. Sign out and sign in with Lisa\'s account.</p></div>';
+    if (R && R.gate === 'denied') return '<div class="card c-risk"><h3>This page is for User only</h3><p class="note gate-note">Signed in as ' + esc(R.email) + '. Sign out and sign in with User\'s account.</p></div>';
     return '<div class="card pending"><h3>Reading…</h3></div>';
   }
 
   // ---- Views ----
   function entBad(m) { return !!((m.liab && m.liab.overdue.length) || (m.dryState === 'dry' && m.dryDays <= 30) || (m.bank != null && m.bank < 0)); }
   function isOverdue(i) { return i.level === 'risk' && /^Overdue/.test(i.tag || ''); }
-  // Summary strip (On track / Needs you / Overdue) and the one "Next" thing, at the top of Now.
   function summary(items) {
     var over = items.filter(isOverdue).length, need = items.length - over;
     var fine = R.money.filter(function (m) { return !m.noData && !entBad(m); }).length;
@@ -407,7 +384,6 @@
   function actWord(href) {
     return /^#\/e\//.test(href) ? 'Open ' + href.slice(4) : /^#\/register\//.test(href) ? 'Open to-do' : /^#\/dates/.test(href) ? 'Open dates' : /^#\/control/.test(href) ? 'Open Control' : 'Open';
   }
-  // A dated row opens its entity's page (its Dates card), as the Dates list does; otherwise where the item points.
   function rowHref(i) {
     var ent = String(i.ent || '').split(';')[0].trim();
     return i.href === '#/dates' && ent && emoney(ent) ? '#/e/' + ent : i.href || '#/now/all';
@@ -422,18 +398,15 @@
     });
     M.yourTurn(R.data).filter(function (x) { return x.ready === 'ready'; }).forEach(function (x) {
       var href = '#/register/' + x.r.id;
-      if (seen[href]) return; // an urgent one is already in the list above
+      if (seen[href]) return;
       rows.push({ kind: /urgent/i.test(x.r.priority || '') ? 'late' : 'wait', text: x.r.subject, href: href, act: 'Open to-do', pill: 'Your turn', sub: entList(x.r.entity).join(' · ') });
     });
-    // A file that could not be read is never hidden behind a calm "Nothing needs you": it is the first late row.
     [['dates', 'MON-DATES.csv'], ['register', 'MON-REGISTER.csv']].forEach(function (f) {
       var e = (meta(f[0]) || {}).error;
       if (e && /fail/i.test(e)) rows.unshift({ kind: 'late', text: f[1] + ' could not be read', sub: e, href: '#/control', act: 'Open Control', pill: 'Read failed' });
     });
     return rows;
   }
-  // Money's 3 numbers (HubRead.money): Overdue = the overdue dates and debts; Due Soon = Dates due in the next 14 days;
-  // Cash = the businesses' bank balances added up (personal never added in). null = could not be read: shown as "–".
   function mainNums() {
     var ok = R && R.gate === 'ok', datesOk = ok && !(meta('dates') || {}).error;
     var over = datesOk ? M.needsNow(R.data, R.money, R.today).filter(isOverdue).length : null; // overdue dates: "–" when MON-DATES failed
@@ -463,15 +436,12 @@
   }
 
   function viewMoney(only) {
-    // #/money/ok: just the entities with nothing wrong (the On track number). #/money/biz: just the businesses, whose bank
-    // balances add up to Main's Cash number (personal never added in).
     var list = only === 'ok' ? R.money.filter(function (m) { return !m.noData && !entBad(m); }) : only === 'biz' ? R.money.filter(function (m) { return m.company && !m.noData; }) : R.money;
     var title = only === 'ok' ? 'On track' : only === 'biz' ? 'Business cash' : 'Every entity';
     var biz = only === 'biz' ? list.filter(function (m) { return m.bank != null; }) : [];
     var tot = biz.length ? '<span class="tag c-fin" data-cash-total>' + cash(biz.reduce(function (t, m) { return t + m.bank; }, 0)) + '</span>' : '';
     var h = '<section class="card c-fin"><div class="cardhead"><h3>' + title + '</h3>' + (only === 'ok' ? cnt(list.length) : tot) + '</div>' + (list.length ? entGroups(list) : empty('Nothing here')) + '</section>';
     if (only === 'ok' || only === 'biz') return h;
-    // The On track / Needs you / Overdue trio moved here from Main (Hub Mains, 2 Nov 2026).
     h = summary(M.needsNow(R.data, R.money, R.today)) + h;
     var rs = R.data.reports || [];
     if (rs.length) {
@@ -590,8 +560,6 @@
     return h + '</section>';
   }
 
-  // Forecast line chart (F5): projected balance from FORECAST.csv, zero line in Risk, "runs dry" marked.
-  // Plain SVG, no library. The numbers are also in the label, and the table stays in the file.
   function forecastChart(m, pts) {
     if (pts.length < 2) return '';
     var W = 640, H = 220, L = 64, Rm = 16, T = 16, B = 34;
@@ -613,7 +581,6 @@
     if (dry) s += '<circle class="dry" data-dry="' + esc(dry.date) + '" cx="' + x(dry.date).toFixed(1) + '" cy="' + y(dry.v).toFixed(1) + '" r="6"/><text class="dry" x="' + Math.min(W - Rm - 4, x(dry.date) + 8).toFixed(1) + '" y="' + Math.max(T + 12, y(dry.v) - 8).toFixed(1) + '" text-anchor="' + (x(dry.date) > W - 160 ? 'end' : 'start') + '">Runs dry ' + esc(M.fmtDate(dry.date, R.today)) + '</text>';
     return '<section class="card ' + (dry ? 'c-risk' : 'c-fin') + ' chart"><h3>Forecast balance</h3>' + s + '</svg><p class="note">' + esc(label) + ' Dashed line is £0.</p>' + src('FORECAST.csv · ' + m.code, efile(m.code, 'forecast')) + '</section>';
   }
-  // Deadlines worked out from rules (F6). Every row says "check with accountant". Not tax advice.
   function ruleLi(x) {
     return '<li>' + bline(x.ent) + '<div class="itext">' + esc(x.what) + '</div><div class="meta">' +
       datePill((x.days === 0 ? 'Today' : 'In ' + x.days + 'd') + ' · ' + M.fmtDate(x.due, R.today), x.days <= 14 ? 'late' : x.days <= 45 ? 'soon' : '') + chip('check with accountant') + plain(['Rule: ' + x.rule]) + '</div></li>';
@@ -658,13 +625,12 @@
     var mk = function (rows) { return rows.map(function (r) { return { r: r, ready: M.ready(r, reg) }; }); };
     if (sub === 'yours') {
       var t = M.yourTurn(R.data), nn = M.needsNow(R.data, R.money, R.today);
-      // Every Needs you item (Main shows the first 5), moved here from Main (Hub Mains, 2 Nov 2026).
       if (nn.length) h += '<section class="card now ' + (nn.some(function (i) { return i.level === 'risk'; }) ? 'c-risk' : 'c-ok') + '" data-needs-all>' + head('Needs you', '#/now/all', nn.length, nn.some(isOverdue)) + listWithMore(nn, NOW_SHOW, itemLi, 'todo-needs') + '</section>';
       var rdy = t.filter(function (x) { return x.ready === 'ready'; }), blk = t.filter(function (x) { return x.ready !== 'ready'; });
       // One empty line per view (the owner, 2 Nov): empty sections are not drawn.
       h += t.length ? (rdy.length ? wrap('Ready now', 'c-ops', rdy, 8) : '') + (blk.length ? wrap('Blocked', 'c-mute', blk, 5) : '') : nn.length ? '' : '<section class="card c-ok" data-empty-one>' + empty('Nothing needs you') + '</section>';
     } else if (sub === 'others') {
-      h += wrap('Waiting on others', 'c-ok', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isLisa(r) && M.isTask(r); })));
+      h += wrap('Waiting on others', 'c-ok', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isUser(r) && M.isTask(r); })));
     } else if (sub === 'watch') {
       h += wrap('Watching', 'c-ideas', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isTask(r); })));
     } else {
@@ -762,7 +728,6 @@
     $('signOutBtn').classList.toggle('hidden', !signedIn);
     $('signInBtn').classList.toggle('hidden', signedIn);
   }
-  // Counts in the tab corners: rose ring = something counted is late; grey ring = waiting. Empty = hidden.
   function tabCounts() {
     var ok = signedIn && R && R.gate === 'ok', set = function (id, n, need) { var e = $(id); e.textContent = ok && n ? String(n) : ''; e.classList.toggle('need', !!need); e.classList.toggle('wide', String(n).length > 2); };
     if (!ok) { ['nNow', 'nMoney', 'nDates', 'nTodo', 'nAcct', 'nControl'].forEach(function (id) { set(id, 0); }); return; }
@@ -827,23 +792,21 @@
     DashAuth.save(accessToken, tokenExpiresAt, resp.scope || SCOPE);
     signedIn = true; clearBanner(); startTimer(); load();
   }
-  // otherTab: another tab already signed out (and revoked), so just forget everything here.
   function signOut(otherTab) {
     stopTimer();
     var t = otherTab === true ? null : accessToken;
     accessToken = null; tokenExpiresAt = 0; signedIn = false; R = null; err = null; MORE = {};
-    M.clearCache(); // the memory copy of the Money files goes too
+    M.clearCache();
     if (window.DashAuth && otherTab !== true) DashAuth.clear();
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     banner(otherTab === true ? 'Signed out in another tab. Nothing kept.' : 'Signed out. Nothing kept.', true, false);
     render();
   }
-  // Search (press /): to-dos, dates and accountant questions already read on this page.
   DashKit.search.register(function (q) {
     var hit = DashKit.search.matches(q), out = [];
     if (!R || R.gate !== 'ok') return out;
-    (R.data.register || []).filter(function (r) { return hit([r.subject, r.id, r.entity, r.owner].join(' ')); }).slice(0, 12).forEach(function (r) {
-      out.push({ group: 'To-dos', slot: 4, title: r.subject, sub: [r.entity, r.owner, r.status].filter(Boolean).join(' · '), href: '#/register/' + encodeURIComponent(r.id) });
+    (R.data.register || []).filter(function (r) { return hit([r.subject, r.id, r.entity, r.user].join(' ')); }).slice(0, 12).forEach(function (r) {
+      out.push({ group: 'To-dos', slot: 4, title: r.subject, sub: [r.entity, r.user, r.status].filter(Boolean).join(' · '), href: '#/register/' + encodeURIComponent(r.id) });
     });
     (R.data.dates || []).filter(function (r) { return hit([r.filing, r.entity, r.id].join(' ')); }).slice(0, 12).forEach(function (r) {
       out.push({ group: 'Dates', slot: 4, title: r.filing, sub: [r.entity, r.due_on].filter(Boolean).join(' · '), href: '#/dates' });
@@ -873,13 +836,11 @@
     signedIn = true;
     return true;
   }
-  // Tapping the tab (or any link) for the screen already open goes back to its top and reads it fresh, like a new visit.
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a[href^="#/"]');
     if (!a || e.defaultPrevented || a.getAttribute('href') !== location.hash) return;
     e.preventDefault(); render(); window.scrollTo(0, 0);
   });
-  // Skip link: jump to the content without changing the #/ address.
   document.addEventListener('click', function (e) {
     var k = e.target.closest && e.target.closest('[data-skip]');
     if (!k) return;
@@ -891,7 +852,7 @@
     var t = e.target.closest('[data-action]');
     if (!t || t.disabled) return;
     var a = t.getAttribute('data-action');
-    if (a === 'signin') auth.requestInteractive({ login_hint: M.CFG.owner });
+    if (a === 'signin') auth.requestInteractive({ login_hint: M.CFG.user });
     else if (a === 'signout') signOut();
     else if (a === 'refresh') load();
     else if (a === 'showmore') {
@@ -908,7 +869,6 @@
   var restored = restoreShared();
   render();
   if (restored) { startTimer(); load(); }
-  // Another tab signed in, refreshed the token, or signed out.
   DashAuth.onChange(function (saved) {
     if (!saved || !DashAuth.hasScope(saved, SCOPE)) { if (signedIn) signOut(true); return; }
     var wasIn = signedIn && accessToken;
@@ -926,13 +886,12 @@
 </script>
 
 <script>
-/* Calm: every help bullet list (ul.notes) becomes one (i); its words show on hover or tap. */
 (function () {
   function calm() {
     document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
       var t = Array.prototype.map.call(ul.querySelectorAll('li'), function (li) { return li.textContent.trim(); }).join(' · ');
       var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.textContent = 'i';
-      var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h); // screen readers (and tests) still get the words
+      var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h);
       ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
     });
   }
@@ -942,3 +901,4 @@
 </script>
 </body>
 </html>
+

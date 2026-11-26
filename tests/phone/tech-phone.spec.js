@@ -1,5 +1,3 @@
-// Dashboard › More › Tech on a phone (TECH-HUB-1): at 360px and 390px the search box is full width, tiles stack in one column,
-// nothing scrolls sideways, and every button is phone-sized. Invented rows only (tests/fixtures/tech-tools.js).
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -19,7 +17,6 @@ for (const width of [360, 390]) {
     const sec = page.locator('#techSec');
     await expect(sec).toHaveAttribute('data-tech', 'live');
     await expect(sec.locator('.ttile').first()).toBeVisible();
-    // Phone: the filter chips start folded behind Filter.
     await expect(sec.locator('#techFbody')).toBeHidden();
     const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(over).toBeLessThanOrEqual(0);
@@ -34,3 +31,4 @@ for (const width of [360, 390]) {
     if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await page.addStyleTag({ content: 'nav.main { position: static !important; }' }); await page.screenshot({ path: path.join(SHOTS, `tech-phone-${width}.png`), fullPage: true }); }
   });
 }
+

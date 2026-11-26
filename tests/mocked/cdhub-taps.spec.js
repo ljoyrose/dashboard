@@ -1,5 +1,3 @@
-// CD Hub: small controls that used to do nothing when tapped (found by the click-crawl, 13 Nov 2026).
-// Invented sample rows only. Nothing is saved anywhere.
 const { test, expect } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 
@@ -35,13 +33,12 @@ test.describe('CD Hub: every small control answers a tap', () => {
     await page.keyboard.press(' ');
     await expect(note).toHaveCount(0);
 
-    // the (i) the page makes from a help list answers the same way, and the tap stays on this screen
     await page.evaluate(() => { document.getElementById('main').insertAdjacentHTML('afterbegin', '<div data-open-row id="tapRow"><a class="house-open" href="#/work">Sample row</a><ul class="notes"><li>Sample help words.</li></ul></div>'); });
     const made = page.locator('#tapRow .info');
     await expect(made).toHaveAttribute('role', 'button');
     await made.click();
     await expect(page.locator('#tapRow .infonote')).toHaveText('Sample help words.');
-    await expect(page).toHaveURL(/#\/dogs$/);   // the row's own link was not pressed
+    await expect(page).toHaveURL(/#\/dogs$/);
   });
 
   test('Clear filters is off until there is something to clear, on Dogs and on SOPs', async ({ page }) => {
@@ -60,7 +57,7 @@ test.describe('CD Hub: every small control answers a tap', () => {
     await clear.click();
     await expect(page.locator('#q')).toHaveValue('');
     await expect(clear).toBeDisabled();
-    await page.locator('.sfb[data-code="CL"]').click();   // a status chip counts as a filter
+    await page.locator('.sfb[data-code="CL"]').click();
     await expect(clear).toBeEnabled();
     await clear.click();
     await expect(clear).toBeDisabled();
@@ -79,7 +76,6 @@ test.describe('CD Hub: every small control answers a tap', () => {
   test('a screen that is switched off is not offered: no button, link or Next leads to it', async ({ page }) => {
     await signIn(page);
     await open(page, 'today');
-    // Switch Litters off the way a hide does it (the page function stays; the id leaves the wired list).
     const wired = await page.evaluate(() => !!PAGES.litters);
     await page.evaluate(() => { delete PAGES.litters; go('today', false); });
     await expect(page.locator('#main [data-go="litters"]')).toHaveCount(0);
@@ -101,7 +97,7 @@ test.describe('CD Hub: every small control answers a tap', () => {
     await expect(page.locator('#main')).toBeFocused();
     const card = page.locator('#needsCard'), chevron = card.locator('.house-fold').first();
     await expect(chevron).toHaveAttribute('aria-expanded', 'true');
-    await page.locator('#main h2').first().click();   // the focus leaves the page body, as it does on any tap
+    await page.locator('#main h2').first().click();
     await card.locator('[data-fold-row]').click({ position: { x: 150, y: 10 } });
     await expect(chevron).toHaveAttribute('aria-expanded', 'false');
     await card.locator('[data-fold-row]').click({ position: { x: 150, y: 10 } });
@@ -140,21 +136,19 @@ test('Compliance: the "choose a rule" list shows the pale grey fill on hover, an
   await expect(list).toHaveCSS('outline-style', 'none');
 });
 
-// Found by the click-crawl on 20 Nov 2026 (JOB CDH-HT.1): Sign out pressed while the hub was still reading left an error
-// card ("Sign in again") or a blank page where the sign-in card should be, because the unfinished read carried on.
-test('Sign out while the hub is still reading: the sign-in card stays and nothing is read back in @regression', async ({ page }) => {
+test('t-cdhub-taps-spec-1', async ({ page }) => {
   await signIn(page);
   await page.waitForFunction(() => typeof LOAD !== 'undefined' && LOAD.state === 'ok' && LOAD.later !== 'wait');
-  // hold every file read until the test lets go
   let letGo; const gate = new Promise((r) => { letGo = r; });
   await page.route(/googleapis\.com\/drive\/v3\/files\/[\w-]+\?alt=media/, async (route) => { await gate; await route.fallback(); });
-  await page.locator('#cdRefresh').click();          // Refresh reads again behind what is on screen
-  await page.waitForTimeout(300);                    // the read has started and is held
+  await page.locator('#cdRefresh').click();
+  await page.waitForTimeout(300);
   await page.locator('#cdSignout').click();
   await expect(page.locator('#signinbtn')).toBeVisible();
   letGo();
-  await page.waitForTimeout(1200);                   // the held reads come back (answered or refused)
+  await page.waitForTimeout(1200);
   await expect(page.locator('#signinbtn')).toBeVisible();
   await expect(page.locator('#nav')).toBeEmpty();
   expect(await page.evaluate(() => ({ state: LOAD.state, tables: Object.keys(T).length }))).toEqual({ state: 'signin', tables: 0 });
 });
+

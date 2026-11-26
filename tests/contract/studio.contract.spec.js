@@ -1,7 +1,3 @@
-// STUDIO DATA CONTRACT (JOB 31). No browser, no Google. Names and types only.
-// The shape is JOB 3's (the Studio engine). This file only reads it: if JOB 3 changes the shape, JOB 3's PR updates
-// tests/fixtures/studio/contract-state.json and reruns tests/contract/make-expected.js.
-// Each failure case proves itself: CONTRACT_PROVE_RED=1 flips it to expect "no problem", so it must go red.
 const { test, expect } = require('@playwright/test');
 const { EXPECTED_STATE, fixture, pageFns, checkState, codes } = require('./shape');
 
@@ -10,9 +6,8 @@ const RED = !!process.env.CONTRACT_PROVE_RED;
 const caught = (problems, code) => (RED ? expect(problems).toEqual([]) : expect(codes(problems)).toEqual([code]));
 const state = () => JSON.parse(fixture('studio/contract-state.json'));
 const check = (s) => checkState('studio-state.json', E, s);
-/** The page's own prep() (the defaults it applies after reading the file), run on a state. */
 function prep(s) {
-  const { fns, ctx } = pageFns('studio', ['prep', 'all', 'brand', 'brandOf', 'ownerId'], 'var S; function applyPend() {} function applyCpend() {}');
+  const { fns, ctx } = pageFns('studio', ['prep', 'all', 'brand', 'brandOf', 'userId'], 'var S; function applyPend() {} function applyCpend() {}');
   ctx.S = s; fns.prep(); return ctx.S;
 }
 
@@ -40,3 +35,4 @@ test.describe('Studio contract: each kind of change gives a named failure @contr
   test('empty file: {}', () => { caught(check({}), 'EMPTY'); });
   test('empty file: null', () => { caught(check(null), 'EMPTY'); });
 });
+

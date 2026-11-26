@@ -1,5 +1,4 @@
 'use strict';
-/** tools/backfill-rooms.js on FAKE data only. The tool outputs NEW rows and never edits the occupancy file. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -51,7 +50,6 @@ test('fills ONLY dogs with no room: blank area_id, or no row at all; every other
   const why = {}; r.details.forEach((d) => { why[d.dog_id] = d.result; });
   assert.equal(why['d-conflict'], 'conflict'); assert.equal(why['d-future'], 'too_early'); assert.equal(why['d-twice'], 'ambiguous');
   assert.equal(why['d-othertenant'], 'unknown_room');
-  // every new row: live header, tenant, back-fill date as moved_in, no moved_out, no classification, unique ids
   r.rows.forEach((x) => {
     assert.deepEqual(Object.keys(x), HEADER);
     assert.equal(x.tenant_id, T); assert.equal(x.moved_in, '2026-10-20');
@@ -65,17 +63,16 @@ test('the new rows, appended to a COPY, make each dog\'s current room the regist
   const env = standardEnv();
   const copy = env.text('BLD-occupancy.csv');
   const existing = Lookups.parseCsv(copy);
-  // Test B has an undated row in T1; make a blank-room dog from a fresh dog id in the same file
   const blank = existing.concat([occ('occ-blank', 'sub-test-e', '')]);
   const r = backfill([{ dog_id: 'sub-test-e', room_code: 'T3.1' }, { dog_id: 'sub-test-a', room_code: 'T1' }], blank, [{ id: 'area-t3-1', tenant_id: T, code: 'T3.1' }, { id: 'area-t1', tenant_id: T, code: 'T1' }], { tenant: T, date: '2026-10-20' });
-  assert.deepEqual(r.rows.map((x) => x.subject_id), ['sub-test-e']);       // sub-test-a is in T2: a conflict, left alone
+  assert.deepEqual(r.rows.map((x) => x.subject_id), ['sub-test-e']);
   assert.equal(r.report.conflict, 1);
   const appended = copy + toCsv(r.rows).split('\r\n').slice(1).join('\r\n');
   env.file('BLD-occupancy.csv')[0].content = appended;
   const rows = env.ctx.csvRecords_(env.text('BLD-occupancy.csv')).records;
   assert.equal(env.ctx.occupancyLatest_(rows, 'sub-test-e').area_id, 'area-t3-1');          // the script's rule
   assert.equal(Occ.latestRow(Lookups.parseCsv(appended), 'sub-test-e').area_id, 'area-t3-1');   // the browser's rule
-  assert.ok(appended.startsWith(copy));                                                    // old rows are the first bytes, unchanged
+  assert.ok(appended.startsWith(copy));
   const list = Occ.dailyList({ area: Lookups.parseCsv(fx.csvFiles()['BLD-area.csv']), subject: Lookups.parseCsv(fx.csvFiles()['BLD-subject.csv']), subject_status: [{ subject_id: 'sub-test-e', state: 'Active' }], occupancy: Lookups.parseCsv(appended) });
   assert.equal(list.dogs.filter((d) => d.id === 'sub-test-e')[0].known, true);
 });
@@ -104,7 +101,6 @@ test('CLI: reads files, prints NEW rows with CRLF, never changes the occupancy f
   assert.throws(() => main(argv.concat(['--out', occFile]), () => {}, () => {}), /NEW file/);               // the occupancy file itself
   assert.throws(() => main(argv.concat(['--out', reg]), () => {}, () => {}), /NEW file/);
   assert.deepEqual([occFile, reg, areas].map((p) => sha(fs.readFileSync(p))), hashes);                       // inputs are byte-identical
-  // bad arguments stop with a plain message
   assert.throws(() => main(argv.slice(0, 8), () => {}, () => {}), /--date is needed/);
   assert.throws(() => main(argv.map((x) => (x === '2026-10-20' ? '20/10/2026' : x)), () => {}, () => {}), /real date/);
   assert.throws(() => main(argv.map((x) => (x === T ? 'nope' : x)), () => {}, () => {}), /--tenant/);
@@ -121,7 +117,8 @@ test('150+ dogs: only the blanks are filled and the rest are untouched', () => {
     register.push({ dog_id: id, room_code: i % 2 ? 'T1' : 'T2' });
   }
   const r = backfill(register, existing, AREAS, { tenant: T, date: '2026-10-20' });
-  assert.equal(r.rows.length, 53);                                          // every third dog: 3,6,...,159
+  assert.equal(r.rows.length, 53);
   assert.equal(r.report.filled + r.report.already_there + r.report.conflict, 160);
   assert.ok(r.rows.every((x) => Number(x.subject_id.slice(4)) % 3 === 0));
 });
+

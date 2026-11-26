@@ -23,7 +23,6 @@ async function open(page, guard, { change, fail, width = 1280, scheme = 'light' 
   await page.locator('#signInBtn').click();
   await expect(page.locator('#view [data-hub-main="apps"]')).toBeVisible();
 }
-// One live app (stage 8, fresh) and one task due today, so every kind of row and number shows.
 function lively(st) {
   const now = Date.now();
   st.lists.apps.push(Object.assign({}, st.lists.apps[1], { id: 'app000008', name: 'Sample Live App', status: '8 operate', tags: [], updated: now - 36e5 }));
@@ -48,7 +47,6 @@ test.describe('Apps Main', () => {
     await expect(next.locator('a[data-hm-act]')).toHaveAttribute('href', '#/item/wrk000001');
     const kinds = await page.locator('[data-hm="needs"] .hm-row').evaluateAll((els) => els.map((e) => e.getAttribute('data-kind')));
     expect(kinds.slice(0, 2)).toEqual(['late', 'today']);
-    // More than 5 wait: "+N more" opens Do. TEST items never show.
     await expect(page.locator('[data-hm-more]')).toHaveAttribute('href', '#/do');
     await expect(page.locator('[data-hub-main]')).not.toContainText('TEST-');
     await page.locator('[data-hm="next"] a[data-hm-act]').click();
@@ -81,7 +79,7 @@ test.describe('Apps Main', () => {
   });
 
   test('nothing waits: ONE "Nothing needs you", the numbers stay', async ({ page, guard }) => {
-    await open(page, guard, { change: (st) => { st.lists.decisions = []; st.lists.work = st.lists.work.filter((t) => t.tags.indexOf('who-lisa') < 0); st.lists.sends = []; } });
+    await open(page, guard, { change: (st) => { st.lists.decisions = []; st.lists.work = st.lists.work.filter((t) => t.tags.indexOf('who-user') < 0); st.lists.sends = []; } });
     await checkMain(page, { empty: true, labels: LABELS, hrefs: HREFS, values: [0, 0, 0] });
     await expect(page.locator('#view')).toContainText('Nothing needs you');
   });
@@ -98,3 +96,4 @@ test.describe('Apps Main', () => {
     await noSideways(page);
   });
 });
+

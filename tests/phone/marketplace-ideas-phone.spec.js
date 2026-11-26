@@ -1,4 +1,3 @@
-// Marketplace Product ideas on a phone (390px): no sideways scroll, every control at least 44px tall. Invented rows only.
 const { test, expect } = require('../support/test');
 const { rowsFor, world, open } = require('../support/mkt-ideas-world');
 
@@ -17,3 +16,4 @@ test.describe('Marketplace ideas on a phone', () => {
     });
   }
 });
+

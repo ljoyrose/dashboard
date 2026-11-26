@@ -1,11 +1,7 @@
-// A pretend af-state.json for the Factory page (invented apps and tasks; ids shaped like ClickUp's).
-// 869fk9d1r is the send that hid under "Factory" on 20 Oct: its name starts "Links ·" but the app is "Sample Links";
-// only its app- tag ties them. Times are relative to `now`, so the page sees fresh data.
 (function (root) {
   function build(now) {
     now = now || Date.now();
     var H = 36e5, D = 864e5;
-    // London date and time, as the bots write them on a Sends task (the Copy gate reads these).
     var day = function (ts) { return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); };
     var hm = function (ts) { return new Date(ts).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }); };
     var task = function (o) {
@@ -15,7 +11,7 @@
       task({ id: '869fjxpc2', name: 'Sample Links', status: '4 schema', tags: ['st-4', 'who-claude', 'app-links'], desc: 'overskill: https://overskill.example.test/p/1' }),
       task({ id: '869fk9834', name: 'Kennel Book', status: '4 schema', tags: ['fam-breeder'] }),
       task({ id: '869fk8geg', name: 'TEST-Kennel Book', status: '2 base', tags: ['app-869fk8geg', 'st-2', 'fam-breeder'] }),
-      task({ id: '869fjxpc9', name: 'Vet Converter', status: '0 idea', tags: ['st-0', 'who-lisa'] }),
+      task({ id: '869fjxpc9', name: 'Vet Converter', status: '0 idea', tags: ['st-0', 'who-user'] }),
       task({ id: '869fka369', name: 'TEST-Door Check', status: '1 research', tags: ['st-1', 'app-869fka369'] }),
       task({ id: '869fk9j6h', name: 'ZZ_DELETE_TEST-APPFACT door check', status: '1 research', tags: ['st-1', 'app-869fk9j6h'], desc: 'card: https://drive.google.com/file/d/1SAMPLEzzDeleteCard000000000/view' })
     ];
@@ -27,7 +23,7 @@
           'presend: READY sha256:' + 'ab'.repeat(32) + ' ' + day(now) + '\n' +
           'Happy Hour: active, 40 min left, read ' + hm(now - 5 * 60e3) + ' · next press due ' + hm(now + 35 * 60e3) + ' · presses today 2/5\n' +
           'AFTER SEND YOU MUST: run the leak tests (~15 min after send, ~20 min)\n' +
-          'Lisa available: 16:00–18:00\n' +
+          'User available: 16:00–18:00\n' +
           'Class: CURRENT TEN:1 SEN:1 · DATA POOL:0 · TARGET TEN:3 SEN:1 (REG-0001)' }),
       task({ id: '869fk9d1n', name: 'Links · P5-READ-v13 (read-only check) · send 1 of 2', tags: ['app-869fjxpc2', 'app-links'], created: now - 3 * H, status: 'done' }),
       task({ id: '869fk6k00', name: 'Kennel Book · P2 · Dogs list', tags: ['app-869fk9834'], created: now - 5 * H }),
@@ -40,8 +36,8 @@
       task({ id: 'dec000004', name: 'Keep 12px corners on every card?', created: now - 8 * H, pri: { p: 'urgent', c: '#f50000' } })
     ];
     var work = [
-      task({ id: 'wrk000001', name: 'Vet Converter · Test the import on 3 files', tags: ['who-lisa'], created: now - 30 * 60e3, due: now - 2 * D }),
-      task({ id: 'wrk000002', name: 'Kennel Book · Fix the pedigree PDF', tags: ['who-lisa'], created: now - 9 * H }),
+      task({ id: 'wrk000001', name: 'Vet Converter · Test the import on 3 files', tags: ['who-user'], created: now - 30 * 60e3, due: now - 2 * D }),
+      task({ id: 'wrk000002', name: 'Kennel Book · Fix the pedigree PDF', tags: ['who-user'], created: now - 9 * H }),
       task({ id: 'wrk000003', name: 'Sample Links · Write schema notes', tags: ['who-grok'], created: now - 10 * H }),
       task({ id: 'wrk000004', name: 'Kennel Book · Schema check', tags: ['who-claude', 'line', 'st-4', 'app-869fk9834'], created: now - 11 * H })
     ];
@@ -54,3 +50,4 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = { build: build };
   else root.AF_FIXTURE = build;
 })(this);
+

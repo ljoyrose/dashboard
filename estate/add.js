@@ -1,6 +1,3 @@
-// Web Estate Hub, Stage 5 (Add): pure logic for the Add box. Builds the one request file the page drops into the
-// requests folder; the RR_WEB-ESTATE engine reads it, checks it again and writes one Properties row.
-// No network, no Drive, no DOM. Every example in the tests is invented (example.com style).
 (function (root, factory) {
   'use strict';
   var core = (typeof module === 'object' && module.exports) ? require('./core.js') : root.EstateCore;
@@ -12,7 +9,6 @@
 
   var MAX_TEXT = 80;
 
-  // Trim, drop control characters, cap the length. Anything that is not text becomes ''.
   function cleanText(v) {
     if (v == null) return '';
     return String(v).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MAX_TEXT).trim();
@@ -34,7 +30,6 @@
     return 'site';
   }
 
-  // What the engine checks for a new row, in order. A bare domain (no scheme, no path) also gets the mail checks.
   function scanPlan(target) {
     var t = typeof target === 'string' || target == null ? EstateCore.normaliseTarget(target) : target;
     if (!t || !t.ok) return [];
@@ -43,7 +38,6 @@
     return plan;
   }
 
-  // { input, company, brand, client, kind, by, now } -> { ok, request, fileName } or { ok:false, reason }.
   function buildRequest(o) {
     o = o || {};
     var t = EstateCore.normaliseTarget(o.input);
@@ -71,8 +65,6 @@
     };
   }
 
-  // The body the page POSTs to https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart
-  // with Content-Type: multipart/related; boundary=<boundary>. Same shape as studio putRequest.
   function multipartBody(request, folderId, boundary, fileName) {
     var name = fileName || ('estate-add-' + (Date.parse(request && request.at) || Date.now()) + '.json');
     var meta = { name: name, parents: [folderId], mimeType: 'application/json' };
@@ -90,3 +82,4 @@
     multipartBody: multipartBody
   };
 });
+

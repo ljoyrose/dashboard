@@ -17,7 +17,7 @@ const crlf = (lines) => lines.join('\r\n') + '\r\n';
 
 function setup(opts = {}) {
   const env = standardEnv({ props: Object.assign({ READ_ENABLED: 'true' }, opts.props || {}) });
-  env.email = 'owner@example.test';
+  env.email = 'user@example.test';
   if (opts.files !== false) {
     env.addFile('BLD-inspect_link.csv', crlf([H.link]));
     env.addFile('BLD-inspect_link_subject.csv', crlf([H.subj]));
@@ -30,7 +30,6 @@ function setup(opts = {}) {
     `hs-b,${fx.TENANT},sub-test-b,Hips,30/32,2025-07-01`,
     `hs-x,other-tenant,sub-test-a,Hips,99/99,2025-07-01`
   ]));
-  // V9: how long a link lasts comes from rule rows (were the fixed 7 and 30 days)
   const rules = crlf(['id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date',
     `brl-x1,${fx.TENANT},external.default_hours.inspector,168,2026-01-01,test,,,,`, `brl-x2,${fx.TENANT},external.max_hours.inspector,720,2026-01-01,test,,,,`]);
   if (opts.rules !== false) { const rf = env.file('BLD-breeding_rule.csv'); if (rf.length) { rf[0].content = rules; rf[0].sheet = undefined; } else env.addFile('BLD-breeding_rule.csv', rules); }
@@ -45,7 +44,7 @@ function read(env, code, table, over) {
 const make = (env, spec) => ok(() => env.ctx.sinkInspectMake_(Object.assign({
   label: 'Council visit', ends: '2026-10-20', subjects: ['sub-test-a'],
   fields: { subject: ['name', 'sex', { field: 'chip_number', redaction: 'last4' }], health_screen: ['test', 'grade', 'tested_on'], litter: ['dob'] }
-}, spec), 'owner@example.test'));
+}, spec), 'user@example.test'));
 
 test('a link shows only the ticked dogs and fields; chip as its last 4; other tenants never', () => {
   const env = setup();
@@ -57,7 +56,7 @@ test('a link shows only the ticked dogs and fields; chip as its last 4; other te
 
   const s = read(env, code, 'subject');
   assert.equal(s.ok, true, JSON.stringify(s));
-  assert.deepEqual(Array.from(s.result.fields), ['id', 'name', 'sex', 'chip_number']);   // the dog's id always comes, to join the lists
+  assert.deepEqual(Array.from(s.result.fields), ['id', 'name', 'sex', 'chip_number']);
   assert.deepEqual(JSON.parse(JSON.stringify(s.result.rows)), [{ id: 'sub-test-a', name: 'Test A', sex: 'Female', chip_number: '0001' }]);
   assert.equal(s.result.ends, '2026-10-20T23:59:59+01:00');
   assert.equal(s.result.redacted.chip_number, 'last4');
@@ -67,9 +66,7 @@ test('a link shows only the ticked dogs and fields; chip as its last 4; other te
   const l = read(env, code, 'litter');
   assert.deepEqual(JSON.parse(JSON.stringify(l.result.rows)), [{ dam_subject_id: 'sub-test-a', dob: '2024-03-03' }]);   // keyed on the dam
 
-  // a list with no ticked fields: nothing
   assert.equal(read(env, code, 'subject_status').code, 'NOT_ALLOWED');
-  // the code is never written to any file; each read is logged by code id
   env.drive.forEach((f) => assert.equal(String(f.content || '').includes(code), false, f.title));
   const log = env.text('BLD-inspect_access.csv').trim().split(/\r?\n/).slice(1);
   assert.equal(log.length, 3);
@@ -81,7 +78,6 @@ test('never a score list, never any list outside the inspector set, whatever the
   const m = make(env);
   const code = m.result.code;
   env.addFile('BLD-score_point.csv', crlf(['id,tenant_id,subject_id,points', `sp-1,${fx.TENANT},sub-test-a,10`]));
-  // even a hand-typed field row and a person:<id> visibility row cannot open them
   const f = env.file('BLD-inspect_link_field.csv')[0];
   f.content += crlf([`x1,${fx.TENANT},${m.result.link_id},score_point,points,`, `x2,${fx.TENANT},${m.result.link_id},area,name,`]);
   const v = env.file('BLD-field_visibility.csv')[0];
@@ -89,10 +85,8 @@ test('never a score list, never any list outside the inspector set, whatever the
   ['score_point', 'score_criterion', 'score_enrolment', 'area', 'area_reading', 'occupancy', 'check_log', '__proto__', 'constructor'].forEach((t) => {
     assert.equal(read(env, code, t).code, 'NOT_ALLOWED', t);
   });
-  // making a link cannot tick a score list either
   assert.equal(make(env, { fields: { score_point: ['points'] } }).code, 'INVALID');
   assert.equal(make(env, { fields: { area: ['name'] } }).code, 'INVALID');
-  // an inspector filter is refused, not ignored
   assert.equal(read(env, code, 'subject', { filter: { area_id: 'area-t1' } }).code, 'BAD_FILTER');
 });
 
@@ -100,7 +94,7 @@ test('the link ends by itself at the end of its last day; Stop ends it at once; 
   const env = setup();
   const a = make(env), b = make(env, { label: 'Second visit' });
   assert.equal(read(env, a.result.code, 'subject').ok, true);
-  env.nowMs = Date.UTC(2026, 9, 20, 22, 59, 0);   // 23:59 London on the last day: still open
+  env.nowMs = Date.UTC(2026, 9, 20, 22, 59, 0);
   assert.equal(read(env, a.result.code, 'subject').ok, true);
   env.nowMs = Date.UTC(2026, 9, 20, 23, 0, 0);    // midnight London: ended
   const r = read(env, a.result.code, 'subject');
@@ -108,8 +102,8 @@ test('the link ends by itself at the end of its last day; Stop ends it at once; 
   assert.equal(r.message, 'This link has ended.');
 
   env.nowMs = Date.UTC(2026, 9, 16, 10, 0, 0);
-  assert.equal(ok(() => env.ctx.sinkInspectStop_(b.result.link_id, 'owner@example.test')).code, 'INVALID');   // a reason is needed
-  assert.equal(ok(() => env.ctx.sinkInspectStop_(b.result.link_id, 'owner@example.test', 'visit finished')).ok, true);
+  assert.equal(ok(() => env.ctx.sinkInspectStop_(b.result.link_id, 'user@example.test')).code, 'INVALID');   // a reason is needed
+  assert.equal(ok(() => env.ctx.sinkInspectStop_(b.result.link_id, 'user@example.test', 'visit finished')).ok, true);
   assert.equal(read(env, b.result.code, 'subject').code, 'BAD_CODE');
   const list = JSON.parse(JSON.stringify(env.ctx.sinkInspectLinks_()));
   assert.deepEqual(list.map((x) => [x.label, x.state, x.dogs, x.fields]), [['Second visit', 'stopped', 1, 7], ['Council visit', 'active', 1, 7]]);
@@ -135,7 +129,6 @@ test('dogs: only rows in force today; no dog rows means no rows; a link row for 
   assert.equal(read(env, m.result.code, 'subject').result.count, 1);
   s.content = crlf([H.subj]);
   assert.equal(read(env, m.result.code, 'subject').result.count, 0);
-  // the link row names a different code: this code finds no link
   const l = env.file('BLD-inspect_link.csv')[0];
   l.content = l.content.replace(`,${m.result.code_id},`, ',sc-zzzzzz,');
   assert.equal(read(env, m.result.code, 'subject').code, 'NOT_ALLOWED');
@@ -156,7 +149,6 @@ test('making a link: checks every choice, writes nothing on a refusal, and needs
   });
   assert.equal(JSON.stringify(env.drive), before);
   assert.equal(env.props.STAFF_REGISTRY, reg);
-  // blank end = the external.default_hours.inspector rule row (168 hours from now)
   assert.equal(make(env, { ends: '' }).result.ends, env.ctx.londonIso_(new Date(env.nowMs + 168 * 3600000)));
 
   const env2 = setup({ files: false });
@@ -164,13 +156,13 @@ test('making a link: checks every choice, writes nothing on a refusal, and needs
   assert.equal(env2.props.STAFF_REGISTRY.includes('INSPECTOR'), false);
 });
 
-test('owner page: only the signed-in owner can make, list or stop a link', () => {
+test('user page: only the signed-in user can make, list or stop a link', () => {
   const env = setup();
   env.email = 'someone@example.test';
-  ['ui_inspectChoices', 'ui_inspectLinks'].forEach((fn) => assert.equal(env.ctx[fn]().code, 'NOT_OWNER', fn));
-  assert.equal(env.ctx.ui_inspectMake({ label: 'x', subjects: ['sub-test-a'], fields: { subject: ['name'] } }).code, 'NOT_OWNER');
-  assert.equal(env.ctx.ui_inspectStop('ilk-x').code, 'NOT_OWNER');
-  env.email = 'owner@example.test';
+  ['ui_inspectChoices', 'ui_inspectLinks'].forEach((fn) => assert.equal(env.ctx[fn]().code, 'NOT_USER', fn));
+  assert.equal(env.ctx.ui_inspectMake({ label: 'x', subjects: ['sub-test-a'], fields: { subject: ['name'] } }).code, 'NOT_USER');
+  assert.equal(env.ctx.ui_inspectStop('ilk-x').code, 'NOT_USER');
+  env.email = 'user@example.test';
   const c = env.ctx.ui_inspectChoices();
   assert.equal(c.ok, true);
   assert.deepEqual(Array.from(c.result.lists.subject), ['id', 'name', 'dob', 'sex', 'chip_number']);
@@ -186,20 +178,18 @@ test('owner page: only the signed-in owner can make, list or stop a link', () =>
   const m = env.ctx.ui_inspectMake({ label: 'Vet visit', subjects: ['sub-test-a'], fields: { subject: ['name'] } });
   assert.equal(m.ok, true);
   assert.equal(env.ctx.ui_inspectLinks().result.links[0].state, 'active');
-  // the owner's staff list shows the link as a code that ends, never the code itself
   const staff = JSON.stringify(env.ctx.ui_staffList());
   assert.ok(staff.includes('Inspector - Vet visit (ends ' + env.ctx.londonIso_(new Date(env.nowMs + 168 * 3600000)) + ')'));
   assert.equal(staff.includes(m.result.code), false);
 });
 
-test('owner page: Make a link ticks the suggested set, shows the link once with Copy, and Show links lists it with Stop', async () => {
+test('user page: Make a link ticks the suggested set, shows the link once with Copy, and Show links lists it with Stop', async () => {
   const { JSDOM } = require('jsdom');
   const fs = require('node:fs'), path = require('node:path');
   const env = setup({ props: { INSPECT_PAGE_URL: 'https://example.test/cdhub/staff/inspect/', INSPECT_SCRIPT_ID: 'AKfyTEST_id-123456' } });
   const html = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'ApprovePage.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'outside-only', url: 'https://script.example.test/' });
   const w = dom.window;
-  // google.script.run backed by the real server functions (in this test's sandbox)
   const run = () => {
     let ok = () => {};
     const p = new Proxy({}, { get: (_, k) => {
@@ -220,8 +210,8 @@ test('owner page: Make a link ticks the suggested set, shows the link once with 
   const form = $('#in-form');
   const boxes = [...form.querySelectorAll('label.tick')].map((l) => [l.textContent, l.querySelector('input').checked]);
   ['name', 'sex', 'dob', 'test', 'grade', 'tested_on'].forEach((c) => assert.equal(boxes.find(([t]) => t === c)[1], true, c));   // the suggested set starts ticked
-  assert.equal(boxes.find(([t]) => t === 'chip_number')[1], false);   // the chip on the dog list is not in the suggested set
-  assert.equal(boxes.some(([t]) => t === 'id' || t === 'subject_id' || t === 'dam_subject_id'), false);   // the dog key always comes, never ticked
+  assert.equal(boxes.find(([t]) => t === 'chip_number')[1], false);
+  assert.equal(boxes.some(([t]) => t === 'id' || t === 'subject_id' || t === 'dam_subject_id'), false);
   form.querySelector('input[type=text]').value = 'Council visit';
   [...form.querySelectorAll('label.tick')].find((l) => l.textContent === 'Test A').querySelector('input').checked = true;
   [...form.querySelectorAll('button')].find((b) => b.textContent === 'Make link').click(); await tick(); await tick();
@@ -262,12 +252,11 @@ test('window: now for N hours, until HH:MM today, or scheduled from-to; the link
   assert.equal(read(env, s.result.code, 'subject').ok, true);
   env.nowMs = env.ctx.londonLocalMs_(day + 'T13:31');
   assert.equal(read(env, s.result.code, 'subject').code, 'BAD_CODE');
-  // the link row keeps both times, stored in UTC (S4.2)
   const row = env.file('BLD-inspect_link.csv')[0].content;
   assert.ok(row.includes(new Date(env.ctx.londonLocalMs_(day + 'T09:00')).toISOString().replace(/\.\d{3}Z$/, 'Z')));
 });
 
-test('window: refused when the end is before the start, too long for the rule row, or a time has passed; no rule row = the owner must say', () => {
+test('window: refused when the end is before the start, too long for the rule row, or a time has passed; no rule row = the user must say', () => {
   const env = setup();
   const day = env.ctx.addDays_(env.ctx.todayLondon_(new Date(env.nowMs)), 1);
   assert.equal(make(env, { ends: undefined, starts_at: day + 'T13:00', ends_at: day + 'T09:00' }).fields.ends_at, 'The end must be after the start.');
@@ -276,8 +265,7 @@ test('window: refused when the end is before the start, too long for the rule ro
   assert.equal(make(env, { ends: undefined, until: '25:00' }).code, 'INVALID');
   const none = setup({ rules: false });
   assert.equal(make(none, { ends: undefined }).fields.ends_at, 'Choose when it ends.');
-  assert.equal(make(none, { ends: undefined, hours: 2000 }).ok, true);   // no max row: the owner's own choice stands
-  // a rule row from a later date is not in force yet
+  assert.equal(make(none, { ends: undefined, hours: 2000 }).ok, true);
   const later = setup();
   const rf = later.file('BLD-breeding_rule.csv')[0];
   rf.content = rf.content.replace(/,2026-01-01,/g, ',2099-01-01,');
@@ -296,28 +284,28 @@ test('window: an old 7-column link file still works for links from now, but cann
   assert.equal(make(env, { ends: undefined, starts_at: day + 'T09:00', ends_at: day + 'T10:00' }).fields.starts_at.includes('from_at'), true);
 });
 
-test('fit to breed: the job\'s saved records show with the old list, valid until the job\'s own every_days; owner-only columns never come', () => {
+test('fit to breed: the job\'s saved records show with the old list, valid until the job\'s own every_days; user-only columns never come', () => {
   const env = setup();
   env.addFile('BLD-fit_to_breed.csv', crlf(['id,tenant_id,subject_id,assessed_on,vet_name', `ftb-old,${fx.TENANT},sub-test-a,2025-07-01,Old Vet`]));
   env.addFile('BLD-check_type.csv', crlf(['id,tenant_id,type_key,label,target,every_days,effective_from',
     `cty-ftb-1,${fx.TENANT},fit_to_breed,Fit to breed,dog,365,2026-01-01`, `cty-other,${fx.TENANT},nails,Nails,dog,7,2026-01-01`]));
   env.addFile('BLD-check_log.csv', crlf(['id,tenant_id,check_type_id,subject_id,outcome,happened_at,note,taken_at,taken_by,corrects_id,how_recorded,time_given',
-    `clg-1,${fx.TENANT},cty-ftb-1,sub-test-a,ok,2026-08-13T12:00:00Z,Fit no conditions,2026-11-15T06:40:00Z,Owner,,import,false`,
-    `clg-2,${fx.TENANT},cty-ftb-1,sub-test-b,ok,2026-08-13T12:00:00Z,Other dog,2026-11-15T06:40:01Z,Owner,,import,false`,
+    `clg-1,${fx.TENANT},cty-ftb-1,sub-test-a,ok,2026-08-13T12:00:00Z,Fit no conditions,2026-11-15T06:40:00Z,User,,import,false`,
+    `clg-2,${fx.TENANT},cty-ftb-1,sub-test-b,ok,2026-08-13T12:00:00Z,Other dog,2026-11-15T06:40:01Z,User,,import,false`,
     `clg-3,${fx.TENANT},cty-other,sub-test-a,ok,2026-08-14T09:00:00Z,nails,2026-08-14T09:00:00Z,Staff,,tapped,`,
     `clg-4,other-tenant,cty-ftb-1,sub-test-a,ok,2026-08-13T12:00:00Z,x,2026-08-13T12:00:00Z,x,,import,false`,
-    `clg-5,${fx.TENANT},cty-ftb-1,sub-test-a,ok,2026-08-10T12:00:00Z,wrong day,2026-08-10T12:00:00Z,Owner,,import,false`,
-    `clg-6,${fx.TENANT},cty-ftb-1,sub-test-a,ok,2026-08-11T12:00:00Z,corrected,2026-08-11T12:00:00Z,Owner,clg-5,import,false`]));
+    `clg-5,${fx.TENANT},cty-ftb-1,sub-test-a,ok,2026-08-10T12:00:00Z,wrong day,2026-08-10T12:00:00Z,User,,import,false`,
+    `clg-6,${fx.TENANT},cty-ftb-1,sub-test-a,ok,2026-08-11T12:00:00Z,corrected,2026-08-11T12:00:00Z,User,clg-5,import,false`]));
   const choices = env.ctx.sinkInspectChoices_();
   assert.deepEqual(Array.from(choices.lists.fit_to_breed), ['id', 'subject_id', 'assessed_on', 'vet_name', 'done_on', 'outcome', 'note', 'valid_until']);
-  assert.equal(make(env, { fields: { fit_to_breed: ['done_on', 'taken_by'] } }).code, 'INVALID');   // who typed it stays the owner's
+  assert.equal(make(env, { fields: { fit_to_breed: ['done_on', 'taken_by'] } }).code, 'INVALID');
   assert.equal(make(env, { fields: { fit_to_breed: ['done_on', 'how_recorded'] } }).code, 'INVALID');
   const m = make(env, { fields: { fit_to_breed: ['assessed_on', 'vet_name', 'done_on', 'outcome', 'note', 'valid_until'] } });
   assert.equal(m.ok, true, JSON.stringify(m));
   const r = read(env, m.result.code, 'fit_to_breed');
   assert.equal(r.ok, true, JSON.stringify(r));
   const rows = JSON.parse(JSON.stringify(r.result.rows));
-  assert.deepEqual(rows.map((x) => x.done_on || x.assessed_on).sort(), ['2025-07-01', '2026-08-11', '2026-08-13']);   // the old row, and only this dog's standing ftb records
+  assert.deepEqual(rows.map((x) => x.done_on || x.assessed_on).sort(), ['2025-07-01', '2026-08-11', '2026-08-13']);
   const rec = rows.find((x) => x.done_on === '2026-08-13');
   assert.deepEqual(rec, { subject_id: 'sub-test-a', assessed_on: '', vet_name: '', done_on: '2026-08-13', outcome: 'ok', note: 'Fit no conditions', valid_until: '2027-08-13' });
   assert.equal(Object.prototype.hasOwnProperty.call(rec, 'taken_by'), false);
@@ -333,7 +321,6 @@ test('fit to breed with no old file still shows the job\'s records', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(r.result.rows)), [{ subject_id: 'sub-test-a', done_on: '2026-08-13', valid_until: '' }]);   // as needed: no end shown
 });
 
-// 18 Nov 2026 (CD Hub demo): temperatures and job records through the same link
 function siteSetup() {
   const env = setup();
   const put = (name, lines) => { const f = env.file(name); if (f.length) { f[0].content = crlf(lines); f[0].sheet = undefined; } else env.addFile(name, crlf(lines)); };
@@ -348,7 +335,6 @@ function siteSetup() {
     `clg-1,${fx.TENANT},cty-w,,,done,2026-10-11T09:00:00+01:00,Test Staff,`,
     `clg-2,${fx.TENANT},cty-h,area-r1,sub-test-a,ok,2026-10-11T08:00:00+01:00,Test Staff,`,
     `clg-3,${fx.TENANT},cty-h,area-r1,sub-test-b,ok,2026-10-11T08:01:00+01:00,Test Staff,`]);
-  // litter records: lit-a's mum (sub-test-a) is on the link, lit-c's mum is not, lit-zz is unknown
   const cl = env.file('BLD-check_log.csv')[0];
   cl.content = cl.content.replace('id,tenant_id,check_type_id,area_id,subject_id,outcome', 'id,tenant_id,check_type_id,area_id,subject_id,litter_id,outcome')
     .replace(/^(clg-[0-9]+,[^,]*,[^,]*,[^,]*,[^,]*,)/gm, '$1,')
@@ -383,7 +369,7 @@ test('job records: names not ids; a record about one dog only for the link dogs;
   assert.equal(JSON.stringify(rows).includes('cty-'), false);
 });
 
-test('the owner may limit the days shown; a bad range is refused; inspectors still cannot save', () => {
+test('the user may limit the days shown; a bad range is refused; inspectors still cannot save', () => {
   const env = siteSetup();
   const m = make(env, { data_from_date: '2026-10-11', data_to_date: '2026-10-11', fields: { subject: ['name'], area_reading: ['room', 'taken_at'], check_log: ['job'] } });
   assert.equal(m.ok, true, JSON.stringify(m));
@@ -396,7 +382,7 @@ test('the owner may limit the days shown; a bad range is refused; inspectors sti
   assert.equal(JSON.stringify(s).includes('"ok":true,"result":{"saved"'), false);
 });
 
-test('the owner choices list the readable columns for temperatures and jobs', () => {
+test('the user choices list the readable columns for temperatures and jobs', () => {
   const env = siteSetup();
   const ch = env.ctx.sinkInspectChoices_();
   assert.ok(ch.lists.area_reading.includes('room'));
@@ -425,7 +411,6 @@ test('a column named like a score is never offered, never accepted and never sho
   const bad = make(env, { fields: { subject: ['name'], health_screen: ['test', 'body_score'] } });
   assert.equal(bad.ok, false);
   assert.equal(bad.code, 'INVALID');
-  // a field row written by hand is still not served
   const m = make(env, { fields: { subject: ['name'], health_screen: ['test'] } });
   const ff = env.file('BLD-inspect_link_field.csv')[0];
   ff.content += crlf([`hand-1,${fx.TENANT},${m.result.link_id},health_screen,body_score,`]);
@@ -434,3 +419,4 @@ test('a column named like a score is never offered, never accepted and never sho
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(Array.from(r.result.fields).includes('body_score'), false);
 });
+

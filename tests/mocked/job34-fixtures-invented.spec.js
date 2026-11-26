@@ -1,4 +1,3 @@
-// JOB 34 Stage 1: every JOB 34 fixture is obviously invented (public repo). Reads files only; opens no page.
 const fs = require('fs');
 const path = require('path');
 const { test, expect, fixture } = require('../fixtures/job34/load');
@@ -25,3 +24,4 @@ test.describe('JOB 34 fixtures are invented', () => {
     expect(bad).toEqual([]);
   });
 });
+

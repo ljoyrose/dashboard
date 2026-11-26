@@ -1,6 +1,4 @@
-/** CSV helpers (RFC 4180). Pure functions: no Apps Script services used. */
 
-/** Parse CSV text into an array of rows (arrays of strings). Handles quotes, CRLF/LF, BOM. */
 function csvParse_(text) {
   var rows = [], row = [], field = '', inQ = false, i = 0, n = text.length;
   if (n && text.charCodeAt(0) === 0xFEFF) i = 1;
@@ -25,7 +23,6 @@ function csvParse_(text) {
   return rows;
 }
 
-/** Parse into {header:[...], records:[{col:value}]}. Blank lines are skipped. */
 function csvRecords_(text) {
   var rows = csvParse_(text).filter(function (r) { return !(r.length === 1 && r[0] === ''); });
   if (!rows.length) return { header: [], records: [] };
@@ -38,29 +35,21 @@ function csvRecords_(text) {
   return { header: header, records: records };
 }
 
-/** Escape one value for CSV. */
 function csvEscape_(v) {
   var s = (v === null || v === undefined) ? '' : String(v);
   if (/[",\r\n]/.test(s) || /^\s|\s$/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
 
-/** Build one CSV line (no line ending) from values in column order. */
 function csvLine_(values) {
   return values.map(csvEscape_).join(',');
 }
 
-/** Detect the line ending a file already uses (default CRLF, which the BLD files use). */
 function csvEol_(text) {
   var m = /\r\n|\n/.exec(text);
   return m ? m[0] : '\r\n';
 }
 
-/**
- * Where each record sits in the raw text, so one record can be replaced without touching a byte of the others.
- * Returns [{start, end, next}] for the header (index 0) and then each non-blank record in order, matching
- * csvRecords_: start..end is the record without its line ending, next is where the following record begins.
- */
 function csvSpans_(text) {
   var spans = [], n = text.length, i = 0, inQ = false, start = 0, fields = 0, field = '';
   if (n && text.charCodeAt(0) === 0xFEFF) { i = 1; start = 1; }
@@ -90,3 +79,4 @@ function csvSpans_(text) {
   if (field !== '' || fields > 0) closeRow(n, n);
   return spans;
 }
+

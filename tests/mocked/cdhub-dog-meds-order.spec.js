@@ -1,5 +1,3 @@
-// Dog card medications (Lisa 25 Nov 2026): the list had the oldest at the top.
-// Newest date first. Two rows on the same date keep the order they were read in. Invented rows only.
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 
 const csv = (h, rows) => [h].concat(rows).join('\r\n') + '\r\n';
@@ -11,12 +9,11 @@ function put(world, name, content) {
   world.file('fx-' + name, name, content, { parents: like.parents, driveId: like.driveId, mimeType: like.mimeType });
 }
 
-test('dog card medications list the newest first, and the same date keeps its order @regression', async ({ page, guard }) => {
+test('t-cdhub-dog-meds-order-spec-1', async ({ page, guard }) => {
   const w = guard.world;
   put(w, 'BLD-subject.csv', csv('id,tenant_id,name,sex,dob,kind,neuter_status', [
     'sub-med,t,Pretend Meds,Female,2020-01-01,Breeding,entire']));
   put(w, 'BLD-subject_status.csv', csv('id,tenant_id,subject_id,state', ['s1,t,sub-med,Active']));
-  // File order is oldest first, as the live sheet is. Two rows share 13 Aug 2026.
   put(w, 'BLD-dispense.csv', csv('id,subject_id,given_on,product,dose_volume,route,source', [
     'm1,sub-med,2020-08-31,Oldest wormer,1 tab,Oral,Pretend',
     'm2,sub-med,2026-01-02,January tablet,1 tab,Oral,Pretend',
@@ -39,3 +36,4 @@ test('dog card medications list the newest first, and the same date keeps its or
   await expect(rows.nth(3)).toContainText('31 Aug 2020');
   await expect(rows.nth(3)).toContainText('Oldest wormer');
 });
+

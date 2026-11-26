@@ -9,11 +9,11 @@ const todayLondon = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/L
 const plus = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 
 const WORK = [
-  'id,raised_on,raised_by,area,item,status,blocked_on,owner,evidence,note',
-  'W901,2026-11-01,Lisa,areas,Pretend screws in a door,BLOCKED,Lisa to fit,Lisa,,',
-  'W902,2026-11-01,Lisa,dogs,Pretend colour ruling,BLOCKED,Lisa to rule,Lisa,,',
-  'W903,2026-11-01,Lisa,health,Pretend grouped checks,OPEN,,Claude,,',
-  'W904,2026-11-01,Lisa,areas,Pretend measured rooms,BLOCKED,Lisa to measure,Lisa,,',
+  'id,raised_on,raised_by,area,item,status,blocked_on,user,evidence,note',
+  'W901,2026-11-01,User,areas,Pretend screws in a door,BLOCKED,User to fit,User,,',
+  'W902,2026-11-01,User,dogs,Pretend colour ruling,BLOCKED,User to rule,User,,',
+  'W903,2026-11-01,User,health,Pretend grouped checks,OPEN,,Claude,,',
+  'W904,2026-11-01,User,areas,Pretend measured rooms,BLOCKED,User to measure,User,,',
 ].join('\n') + '\n';
 const REQ_HEAD = 'id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on';
 
@@ -84,9 +84,9 @@ plain('Reassign offers the starting list, moves the row and says who it waits on
   const sent = await openWork(page);
   await page.locator('#work-W902 [data-wk-open^="re:"]').click();
   const opts = page.locator('#work-W902 [data-wk-to]');
-  await expect(opts).toHaveText(['Claude', 'Staff']);   // not the current owner
+  await expect(opts).toHaveText(['Claude', 'Staff']);
   await page.locator('#work-W902 [data-wk-to="Staff"]').click();
-  expect(sent[0].fields).toMatchObject({ need_type: 'work.owner.Staff', target_table: 'work', target_id: 'W902', from_date: todayLondon() });
+  expect(sent[0].fields).toMatchObject({ need_type: 'work.user.Staff', target_table: 'work', target_id: 'W902', from_date: todayLondon() });
   const row = page.locator('#work-W902');
   await expect(row).toBeVisible();
   await expect(row).toContainText('Waiting on Staff');
@@ -111,8 +111,8 @@ const withActions = withRows([
   `req-a,ten-x,work.done,work,W901,2026-11-12,,Pretend done,sc-aaaaaa,2026-11-12T10:00:00Z`,
   `req-b,ten-x,work.snooze,work,W902,2020-01-01,2020-01-08,Pretend old snooze,sc-aaaaaa,2020-01-01T10:00:00Z`,
   `req-c,ten-x,work.snooze,work,W904,2026-01-01,2099-01-01,Pretend long snooze,sc-aaaaaa,2026-01-01T10:00:00Z`,
-], ['r-wk,ten-x,work.snooze.days,2|14,2020-01-01,Owner setting,,2020-01-01T00:00:00Z,sc-aaaaaa,,']);
-withActions('rows already done stay off; an ended snooze is back; the owner setting decides the snooze choices', async ({ page }) => {
+], ['r-wk,ten-x,work.snooze.days,2|14,2020-01-01,User setting,,2020-01-01T00:00:00Z,sc-aaaaaa,,']);
+withActions('rows already done stay off; an ended snooze is back; the user setting decides the snooze choices', async ({ page }) => {
   await page.route(SINK, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"result":{"status":"saved","id":"x"}}' }));
   await page.goto('cdhub/');
   await page.locator('#signinbtn').click();
@@ -120,7 +120,7 @@ withActions('rows already done stay off; an ended snooze is back; the owner sett
   await page.evaluate((url) => { localStorage.setItem('cdhub.sink.url', url); localStorage.setItem('cdhub.sink.code', 'pretend-code'); }, SINK);
   await page.goto('cdhub/#/work');
   await expect(page.locator('#work-W902')).toBeVisible();
-  await expect(page.locator('#work-W901')).toHaveCount(0);   // done on 12 Nov: off the lists
+  await expect(page.locator('#work-W901')).toHaveCount(0);
   await expect(page.locator('#work-W904')).toContainText('Back 1 Jan 2099');
   await page.locator('#work-W902 [data-wk-open^="sn:"]').click();
   await expect(page.locator('#work-W902 [data-wk-days]')).toHaveText(['2 days', '14 days']);
@@ -139,3 +139,4 @@ plain('a failed save says so and the row stays', async ({ page }) => {
   await expect(page.locator('#work-W901 [data-saved="bad"]')).toHaveText('Not saved: Pretend failure. Nothing changed; try again.');
   await expect(page.locator('#work-W901')).toBeVisible();
 });
+

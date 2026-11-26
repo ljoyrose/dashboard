@@ -58,12 +58,9 @@
   --ljr-5-icon: #428C46; --ljr-6-icon: #0F82BC; --ljr-7-icon: #995DCB; --ljr-8-icon: #3A3632;   /* 8 = warm charcoal, never black */
   /* Main's line: every colour = the whole picture (the owner's pick 3i A). */
   --ljr-rainbow: linear-gradient(90deg, var(--ljr-2), var(--ljr-3), var(--ljr-4), var(--ljr-5), var(--ljr-6), var(--ljr-7));
-  /* Courier bands on Marketplace post cards (approximate brand colours, the same in dark mode; name always written too). */
   --ljr-cb-inpost: #FFCD00; --ljr-cb-inpost-on: #111111; --ljr-cb-evri: #00539F; --ljr-cb-rm: #DA202A; --ljr-cb-dpd: #A50034; --ljr-cb-yodel: #1E6B32; --ljr-cb-pf: #B5121B; --ljr-cb-none: #595959; --ljr-cb-on: #FFFFFF;
-  /* Person badges on Marketplace cards (white initials on each; all pass 4.5:1). */
-  --ljr-ava-lisa: #7A3E9D; --ljr-ava-cy: #0F7B6C; --ljr-ava-g: #B4540A; --ljr-ava-h: #2B5FB4; --ljr-ava-cn: #A3324A; --ljr-ava-other: #555555; --ljr-ava-on: #FFFFFF;
+  --ljr-ava-user: #7A3E9D; --ljr-ava-cy: #0F7B6C; --ljr-ava-g: #B4540A; --ljr-ava-h: #2B5FB4; --ljr-ava-cn: #A3324A; --ljr-ava-other: #555555; --ljr-ava-on: #FFFFFF;
 }
-/* B  Dark mode (follows the device). Fills stay the same; text and tints change so they still read on a dark page. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
@@ -81,8 +78,6 @@
   }
 }
 
-/* Mode = Dark from Studio's Look menu ([data-theme="dark"] on <html>, set by toolkit.js from 'dash-look'): the same dark spine as the
-   device's dark mode, written once here so no page repeats it. */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --ljr-ink: #F3EEE5; --ljr-paper: #232019; --ljr-cream: #191714; --ljr-muted: #B4AB9E;
@@ -103,7 +98,6 @@
    Sizes and lines are the same in every look. Colours: "Warm clear" (default) and "Cool clear" (Look menu, html.look-cool),
    each with a dark version (the device's dark mode, or Look > Dark = [data-theme="dark"]). */
 :root {
-  /* C  Shape and spacing. */
   --house-radius: 12px;            /* one radius on everything; dots and rings are round */
   --house-line: 1px;               /* every line */
   --house-bar: 3px;                /* H  colour lines: 3px down the WHOLE left edge of a card or row, curved with its 12px corner */
@@ -148,20 +142,14 @@
   /* E  Typing boxes (input, textarea, select, contenteditable): 16px on every page, so a phone (iPhone Safari) never zooms in when one is
      tapped. The only size above 15px that is not a heading or figure. */
   --fs-input: 16px;
-  /* F  The look swap: the top-bar button that opens the Look menu (Warm / Cool, Light / Dark / Device). It rests on the frame's own line,
-     hover draws the frame-ink line, and the chosen look in the menu wears the ink line (aria-pressed); no fill in any state. */
   --house-look-btn: var(--house-btn); --house-look-line: var(--house-frame-line); --house-look-hover: var(--house-frame-ink); --house-look-on: var(--house-ink);
-  /* I  Fold (every card or section with a heading) and "+N more": a grey 16px chevron in a house control; folded it turns a quarter.
-     On a phone a list of more than 5 rows shows its first 3 and a "+N more" link-button (14px, underlined). */
   --house-fold-icon: 16px; --house-fold-turn: -90deg; --house-fold-phone-max: 5; --house-fold-phone-rows: 3; --house-more-size: var(--fs-small);
-  /* J  Looks. Warm clear, light */
   --house-paper: #EEE8DF; --house-canvas: #E3DBCF; --house-card: #FFFEFB; --house-ink: #262624; --house-muted: #57504A;
   --house-soft-line: #BFB4A3; --house-soft: #DED5C7;
   --house-press: #8A7F70;          /* the ONE control line every pressable rests on (3:1) */
   --house-ring: var(--house-press); /* read-only rings (plain date pills, tags, counts): the same one line */
   --house-frame: #3A3632; --house-foot: #46413B; --house-frame-ink: #F6F1E8; --house-frame-line: #9C9285;
   --house-shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
-  /* Meaning lines (3:1 or better on a card): date pills, yes / no, needs-you. Tints are the slot tints. */
   --house-late: var(--ljr-2); --house-late-tint: var(--ljr-2-tint);   /* rose ring: late only (DashKit.count in toolkit.js) */
   /* K  Broken counts (the owner, 3 Nov 2026): the black badge, the one fill a count may have. */
   --house-broken-fill: #1E1C1A; --house-broken-ink: #FFFFFF;
@@ -203,3 +191,4 @@
 
 /* Links (the owner, 20 Oct 2026): normal text colour, underlined; never default blue. */
 a { color: inherit; }
+

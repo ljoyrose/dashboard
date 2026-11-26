@@ -1,7 +1,3 @@
-// FACTORY DATA CONTRACT (JOB 31b). No browser, no Google. Names and types only.
-// The page (factory/index.html) reads one file, af-state.json, written by AF-ENGINE. This file only reads that shape:
-// if the engine changes it, the engine's PR updates tests/fixtures/factory/state.js and reruns tests/contract/make-expected-factory.js.
-// Each failure case proves itself: CONTRACT_PROVE_RED=1 flips it to expect "no problem", so it must go red.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -16,7 +12,6 @@ const { build } = require('../fixtures/factory/state.js');
 const state = () => JSON.parse(JSON.stringify(build(Date.now())));
 const check = (s) => checkState('af-state.json', E, s);
 
-/** The page's own list readers (allTasks, apps, mine, decisions), run on a state in a sandbox. */
 function pageLists(s) {
   const html = fs.readFileSync(path.join(REPO, 'factory', 'index.html'), 'utf8');
   const names = ['allTasks', 'apps', 'isOpen', 'mine', 'decisions', 'queuedN', 'stuck'];
@@ -53,8 +48,9 @@ test.describe('Factory contract: each kind of change gives a named failure @cont
   test('renamed field: an app "status" becomes "stage"', () => { const s = state(); s.lists.apps[0].stage = s.lists.apps[0].status; delete s.lists.apps[0].status; caught(check(s), 'RENAMED'); });
   test('extra key: the file gains "newThing"', () => { const s = state(); s.newThing = {}; caught(check(s), 'EXTRA'); });
   test('wrong type: a task "updated" is an ISO date text (stuck() would never fire)', () => { const s = state(); s.lists.apps[0].updated = new Date().toISOString(); caught(check(s), 'WRONG_TYPE'); });
-  test('wrong type: "tags" is one text, not a list', () => { const s = state(); s.lists.work[0].tags = 'who-lisa'; caught(check(s), 'WRONG_TYPE'); });
+  test('wrong type: "tags" is one text, not a list', () => { const s = state(); s.lists.work[0].tags = 'who-user'; caught(check(s), 'WRONG_TYPE'); });
   test('wrong type: "lists" is a list, not an object', () => { const s = state(); s.lists = [].concat(s.lists.apps); caught(check(s), 'WRONG_TYPE'); });
   test('empty file: {}', () => { caught(check({}), 'EMPTY'); });
   test('empty file: null', () => { caught(check(null), 'EMPTY'); });
 });
+

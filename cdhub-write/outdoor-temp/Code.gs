@@ -1,47 +1,10 @@
-/**
- * BLD outdoor temperature log (the script bound to the BLD-outdoor_temp Sheet; Extensions > Apps Script > Code.gs).
- * Free source: Open-Meteo (no key, no account). Kept in the repo from 17 Nov 2026 so changes go through a PR.
- *
- * WHAT IT DOES
- *  - Keeps ONE row per day in the first tab ("readings"), in the same columns as the original BLD-outdoor_temp.csv,
- *    plus current_temp, current_at, locked.
- *  - Every 3 hours it updates today's row (min/max so far plus the current reading) and the next 6 days as
- *    reading_kind = "forecast". A forecast row is overwritten in place by the real figures once its day has passed.
- *  - It finalises yesterday's row as reading_kind = "actual".
- *  - Rows with locked = Y are never touched, so any value can be hand-edited safely.
- *  - Optional email warning when today's low is below WARN_LOW or the high is above WARN_HIGH.
- *
- * IDS (17 Nov 2026, Lisa: "Clear all failures and ensure this is not repeated"; wx-0584 and wx-0585 were used twice)
- *  - A new row takes the next number after the HIGHEST wx- id ever used: the highest in the sheet or the highest
- *    this script has handed out before (Script Property WX_LAST_ID), whichever is larger. A deleted row's number is
- *    never given out again.
- *  - Only one run writes at a time (LockService). A second run that cannot get the lock in 30 s writes nothing.
- *  - The archive back-fill takes ids the same way and skips days already in the sheet.
- *
- * OPEN-METEO BUSY (429): the run writes nothing, logs one line and ends normally; the next 3-hourly run tries again.
- *
- * SETTINGS (Script Properties; Project Settings > Script Properties. Not in this file: the repo is public.)
- *  LAT, LON        the point to read, e.g. 51.42, -3.21          (needed)
- *  LOCATION        text written in the location column            (needed)
- *  LOCATION_KEY    short location key, e.g. the postcode          (needed)
- *  TENANT          tenant id, e.g. ten-...                        (needed)
- *  ALERT_EMAIL     where the cold/hot warning goes; blank = no emails
- *  OLD_CSV_ID      Drive id of the old AccuWeather CSV, only for setup()'s one-off archive copy
- *  WX_LAST_ID      set by the script: the highest wx- number handed out so far
- *
- * INSTALL / UPDATE
- *  1. Set the Script Properties above (copy the values from the old CFG block before replacing the code).
- *  2. Paste this file over Code.gs, Save (toolbar button).
- *  3. Run fixTriggers() once: one trigger, run() every 3 hours; a trigger for a function that no longer exists
- *     (e.g. writeForecast) is deleted.
- */
 
 var CFG = {
   TZ: 'Europe/London',
   WARN_LOW: 10,
   WARN_HIGH: 27,
   BACKFILL_FROM: '2025-01-01',
-  FORECAST_DAYS: 7,                        // today + 6 days ahead; each becomes 'actual' once the day has passed
+  FORECAST_DAYS: 7,
   TAB: 'readings',
   ARCHIVE_TAB: 'archive_accuweather',
   LOCK_WAIT_MS: 30000
@@ -55,7 +18,6 @@ var COL = {}; HEAD.forEach(function (h, i) { COL[h] = i; });
 var NOTE = 'Open-Meteo modelled values for the postcode point, not a weather station. '
   + '"actual" = finished day; "today" = still updating; "forecast" = future day, overwritten by the actual when it passes.';
 
-/* ── entry points ─────────────────────────────────────────────── */
 
 function setup() {
   var sh = sheet_();
@@ -71,8 +33,6 @@ function run() {
   alert_();
 }
 
-/** Exactly one trigger: run() every 3 hours. Any other time trigger of this project (writeForecast and the like,
- *  whose function no longer exists and so fails every time) is deleted. Returns the handler names deleted. */
 function fixTriggers() {
   var gone = [], kept = false;
   ScriptApp.getProjectTriggers().forEach(function (t) {
@@ -85,7 +45,6 @@ function fixTriggers() {
   return gone;
 }
 
-/* ── core ─────────────────────────────────────────────────────── */
 
 function record_(pastDays) {
   var c = cfg_();
@@ -95,9 +54,6 @@ function record_(pastDays) {
     + 'wind_speed_10m_max,precipitation_sum,weather_code'
     + '&timezone=' + encodeURIComponent(CFG.TZ) + '&past_days=' + (pastDays - 1) + '&forecast_days=' + CFG.FORECAST_DAYS;
   var resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-  // 429 (STAFF 17 Nov 2026: about 3 runs in 4 since 12 Nov): Open-Meteo's free daily limit counts by address, and
-  // Apps Script shares Google's addresses with other users, so the limit is often used up by others. Nothing was
-  // fetched, so nothing is written; the next 3-hourly run tries again. Not an error: the run is not marked failed.
   if (resp.getResponseCode() === 429) { Logger.log('Open-Meteo busy (429, daily limit on a shared address); nothing written, next run tries again.'); return 0; }
   if (resp.getResponseCode() !== 200) throw new Error('Open-Meteo ' + resp.getResponseCode() + ': ' + resp.getContentText());
   var d = JSON.parse(resp.getContentText()), dl = d.daily, cur = d.current || {};
@@ -117,7 +73,7 @@ function record_(pastDays) {
     if (existing && String(existing[COL.locked]).toUpperCase() === 'Y') continue;
 
     var row = existing ? existing.slice() : new Array(HEAD.length).fill('');
-    if (!existing || !/^wx-\d+$/.test(String(row[COL.id]))) row[COL.id] = ids.next();   // a row with no proper id gets one too
+    if (!existing || !/^wx-\d+$/.test(String(row[COL.id]))) row[COL.id] = ids.next();
     row[COL.tenant_id] = c.TENANT;
     row[COL.location] = c.LOCATION;
     row[COL.location_key] = c.LOCATION_KEY;
@@ -155,11 +111,6 @@ function record_(pastDays) {
   return added;
 }
 
-/**
- * Hands out wx- ids: always above the highest number in the sheet (every row, whatever its kind or source) AND above
- * the highest this script has handed out before (WX_LAST_ID), so a number is never used twice, even after a row is
- * deleted. save() records the new highest; call it after the rows are written.
- */
 function idMaker_(data) {
   var props = PropertiesService.getScriptProperties();
   var top = parseInt(props.getProperty('WX_LAST_ID') || '0', 10) || 0;
@@ -174,14 +125,12 @@ function idMaker_(data) {
   };
 }
 
-/** One run at a time. Another run already writing = this one writes nothing (the next 3-hourly run catches up). */
 function withLock_(fn) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(CFG.LOCK_WAIT_MS)) { Logger.log('Another run is writing; skipped.'); return null; }
   try { return fn(); } finally { lock.releaseLock(); }
 }
 
-/** The location and tenant settings, from Script Properties (see SETTINGS). Missing ones stop the run, plainly. */
 function cfg_() {
   var p = PropertiesService.getScriptProperties(), c = {}, missing = [];
   ['LAT', 'LON', 'LOCATION', 'LOCATION_KEY', 'TENANT'].forEach(function (k) {
@@ -222,7 +171,6 @@ function alert_() {
   }
 }
 
-/* ── helpers ──────────────────────────────────────────────────── */
 
 function sheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -258,11 +206,6 @@ function wmo_(c) {
   return m[c] || '';
 }
 
-/**
- * One-off: actual days from the Open-Meteo archive between two dates. Days already in the sheet are skipped (never a
- * second row for a day) and new rows take ids after the highest ever used. Before 17 Nov 2026 this numbered from
- * wx-0001 and inserted at row 2, which is how ids came to be used twice.
- */
 function backfillArchive_(start, end) {
   var c = cfg_();
   start = start || CFG.BACKFILL_FROM; end = end || today_();
@@ -306,3 +249,4 @@ function backfillArchive_(start, end) {
 function runBackfill() {
   return withLock_(function () { return backfillArchive_(); });
 }
+

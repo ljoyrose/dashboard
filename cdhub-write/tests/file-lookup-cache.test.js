@@ -1,9 +1,4 @@
 'use strict';
-/**
- * 17 Nov 2026: live saves took 17-127 s. A save looks up several files by name, and each folder search is slow, so the
- * id found is remembered for 5 minutes. A remembered id is used only while that file keeps its exact name and is not
- * in the bin; otherwise the folder is searched again (with the two-files-one-name check).
- */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { standardEnv } = require('./harness');
@@ -34,7 +29,7 @@ test('a remembered file that was renamed or binned is not used: the folder is se
   f.title = 'zz_' + T;                                   // renamed away
   assert.equal(env.ctx.store_findOne_(T), null);
   assert.equal(searches(), 2);
-  f.title = T; f.trashed = true;                         // back under the name, but in the bin
+  f.title = T; f.trashed = true;
   env.ctx.store_findOne_(T);
   assert.equal(searches(), 3);
   assert.ok(first);
@@ -104,3 +99,4 @@ test('a request that cannot be read is listed without failing', () => {
   const st = JSON.parse(env.ctx.doGet({ parameter: { status: '1' } }).getContent());
   assert.equal(st.lastRefusals[0].code, 'BAD_REQUEST');
 });
+

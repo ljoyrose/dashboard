@@ -1,11 +1,8 @@
-// JOB 35 (30 Oct 2026) @regression: on a phone, Money Hub's sideways-scrolling tables were out of reach
-// for keyboard users (axe scrollable-region-focusable, serious, on money and e/TESTCO; CI fonts made them overflow). Each scroll box is
-// now a named, focusable region. Fails if any view at 390px has a scroll box a keyboard cannot reach.
 const { test, expect } = require('../support/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 const { HUBS, go } = require('../support/hubs');
 
-test('@regression Money Hub 390px: every sideways-scroll box can be reached by keyboard', async ({ page, guard }) => {
+test('t-job35-money-scroll-spec-1', async ({ page, guard }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 390, height: 844 });
   await HUBS.money.open(page, guard);
@@ -19,3 +16,4 @@ test('@regression Money Hub 390px: every sideways-scroll box can be reached by k
   }
   expect(bad).toEqual([]);
 });
+

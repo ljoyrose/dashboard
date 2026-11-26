@@ -9,17 +9,16 @@ const NOW = new Date('2026-01-12T20:00:00');
 const ROOMS = 'id,code,group_sort\narea-r1,R1,1\narea-r2,R2,2\n';
 const NEEDS = 'id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on\n';
 const BANDS = 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\ntb-p,Puppy,0,28,26,28,,\ntb-a,Adult,29,,10,26,,\n';
-// A litter born 1 Nov 2025 in R1; R2 holds no dogs. So in Nov 2025 R1 is a puppy room (bed spot on 26–28) and R2 is adult.
 const SUBJ = 'id,tenant_id,name,sex,dob\npup-1,t,Pup,F,2025-11-01\n';
 const OCC = 'id,tenant_id,subject_id,area_id,off_site_kind,moved_in,moved_out\nocc-1,t,pup-1,area-r1,,2025-11-01,\n';
 const R = [];
 const add = (aid, day, slot, min, max, spot, note) => R.push([aid, day, slot, min, max, spot || '', note || '']);
 add('area-r1', '2025-11-03', 'am', '18.0', '22.0', '27.0');                  // puppy room, bed spot inside 26–28
-add('area-r1', '2025-11-03', 'pm', '18.0', '22.0', '24.5', 'Heat lamp on');  // bed spot below 26: outside, with what was done
+add('area-r1', '2025-11-03', 'pm', '18.0', '22.0', '24.5', 'Heat lamp on');
 add('area-r2', '2025-11-03', 'am', '12.0', '15.0');                          // adult room inside 10–26
 add('area-r2', '2025-11-03', 'pm', '9.0', '15.0', '', 'Heater on');          // below 10: outside
 add('area-r2', '2025-11-04', 'am', '14.0', '27.0', '', 'Fan on');            // over 26: cooling action, not outside
-add('area-r1', '2026-01-05', 'am', '12.0', '15.0');                          // this year, so the page has a current month too
+add('area-r1', '2026-01-05', 'am', '12.0', '15.0');
 const READINGS = 'id,area_id,taken_at,period_start,min_c,max_c,spot_c,read_method,mitigation_note\n'
   + R.map((r, i) => ['rdg-' + i, r[0], r[1] + 'T' + (r[2] === 'am' ? '09' : '16') + ':00:00Z', r[1] + 'T' + (r[2] === 'am' ? '00' : '12') + ':00:00+00:00', r[3], r[4], r[5], 'typed', '"' + r[6] + '"'].join(',')).join('\n') + '\n';
 const OUTDOOR = 'on_date,reading_kind,max_temp,min_temp,realfeel_max_temp,rain_value,cloud_cover_pct,wind_kmh\n2026-01-05,sample,5.3,-1.9,2.3,0,8,13.7\n';
@@ -69,8 +68,8 @@ test('report: a past month (Nov 2025), all rooms, applies the puppy bed rule fro
   await expect(r2a.locator('td').nth(6)).toHaveText('Heater on');
   const r2b = dayRow(r2, '4 Nov');
   await expect(r2b.locator('td').nth(5)).toHaveText('AM Over max: cooling action · PM Missed');
-  await expect(r2b).toHaveClass(/warn/);                                                 // the missed PM, not the cooling action
-  await expect(dayRow(r2, '5 Nov').locator('td').nth(5)).toHaveText('Missed');     // rooms in use with no reading show as missed
+  await expect(r2b).toHaveClass(/warn/);
+  await expect(dayRow(r2, '5 Nov').locator('td').nth(5)).toHaveText('Missed');
   await expect(r2.locator('.rep-sum')).toHaveText('3 readings · lowest 9.0 °C · highest 27.0 °C · 1 outside the limit · 1 cooling actions · 53 missed');
   await expect(out.locator('.rep-all')).toHaveText('2 rooms · 5 readings · 2 outside the limit · 1 cooling actions · 107 missed');
   // one room only
@@ -87,7 +86,6 @@ test('report: Save as PDF prints only the report, named for the month; the page 
   const printed = await page.evaluate(() => window.__printed);
   expect(printed).toEqual([{ title: 'Room temperatures Nov 2025 all rooms', cls: expect.stringContaining('print-report') }]);
   await expect(page.locator('#repSay')).toHaveText('The print window is open: choose Save as PDF as the printer.');
-  // In print, only the report shows: no header, tabs, year buttons, month picker or bottom tabs.
   await page.evaluate(() => document.body.classList.add('print-report'));
   await page.emulateMedia({ media: 'print' });
   for (const sel of ['header.house-head', '#nav', '.yr-row', '.tab-row', '.rep-ctl']) await expect(page.locator(sel).first(), sel).toBeHidden();
@@ -101,13 +99,13 @@ test('report: Save as PDF prints only the report, named for the month; the page 
 test('report: #report opens it; the year buttons reach back to the first reading and move The round into that year', async ({ page, guard }) => {
   await open(page, guard, '#report');
   await expect(page.locator('#view-r')).toHaveClass(/\bon\b/);
-  await expect(page.locator('.yr-btn')).toHaveText(['2026', '2025', '2024']);   // this year and the two before (further back when readings go further)
+  await expect(page.locator('.yr-btn')).toHaveText(['2026', '2025', '2024']);
   await page.getByRole('button', { name: 'The round' }).click();
   await expect(page.locator('#rdate')).toHaveValue('2026-01-12');
   await page.locator('.yr-btn[data-yr="2025"]').click();
-  await expect(page.locator('#rdate')).toHaveValue('2025-01-12');         // was: 2025 pressed, The round still showed today
+  await expect(page.locator('#rdate')).toHaveValue('2025-01-12');
   await page.getByRole('button', { name: 'Report' }).click();
-  await expect(page.locator('#repMonth')).toHaveValue('2025-0');           // and the report moved to Jan 2025
+  await expect(page.locator('#repMonth')).toHaveValue('2025-0');
 });
 
 test('CD Hub: #m/temperature opens the month report instead of Main', async ({ page, guard }) => {
@@ -129,3 +127,4 @@ test('report on a phone (375px): no sideways scroll, controls at least 40px', as
     expect(b.height, sel).toBeGreaterThanOrEqual(40);
   }
 });
+

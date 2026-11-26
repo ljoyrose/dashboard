@@ -1,9 +1,3 @@
-// How the three pages LOOK and READ: dark mode, accessibility (axe) and smallest text size.
-// Same pretend Google and Drive as everywhere else. Cheap extras: they never need real data.
-//
-// Accessibility and text size are a RATCHET, not a wish list: today's known problems are written down below,
-// and the test fails only if something gets WORSE (a new kind of problem, more of one kind, or smaller text).
-// When you fix one, lower the number here so it can never creep back. Known problems are listed in TESTS.md.
 const { test, expect } = require('../support/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 
@@ -13,10 +7,7 @@ const PAGES = [
   { key: 'money', name: 'Money Hub', url: 'money/', button: '#signInBtn', ready: '#readStamp', after: /^Read \d/ },
 ];
 
-// Known problems today: { 'page/colour-scheme/signed-out|in': { ruleId: most nodes allowed } }
 const KNOWN_AXE = {};
-// Every other view (Bin, Drive, Money entity pages, all CD Hub sections) is checked in every-view-access.spec.js.
-// Smallest text allowed, in pixels, per page (today's smallest). Raise when text is made bigger.
 const MIN_FONT_PX = { main: 13, cdhub: 13, money: 13 };
 
 async function open(page, p, signedIn) {
@@ -35,7 +26,6 @@ test.describe('Dark mode (browser set to dark)', () => {
       expect(await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches)).toBe(true);
       await open(page, p, false);
       await open(page, p, true);
-      // dark mode must not blank the page: the page background is dark and there is visible text
       const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
       const [r, g, b] = bg.match(/\d+/g).map(Number);
       expect(r + g + b, `page background ${bg} should be dark`).toBeLessThan(384);
@@ -78,3 +68,4 @@ test.describe('Accessibility (axe) and smallest text', () => {
     });
   }
 });
+

@@ -1,6 +1,3 @@
-// JOB 34 state matrix (group E): SIGNED OUT, every hub. signin-gate.spec.js already proves only the sign-in shows on each
-// hub's front address; this adds what it does not check: no private call (Drive / Sheets) is made before sign-in, the
-// sign-in button is there, and every deep view address (#/...) stays locked too. Pretend Google, Drive and Sheets.
 const { test, expect, HUBS, fixture } = require('../fixtures/job34/load');
 const H = fixture('states', 'hubs.json');
 const PRIVATE = /^https:\/\/(www\.googleapis\.com\/drive|sheets\.googleapis\.com|www\.googleapis\.com\/oauth2|people\.googleapis\.com)/;
@@ -24,3 +21,4 @@ for (const hub of Object.keys(HUBS)) {
     expect(guard.world.calls.length, `${hub} asked the pretend Drive before sign-in`).toBe(0);
   });
 }
+

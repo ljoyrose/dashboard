@@ -4,8 +4,8 @@ const { test: base, expect } = require('../support/test');
 const { buildWorld, IDS } = require('../support/world');
 
 const WORK = [
-  'id,raised_on,raised_by,area,item,status,blocked_on,owner,evidence,note',
-  'W905,2026-11-01,Lisa,rules,Pretend rule groups,OPEN,,Claude,,Pretend note shown once',
+  'id,raised_on,raised_by,area,item,status,blocked_on,user,evidence,note',
+  'W905,2026-11-01,User,rules,Pretend rule groups,OPEN,,Claude,,Pretend note shown once',
 ].join('\n') + '\n';
 const test = base.extend({ world: async ({}, use) => {
   const d = buildWorld();
@@ -77,3 +77,4 @@ test('every room link opens a room, never "Room not found"', async ({ page }) =>
     }
   }
 });
+

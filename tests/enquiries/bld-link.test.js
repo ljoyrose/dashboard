@@ -1,5 +1,3 @@
-// BLD links for puppy enquiries. Invented rows only: Sample Buyer A, Pup One, lit-001.
-// Run: node --test tests/enquiries/bld-link.test.js
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -88,7 +86,7 @@ test('optional trailing columns load when missing and still refuse a moved requi
   assert.equal(C.parseTab('Enquiries', [renamed, row]).ok, false);
 });
 
-test('row builders match the BLD headers and keep sale price for ownership only', () => {
+test('row builders match the BLD headers and keep sale price for holding only', () => {
   const person = C.bldPersonRow({ name: 'Sample Buyer A', email: 'buyer.a@example.test', phone_e164: '+447700900000' }, { id: 'per-1', tenant_id: 'ten-1' });
   assert.deepEqual(Object.keys(person), C.BLD_COLUMNS.person);
   assert.equal(person.full_name, 'Sample Buyer A');
@@ -102,20 +100,21 @@ test('row builders match the BLD headers and keep sale price for ownership only'
   assert.equal(C.bldHouseholdRow({ stage: 'balance' }).stage, 'working to collection');
   const member = C.bldHouseholdMemberRow({ household_id: 'hhd-1', person_id: 'per-1' });
   assert.deepEqual(Object.keys(member), C.BLD_COLUMNS.household_member);
-  const assigned = C.bldSubjectOwnerRow({ subject_id: 'sub-01', person_id: 'per-1', household_id: 'hhd-1', role: 'assigned' });
+  const assigned = C.bldSubjectUserRow({ subject_id: 'sub-01', person_id: 'per-1', household_id: 'hhd-1', role: 'assigned' });
   assert.equal(assigned.role, 'assigned');
-  assert.deepEqual(Object.keys(assigned), C.BLD_COLUMNS.subject_owner);
-  const owner = C.bldSubjectOwnerRow({ subject_id: 'sub-01', stage: 'collected', person_id: 'per-1' });
-  assert.equal(owner.role, 'owner');
-  assert.equal(C.bldSubjectOwnerRow({ role: 'assigned' }), null);
+  assert.deepEqual(Object.keys(assigned), C.BLD_COLUMNS.subject_user);
+  const user = C.bldSubjectUserRow({ subject_id: 'sub-01', stage: 'collected', person_id: 'per-1' });
+  assert.equal(user.role, 'user');
+  assert.equal(C.bldSubjectUserRow({ role: 'assigned' }), null);
   const early = C.bldSaleRow({ subject_id: 'sub-01', person_id: 'per-1', household_id: 'hhd-1', deposit: '500', deposit_date: '2026-03-01', sold_on: '2026-04-01', price: '2000', stage: 'deposit' });
   assert.deepEqual(Object.keys(early), C.BLD_COLUMNS.sale);
   assert.equal(early.deposit, '500');
   assert.equal(early.deposit_date, '2026-03-01');
   assert.equal(early.sold_on, '');
   assert.equal(early.price, '');
-  const sold = C.bldSaleRow({ subject_id: 'sub-01', role: 'owner', deposit: '500', deposit_date: '2026-03-01', sold_on: '2026-04-01', price: '2000' });
+  const sold = C.bldSaleRow({ subject_id: 'sub-01', role: 'user', deposit: '500', deposit_date: '2026-03-01', sold_on: '2026-04-01', price: '2000' });
   assert.equal(sold.sold_on, '2026-04-01');
   assert.equal(sold.price, '2000');
   assert.equal(sold.deposit, '500');
 });
+

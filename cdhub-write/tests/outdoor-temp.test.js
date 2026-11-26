@@ -64,7 +64,6 @@ const row = (id, date, kind = 'actual') => { const r = H.map(() => ''); r[0] = i
 const ids = (env) => env.sheet.slice(1).map((r) => r[0]);
 
 test('outdoor temp: a new day takes the next number after the highest id in the sheet, wherever that row sits', () => {
-  // rows out of order (an old AccuWeather row with a high id dated earlier), as in the live sheet
   const env = makeEnv([H, row('wx-0584', '2026-11-08'), row('wx-0100', '2026-11-10'), row('wx-0583', '2026-11-16')]);
   env.ctx.run();
   assert.deepEqual(ids(env).sort(), ['wx-0100', 'wx-0583', 'wx-0584', 'wx-0585']);
@@ -84,7 +83,6 @@ test('outdoor temp: every new day in one run gets its own number, all above the 
   const all = ids(env);
   assert.equal(new Set(all).size, all.length);
   assert.deepEqual(all.slice(1), ['wx-0586', 'wx-0587', 'wx-0588', 'wx-0589', 'wx-0590', 'wx-0591', 'wx-0592', 'wx-0593']);
-  // a second run updates the same days in place: no new rows, no new numbers
   env.ctx.run();
   assert.deepEqual(ids(env), all);
 });
@@ -117,7 +115,7 @@ test('outdoor temp: Open-Meteo busy (429) is not a failure: nothing written, one
   assert.equal(env.sheet.length, 2);
   assert.match(env.log.join('\n'), /Open-Meteo busy \(429/);
   const bad = makeEnv([H], { status: 500 });
-  assert.throws(() => bad.ctx.run(), /Open-Meteo 500/);   // any other refusal still shows as a failed run
+  assert.throws(() => bad.ctx.run(), /Open-Meteo 500/);
 });
 
 test('outdoor temp: missing location settings stop the run plainly and nothing is written', () => {
@@ -141,3 +139,4 @@ test('outdoor temp: the script holds no address, Drive id or email (public repo)
   assert.doesNotMatch(SRC, /\b[A-Za-z0-9_-]{28,}\b/);
   assert.doesNotMatch(SRC, /\b[A-Z]{1,2}\d{1,2}[A-Z]? ?\d[A-Z]{2}\b/);   // a UK postcode
 });
+

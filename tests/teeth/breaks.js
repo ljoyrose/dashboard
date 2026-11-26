@@ -1,8 +1,5 @@
-// The deliberate breaks for the weekly teeth check (see run-teeth.js).
-// tests/mocked/ci-guards.spec.js checks on every push that each `find` text still appears exactly once in its file.
-// find: exact text that must appear exactly once in `file` (if not, this list is out of date: reported, not ignored)
 const BREAKS = [
-  { id: 'one-sign-in', what: 'The sign-in goes back to one tab only (Lisa signs in twice)', file: 'auth.js',
+  { id: 'one-sign-in', what: 'The sign-in goes back to one tab only (User signs in twice)', file: 'auth.js',
     find: 'try { return global.localStorage; }', replace: 'try { return global.sessionStorage; }', project: 'mocked', spec: 'one-sign-in-tabs' },
   { id: 'back-link', what: 'Money Hub "Dashboard" button goes to the wrong place', file: 'money/index.html',
     find: '<a id="backHome" class="btn back house-ib" href="../"', replace: '<a id="backHome" class="btn back house-ib" href="../nowhere/"', project: 'mocked', spec: 'main-dashboard' },
@@ -27,3 +24,4 @@ const BREAKS = [
 ];
 
 module.exports = { BREAKS };
+

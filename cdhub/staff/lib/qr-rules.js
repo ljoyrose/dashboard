@@ -16,7 +16,6 @@
   var KINDS = ['area', 'subject', 'litter', 'site', 'thermometer', 'item'];
   var ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', LEN = 8;
 
-  /** true when the qr.on_add rule for this kind (and item type) in force on `day` says yes. */
   function ruleOn(rules, kind, sub, day, tenant) {
     var keys = sub ? ['qr.on_add.' + kind + '.' + sub, 'qr.on_add.' + kind] : ['qr.on_add.' + kind];
     for (var i = 0; i < keys.length; i++) {
@@ -33,12 +32,10 @@
     return false;
   }
 
-  /** The active tag row for kind + ref_id, or undefined. */
   function tagFor(tags, kind, refId) {
     return (tags || []).filter(function (t) { return t.kind === kind && t.ref_id === refId && String(t.active).toLowerCase() !== 'false'; })[0];
   }
 
-  /** A random tag (no 0/O, 1/I/L) not in `taken` ({tag: 1}). `bytes(n)` gives n random bytes (crypto in the browser). */
   function newTag(taken, bytes) {
     taken = taken || {};
     var tag;
@@ -51,3 +48,4 @@
 
   return { KINDS: KINDS, ruleOn: ruleOn, tagFor: tagFor, newTag: newTag };
 }));
+

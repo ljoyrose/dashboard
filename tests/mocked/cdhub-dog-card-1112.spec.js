@@ -183,7 +183,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await page.evaluate(() => go('dogs'));
     const one = page.locator('#rows article.dc', { hasText: 'Pretend Dam One' });
     await expect(one).toBeVisible();   // Dogs draws after its parts load
-    await expect(one.locator('.nl .st')).toHaveCount(0);   // no role badge on the card: sex is the icon on the photo
+    await expect(one.locator('.nl .st')).toHaveCount(0);
     const chips = await page.locator('.sfb.st').allTextContents();
     expect(chips.map((t) => t.replace(/\s*\d+$/, '').trim())).toEqual(expect.arrayContaining(['Bitch', 'Stud']));
     await expect(page.locator('#rows')).not.toContainText(/\bBI\b/);
@@ -214,7 +214,6 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(await frame()).not.toBe(small);
     expect(await page.evaluate(() => [roomDogs(['sub-x1'])[0].size, sizeOn(CD._byId['sub-x1'])])).toEqual(['medium', 'medium']);
     expect(await page.evaluate(() => sizeDot(CD._byId['sub-x1'].sizeWord))).toContain('data-size="medium"');
-    // the dog with no weight and no kg range in its size cell has no size at all
     await page.evaluate(() => go('dogs/sub-x2'));
     await expect(dog(page)).not.toHaveAttribute('data-size', /./);
   });
@@ -252,7 +251,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await page.evaluate(() => go('round'));
     await expect(page.locator('#sinkcard')).toContainText('Saving on this device: on');
     await page.locator('#sinkoff').click();
-    expect(await page.evaluate(() => sinkOn())).toBe(false);   // switching off here wins over the staff page's set-up
+    expect(await page.evaluate(() => sinkOn())).toBe(false);
     await expect(page.locator('#sinkcard')).toContainText('The save address is already on this phone');
     await expect(page.locator('#sinkurl')).toBeHidden();
     await page.locator('#sinkcode').fill('pretend-code-2');
@@ -315,7 +314,6 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await max.fill('13,2'); await max.blur();
     await expect.poll(() => bodies.length).toBe(1);
     expect(bodies[0]).toMatchObject({ table: 'area_reading', fields: { area_id: area, min_c: '11.3', max_c: '13.2' } });
-    // a row typed straight into the sheet as text, and one with max blank: both are problems, never hidden
     const st = await page.evaluate(() => ({ text: tempState('24.1', '25,3', { min: 10, max: 30 }), half: tempState('26.4', '', { min: 10, max: 30 }), ok: tempState('24.1', '25.3', { min: 10, max: 30 }) }));
     expect(st).toEqual({ text: 'unread', half: 'unread', ok: 'ok' });
     await page.evaluate(() => { T['BLD-area_reading.csv'] = [{ id: 'r-x', area_id: CD.areas[0].id, min_c: '24.1', max_c: '25,3', period_start: '2026-11-11T00:00:00Z', taken_at: '2026-11-11T08:00:00Z' }]; ROUND = {}; foldAreaReadings(T['BLD-area_reading.csv']); go('round', false); });
@@ -330,7 +328,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await page.locator('#rdate').fill('2026-11-11');
     await page.locator('#rdate').dispatchEvent('change');
     const ids = await page.evaluate(() => {
-      const hall = { id: 'area-hall-x', code: 'Pretend Hall', m2: '' };   // a pretend corridor: in use, no dogs
+      const hall = { id: 'area-hall-x', code: 'Pretend Hall', m2: '' };
       [CD.allAreas, CD.areas].forEach((l) => { if (l && !l.some((a) => a.id === hall.id)) l.push(hall); });
       const w = walkList().map((c) => c.area.id); return { two: w[0], one: w[1], hall: hall.id };
     });
@@ -381,7 +379,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(line.msg).toContain('never sort the sheet');
   });
 
-  test('Round present saves a check_log row against the owner\'s round.presence row; the tick shows once the save lands; a failed save puts the buttons back (Lisa 15 Nov)', async ({ page, guard }) => {
+  test('Round present saves a check_log row against the user\'s round.presence row; the tick shows once the save lands; a failed save puts the buttons back (User 15 Nov)', async ({ page, guard }) => {
     await open(page, guard);
     let fail = false;
     const bodies = await saves(page, () => (fail ? { ok: false, code: 'BUSY_FOR_GOOD', message: 'Pretend failure' } : { ok: true, result: { status: 'saved', id: 'clg-new' } }));
@@ -392,17 +390,16 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await here.click();
     await expect(here).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(() => bodies.length).toBe(1);
-    // Present is one session row for the round (the dogs present, not one row per dog) unless Settings turns that off.
     expect(bodies[0]).toMatchObject({ table: 'check_log', action: 'add_session', fields: { check_type_id: 'cty-p', area_id: area, outcome: 'recorded', how_recorded: 'tapped', dog_ids: sid, exceptions: '' } });
     expect(bodies[0].fields.subject_id).toBeUndefined();
     expect(bodies[0].fields.item).toBeUndefined();
     await expect(line.locator('[data-saved="good"]')).toContainText(/^Saved \d\d:\d\d$/);
-    await here.click();   // a second tap on the saved button sends nothing
+    await here.click();
     await page.waitForTimeout(200); expect(bodies.length).toBe(1);
-    await not.click();   // already saved today: the other button does not write another row
+    await not.click();
     await page.waitForTimeout(200); expect(bodies.length).toBe(1);
     await expect(line).toContainText('Done today');
-    await page.evaluate(() => go('round', false));   // after a redraw the saved row still shows pressed, and says done today
+    await page.evaluate(() => go('round', false));
     await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
     await expect(line.locator('[data-saved="good"]')).toHaveCount(1);
     await page.locator(`[data-pcorrect="${sid}"][data-area="${area}"]`).click();
@@ -414,7 +411,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('Present already saved today is not written again on a later round @regression', async ({ page, guard }) => {
+  test('t-cdhub-dog-card-1112-spec-1', async ({ page, guard }) => {
     await open(page, guard);
     const bodies = await saves(page);
     await page.evaluate(() => {
@@ -457,3 +454,4 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(html).not.toMatch(/in area-/);
   });
 });
+

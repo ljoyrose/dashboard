@@ -1,5 +1,3 @@
-// Money: forecast chart per entity (F5) and deadlines worked out from UK rules (F6), each marked
-// "check with accountant". Today is pinned to 10 Mar 2026 by the test setup.
 const { test, expect } = require('../support/test');
 
 const signIn = async (page) => {
@@ -22,7 +20,7 @@ test.describe('Money: forecast chart', () => {
     await expect(svg.locator('circle.dry')).toHaveCount(0);
   });
 
-  test('a forecast that goes below zero marks the runs-dry date in red @regression', async ({ page, guard }) => {
+  test('t-money-forecast-deadlines-spec-1', async ({ page, guard }) => {
     guard.world.files.find((f) => f.id === 'l-co-FORECAST.csv').content = 'CURRENT: 4 rows held 2026-03-09\ndate,projected_balance\n2026-03-10,3000\n2026-03-25,800\n2026-04-02,-450\n2026-05-10,-1200\n';
     await page.goto('money/#/e/TESTCO');
     await signIn(page);
@@ -41,7 +39,6 @@ test.describe('Money: deadlines worked out from rules', () => {
     await expect(card).toContainText('From the rules');
     await expect(card).toContainText('Self Assessment: 2nd payment on account');
     await expect(card).toContainText('31 Jul');
-    // 31 Jan 2027 is the deadline for the 2025-26 tax year (ended 5 Apr 2026)
     await expect(card).toContainText('Self Assessment: online return and balancing payment for the 2025-26 tax year');
     await expect(card).toContainText(/not tax advice/i);
     const rows = card.locator('li:not(.notes li)');
@@ -57,11 +54,9 @@ test.describe('Money: deadlines worked out from rules', () => {
     const card = page.locator('[data-rules="TESTCO"]');
     const all = card.locator('[data-action="showall"]');
     if (await all.count()) await all.click();
-    // year to 31 Mar 2026: accounts 31 Dec 2026, CT payment 1 Jan 2027, CT600 31 Mar 2027
     await expect(card.locator('li', { hasText: 'Company accounts to Companies House (year to 2026-03-31)' })).toContainText('31 Dec');
     await expect(card.locator('li', { hasText: 'Corporation Tax payment (year to 2026-03-31)' })).toContainText('1 Jan 2027');
     await expect(card.locator('li', { hasText: 'Corporation Tax return CT600 (year to 2026-03-31)' })).toContainText('31 Mar 2027');
-    // VAT quarter to 31 May 2026 (from 02-28, stepping 3 months keeps month ends): due 7 Jul 2026
     await expect(card.locator('li', { hasText: 'VAT return and payment (quarter to 2026-05-31)' })).toContainText('7 Jul');
     // a retired entity gets nothing
     await page.goto('money/#/dates');
@@ -70,9 +65,10 @@ test.describe('Money: deadlines worked out from rules', () => {
 
   test('a date already in MON-DATES for the same entity is not repeated', async ({ page, guard }) => {
     const dates = guard.world.files.find((f) => f.name === 'MON-DATES.csv');
-    dates.content = dates.content.trimEnd() + '\nD099,SA payment on account,TESTPERS,2026-07-31,open,Lisa\n';
+    dates.content = dates.content.trimEnd() + '\nD099,SA payment on account,TESTPERS,2026-07-31,open,User\n';
     await page.goto('money/#/dates');
     await signIn(page);
     await expect(page.locator('[data-rules="all"]')).not.toContainText('Self Assessment: 2nd payment on account');
   });
 });
+

@@ -1,6 +1,3 @@
-// ClickFunnels, HubSpot, contact rules and Add by hand (JOB 13 Stage 5). Run: node --test tests/enquiries/crm.test.js
-// Invented data only (tests/fixtures/enquiries/crm.js). In these tests example.com stands for a real domain, so the
-// junk check runs with testDomains: [] (in real data example.com IS a test entry and is kept out).
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -107,3 +104,4 @@ test('the engine reads name, email and phone out of a pasted message', () => {
 test('every CF and HubSpot row passes the data contract', () => {
   for (const e of C.cfRecords(FX.runs, OPTS).enquiries.concat(C.hubspotRecords(FX.hubspot, OPTS).enquiries)) assert.deepEqual(C.validateRow(e), [], e.source_ref);
 });
+

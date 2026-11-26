@@ -1,8 +1,3 @@
-// Tiny static web server for the tests. No packages needed.
-// It serves this repo under /dashboard/ (GitHub Pages) or, with SITE_BASE=/, at the root (Cloudflare Pages):
-//   http://127.0.0.1:4173/dashboard/        -> index.html
-//   http://127.0.0.1:4173/dashboard/cdhub/  -> cdhub/index.html
-//   http://127.0.0.1:4173/dashboard/money/  -> money/index.html
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -22,7 +17,6 @@ const TYPES = {
   '.txt': 'text/plain; charset=utf-8',
   '.md': 'text/plain; charset=utf-8',
 };
-// Only the website files are served. Test tooling, git data and dependencies stay private.
 const BLOCKED = /^(\.git|node_modules|tests|test-results|playwright-report|\.github|docs|_site)(\/|$)/;
 
 http
@@ -64,3 +58,4 @@ http
     });
   })
   .listen(PORT, '127.0.0.1', () => console.log('Serving ' + ROOT + ' at http://127.0.0.1:' + PORT + PREFIX));
+

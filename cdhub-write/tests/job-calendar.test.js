@@ -19,7 +19,7 @@ test('a per-dog job is done only when every dog it covers has a line; isolation 
   const m = C.month(v, 'health_check_all', '2026-11');
   const day = (iso) => m.cells.find((c) => c.iso === iso);
   assert.equal(m.need, 2);
-  assert.equal(day('2026-11-14').state, 'before');   // before the job's first record: not tracked, never "missed"
+  assert.equal(day('2026-11-14').state, 'before');
   assert.equal(day('2026-11-15').state, 'part');
   assert.equal(day('2026-11-15').got, 1);
   assert.equal(day('2026-11-16').state, 'done');
@@ -38,7 +38,7 @@ test('a one-line job is done with one record; a missed day after the first recor
   assert.equal(st('2026-11-14'), 'missed');
 });
 
-test('the owner chooses which calendars show and in what order; no rows = the starter list', () => {
+test('the user chooses which calendars show and in what order; no rows = the starter list', () => {
   assert.deepEqual(C.chosen(base([])), ['health_check_all', 'food_bowls', 'whole_site_clean']);   // water_bowls has no job row here
   const rules = [
     { rule_key: 'compliance.calendar.whole_site_clean', value: '1', effective_from: '2026-11-01' },
@@ -68,7 +68,7 @@ test('a pup counts on the health-check calendar only from its birth day, so the 
   const v = Object.assign(base([log('1', 'cty-hc', '2026-11-14', 'd1'), log('2', 'cty-hc', '2026-11-14', 'd2'),
     log('3', 'cty-hc', '2026-11-15', 'd1'), log('4', 'cty-hc', '2026-11-15', 'd2')]), { dogs: pups });
   const day = (iso) => C.month(v, 'health_check_all', '2026-11').cells.find((c) => c.iso === iso);
-  assert.equal(day('2026-11-14').state, 'done');     // before the pup was born: 2 of 2
+  assert.equal(day('2026-11-14').state, 'done');
   assert.equal(day('2026-11-15').state, 'part');     // born today: 2 of 3
   assert.equal(day('2026-11-15').need, 3);
 });
@@ -109,9 +109,7 @@ test('a vet visit shows on the per-dog calendar day (marker and details), not on
   assert.match(html, /vet visit<\/p>/);                                // the key explains the marker
 });
 
-// Lisa 25 Nov 2026: Health check was red for all of September because a June paper row started the clock.
-// The other cards start in October, so September is not tracked. A vet dot belongs on Health only.
-test('September before the daily run is not tracked, and a vet dot is only on Health @regression', () => {
+test('t-job-calendar-test-1', () => {
   const extra = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' };
   const v = Object.assign(base([
     log('h1', 'cty-hc', '2026-06-02', 'd1'), log('h2', 'cty-hc', '2026-06-02', 'd2'),
@@ -146,15 +144,15 @@ test('September before the daily run is not tracked, and a vet dot is only on He
   assert.match(exercise, /title="2026-09-03: not tracked yet"/);
 });
 
-test('exercise counts the adult dogs only and hides a backfill note @regression', () => {
+test('t-job-calendar-test-2', () => {
   const ex = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' };
   const dogs = [
     { id: 'd1', area_id: 'a1', name: 'Ada', kind: 'Breeding Female', dob: '2020-01-01' },
     { id: 'd2', area_id: 'a2', name: 'Bea', kind: 'Stud', dob: '2020-01-01' },
     { id: 'p1', area_id: 'a1', name: 'Marble x Sammy 2026 - Black male 1', kind: 'Pup', dob: '2026-06-01', birthLitter: 'lit-1' }
   ];
-  const logs = ['d1', 'd2'].map((id, i) => log('e' + i, 'cty-ex', '2026-11-08', id, { note: 'backfill Lisa 25 Nov', taken_by: 'Lisa Carson' }));
-  logs.push(log('skin', 'cty-ex', '2026-11-09', 'd1', { note: 'Skin looked red. backfill Lisa 25 Nov' }));
+  const logs = ['d1', 'd2'].map((id, i) => log('e' + i, 'cty-ex', '2026-11-08', id, { note: 'backfill User 25 Nov', taken_by: 'User' }));
+  logs.push(log('skin', 'cty-ex', '2026-11-09', 'd1', { note: 'Skin looked red. backfill User 25 Nov' }));
   logs.push(log('skin2', 'cty-ex', '2026-11-09', 'd2', { note: 'Skin looked red' }));
   const v = Object.assign(base(logs, [
     { rule_key: 'compliance.calendar.exercise_all', value: '1', effective_from: '2026-01-01' }
@@ -171,7 +169,7 @@ test('exercise counts the adult dogs only and hides a backfill note @regression'
   assert.doesNotMatch(html9, /backfill/i);
 });
 
-test('a vet visit stays on the health-check calendar and is not shown on Exercise and play @regression', () => {
+test('t-job-calendar-test-3', () => {
   const exercise = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' };
   const shared = {
     types: types.concat([exercise]),
@@ -207,7 +205,7 @@ test('import: rows are checked (date, job by name or key, outcome, future, repea
   const v = base([log('1', 'cty-fb', '2026-11-10')]);
   const rows = C.parseImport(v, 'date,job,outcome,note\r\n'
     + '2026-11-09,Food bowls washed,done,\r\n'      // ready, by name
-    + '11/11/2026,whole_site_clean,,paper book\r\n' // ready, by key, UK date, blank outcome = done, note kept
+    + '11/11/2026,whole_site_clean,,paper book\r\n'
     + '2026-11-10,food_bowls,done,\r\n'             // already recorded that day
     + '2026-11-09,Food bowls washed,done,\r\n'      // repeated in this file
     + '2026-11-30,food_bowls,done,\r\n'             // future
@@ -251,7 +249,7 @@ test('import: a part-done day is not "already recorded"; a fully done day is, an
   assert.equal(C.importFields(v, rows[0]).check_type_id, 'cty-hc');
 });
 
-test('a vet day button keeps the day size and drops native button chrome @regression', () => {
+test('t-job-calendar-test-4', () => {
   assert.match(C.CSS, /button\.jd\{border:0;padding:0;margin:0;font-family:inherit;font-size:inherit;line-height:inherit;-webkit-appearance:none;appearance:none;cursor:pointer;position:relative;min-width:0\}/);
   assert.doesNotMatch(C.CSS, /font:inherit/);
   assert.match(C.CSS, /\.jdays\{[^}]*font-size:10px/);
@@ -267,7 +265,7 @@ test('a day is done only after times_per_day records, and part done before that'
   assert.equal(st('2026-11-12').state, 'done');
 });
 
-test('the calendar counts subjects on site that day, and can leave juveniles out @regression', () => {
+test('t-job-calendar-test-5', () => {
   const subjects = [
     { id: 'sub-test-a', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
     { id: 'sub-test-b', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
@@ -342,3 +340,4 @@ test('import: a row older than 7 days is sent with the save-anyway answer; a rec
   assert.equal('confirm_unusual' in C.importFields(v, rows[1]), false);
   assert.match(C.previewHtml(v, rows), /ready \(older than 7 days\)/);
 });
+

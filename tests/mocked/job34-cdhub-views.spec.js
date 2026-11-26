@@ -1,6 +1,4 @@
 const { tabClick, openView } = require('../support/tabs');
-// JOB 34 (group B): CD Hub buttons, links and states that no other spec proves yet.
-// Gap map: kept outside the repo. Every dog, litter and buyer here is invented (Test Dog One, Sample Buyer, @example.test).
 const { test, expect, HUBS, IDS, fixture, DRIVE } = require('../fixtures/job34/load');
 
 const tab = (page, id) => openView(page, id);
@@ -89,7 +87,6 @@ test.describe('CD Hub: Buyers prospects (invented rows)', () => {
     await expect(rows.first()).toContainText('Sample Kennel Alpha');
   });
 
-  // J34-F20 (fixed): RK['VERY STRONG'] is 0, so (RK[x]||9) once sank the strongest lead to the bottom.
   test('J34-F20 default Sort "strongest signal" puts a VERY STRONG lead above a MODERATE one', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-prospect.csv', fixture('cdhub', 'BLD-prospect.csv'));
     await HUBS.cdhub.open(page, guard);
@@ -231,12 +228,11 @@ test.describe('CD Hub: max lower than min = min and max typed the wrong way roun
 
 test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and litters and matings are checked against them (the owner, 8 Nov 2026)', () => {
   const LIT = (rows) => 'id,dam_subject_id,sire_subject_id,dob,pairing,status,notes\n' + rows.join('\n') + '\n';
-  // These tests replace the rules table, so they keep the test kennel's switched-on views (Table map, Litters).
   const NAV_ON = ['nv1,ten-test,nav.view.litters,1,2020-01-01,invented,,,', 'nv3,ten-test,nav.view.shape,1,2020-01-01,invented,,,'];
   const RULES = (rows) => 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n' + rows.concat(NAV_ON).join('\n') + '\n';
-  const STD = ['brl-1,ten-test,min_months_between_litters,12,2020-01-01,invented,,2026-11-08,owner',
-    'brl-2,ten-test,max_litters_per_dam,6,2020-01-01,invented,,2026-11-08,owner',
-    'brl-3,ten-test,min_dam_age_months,12,2020-01-01,invented,,2026-11-08,owner'];
+  const STD = ['brl-1,ten-test,min_months_between_litters,12,2020-01-01,invented,,2026-11-08,user',
+    'brl-2,ten-test,max_litters_per_dam,6,2020-01-01,invented,,2026-11-08,user',
+    'brl-3,ten-test,min_dam_age_months,12,2020-01-01,invented,,2026-11-08,user'];
 
   test('with no rules saved yet, nothing is judged and the breeder is sent to Compliance to set them', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
@@ -246,7 +242,7 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
     await expect(page.locator('#checksCard')).toContainText('not checked: set the shortest time between litters on Compliance');
     await tab(page, 'compliance');
     await expect(page.locator('#compProblems')).toContainText('3 of 3 rules not set');
-    await expect(page.locator('#compRules tr[data-rule]')).toHaveCount(17);   // 3 breeding rules + look-back + due-soon + 2 staffing ratios + adult age + 4 gestation + the sample file's 5 view switches
+    await expect(page.locator('#compRules tr[data-rule]')).toHaveCount(17);
     await expect(page.locator('#compRules')).toContainText('not set');
   });
 
@@ -292,8 +288,8 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
 
   test('a changed rule judges each litter by the version in force on its own date', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-breeding_rule.csv', RULES([
-      'brl-1,ten-test,min_months_between_litters,12,2020-01-01,invented,,2026-11-08,owner',
-      'brl-4,ten-test,min_months_between_litters,18,2025-06-01,invented,,2026-11-08,owner']));
+      'brl-1,ten-test,min_months_between_litters,12,2020-01-01,invented,,2026-11-08,user',
+      'brl-4,ten-test,min_months_between_litters,18,2025-06-01,invented,,2026-11-08,user']));
     addTable(guard.world, 'BLD-litter.csv', LIT([
       'lit-a,sub-test-dog-1,sub-test-dog-2,2023-01-01,Alpha pairing,born,invented',
       'lit-b,sub-test-dog-1,sub-test-dog-2,2024-03-01,Beta pairing,born,invented',
@@ -312,7 +308,7 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
 
   test('a bitch mated younger than the rule is flagged (dam born 2022-03-01, mated 2025-11-18, rule 48 months)', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-breeding_rule.csv', RULES([
-      'brl-3,ten-test,min_dam_age_months,48,2020-01-01,invented,,2026-11-08,owner']));
+      'brl-3,ten-test,min_dam_age_months,48,2020-01-01,invented,,2026-11-08,user']));
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'shape');
     await expect(page.locator('#checksCard')).toContainText('Age at mating');
@@ -324,7 +320,7 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
 
   test('a third litter when the rule allows 2 is flagged', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-breeding_rule.csv', RULES([
-      'brl-2,ten-test,max_litters_per_dam,2,2020-01-01,invented,,2026-11-08,owner']));
+      'brl-2,ten-test,max_litters_per_dam,2,2020-01-01,invented,,2026-11-08,user']));
     addTable(guard.world, 'BLD-litter.csv', LIT([
       'lit-a,sub-test-dog-1,sub-test-dog-2,2022-01-01,Alpha pairing,born,invented',
       'lit-b,sub-test-dog-1,sub-test-dog-2,2023-06-01,Beta pairing,born,invented',
@@ -400,7 +396,7 @@ test.describe('CD Hub: The round saves through the save script (one row added, n
     expect(sent[0]).toMatchObject({ v: 1, table: 'area_reading', action: 'add', code: 'test-code-1', fields: { area_id: area, min_c: '11.3', max_c: '14.2' } });
     expect(sent[0].fields.period_start).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00[+-]\d{2}:\d{2}$/);
     expect(sent[0].request_id).toMatch(/^cd[0-9a-f]{24}$/);
-    await mx.fill('14.3'); await mx.blur();                         // a saved reading is never changed from here
+    await mx.fill('14.3'); await mx.blur();
     await expect(msg).toContainText('already saved');
     expect(sent.length).toBe(1);
   });
@@ -420,7 +416,7 @@ test.describe('CD Hub: The round saves through the save script (one row added, n
 
   test('adding a dog to a cabin sends one move; a queued move says it is waiting for approval', async ({ page, guard }) => {
     await setUp(page);
-    const occ = guard.world.files.find((x) => x.name === 'BLD-occupancy.csv');   // one dog on site (SLA) so the round lists it
+    const occ = guard.world.files.find((x) => x.name === 'BLD-occupancy.csv');
     occ.content = occ.content.replace('sub-test-dog-1,area-1,Resident,', 'sub-test-dog-1,area-1,SLA,');
     const sent = await sink(page, (b) => ({ ok: true, result: { status: 'queued', table: b.table, id: 'occ-test-1', pending_id: 'pnd-1' } }));
     await HUBS.cdhub.open(page, guard);
@@ -442,7 +438,7 @@ test.describe('CD Hub: slow and failed reads', () => {
   test('while Drive is slow the pill says it is reading, and no section shows yet; then it goes live', async ({ page }) => {
     await page.goto('cdhub/');
     await expect(page.locator('#signinbtn')).toBeEnabled();
-    let held = false; // hold the folder listing (not whichever Drive call happens to be first), so the test stays quick
+    let held = false;
     await page.route(DRIVE, async (route) => {
       const url = decodeURIComponent(route.request().url()).replace(/\+/g, ' ');
       if (!held && /in parents/.test(url)) { held = true; await new Promise((r) => setTimeout(r, 2500)); }
@@ -483,7 +479,8 @@ test.describe('CD Hub: phone top bar Look menu (it replaced the More menu, the o
     await expect(btn).toHaveAttribute('aria-expanded', 'false');
     await btn.click();
     await expect(menu).toBeVisible();
-    await page.mouse.click(195, 760); // the lower page, well away from the header menu
+    await page.mouse.click(195, 760);
     await expect(menu).toBeHidden();
   });
 });
+

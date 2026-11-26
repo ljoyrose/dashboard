@@ -1,5 +1,3 @@
-// 12 invented emails for the Stage 4 classifier: 6 enquiries and 6 noise. Nobody is real: example.com
-// addresses (the sender's role is in the part before the @), Ofcom fiction numbers (07700 900xxx) and made-up text.
 'use strict';
 
 const FORM_SENDERS = ['wordpress@example.com', 'myclickfunnels-notify@example.com', 'hubspot-forms@example.com'];
@@ -12,7 +10,7 @@ const emails = [
     body: 'Name: Buyer D\nEmail: buyer.d@example.com\nPhone: 07700 900104\nMessage: Hi, do you have any Labradoodle puppies due next year? We have a large garden.\n' },
   { id: 'enq-direct', want: { enquiry: true, channel: 'email', kind: 'puppy' },
     from: 'Buyer E <buyer.e@example.com>', subject: 'Cobberdog puppy',
-    body: 'Hello Lisa, we are looking for a Cobberdog puppy for our family in spring. Is there a waiting list? Thank you, Buyer E' },
+    body: 'Hello User, we are looking for a Cobberdog puppy for our family in spring. Is there a waiting list? Thank you, Buyer E' },
   { id: 'enq-cf', want: { enquiry: true, channel: 'cf-website-optin', kind: 'puppy' },
     from: 'ClickFunnels <myclickfunnels-notify@example.com>', subject: 'New opt-in on Home',
     body: 'First name: Buyer F\nLast name: Example\nEmail: buyer.f@example.com\nPhone: +44 7700 900106\nHow can we help?: Interested in a chocolate girl\n' },
@@ -47,3 +45,4 @@ const emails = [
 ];
 
 module.exports = { emails, FORM_SENDERS, NOISE_SENDERS };
+

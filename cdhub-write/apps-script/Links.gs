@@ -1,25 +1,3 @@
-/**
- * Record-to-record links (14 Nov 2026, DRAFT; Lisa decision C, 13 Nov: one link table, shown on both sides,
- * addable from either side; free tags are links of a kind that carries no rule meaning).
- *
- *   action 'link_add'  adds one BLD-links row: from_table/from_id -> to_table/to_id with a role.
- *   action 'link_end'  ends one row by filling its to_date (blank = today). Never deletes, never edits anything else.
- *
- * Table names are the file stems (BLD-<table>.csv), so after the plural rename they follow the files. Both records
- * must exist in their files. The role is an owner rule row in BLD-breeding_rule (one rule list), in force today:
- *   link_kind.<role>               the words people see (e.g. "Placed in"); no row = the role cannot be used
- *   link_kind.<role>.from_tables   pipes of allowed table names; no row = any      (same for .to_tables)
- *   link_kind.<role>.max_per_from  e.g. 1 for "main" - adding a new one ends the oldest open one in the same save
- *   link_kind.<role>.who_may       pipes of roles (OWNER, STAFF, ...) or person:<code id>; no row = OWNER only
- *   link_kind.<role>.inherit_at_birth  pipes of to_ids, or * for all; none / blank / no row = off (15 Nov 2026, BB):
- *                                  a new record made from parent records (a pup from its litter's parents) gets
- *                                  the parents' open links of this kind, from its own start date (dob).
- * link_end takes an optional `reason`, kept in end_reason (15 Nov 2026, BB: why someone left a course or scheme).
- * One links table: the spec is ITEMS' TABLES.links (PR 568); the owner's generic add path writes the same file.
- * A second open row with the same from, to and kind is refused as DUPLICATE.
- * Rows follow STANDARD S4: from_date/to_date, source, set_by, set_on, created_at/updated_at (UTC).
- * Switch: TABLE_ON_links, OFF until Lisa says go.
- */
 var LINKS_ = {
   file: 'BLD-links.csv', on: 'links', idPrefix: 'lnk',
   need: ['id', 'tenant_id', 'from_table', 'from_id', 'role', 'to_table', 'to_id', 'from_date', 'to_date', 'source',
@@ -31,7 +9,6 @@ function linksOn_() { return prop_(BLD.PROP.TABLE_ON_PREFIX + LINKS_.on) === 'tr
 function linksFiles_() { return linksOn_() ? [LINKS_.file] : []; }
 function linksUtc_(d) { return new Date(d.getTime()).toISOString().replace(/\.\d{3}Z$/, 'Z'); }
 
-/** The roles in force on `day` from link_kind.<role>[.<setting>] rule rows: { role: {label, from_tables, ...} }. */
 function linkKindsInForce_(day) {
   var out = {}, best = {}, rules = store_read_('BLD-breeding_rule.csv', false), tenant = prop_(BLD.PROP.TENANT_ID);
   if (!rules) return out;
@@ -50,14 +27,12 @@ function linkKindsInForce_(day) {
 
 function linkPipes_(v) { return String(v || '').split('|').map(function (s) { return s.trim(); }).filter(Boolean); }
 
-/** Who may add/end links of this kind: an owner setting on the kind row; blank = the owner only. */
 function linkMay_(kind, who) {
-  if (who.role === 'OWNER') return true;
+  if (who.role === 'USER') return true;
   var may = linkPipes_(kind.who_may);
   return may.indexOf(who.role) >= 0 || (who.id && may.indexOf('person:' + who.id) >= 0);
 }
 
-/** Dog rows live in BLD-subject.csv. Older pages and the saved link rows say subjects. Either name is that file. */
 function linkSameTable_(a, b) {
   a = String(a || ''); b = String(b || '');
   if (a === b) return true;
@@ -118,7 +93,7 @@ function sinkLinkAdd_(req) {
     if (!kind) errors.role = Object.keys(kinds).length ? 'Choose a kind of link on the list.' : 'No kinds of link are set up yet (link_kind rows).';
     var note = dogcardText_(f.note, 'note', errors, 500), source = dogcardText_(f.source, 'source', errors, 200);
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
-    if (!linkMay_(kind, who)) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask the owner.');
+    if (!linkMay_(kind, who)) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask the user.');
     var fts = linkPipes_(kind.from_tables), tts = linkPipes_(kind.to_tables);
     if (fts.length && !linkTableAllowed_(fts, ft)) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { from_table: 'This kind of link cannot start from ' + ft + '.' } });
     if (tts.length && !linkTableAllowed_(tts, tt)) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_table: 'This kind of link cannot go to ' + tt + '.' } });
@@ -134,7 +109,6 @@ function sinkLinkAdd_(req) {
     var stamp = linksUtc_(now), ended = [];
     var max = parseInt(String(kind.max_per_from || ''), 10);
     if (max > 0 && open.length >= max) {
-      // e.g. a new main photo: end the oldest open ones so the limit holds after this save
       open.sort(function (a, b) { return String(a.r.from_date).localeCompare(String(b.r.from_date)) || String(a.r.created_at).localeCompare(String(b.r.created_at)); });
       var endOn = addDays_(from, -1) < String(open[0].r.from_date || '') ? from : addDays_(from, -1);
       open.slice(0, open.length - max + 1).forEach(function (x) {
@@ -170,8 +144,7 @@ function sinkLinkEnd_(req) {
     read.records.forEach(function (r, i) { if (r.id === rowId && (!tenant || !r.tenant_id || r.tenant_id === tenant)) idx = i; });
     if (idx < 0) throw err_('NOT_FOUND', 'That link was not found.');
     var rec = read.records[idx], kind = linkKindsInForce_(today)[rec.role] || {};
-    if (!linkMay_(kind, who)) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask the owner.');
-    // Already ended: the link is in the state this save wanted. Say saved so the phone stops and does not send it again.
+    if (!linkMay_(kind, who)) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask the user.');
     if (String(rec.to_date || '')) return { status: 'saved', id: rowId, ended: String(rec.to_date), already: true };
     if (to < String(rec.from_date || '')) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_date: 'The end date cannot be before the start date.' } });
     var stamp = linksUtc_(now);
@@ -186,12 +159,6 @@ function sinkLinkEnd_(req) {
   });
 }
 
-/**
- * Links a new record inherits from its parents (15 Nov 2026, BB): for each kind whose inherit_at_birth row is in
- * force on `day`, every open link of that kind from a parent (same table) to an allowed to_id is copied to the new
- * record, from `day`. Called INSIDE the caller's save and lock (e.g. DOGCARD subject_create with a birth litter).
- * Does nothing while links are switched off. Returns the new link ids.
- */
 function linkInherit_(table, childId, parentIds, day, who, now) {
   if (!linksOn_() || !parentIds || !parentIds.length) return [];
   var kinds = linkKindsInForce_(day), tenant = prop_(BLD.PROP.TENANT_ID), made = [];
@@ -214,7 +181,7 @@ function linkInherit_(table, childId, parentIds, day, who, now) {
       return mine(r) && r.from_table === table && parentIds.indexOf(r.from_id) >= 0 && r.role === role &&
         String(r.from_date || '') <= day && linkOpen_(r, day) && (all || allow.indexOf(r.to_id) >= 0);
     }).forEach(function (p) {
-      if (has(role, p.to_table, p.to_id)) return;                 // both parents on the same scheme: one link
+      if (has(role, p.to_table, p.to_id)) return;
       var id = newId_(LINKS_.idPrefix, now);
       while (ids[id]) id = newId_(LINKS_.idPrefix, now);
       ids[id] = 1;
@@ -230,7 +197,6 @@ function linkInherit_(table, childId, parentIds, day, who, now) {
   return made;
 }
 
-/** A pup made from a birth litter inherits its parents' links (the litter's dam and sire), from its dob. */
 function linkInheritAtBirth_(pupId, litterId, dob, who, now) {
   if (!linksOn_() || !litterId || !dob) return [];
   var lit = store_read_('BLD-litter.csv', false), tenant = prop_(BLD.PROP.TENANT_ID), parents = [];
@@ -240,3 +206,4 @@ function linkInheritAtBirth_(pupId, litterId, dob, who, now) {
   });
   return linkInherit_('subject', pupId, parents, dob, who, now);
 }
+

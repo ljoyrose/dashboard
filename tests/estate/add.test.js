@@ -1,5 +1,3 @@
-// Web Estate Hub, Stage 5 (Add). Run: node --test tests/estate/add.test.js
-// Every name here is invented (example.com / example.org / .test style). No estate row lives in this repo.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const A = require('../../estate/add.js');
@@ -97,7 +95,6 @@ test('multipartBody: metadata with parents, then the JSON once, studio shape', (
   assert.deepEqual(meta, { name: 'estate-add-' + NOW + '.json', parents: ['FOLDER_ID_SAMPLE'], mimeType: 'application/json' });
   assert.equal(body, '--bnd123\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) +
     '\r\n--bnd123\r\nContent-Type: application/json\r\n\r\n' + json + '\r\n--bnd123--');
-  // Without a file name it falls back to the request time.
   assert.ok(A.multipartBody(r.request, 'F', 'b').includes('"name":"estate-add-' + NOW + '.json"'));
 });
 
@@ -108,3 +105,4 @@ test('scanPlan: dns, ssl, live, tags; mail only for a bare domain; nothing for a
   assert.deepEqual(A.scanPlan('javascript:alert(1)'), []);
   assert.deepEqual(A.buildRequest(Object.assign({ input: 'example.com' }, base)).request.scan, ['dns', 'ssl', 'live', 'tags', 'mail']);
 });
+

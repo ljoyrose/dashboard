@@ -1,5 +1,3 @@
-// Web Estate keywords and ads (30 Oct 2026): manual rows from the private Keywords tab; "not connected" for every
-// source with no rows; a zero or blank position is never shown as a real position. Pretend Google; invented rows.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -43,3 +41,4 @@ test.describe('Web Estate keywords and ads', () => {
     await expect(page.locator('[data-card="ads"]')).toContainText('client-b.example');
   });
 });
+

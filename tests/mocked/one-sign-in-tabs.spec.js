@@ -5,7 +5,7 @@ const { test, expect } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 const { at } = require('../support/site');
 
-const MOVE = require('../support/world').IDS.moveSheet; // read from config.js, never copied (this repo is public)
+const MOVE = require('../support/world').IDS.moveSheet;
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
@@ -14,7 +14,7 @@ const signIn = async (page) => {
 const gisRequests = (p) => p.evaluate(() => window.__GIS_CALLS.request);
 
 test.describe('One sign-in for every tab', () => {
-  test('sign in on home, open Money Hub and CD Hub: each opens in a new tab already signed in, no prompt @regression', async ({ page, context }) => {
+  test('t-one-sign-in-tabs-spec-1', async ({ page, context }) => {
     await page.goto('./');
     await signIn(page);
 
@@ -32,7 +32,6 @@ test.describe('One sign-in for every tab', () => {
     await expect(cd.locator('#nav button[data-go]').first()).toBeVisible();
     await expect(cd.locator('#signinbtn')).toHaveCount(0);
     expect(await gisRequests(cd)).toBe(0);
-    // The dashboard tab itself was not replaced.
     await expect(page).toHaveURL(at('(#/map)?'));
   });
 
@@ -53,7 +52,7 @@ test.describe('One sign-in for every tab', () => {
     expect(links.length).toBeGreaterThan(4);
     for (const [href, target, rel] of links) {
       expect(target, href).toBe('_blank');
-      expect(rel, href).toBe('opener'); // same site only: lets "Dashboard" bring this tab back
+      expect(rel, href).toBe('opener');
     }
   });
 
@@ -95,7 +94,7 @@ test.describe('One sign-in for every tab', () => {
     await expect(page.locator('#mainNav')).toBeVisible();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
     await expect(cd.locator('#nav button[data-go]').first()).toBeVisible();
-    expect(await gisRequests(page)).toBe(homeAsked); // home picked it up without asking Google
+    expect(await gisRequests(page)).toBe(homeAsked);
   });
 
   test('an expired saved sign-in is not reused in a new tab', async ({ page, context }) => {
@@ -153,7 +152,6 @@ test.describe('Dashboard button (every page except home)', () => {
       const link = '#hubTiles .hubtile a.hgo[href="' + url + '"]';
       const [tab] = await Promise.all([context.waitForEvent('page'), page.locator(link).click()]);
       await expect(tab.locator('#backHome')).toBeVisible();
-      // The tab can close before click() returns; that close is the point, not an error.
       await Promise.all([tab.waitForEvent('close'), tab.locator('#backHome').click().catch((e) => { if (!/closed/.test(e.message)) throw e; })]);
       expect(context.pages()).toEqual([page]);
       await expect(page).toHaveURL(at('(#/map)?'));
@@ -165,7 +163,7 @@ test.describe('Dashboard button (every page except home)', () => {
       const link = '#hubTiles .hubtile a.hgo[href="' + url + '"]';
       const [tab] = await Promise.all([context.waitForEvent('page'), page.locator(link).click()]);
       await expect(tab.locator('#backHome')).toBeVisible();
-      await tab.evaluate(() => { window.close = () => {}; });   // as on a phone or an installed app
+      await tab.evaluate(() => { window.close = () => {}; });
       await tab.locator('#backHome').click();
       await expect(tab).toHaveURL(at('(#/map)?'));
     });
@@ -184,3 +182,4 @@ test.describe('Home: one MOVE link', () => {
     await expect(page.locator('#key-projects p.lead')).toHaveCount(0);
   });
 });
+

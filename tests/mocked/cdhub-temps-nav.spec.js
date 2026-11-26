@@ -1,5 +1,3 @@
-// Temperature pages share the hub's tab list (cdhub/hub-nav.js).
-// Pretend Google and Drive only. The rows here are invented.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -147,4 +145,5 @@ test('history.html: the top-right button closes back to CD Hub; there is no Sign
   await expect(close).toHaveAttribute('href', './index.html#/compliance');
   await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
 });
+
 

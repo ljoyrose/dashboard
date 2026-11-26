@@ -8,13 +8,11 @@ const RULES = {
   // A bottom tab's count (the owner's tab picks, 2 Nov): a small ring in the tab's top-right corner, no fill, never in the flow.
   tabCount: { w: 24, h: 24, r: 12, lh: 22, pad: 0, corner: 5 },   // 14px number (the owner's pick A, 2 Nov)
   button: { desktop: 36, phone: 44 },
-  // Control line, frame top and frame bottom, per background (warm/cool) and mode (light/dark).
   press: { 'warm-light': '#8A7F70', 'cool-light': '#7A8692', 'warm-dark': '#857B6E', 'cool-dark': '#7A8691' },
   frame: { 'warm-light': '#3A3632', 'cool-light': '#33475B', 'warm-dark': '#2A2622', 'cool-dark': '#24323F' },
   foot: { 'warm-light': '#46413B', 'cool-light': '#405569', 'warm-dark': '#34302B', 'cool-dark': '#2D3D4C' },
 };
 
-// Runs in the page. `o` = { look: 'warm-light'..., phone, hover: true|false, rules }. Returns a list of { rule, what, got }.
 function audit(o) {
   const R = o.rules, out = [], seenWhat = new Set();
   const add = (rule, el, got) => { const what = name(el); const k = rule + '|' + what + '|' + got; if (!seenWhat.has(k)) { seenWhat.add(k); out.push({ rule, what, got: String(got) }); } };
@@ -31,24 +29,20 @@ function audit(o) {
   const icon = (e) => e.closest('svg, .ti, [class^="ti-"], .ico-font, canvas, img, video');
   const hex6 = (c) => '#' + c.slice(0, 3).map((x) => Math.round(x).toString(16).padStart(2, '0')).join('').toUpperCase();
 
-  // The bottom tab bar: a fixed nav along the bottom of the screen. The frame top: the first header.
   const navs = [...document.querySelectorAll('nav')].filter((n) => seen(n) && getComputedStyle(n).position === 'fixed' && n.getBoundingClientRect().bottom >= innerHeight - 2);
   const tabbar = navs[0] || null;
   const header = [...document.querySelectorAll('header')].find(seen) || null;
   const inTabs = (e) => tabbar && tabbar.contains(e);
   const PRESS = 'button, summary, select, a.btn, a.pill, a.chip, a.lk, a.tag, [role="button"], input[type="button"], input[type="submit"], label.date';
   const controls = [...document.querySelectorAll(PRESS)].filter((e) => seen(e) && !inTabs(e) && !e.matches('.phbtn') && !e.closest('.sr, [aria-hidden="true"], .gsi, #credential_picker_container') && getComputedStyle(e).display !== 'contents');
-  // A "bare" control is laid out as text: a row title you click, or a card's own title row (a summary holding a heading).
   const bare = (e) => { const s = getComputedStyle(e); if (e.matches('summary') && e.querySelector('h1, h2, h3, h4, h5')) return true; return e.matches('.ttl, [data-house="text"]') && rgb(s.backgroundColor)[3] < 0.05 && ['Top', 'Right', 'Bottom', 'Left'].every((k) => s['border' + k + 'Style'] === 'none' || px(s['border' + k + 'Width']) === 0 || rgb(s['border' + k + 'Color'])[3] < 0.05); };
   const press = hex(R.press[o.look]);
-  // Status pills that are also links (dates, needs-you, stuck) keep their status ring: the ring is the information.
   const STATUS = '.date, .dpill, .datep, label.date, .need, .stuck, .alert, .stat, .late, .soon, .over, [data-house="status"]';
   // Meaning buttons rest on their own colour line (the owner's approved picture): yes green, no / delete rose (AI purple, off rose).
   const MEANING = '.btn.yes, .btn.no, .btn.danger, .btn.ai, .lk.off';
   const lines = (e) => { const rg = document.createRange(); rg.selectNodeContents(e); const tops = [...rg.getClientRects()].filter((q) => q.height > 8 && q.width > 1).map((q) => q.top + q.height / 2).sort((a, b) => a - b);
     return tops.reduce((n, t, i) => n + (i && t - tops[i - 1] > 10 ? 1 : 0), tops.length ? 1 : 0); };
 
-  // 1 radius, 2 lines, 9 solid fills, 10 bars: every element (and its ::before / ::after).
   for (const e of document.querySelectorAll('body *')) {
     if (!seen(e) || e.closest('svg, #credential_picker_container')) continue;
     const r = e.getBoundingClientRect(), w = r.width, h = r.height;
@@ -59,32 +53,25 @@ function audit(o) {
       if (pseudo && (!pw || !ph)) continue;
       const tag = pseudo ? { tagName: e.tagName, id: e.id, className: (typeof e.className === 'string' ? e.className : '') + ' ' + pseudo, textContent: '' } : e;
       const isBar = Math.min(pw, ph) <= 4 && Math.max(pw, ph) >= 8;
-      // Radius: 12px, or round (a dot / ring), or the count pill's 11px; thin bars may round their ends.
       const rad = Math.max(px(s.borderTopLeftRadius), px(s.borderTopRightRadius), px(s.borderBottomLeftRadius), px(s.borderBottomRightRadius));
       if (rad > 0 && !isBar && !e.matches('.bmark') && Math.abs(rad - R.radius) > 0.5 && rad < Math.min(pw, ph) / 2 - 0.5 && !(Math.abs(rad - R.count.r) < 0.5 && Math.abs(ph - R.count.h) < 1.5)) add('radius', tag, rad + 'px');
-      // Lines: every border is 1px; a 3px left colour bar is the one wider edge.
       const bw = ['Top', 'Right', 'Bottom', 'Left'].map((k) => (s['border' + k + 'Style'] === 'none' ? 0 : px(s['border' + k + 'Width'])));
       bw.forEach((v, i) => { if (v > 0 && Math.abs(v - R.line) > 0.01 && !(i === 3 && Math.abs(v - R.bar) < 0.01)) add('line', tag, ['top', 'right', 'bottom', 'left'][i] + ' ' + v + 'px'); });
       if (bw[3] > 1.01 && Math.abs(bw[3] - R.bar) > 0.01) add('bar', tag, 'left edge ' + bw[3] + 'px');
-      // Box-shadow used as a thick line (inset spread over 1px).
       for (const m of s.boxShadow.matchAll(/inset\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+([\d.]+)px\s+([\d.]+)px|(-?[\d.]+)px\s+(-?[\d.]+)px\s+([\d.]+)px\s+([\d.]+)px\s+inset/g)) {
         const spread = +(m[4] || m[8]), dx = Math.abs(+(m[1] || m[5])), dy = Math.abs(+(m[2] || m[6]));
         if (spread > 1.01 || (dx > 1.01 && !(dx === 3 && !dy)) || dy > 1.01) add('line', tag, 'inset shadow ' + m[0]);
       }
-      // Solid fills: a strong colour behind something bigger than a dot. Allowed: small status dots, switch knobs, bars.
       const bg = rgb(s.backgroundColor);
       if (bg[3] >= 0.5 && chroma(bg) > 70 && light(bg) > 0.2 && light(bg) < 0.82 && Math.min(pw, ph) > 12 && !e.closest('img, picture, video, canvas, .qr, .sws, .swwrap, [data-house="swatch"]')) add('solid fill', tag, hex6(bg) + ' ' + Math.round(pw) + 'x' + Math.round(ph));
-      // Bars: a thin upright colour strip is 3px wide.
       if (pw <= 6 && pw > 0 && ph >= 10 && bg[3] >= 0.5 && chroma(bg) > 40 && Math.abs(pw - R.bar) > 0.6) add('bar', tag, Math.round(pw * 10) / 10 + 'x' + Math.round(ph) + 'px');
     }
   }
-  // 10b the column-title stage marker is exactly 3 x 18.
   for (const e of document.querySelectorAll('.col-head .sbar, .house-marker')) {
     if (!seen(e)) continue;
     const r = e.getBoundingClientRect();
     if (Math.abs(r.width - R.marker[0]) > 0.5 || Math.abs(r.height - R.marker[1]) > 0.5) add('bar', e, 'stage marker ' + r.width + 'x' + r.height);
   }
-  // 3 type and 4 no coloured words: every element that holds words.
   for (const e of document.querySelectorAll('body *')) {
     if (!seen(e) || icon(e) || e.closest('#credential_picker_container, .sr')) continue;
     // A phone's bottom-tab count is a dot with no number showing (the owner's pick b, 2 Nov; tab-dots.spec.js pins it): not words.
@@ -99,15 +86,13 @@ function audit(o) {
     const c = rgb(s.color);
     if (c[3] > 0.3 && chroma(c) > 45) add('coloured text', e, hex6(c));
   }
-  // 5 one control line, 6 button height (36 / 44), on everything you press (not the bottom tabs).
   const want = o.phone ? R.button.phone : R.button.desktop;
   for (const e of controls) {
     if (bare(e)) continue;
     const s = getComputedStyle(e), r = e.getBoundingClientRect();
     const inHead = header && header.contains(e);
-    // A control that wraps its words onto more lines may grow past the minimum; a one-line control is exactly 36 / 44.
     if (!e.matches('input[type="checkbox"], input[type="radio"], #backHome') && (r.height < want - 0.6 || (r.height > want + 0.6 && lines(e) <= 1))) add('button height', e, Math.round(r.height * 10) / 10 + 'px (want ' + want + ')');
-    if (inHead) continue; // frame buttons use the frame's own light line
+    if (inHead) continue;
     const bc = rgb(s.borderTopColor), bwid = s.borderTopStyle === 'none' ? 0 : px(s.borderTopWidth);
     if (!bwid || bc[3] < 0.3) { add('control line', e, 'no line'); continue; }
     if (e.matches(MEANING)) { if (!(chroma(bc) > 45)) add('control line', e, 'meaning button rests on ' + hex6(bc) + ', not its own colour'); continue; }
@@ -120,7 +105,7 @@ function audit(o) {
     if (!seen(e) || e.children.length || e.matches(PRESS)) continue;
     const t = (e.textContent || '').trim(), s = getComputedStyle(e), r = e.getBoundingClientRect();
     const ringed = s.borderTopStyle !== 'none' && px(s.borderTopWidth) > 0 && rgb(s.borderTopColor)[3] > 0.3;
-    if (!/^\d{1,4}\+?$/.test(t) || !ringed || r.height > 26 || r.width > 60) continue; // bigger ringed numbers are summary figures, not count pills
+    if (!/^\d{1,4}\+?$/.test(t) || !ringed || r.height > 26 || r.width > 60) continue;
     if (t === '0') { add('count', e, '0 shows a ring'); continue; }
     if (inTabs(e)) {
       const T = R.tabCount, tab = e.parentElement.getBoundingClientRect();
@@ -148,7 +133,6 @@ function audit(o) {
     const t = (e.textContent || '').trim(), s = getComputedStyle(e);
     if (seen(e) && (t === '' || t === '0') && s.borderTopStyle !== 'none' && px(s.borderTopWidth) > 0 && rgb(s.borderTopColor)[3] > 0.3) add('count', e, 'empty or 0 shows a ring');
   }
-  // 8 date pills: always ringed; rose for late, amber for soon.
   const tok = (n, f) => hex(getComputedStyle(document.documentElement).getPropertyValue(n).trim() || getComputedStyle(document.documentElement).getPropertyValue(f).trim());
   const rose = tok('--house-late', '--ljr-2'), amber = tok('--house-soon', '--ljr-3-text');
   for (const e of document.querySelectorAll('.dpill, .datep, .date, label.date, .due')) {
@@ -159,7 +143,6 @@ function audit(o) {
     if (late && !near(bc, rose, 12)) add('date pill', e, 'late ring ' + hex6(bc));
     if (soon && !near(bc, amber, 12)) add('date pill', e, 'soon ring ' + hex6(bc));
   }
-  // 11 frame: deep top and bottom, light tab buttons.
   if (header) { const bg = rgb(getComputedStyle(header).backgroundColor); if (!near(bg, hex(R.frame[o.look]), 8)) add('frame', header, 'top ' + hex6(bg) + ' (want ' + R.frame[o.look] + ')'); }
   if (tabbar) {
     const bg = rgb(getComputedStyle(tabbar).backgroundColor);
@@ -172,7 +155,6 @@ function audit(o) {
       if (s.outlineStyle !== 'none' && px(s.outlineWidth) > 0 && document.activeElement !== a) add('tabs', a, 'outline at rest');
     }
   }
-  // 12 gaps: 12px between cards that stack in one column; 12px padding inside a card.
   for (const c of document.querySelectorAll('.card')) {
     if (!seen(c)) continue;
     const s = getComputedStyle(c);
@@ -186,7 +168,6 @@ function audit(o) {
   return out;
 }
 
-// Runs in the page: hover one control and read what changed. Returns { before, after } of the box and the drawn line.
 function hoverRead(sel) {
   const e = document.querySelector(sel); if (!e) return null;
   const s = getComputedStyle(e), r = e.getBoundingClientRect();
@@ -197,3 +178,4 @@ function hoverRead(sel) {
 }
 
 module.exports = { RULES, audit, hoverRead };
+

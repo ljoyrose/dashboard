@@ -38,3 +38,4 @@ test.describe('Live header check @contract', () => {
     expect(r.stdout).not.toMatch(/total_gbp|stage/); // counts only
   });
 });
+

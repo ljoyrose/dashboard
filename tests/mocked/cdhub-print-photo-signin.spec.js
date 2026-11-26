@@ -7,7 +7,7 @@ const { test, expect } = require('../fixtures/job34/load');
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-const TOKEN = 'fake-owner-token-photo';
+const TOKEN = 'fake-user-token-photo';
 
 async function open(page, { thumbOk }) {
   const tables = {
@@ -21,7 +21,7 @@ async function open(page, { thumbOk }) {
   const seen = { meta: [], bytes: [], cookieThumb: 0 };
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
-    return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [], role: 'OWNER' } } });
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [], role: 'USER' } } });
   });
   await page.route(/^https:\/\/drive\.google\.com\/thumbnail/, (route) => { seen.cookieThumb++; return route.fulfill({ status: 403, body: '' }); });   // what Chrome now does
   await page.route(/^https:\/\/www\.googleapis\.com\/drive\/v3\/files\/FAKEphotoFile1\?fields=thumbnailLink/, (route) => {
@@ -36,7 +36,7 @@ async function open(page, { thumbOk }) {
   await page.addInitScript(([c, u, t]) => {
     localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u);
     localStorage.setItem('ljr-dash-auth', JSON.stringify({ access_token: t, expires_at: Date.now() + 1800000, scope: 'https://www.googleapis.com/auth/drive.readonly' }));
-  }, ['FAKE-OWNER', SCRIPT, TOKEN]);
+  }, ['FAKE-USER', SCRIPT, TOKEN]);
   await page.goto('cdhub/staff/print/');
   await page.getByRole('button', { name: 'Dog cards' }).click();
   return seen;
@@ -44,9 +44,9 @@ async function open(page, { thumbOk }) {
 const photo = (page) => page.locator('.dcard[data-dog="d1"] [data-k="photo"] img');
 const loaded = (page) => expect.poll(() => photo(page).evaluate((i) => i.complete && i.naturalWidth > 0)).toBe(true);
 
-test('signed in to CD Hub: the photo comes from the Drive thumbnail link, asked for with the sign-in, never the cookie address @regression', async ({ page }) => {
+test('t-cdhub-print-photo-signin-spec-1', async ({ page }) => {
   const seen = await open(page, { thumbOk: true });
-  await expect(photo(page)).toHaveAttribute('src', 'https://lh3.googleusercontent.com/FAKEthumb=s800');   // print size, not the 220px list size
+  await expect(photo(page)).toHaveAttribute('src', 'https://lh3.googleusercontent.com/FAKEthumb=s800');
   await loaded(page);
   expect(seen.meta).toEqual(['Bearer ' + TOKEN]);
   expect(seen.cookieThumb, 'the cookie-only address is not used when signed in').toBe(0);
@@ -63,3 +63,4 @@ test.describe('thumbnail refused', () => {
   expect(seen.cookieThumb).toBe(0);
 });
 });
+

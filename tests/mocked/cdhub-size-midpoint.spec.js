@@ -5,8 +5,8 @@ const { test, expect, HUBS } = require('../fixtures/job34/load');
 const { SINK, csv, put } = require('../support/dog-photo-world');
 
 const RULES = [
-  { rule_key: 'size_from_kg.medium', value: '10', effective_from: '2026-01-01', source: 'Pretend owner rule' },
-  { rule_key: 'size_from_kg.large', value: '25', effective_from: '2026-01-01', source: 'Pretend owner rule' },
+  { rule_key: 'size_from_kg.medium', value: '10', effective_from: '2026-01-01', source: 'Pretend user rule' },
+  { rule_key: 'size_from_kg.large', value: '25', effective_from: '2026-01-01', source: 'Pretend user rule' },
   { rule_key: 'size_colour.small', value: 'blue' }, { rule_key: 'size_colour.medium', value: 'green' }, { rule_key: 'size_colour.large', value: 'red' }];
 
 test.describe('Size band from the kg range midpoint', () => {
@@ -50,7 +50,7 @@ test.describe('Size band from the kg range midpoint', () => {
       if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
       return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [] } } });
     });
-    await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+    await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-USER', SCRIPT]);
     await page.goto('cdhub/staff/print/');
     await page.getByRole('button', { name: 'Dog cards' }).click();
     const card = (id) => page.locator('.dcard[data-dog="' + id + '"]');
@@ -59,7 +59,7 @@ test.describe('Size band from the kg range midpoint', () => {
     await expect(card('d1').locator('[data-k="size"] b')).toHaveText('Medium');
     await expect(card('d2').locator('[data-k="size"]')).toHaveAttribute('data-size', 'medium');
     await expect(card('d2')).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
-    await expect(card('d3').locator('[data-k="size"]')).toHaveAttribute('data-size', 'small');   // latest weighing 7.2 kg
+    await expect(card('d3').locator('[data-k="size"]')).toHaveAttribute('data-size', 'small');
     await expect(card('d3')).toHaveAttribute('style', /--c:var\(--sz-blue, blue\)/);
   });
 
@@ -81,3 +81,4 @@ test.describe('Size band from the kg range midpoint', () => {
     await expect(page.locator('#rows article.dc')).toHaveAttribute('data-size', 'medium');
   });
 });
+

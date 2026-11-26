@@ -1,18 +1,13 @@
 const { tabClick, tabTo } = require('../support/tabs');
-// JOB 34 (group D): GA Hub gaps not proved by food.spec.js, house-look or phone.spec.js.
-// Sign out, unknown address, header links, "Show N more", Copy, load errors in plain words, an expired sign-in,
-// a failed save, a slow read, keyboard reach. Pretend Google and Sheets only; every row is invented.
 const { test, expect, HUBS, go, tabWalk, SHEETS } = require('../fixtures/job34/load');
 
 const EMPTY8 = { valueRanges: [{ values: [] }, { values: [] }, { values: [] }, { values: [] }, { values: [] }, { values: [] }, { values: [] }, { values: [] }] };
 
-// Sign in by hand (the Sheets route is set by the test first).
 async function signIn(page) {
   await page.goto('food/#/home');
   await page.locator('#view [data-action="signin"]').click();
 }
 
-// Record later sheet writes (the hub's pretend Sheets route still answers reads).
 async function sheetWrites(page, opts = {}) {
   const writes = [];
   await page.route(SHEETS, (route) => {
@@ -92,7 +87,7 @@ test.describe('GA Hub (JOB 34)', () => {
     [403, 'Request had insufficient authentication scopes.', 'tick every box Google shows'],
   ]) {
     test(`a ${status} "${message}" from Sheets says what to do in plain words`, async ({ page, allowedConsole }) => {
-      allowedConsole.push(new RegExp('status of ' + status)); // the browser logs the refused request; the page's banner is the handling
+      allowedConsole.push(new RegExp('status of ' + status));
       await page.route(SHEETS, (route) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ error: { code: status, message } }) }));
       await signIn(page);
       await expect(page.locator('#banner')).toContainText(words);
@@ -122,16 +117,15 @@ test.describe('GA Hub (JOB 34)', () => {
     await expect(page.locator('#view [data-hub-main="food"] [data-hm="needs"] .hm-head .cnt')).toHaveText('3');
   });
 
-  // J34-F60 (fixed in food/index.html).
   test('J34-F60 a save Google refuses says "Not saved" and the button can be tapped again', async ({ page, allowedConsole }) => {
     allowedConsole.push(/status of 500/);
     await HUBS.food.open(page);
     await page.route(SHEETS, (route) => route.request().method() === 'PUT' ? route.fulfill({ status: 500, contentType: 'application/json', body: '{}' }) : route.fallback());
-    await go(page, 'do'); // answer cards live on Do (Main holds no answer cards)
+    await go(page, 'do');
     const apply = page.locator('#view [data-ans]').first();
     await apply.click();
     await expect(page.locator('#banner')).toContainText('Not saved: Google said 500');
-    await expect(page.locator('#view [data-ans]').first()).toBeEnabled(); // today it stays disabled until the page is refreshed
+    await expect(page.locator('#view [data-ans]').first()).toBeEnabled();
   });
 
   test('a slow read never shows "Nothing needs you" before the workbook has answered', async ({ page }) => {
@@ -142,12 +136,10 @@ test.describe('GA Hub (JOB 34)', () => {
     await expect(page.locator('#view')).toContainText('Nothing needs you', { timeout: 6000 }); // the empty workbook, once read
   });
 
-  // J34-F61 (fixed in food/index.html).
   test('J34-F61 while the workbook is being read after sign-in, the page says it is reading (not the sign-in card again)', async ({ page }) => {
     await page.route(SHEETS, async (route) => { await new Promise((r) => setTimeout(r, 2500)); route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY8) }); });
     await signIn(page);
     await page.waitForTimeout(400);
-    // Read once, mid-load (no waiting): today both still say "Sign in" for the whole read, inviting a second sign-in.
     expect(await page.locator('#signin').getAttribute('aria-label'), 'header button mid-read').toBe('Sign out');
     expect(await page.locator('#view').innerText(), 'view mid-read').not.toContain('Sign in to see the GA Hub');
   });
@@ -155,7 +147,6 @@ test.describe('GA Hub (JOB 34)', () => {
   test('an empty workbook: Orders, Invoices and Products each say so in plain words', async ({ page }) => {
     await page.route(SHEETS, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY8) }));
     await signIn(page);
-    // Main says it once, in its own empty card (the 3 numbers stay below it).
     await expect(page.locator('#view [data-hub-main="food"] [data-hm="empty"]')).toContainText('Nothing needs you');
     await expect(page.locator('#view').getByText('Nothing needs you', { exact: true })).toHaveCount(1);
     for (const [view, words] of [['orders', 'No orders yet'], ['invoices', 'No GA invoices yet'], ['products', 'No products here']]) {
@@ -164,12 +155,10 @@ test.describe('GA Hub (JOB 34)', () => {
     }
   });
 
-  // J34-F62 (fixed in food/index.html).
   test('J34-F62 an empty Settings tab: the GA tab says there are no GA details yet (not an empty box)', async ({ page }) => {
     await page.route(SHEETS, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY8) }));
     await signIn(page);
     await go(page, 'ga');
-    // Today: "GA", the hint, then a bordered card with nothing in it.
     await expect(page.locator('#view .card').first()).not.toBeEmpty();
   });
 
@@ -202,7 +191,6 @@ test.describe('GA Hub (JOB 34)', () => {
     expect(await tabTo(page, 'nav.tabs a[data-nav="ga"]', 60), 'Tab reaches GA under More').toBe(true);
   });
 
-  // Card notes (11 Nov 2026). Invented rows only. Who is the pretend signed-in account, never a name in this file.
   test('a note saved with the answer is written in column H (answer, note, time, who)', async ({ page }) => {
     let who = '';
     page.on('response', async (res) => {
@@ -283,3 +271,4 @@ test.describe('GA Hub (JOB 34)', () => {
     expect(writes.some((w) => w.method === 'PUT')).toBe(false);
   });
 });
+

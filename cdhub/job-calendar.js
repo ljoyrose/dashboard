@@ -24,7 +24,6 @@
 
   function inForce(r, day) { return r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day); }
 
-  /** The type_keys to draw, in the owner's order. */
   function chosen(v) {
     var best = {};
     (v.rules || []).forEach(function (r) {
@@ -38,13 +37,12 @@
         .sort(function (a, b) { return a.n - b.n; }).map(function (x) { return x.k; });
     ALWAYS.forEach(function (k) {
       if (on.indexOf(k) >= 0) return;
-      if (best[k] && !(parseInt(best[k].value, 10) > 0)) return;   // the owner turned this card off
+      if (best[k] && !(parseInt(best[k].value, 10) > 0)) return;
       if (typeOf(v, k)) on.push(k);
     });
     return on;
   }
 
-  /** Every check_type row of this job, including a later copy with another type_key or a -2 id. */
   function familyFor(v, key) {
     var hit = null;
     (Due.families ? Due.families(v.types || []) : []).forEach(function (g) {
@@ -53,7 +51,6 @@
     return hit || [];
   }
 
-  /** The row a new save uses: the original of the family, not a later copy. One type_key still uses its newest row. */
   function typeOf(v, key) {
     var main = Due.mainOf ? Due.mainOf(familyFor(v, key), v.today) : null;
     if (main) return String(main.active).toLowerCase() !== 'false' ? main : null;
@@ -62,15 +59,13 @@
     return best && String(best.active).toLowerCase() !== 'false' ? best : null;
   }
 
-  /** London day -> {dogs:{id:1}, n, lines:[{by, at}]} for every done record of this job (all its versions and copies).
-      A round row counts each dog in covered_ids. A dog marked not here, not done or missed on that row does not count. */
   function days(v, key) {
     var ids = {}, replaced = {}, out = {};
     var group = familyFor(v, key);
     (group.length ? group : (v.types || []).filter(function (r) { return r.type_key === key; })).forEach(function (r) { ids[r.id] = 1; });
     (v.logs || []).forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = 1; });
     (v.logs || []).forEach(function (l) {
-      if (!ids[l.check_type_id] || replaced[l.id] || SKIP[l.outcome] || String(l.how_recorded || '') === 'owner_note') return;
+      if (!ids[l.check_type_id] || replaced[l.id] || SKIP[l.outcome] || String(l.how_recorded || '') === 'user_note') return;
       var d = Due.londonDate(l.happened_at || l.taken_at); if (!d) return;
       var x = out[d] = out[d] || { dogs: {}, dogN: {}, n: 0, lines: [] };
       var skip = {};
@@ -83,8 +78,6 @@
     return out;
   }
 
-  /** The day the daily run starts. A gap of more than 60 days means the earlier entries did not start it
-      (a paper sheet typed in months later). Days before that stay "not tracked", even if one old day has a row. */
   function trackedFrom(days) {
     var list = Object.keys(days || {}).sort();
     if (!list.length) return '';
@@ -108,7 +101,6 @@
     if (Number(today.slice(8, 10)) < Number(dob.slice(8, 10))) m--;
     return m < 0 ? null : m;
   }
-  /** Same puppy rule as the year print: a litter pup, a Pup, or a generated "Dam x Sire 2026 - male" name. */
   function litterPup(dog, today) {
     if (!dog) return false;
     if (dog.puppy === true) return true;
@@ -124,7 +116,6 @@
   function wantsPups(t) {
     return /pup/i.test(String((t && t.type_key) || '') + ' ' + String((t && t.label) || '') + ' ' + String((t && t.only_groups) || ''));
   }
-  /** Dogs a per-dog card counts on one day: on site that day, born, without litter puppies unless the check is for puppies. */
   function dogsOn(v, t, iso) {
     iso = iso || v.today;
     var opt = { occupancy: v.occupancy, statuses: v.statuses, rules: v.rules, settings: v.settings };
@@ -135,8 +126,6 @@
     return list;
   }
 
-  /** One month for one job: {key, label, ym, first, need, cells:[{iso, day, state, got, need}]}. State: done, part,
-      missed, due (today, not yet), future, before (before this job's daily run: not tracked here), blank (padding). */
   function month(v, key, ym) {
     var t = typeOf(v, key); if (!t) return null;
     var perDog = Due.perDogSite(t), need = perDog ? dogsOn(v, t, v.today).length : 1;
@@ -162,7 +151,6 @@
     return { key: key, label: t.label || key, ym: ym, first: first, perDog: perDog, vetCal: showsVet(t), need: need, typeId: t.id, cells: cells };
   }
 
-  /** Dogs and litters in scope on one day, so a past day uses the band in force then. */
   function dayScope(v, t, iso) {
     var roster = v.subjects || v.dogs || [];
     var opt = { occupancy: v.occupancy, statuses: v.statuses, rules: v.rules, settings: v.settings };
@@ -174,8 +162,6 @@
     return { subjects: dogs, litters: litters, types: v.types || [] };
   }
 
-  /** Photos and files linked to each record (link rows check_log -> files, any role, link not ended), keyed by record id.
-      Same rule as the record history (its filesByLog). */
   function filesByLog(v) {
     var files = {}, out = {};
     (v.files || []).forEach(function (f) { files[f.id] = f; });
@@ -190,8 +176,6 @@
     return out;
   }
 
-  /** What was recorded on one day for one job: who and when, notes, and the photos (diary pages, evidence) to open.
-      A picture has no src here: the page fills it from Drive with the signed-in read (data-cal-photo-id), as for dog photos. */
   function dayHtml(v, key, iso, docs, vets) {
     var e = v.esc, c = month(v, key, iso.slice(0, 7)); if (!c) return '';
     var x = c.cells.filter(function (y) { return y.iso === iso; })[0]; if (!x) return '';
@@ -217,14 +201,11 @@
       + '</div>';
   }
 
-  /** A health-check calendar may show vet visits beside the checks. Exercise and every other card do not. */
   function showsVet(t) {
     if (!t || !Due.perDogSite(t)) return false;
     return (String(t.type_key || '') + ' ' + String(t.label || '')).toLowerCase().indexOf('health') >= 0;
   }
 
-  /** Vet visits by day (BLD-visit rows, status done; booked ones are not shown as visits). Shown on health-check
-      calendars only, so a visit never counts as a check and never appears on Exercise or any other card. */
   function vetByDay(v) {
     var out = {};
     (v.vetVisits || []).forEach(function (r) {
@@ -240,7 +221,6 @@
   var WORD = { done: 'done', part: 'part done', missed: 'missed', due: 'due today', future: '', before: 'not tracked yet' };
   var TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>';
 
-  /** The calendars for one month, with a "Done today" button on each job not yet done today (when the page can save). */
   function html(v, ym, canSave) {
     var e = v.esc, keys = chosen(v), docs = filesByLog(v), open = v.calOpen || {}, vets = vetByDay(v);
     var mm = parseInt(ym.slice(5, 7), 10), title = MON[mm - 1] + ' ' + ym.slice(0, 4);
@@ -272,15 +252,14 @@
           var cls = 'jd ' + x.state + (x.iso === v.today ? ' today' : '') + (ph ? ' ph' : '') + (vn ? ' vet' : '') + (open.key === k && open.iso === x.iso ? ' open' : '');
           var face = (x.state === 'done' ? TICK : '<i>' + x.day + '</i>') + (ph ? '<b class="jcam">' + CAM + '</b>' : '') + (vn ? '<b class="jvet">' + VET + '</b>' : '');
           if (x.lines.length || vn) return '<button type="button" class="' + cls + '" data-day="' + x.iso + '" data-jcal-day="' + x.iso + '" data-jcal-key="' + e(k) + '" title="' + e(label) + '" aria-label="' + e(label + (ph ? ' · photo' : '') + '. Open') + '"'
-            + (open.key === k && open.iso === x.iso ? ' aria-expanded="true"' : '') + '>' + face + '</button>';   // a day with records opens who, when, notes and photos
-          return '<span class="' + cls + '" data-day="' + x.iso + '" title="' + e(label) + '" aria-label="' + e(label) + '" role="img">' + face + '</span>';   // the date in every square but a done one (its tick); part done says how many in its label
+            + (open.key === k && open.iso === x.iso ? ' aria-expanded="true"' : '') + '>' + face + '</button>';
+          return '<span class="' + cls + '" data-day="' + x.iso + '" title="' + e(label) + '" aria-label="' + e(label) + '" role="img">' + face + '</span>';
         }).join('') + '</div>' + (open.key === k && open.iso && open.iso.slice(0, 7) === ym ? dayHtml(v, k, open.iso, docs, vets) : '') + '</div>';
     }).join('') + '</div>';
     return h + '</section>';
   }
   function shift(ym, n) { var y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10) - 1 + n; y += Math.floor(m / 12); m = ((m % 12) + 12) % 12; return y + '-' + (m < 9 ? '0' : '') + (m + 1); }
 
-  /** What the page sends for "Done today": one whole-site save; a per-dog job lists every dog it covers. */
   function doneFields(v, key) {
     var t = typeOf(v, key); if (!t) return null;
     var f = { check_type_id: t.id, outcome: String(t.asks_outcome).toLowerCase() === 'false' ? 'recorded' : 'ok', how_recorded: 'site_tap' };
@@ -340,7 +319,6 @@
   }
   var IMP_OUTCOME = { '': 'ok', done: 'ok', ok: 'ok', yes: 'ok', concern: 'concern', 'not done': 'not_done', no: 'not_done' };
 
-  /** A day that is already fully done (every dog, or the one line). A part-done day can still be imported. */
   function dayFullyDone(v, key, iso) {
     var c = month(v, key, String(iso || '').slice(0, 7));
     if (!c) return false;
@@ -348,7 +326,6 @@
     (c.cells || []).forEach(function (x) { if (x.iso === iso) cell = x; });
     return !!(cell && cell.state === 'done');
   }
-  /** Checks every row: [{line, iso, key, label, outcome, note, ok, why}]. Nothing is saved here. */
   function parseImport(v, text) {
     var types = siteTypes(v), byName = {};
     Object.keys(types).forEach(function (k) { byName[k.toLowerCase()] = k; byName[String(types[k].label || '').toLowerCase()] = k; });
@@ -376,7 +353,6 @@
     });
     return out;
   }
-  /** What one imported row sends: a whole-site record for that day, marked import; a per-dog job lists its dogs. */
   function importFields(v, x) {
     var t = siteTypes(v)[x.key]; if (!t) return null;
     var f = { check_type_id: t.id, outcome: x.outcome, how_recorded: 'import', happened_at: x.iso + 'T12:00:00Z' };
@@ -385,7 +361,6 @@
     if (Due.perDogSite(t)) f.dog_ids = dogsOn(v, t, x.iso).map(function (d) { return d.id; }).join('|');
     return f;
   }
-  /** A starter file: the heading row and one example row per calendar job (yesterday), to fill in and import. */
   function template(v) {
     var y = new Date(Date.parse(v.today + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10), types = siteTypes(v);
     return 'date,job,outcome,note\r\n' + chosen(v).map(function (k) { return y + ',"' + String((types[k] || {}).label || k).replace(/"/g, '""') + '",done,'; }).join('\r\n') + '\r\n';
@@ -412,3 +387,4 @@
 
   return { STARTER: STARTER, chosen: chosen, month: month, html: html, dayHtml: dayHtml, filesByLog: filesByLog, doneFields: doneFields, shift: shift, CSS: CSS, parseImport: parseImport, importFields: importFields, template: template, importPanel: importPanel, previewHtml: previewHtml };
 }));
+

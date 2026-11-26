@@ -71,20 +71,12 @@
     var a = parseFloat(m[1].replace(',', '.')), b = parseFloat(m[2].replace(',', '.'));
     return a > 0 && b >= a ? (a + b) / 2 : NaN;
   }
-  /**
-   * The size of one dog: the latest weighing against the cut-off rows, else the midpoint of the kg range in its size
-   * cell. { size: 'small'|'medium'|'large'|'', from: 'weight'|'range'|'', kg }. No cut-off rows: no size (never a fixed default).
-   */
   function sizeOf(latestKg, sizeText, cut) {
     var b = sizeFromKg(latestKg, cut);
     if (b) return { size: b, from: 'weight', kg: parseFloat(latestKg) };
     var mid = rangeMidKg(sizeText); b = sizeFromKg(mid, cut);
     return b ? { size: b, from: 'range', kg: mid } : { size: '', from: '', kg: null };
   }
-  /**
-   * The owner's size_override.<dog id> rule row in force on `today` (newest effective_from wins; a later row on the
-   * same day wins a tie). 'small' | 'medium' | 'large', or '' (no row, or the row says 'weight').
-   */
   function sizeOverride(rules, id, today) {
     var k = 'size_override.' + id, hit = null, from = '';
     (rules || []).forEach(function (r) {
@@ -109,10 +101,6 @@
     return sizeOf(o.kg, o.sizeText, o.cut !== undefined ? o.cut : sizeCutoffs(o.rules, o.today));
   }
 
-  /**
-   * The owner's words for the sizes: size_label.small|medium|large rule rows (OV12 17 Nov 2026), newest row in force on
-   * `today` wins; a word over 30 characters is ignored. Without a row, Small, Medium, Large. Hub and print share this.
-   */
   function sizeLabels(rules, today) {
     var out = { small: 'Small', medium: 'Medium', large: 'Large' }, from = {}, day = String(today || '').slice(0, 10);
     (rules || []).forEach(function (r) {
@@ -125,42 +113,27 @@
     return out;
   }
 
-  /**
-   * Whether one access row counts. A row whose to_date is before its from_date was voided (it never applied; OV12 18 Nov
-   * 2026, 3A.1/2) and never counts. With a date, the row must also be in force that day (inForce: started, not ended).
-   */
   function accessRowCounts(r, date) {
     var f = ymd(r && r.from_date), t = ymd(r && r.to_date);
     if (f && t && t < f) return false;
     return !ymd(date) || inForce([r], date, 'from_date').length === 1;
   }
-  /** The flap setting in force: the last counting row for that room with a value (rows are only ever added). */
   function accessOf(rows, areaId, date) {
     var a = '';
     (rows || []).forEach(function (r) { if (r.area_id === areaId && r.access_type && accessRowCounts(r, date)) a = String(r.access_type).toLowerCase(); });
     return a === 'free' || a === 'limited' ? a : '';
   }
-  /**
-   * The flap setting in force on a date (LD-SC audit, OV11 15 Nov 2026). area_access rows are dated: from_date (older
-   * rows may carry effective_from) and to_date, the shared rule above. Of the rows in force that day the latest start
-   * wins; on the same start, the later row. An undated row counts as the oldest. A voided row (to_date before from_date)
-   * never counts. No date: every other row.
-   */
   function accessOn(rows, areaId, iso) {
     var a = '', best = null, d = ymd(iso);
     (rows || []).forEach(function (r) {
       if (!r || r.area_id !== areaId || !r.access_type) return;
       var f = ymd(r.from_date || r.effective_from), t = ymd(r.to_date);
-      if (f && t && t < f) return; // voided: to_date before from_date never counts (OV12 18 Nov 2026)
+      if (f && t && t < f) return;
       if (d && ((f && f > d) || (t && d > t))) return;
       if (best === null || f >= best) { best = f; a = String(r.access_type).toLowerCase(); }
     });
     return a === 'free' || a === 'limited' ? a : '';
   }
-  /**
-   * The room's alternatives for one flap setting on a date, for a sign or a card: [{band:'small', n:3}, ...], small first.
-   * Same rows as check(): in force that day, the latest from_date per size; "+ pups" rows left out.
-   */
   function limitsOn(capacity, areaId, access, iso) {
     var rows = (capacity || []).filter(function (r) { return r.area_id === areaId; });
     if (iso) rows = latestPerBand(inForce(rows, iso, 'from_date'));
@@ -168,7 +141,6 @@
     SIZES.forEach(function (s) { var n = limitFor(rows, [String(access || '').toLowerCase()], s); if (n > 0) out.push({ band: s, n: n }); });
     return out;
   }
-  /** The limit for one alternative. With two flap settings possible, the stricter. null = no row. */
   function limitFor(rows, modes, b) {
     var limit = null;
     rows.forEach(function (r) {
@@ -184,8 +156,6 @@
     return out.join(' or ');
   }
 
-  /** On a date, several rows can cover the same room, flap setting and size: the latest from_date wins (a new row replaces
-   *  the old one even if the old one was not closed). Rows with the same from_date all stay, and the stricter figure counts. */
   function latestPerBand(rows) {
     var top = {};
     rows.forEach(function (r) { var k = String(r.access_type).toLowerCase() + '|' + band(r.size_band), f = ymd(r.from_date); if (!(k in top) || f > top[k]) top[k] = f; });
@@ -215,10 +185,6 @@
     });
     return out;
   }
-  /**
-   * The limits a room of m2 square metres gets from the space rules, as capacity rows (marked derived):
-   * for each size, the most dogs whose m² needed fits the room; a mum with pups fits (1) or not (0).
-   */
   function deriveRows(areaId, m2, space) {
     var rows = [], a = parseFloat(m2);
     if (isNaN(a) || a <= 0 || !space) return rows;
@@ -233,12 +199,6 @@
     });
     return rows;
   }
-  /**
-   * dogs = everyone who would be in the room: [{id, size, damId}]
-   * Optional m2 (the room's size) and space (spaceRules()): a flap setting with no capacity rows of its own is worked out
-   * from the room's m² and the space rules, and the message says so.
-   * Returns {status: 'ok'|'over'|'unknown', count, limit, access, alternatives, mix, message, notes}
-   */
   function check(o) {
     var rows = (o.capacity || []).filter(function (r) { return r.area_id === o.areaId; });
     if (o.date) rows = latestPerBand(inForce(rows, o.date, 'from_date'));
@@ -290,7 +250,6 @@
     return res;
   }
 
-  /** Every room at once, for the compliance audit. rooms = [{areaId, label, access, dogs, reasons, date}]; date (optional) judges each room by the rows in force that day. */
   function audit(rooms, capacity) {
     var out = { over: [], unknown: [], ok: 0 };
     rooms.forEach(function (r) {
@@ -300,10 +259,6 @@
     });
     return out;
   }
-  /**
-   * How many places of the incoming dog's size are free in this room (including this dog). 0 = no space or over.
-   * The mix is judged as check() does: every dog counts as the largest size present after this dog would join.
-   */
   function freePlaces(o) {
     var add = o && o.add, cur = (o && o.dogs) || [];
     if (!add) return { ok: false, free: 0, size: '', limit: null, count: cur.length };
@@ -325,7 +280,6 @@
     (o.weights || []).forEach(function (w) { var p = lastKg[w.subject_id]; if (!p || String(w.performed_on) >= p.on) lastKg[w.subject_id] = { on: String(w.performed_on), kg: w.weight_kg }; });
     return function (id) { var x = subj[id] || {}; return { id: id, size: byWeight ? sizeFromKg((lastKg[id] || {}).kg, cut) : x.size_band, damId: damOf[x.birth_litter_id] || '' }; };
   }
-  /** One plain line for a check() result: "Takes 3 small or 2 medium with limited access. 2 of 2 now." */
   function summary(r) {
     var takes = r.alternatives ? 'Takes ' + r.alternatives + (r.access ? ' with ' + r.access + ' access' : '') + '. ' : '';
     if (r.limit === null) return takes + (r.count ? r.count + ' here. ' : '') + r.notes.join(' ');
@@ -334,3 +288,4 @@
   return { check: check, audit: audit, accessOf: accessOf, accessRowCounts: accessRowCounts, accessOn: accessOn, limitsOn: limitsOn, facts: facts, summary: summary, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, sizeOverride: sizeOverride, sizeForDog: sizeForDog, sizeLabels: sizeLabels, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
 
 }));
+

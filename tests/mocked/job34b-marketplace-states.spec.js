@@ -1,6 +1,3 @@
-// JOB 34b (Marketplace): states not yet proved by marketplace.spec.js, job34-marketplace-states, house-look or tests/phone.
-// A save that Google refuses (500, expired sign-in), a link opened while signed out, a card whose detail is not JSON,
-// a slow Refresh, the 5-minute re-read, and the Insights pages with an empty list. Pretend Google and Sheets only.
 const { test, expect, go, sheets, SHEETS } = require('../fixtures/job34/load');
 
 const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
@@ -12,7 +9,6 @@ async function book(page, rows) {
   page.on('request', (req) => {
     if (!SHEETS.test(req.url())) return;
     if (req.method() === 'PUT') writes.push(decodeURIComponent(req.url()));
-    // Only the Open work list counts; the food Cards sheet (G7 fish postage, a second read-only source) has the same range.
     else if (/!A2:L$/.test(decodeURIComponent(req.url())) && !/Cards!A2:L$/.test(decodeURIComponent(req.url()))) reads += 1;
   });
   await sheets(page, (url) => /!A2:L$/.test(url) ? { values: rows } : { values: [(rows[Number((/!A(\d+)/.exec(url) || [0, 2])[1]) - 2] || [])] });
@@ -23,7 +19,6 @@ async function open(page, hash = '#/me') {
   await page.locator('#view [data-action="signin"]').click();
   await expect(page.locator('#readAt')).toContainText(/^Read \d/);
 }
-// Every PUT (a save) gets this answer; reads still come from the pretend sheet.
 async function refuseSaves(page, status, message = 'Sample failure') {
   await page.route(SHEETS, (route) => route.request().method() === 'PUT'
     ? route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ error: { code: status, message } }) })
@@ -110,7 +105,6 @@ test.describe('Marketplace (JOB 34b): states', () => {
   test('empty list: Insights shows zero tiles; Stock, Temu and Suppliers each say in plain words why they are empty', async ({ page }) => {
     await book(page, []);
     await open(page, '#/insights');
-    // Insights now opens with the Orders strip (moved from Main), then the three stock tiles: all zero.
     await expect(page.locator('#view a.tile .v')).toHaveText(['0', '0', '0', '0', '0', '0']);
     await expect(page.locator('#view .acts a.btn', { hasText: 'Suppliers' })).toHaveCount(0);
     for (const [v, words] of [
@@ -124,3 +118,4 @@ test.describe('Marketplace (JOB 34b): states', () => {
     }
   });
 });
+

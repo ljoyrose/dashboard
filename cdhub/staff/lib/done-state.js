@@ -20,7 +20,6 @@
   var TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>';
   var CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 
-  /** 14:32, London time, from an ISO time or a Date. */
   function hhmm(at) {
     var d = at ? new Date(at) : new Date();
     if (isNaN(d.getTime())) return '';
@@ -33,7 +32,7 @@
   }
   function line(el) {
     var n = el.querySelector(':scope > .done-line');
-    if (!n) { n = el.ownerDocument.createElement('p'); n.className = 'done-line'; n.setAttribute('role', 'status'); el.appendChild(n); }
+    if (!n) { n = el.userDocument.createElement('p'); n.className = 'done-line'; n.setAttribute('role', 'status'); el.appendChild(n); }
     return n;
   }
   function btn(el, grey, busy) {
@@ -46,7 +45,7 @@
     var n = line(el);
     n.className = 'done-line ' + cls;
     n.innerHTML = icon ? '<span class="done-ic">' + icon + '</span>' : '';
-    var t = el.ownerDocument.createElement('span'); t.textContent = words; n.appendChild(t);
+    var t = el.userDocument.createElement('span'); t.textContent = words; n.appendChild(t);
     return n;
   }
 
@@ -55,7 +54,7 @@
     el.classList.add('is-done'); var flag = !!s && (s.outcome === 'concern' || s.outcome === 'not_done' || s.outcome === 'part_done');
     el.classList.toggle('is-concern', flag);
     var n = set(el, flag ? 'flag' : 'good', TICK, text(s));
-    if (s && s.note) { var p = el.ownerDocument.createElement('span'); p.className = 'done-note'; p.textContent = s.note; n.appendChild(p); }
+    if (s && s.note) { var p = el.userDocument.createElement('span'); p.className = 'done-note'; p.textContent = s.note; n.appendChild(p); }
     btn(el, true);
   }
   function saving(el, words) { if (!el) return; el.classList.remove('is-done', 'is-concern'); set(el, 'wait', CLOCK, words || 'Saving...'); btn(el, false, true); }
@@ -63,14 +62,13 @@
   function fail(el, words) { if (!el) return; el.classList.remove('is-done', 'is-concern'); set(el, 'bad', '', words || 'Not saved. Try again.'); btn(el, false); }
   function clear(el) { if (!el) return; el.classList.remove('is-done', 'is-concern'); var n = el.querySelector(':scope > .done-line'); if (n) n.remove(); btn(el, false); }
 
-  /** Demo 2a (18 Nov 2026): who and when, from the save's own reply. Never a tick unless the reply said saved. */
   function by(res) {
     if (!res || !res.ok) return '';
     return '✓ ' + [res.who, hhmm(res.at)].filter(function (x) { return x && String(x).trim(); }).join(', ');
   }
 
-  /** 20 Nov 2026: the words for a save's place in this device's line (bld-save onTurn): "Waiting, 2 ahead", then "Saving...". */
   function turn(n) { return n > 0 ? 'Waiting, ' + n + ' ahead' : 'Saving...'; }
 
   return { by: by, turn: turn, mark: mark, saving: saving, wait: wait, fail: fail, clear: clear, text: text, hhmm: hhmm, TICK: TICK };
 }));
+

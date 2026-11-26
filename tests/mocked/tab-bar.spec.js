@@ -21,7 +21,7 @@ const ALL = {
 };
 // What each hub's bar shows, in order, and what sits under More (the owner's picks; the first is Main, More is always last).
 const PLAN = {
-  home: { tabs: ['Main', 'Decide', 'Do', 'More'], more: ['Drives', 'Bin', 'Money', 'Actions minutes', 'Tech', 'Changes'], out: ['MOVE'] }, // Decide + Do: Dashboard Main (2 Nov); Money + Actions minutes moved off Main; Tech (TECH-HUB-1); MOVE is a link out (new tab)
+  home: { tabs: ['Main', 'Decide', 'Do', 'More'], more: ['Drives', 'Bin', 'Money', 'Actions minutes', 'Tech', 'Changes'], out: ['MOVE'] },
   money: { tabs: ['Main', 'Money', 'Do', 'Dates', 'Accountant', 'More'], phone: ['Main', 'Money', 'Do', 'Dates', 'Acct', 'More'], more: ['Control'] },
   marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], phone: ['Main', 'Decide', 'Do', 'Reply', 'Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },
@@ -68,7 +68,7 @@ for (const [hub, H] of Object.entries(ALL)) {
     test(`${hub} at ${W}: one 70px row, at most 6 tabs, Main first, More last, no fills at rest, nothing sideways`, async ({ page, guard }) => {
       await page.setViewportSize({ width: W, height: W > 600 ? 800 : 844 });
       await H.open(page, guard);
-      await page.mouse.move(W / 2, 200);   // the pointer away from the bar: everything at rest
+      await page.mouse.move(W / 2, 200);
       const m = await page.evaluate(measureBar);
       expect(m, 'a bottom tab bar shows').not.toBeNull();
       expect(m.navs, 'one bar on the page').toBe(1);
@@ -94,7 +94,6 @@ for (const [hub, H] of Object.entries(ALL)) {
         expect(t.left, `${t.word} inside the screen`).toBeGreaterThanOrEqual(0);
         expect(t.right, `${t.word} inside the screen`).toBeLessThanOrEqual(m.winW + 0.5);
         if (SLOT[t.word]) expect(t.slot, `${t.word} wears slot ${SLOT[t.word]}`).toBe(SLOT[t.word]);
-        // No fills anywhere: the tab is the card colour (selected too), the icon's round place is empty.
         expect(t.bg, `${t.word}: the tab is the plain card colour`).toBe(m.tabs[0].bg);
         expect(t.hicBg, `${t.word}: no fill behind the icon`).toMatch(TRANSPARENT);
         expect(t.ring, `${t.word}: no ring round the icon at rest (selected or not)`).toMatch(TRANSPARENT);
@@ -144,29 +143,23 @@ for (const [hub, H] of Object.entries(ALL)) {
     await expect(more).toHaveAttribute('aria-expanded', 'true');
     await expect(menu).toBeVisible();
     const items = menu.locator(':scope > a, :scope > button');
-    // A view may carry its count after the word (e.g. "Kits1"): the word itself must match exactly.
     await expect(items).toHaveText(PLAN[hub].more.concat(PLAN[hub].out || []).map((w) => new RegExp('^' + w + '\\s*\\d*$')));
-    // A link out of the site (not a view) opens a new tab and so never shows "where you are".
     for (const w of PLAN[hub].out || []) await expect(menu.locator(':scope > a', { hasText: w })).toHaveAttribute('target', '_blank');
-    // Each view in the menu takes its own colour in its icon on hover (grey only for slot 0).
     for (const it of await items.all()) {
       if ((await it.getAttribute('data-slot')) === '0') continue;
       await it.hover();
       await expect.poll(() => it.evaluate((e) => getComputedStyle(e.querySelector('svg, .ti, i')).color), { message: 'menu icon colour on hover' }).not.toBe('rgb(147, 133, 110)');
     }
-    // The menu stays on screen.
     const box = await menu.boundingBox();
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(1280);
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();
     await expect(more).toBeFocused();
-    // Each view under More opens from the menu, the menu shuts, and More then shows where you are.
     for (const word of PLAN[hub].more) {
       await more.click();
       const item = menu.locator(':scope > a, :scope > button', { hasText: word });
       const href = await item.getAttribute('href');
-      // A separate page (Temps) is a link, not a view on this screen. Leave it closed and stay here.
       if (href && !href.startsWith('#')) {
         await page.keyboard.press('Escape');
         await expect(menu).toBeHidden();
@@ -175,10 +168,8 @@ for (const [hub, H] of Object.entries(ALL)) {
       await item.click();
       await expect(menu).toBeHidden();
       await expect(menu.locator(':scope > [aria-current="page"]')).toHaveText(new RegExp('^' + word + '\\s*\\d*$'));
-      // The line grows with a short transition; wait for it to settle.
       await expect.poll(() => more.evaluate((b) => b.querySelector('.bar').getBoundingClientRect().width), { message: `More shows where you are (${word})` }).toBeCloseTo(40, 0);
     }
-    // A click outside shuts it too.
     await more.click();
     await expect(menu).toBeVisible();
     await page.mouse.click(640, 200);
@@ -223,10 +214,7 @@ test('keyboard: every tab is reachable with Tab, shows a visible focus ring, and
   expect(f.ring).not.toMatch(TRANSPARENT);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#\/dates$/);
-  // The hash change focuses the page title after the address has already changed. Wait for that,
-  // or it can take the focus back off the More menu (the keyboard check then sees Control unfocused).
   await expect(page.locator('#hereTitle')).toBeFocused();
-  // More by keyboard: Enter opens, the first view takes the focus, Enter goes there.
   const more = page.locator('nav.house-tabs [data-house-more]');
   const control = page.locator('#houseMore a', { hasText: 'Control' });
   await more.focus();
@@ -256,3 +244,4 @@ for (const look of [{ bg: 'warm', scheme: 'dark' }, { bg: 'cool', scheme: 'dark'
     });
   }
 }
+

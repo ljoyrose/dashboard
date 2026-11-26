@@ -4,7 +4,7 @@ const { test, expect } = require('../support/test');
 
 test.use({ viewport: { width: 390, height: 800 } });
 
-test('phone: every Records chip is on screen at the top, no sideways scroll @regression', async ({ page }) => {
+test('t-cdhub-chips-wrap-spec-1', async ({ page }) => {
   await page.goto('cdhub/');
   await page.locator('#signinbtn').click();
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
@@ -21,3 +21,4 @@ test('phone: every Records chip is on screen at the top, no sideways scroll @reg
     expect(b.t).toBeLessThan(250);
   }
 });
+

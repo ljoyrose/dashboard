@@ -13,9 +13,7 @@
   'use strict';
   var NEED = 'reading.temperature', TABLE = 'thermometer';
   function day(v) { var s = String(v || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
-  /** True when thermometer `t` is needed on `on` (YYYY-MM-DD). reqRows = BLD-requirement rows. */
   function neededOn(t, on, reqRows) { return !!t && !!day(on) && N.coversDay(reqRows, NEED, TABLE, t.id, on); }
-  /** The thermometers needed on `on`, A-Z by name. */
   function neededList(rows, on, reqRows) {
     return (rows || []).filter(function (t) { return neededOn(t, on, reqRows); })
       .sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); });
@@ -38,3 +36,4 @@
   }
   return { neededOn: neededOn, neededList: neededList, missingOn: missingOn };
 }));
+

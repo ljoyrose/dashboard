@@ -1,5 +1,3 @@
-// Stage 7: triage and scoring. Run: node --test tests/enquiries/score.test.js
-// Every enquiry here is invented. "now" is fixed so the timing words give the same months every run.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -15,7 +13,6 @@ const ctx = (o) => Object.assign({ now: NOW, openPups: PUPS, simpleCountries: 'I
 const HOT_TEXT = 'Looking for a chocolate girl asap. We have a fenced garden and had dogs before; happy to pay a deposit.';
 
 const CASES = [
-  // [label, enquiry, ctx overrides, expected band, expected score]
   ['UK call, fits, ready', { kind: 'puppy', channel: 'calendly', country: 'United Kingdom', question_summary: HOT_TEXT }, {}, 'hot', 85],
   ['repeat buyer, January, name down', { kind: 'puppy', channel: 'email', stage: 'call-booked', country: 'United Kingdom', question_summary: 'Would love another pup in January, ready to put our name down' }, { person: { repeat_buyer: true } }, 'hot', 83],
   ['UK call, girl in summer, garden', { kind: 'puppy', channel: 'calendly', country: 'United Kingdom', question_summary: 'A girl please, sometime in summer. Big garden.' }, {}, 'warm', 50],
@@ -80,3 +77,4 @@ test('prefs from text fill only blank fields; pupFits treats blank and "either" 
   assert.equal(C.pupFits({ sex: 'female', colour: 'cream' }, PUPS[0]), false);
   assert.equal(C.pupFits({ size: 'either' }, PUPS[1]), true);
 });
+

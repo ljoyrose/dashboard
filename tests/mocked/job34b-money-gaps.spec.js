@@ -1,7 +1,4 @@
 const { tabClick } = require('../support/tabs');
-// JOB 34b: Money Hub checks that no other spec makes yet (after money*, every-click, every-view-access, house-look,
-// tests/phone and job34-money-views). Each describe names the gap it fills. Pretend Google and Drive only; every row
-// used here is the existing invented sample data, emptied or changed in the test itself (no new fixture files).
 const { test, expect, HUBS, sideScroll, tabWalk } = require('../fixtures/job34/load');
 
 const hashTo = (page, v) => page.evaluate((h) => { location.hash = '#/' + h; }, v);
@@ -9,7 +6,6 @@ const signInHeader = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
 };
-/** Keep only the header line(s) of an invented CSV and say "0 rows held" on its count line. */
 const emptyCsv = (world, name) => {
   const f = world.files.find((x) => x.name === name);
   const lines = f.content.split('\n');
@@ -20,7 +16,7 @@ const emptyCsv = (world, name) => {
 test.describe('Money Hub: links and buttons go where their words say', () => {
   test('an entity card in "Money by entity" opens that entity; the Money tab stays selected', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
-    await hashTo(page, 'money'); // Money by entity moved from Main to Money (Hub Mains, 2 Nov 2026)
+    await hashTo(page, 'money');
     await page.locator('#view a.ent[href="#/e/TESTCO"]').first().click();
     await expect(page).toHaveURL(/#\/e\/TESTCO$/);
     await expect(page.locator('#hereTitle')).toHaveText('TESTCO');
@@ -30,7 +26,7 @@ test.describe('Money Hub: links and buttons go where their words say', () => {
 
   test('every link in "Needs you" opens the screen it points at', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
-    await hashTo(page, 'todo'); // the full Needs you list moved from Main to To-do (Hub Mains, 2 Nov 2026)
+    await hashTo(page, 'todo');
     const card = page.locator('#view section.card.now', { has: page.locator('h3', { hasText: 'Needs you' }) });
     await expect(card).toBeVisible();
     const hrefs = await card.locator('ul.items a[href^="#/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
@@ -139,10 +135,10 @@ test.describe('Money Hub: someone else\'s account on every screen', () => {
     guard.world.email = 'someone.else@example.test';
     await page.goto('money/#/control');
     await signInHeader(page);
-    await expect(page.locator('#view')).toContainText('This page is for Lisa only');
+    await expect(page.locator('#view')).toContainText('This page is for User only');
     for (const v of ['now', 'money', 'dates', 'todo', 'accountant', 'control', 'e/TESTCO', 'register/R001']) {
       await hashTo(page, v);
-      await expect(page.locator('#view'), '#/' + v).toContainText('This page is for Lisa only');
+      await expect(page.locator('#view'), '#/' + v).toContainText('This page is for User only');
       await expect(page.locator('#view'), '#/' + v).not.toContainText('Sample');
     }
     for (const id of ['nNow', 'nMoney', 'nDates', 'nTodo', 'nAcct', 'nControl']) await expect(page.locator('#' + id), id).toHaveText('');
@@ -265,8 +261,8 @@ test.describe('Money Hub phone: the problem screens fit at 390px', () => {
     guard.world.email = 'someone.else@example.test';
     await page.goto('money/');
     await signInHeader(page);
-    await expect(page.locator('#view')).toContainText('This page is for Lisa only');
-    expect(await sideScroll(page), 'Lisa-only card').toBe(false);
+    await expect(page.locator('#view')).toContainText('This page is for User only');
+    expect(await sideScroll(page), 'User-only card').toBe(false);
   });
 
   // J34b-F20 (fixed): a long address on the the owner-only card wraps instead of pushing the page sideways.
@@ -274,8 +270,8 @@ test.describe('Money Hub phone: the problem screens fit at 390px', () => {
     guard.world.email = 'someone.else.with.a.very.long.sample.address@example.test';
     await page.goto('money/');
     await signInHeader(page);
-    await expect(page.locator('#view')).toContainText('This page is for Lisa only');
-    expect(await sideScroll(page), 'Lisa-only card').toBe(false);
+    await expect(page.locator('#view')).toContainText('This page is for User only');
+    expect(await sideScroll(page), 'User-only card').toBe(false);
   });
 
   test('the "Sign in again" banner: no sideways scroll', async ({ page, guard, allowedConsole }) => {
@@ -287,3 +283,4 @@ test.describe('Money Hub phone: the problem screens fit at 390px', () => {
     expect(await sideScroll(page)).toBe(false);
   });
 });
+

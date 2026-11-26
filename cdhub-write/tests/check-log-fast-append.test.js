@@ -1,9 +1,4 @@
 'use strict';
-/**
- * 25 Nov 2026: the live job log grew past 4,900 rows and every Present tap read every column of every row
- * while holding the lock. A save must append, leave existing taken_by values alone, and read only the last
- * rows (plus id and time) unless a row inside the 30-minute window sits higher up the sheet.
- */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
@@ -12,8 +7,8 @@ const fx = require('./fixtures');
 const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas', 'item_kind', 'only_groups'];
 const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given', 'grant_id', 'counts_due', 'covered_ids', 'exceptions'];
 const LOG = 'BLD-check_log.csv';
-const NOW = Date.UTC(2026, 10, 25, 16, 0, 0);   // 16:00 GMT, 25 Nov 2026
-const OLD_N = 400;   // more than SAVE_TAIL_ROWS (200), so a full-sheet read is visible
+const NOW = Date.UTC(2026, 10, 25, 16, 0, 0);
+const OLD_N = 400;
 const whoAt = LOG_H.indexOf('taken_by');
 
 function iso(ms) { return new Date(ms).toISOString(); }
@@ -27,7 +22,7 @@ function bigLog(recent) {
   const env = standardEnv({ nowMs: NOW, props: { TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true' } });
   env.addFile('BLD-check_type.csv', fx.headerOnly(TYPE_H));
   env.addFile(LOG, fx.headerOnly(LOG_H));
-  const t = save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: { type_key: 'round.presence', label: 'Present', target: 'dog', effective_from: '2026-01-01' } }));
+  const t = save(env, req(env, { code: env.codes.user, table: 'check_type', fields: { type_key: 'round.presence', label: 'Present', target: 'dog', effective_from: '2026-01-01' } }));
   assert.equal(t.ok, true, JSON.stringify(t));
   const typeId = t.result.id;
   const sheet = [LOG_H.slice()];
@@ -55,7 +50,7 @@ function fields(typeId, subject) {
   return { check_type_id: typeId, area_id: 'area-t1', subject_id: subject, item: 'present', outcome: 'recorded', happened_at: iso(NOW), how_recorded: 'tapped' };
 }
 
-test('a Present save on a long job log appends one row and does not read or rewrite the old rows @regression', () => {
+test('t-check-log-fast-append-test-1', () => {
   const { env, typeId, before } = bigLog();
   const r = save(env, req(env, { table: 'check_log', fields: fields(typeId, 'sub-test-a') }));
   assert.equal(r.ok, true, JSON.stringify(r));
@@ -83,11 +78,11 @@ test('the same Present tap inside 30 minutes is still a repeat, and an older one
 });
 
 test('a repeat that sits above the last rows is still caught, without reading every column', () => {
-  const { env, typeId, before } = bigLog({ index: 1, id: 'clg-high', ms: NOW - 60000, who: 'Lisa (written by Claude)', subject: 'sub-test-b' });
+  const { env, typeId, before } = bigLog({ index: 1, id: 'clg-high', ms: NOW - 60000, who: 'User (written by Claude)', subject: 'sub-test-b' });
   const dup = save(env, req(env, { table: 'check_log', fields: fields(typeId, 'sub-test-b') }));
   assert.equal(dup.code, 'DUPLICATE', JSON.stringify(dup));
   assert.equal(env.rows(LOG).length, before);
-  assert.equal(env.rows(LOG)[1][whoAt], 'Lisa (written by Claude)');
+  assert.equal(env.rows(LOG)[1][whoAt], 'User (written by Claude)');
   assert.equal(wideReads(env).length, 0, JSON.stringify(wideReads(env)));
 });
 
@@ -113,3 +108,4 @@ test('a list of Present taps reads the job log once and appends once, and the se
   assert.equal(adds[0].vals.length, 2);
   assert.ok(adds[0].row > before);
 });
+

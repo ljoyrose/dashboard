@@ -1,5 +1,3 @@
-// Stage 8: reply drafts. Run: node --test tests/enquiries/drafts.test.js
-// Every person here is invented. A draft is text in a copy box: nothing here sends anything.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -33,7 +31,7 @@ test('ACCEPT: the check fails a price, a £ figure, COI, hypoallergenic alone, a
     ['a licence number or licence-number pattern', ok + ' Licence number on request.'],
     ['a licence number or licence-number pattern', ok + ' Ref XYZ 0042.'],
     ['a puppyclassroom.com link', ok + ' See puppyclassroom.com/start'],
-    ['no info link', 'Hi, thanks. Kind regards, Lisa']
+    ['no info link', 'Hi, thanks. Kind regards, User']
   ];
   for (const [why, t] of bad) assert.ok(C.checkDraft(t).includes(why), why + ': ' + t);
   assert.deepEqual(C.checkDraft(ok + ' Low-shedding and often called hypoallergenic.'), []);
@@ -48,10 +46,10 @@ test('ACCEPT: an invented Swiss buyer gets an official government page or "the o
   // the owner's own official page from Settings replaces the fallback; a non-government link is ignored.
   const own = C.buildDraft('first-abroad', { country: 'Switzerland', importPages: 'Switzerland=https://www.blv.admin.ch/example-page; Spain=https://example.com/rules' });
   assert.match(own.email.text, /blv\.admin\.ch/);
-  assert.doesNotMatch(own.email.text, /Lisa to confirm/);
+  assert.doesNotMatch(own.email.text, /User to confirm/);
   const es = C.buildDraft('first-abroad', { country: 'Spain', importPages: 'Spain=https://example.com/rules' });
   assert.doesNotMatch(es.email.text, /example\.com/);
-  assert.match(es.email.text, /Lisa to confirm/);
+  assert.match(es.email.text, /User to confirm/);
 });
 
 test('adult dogs say "price on request"; cold breeder and missed-enquiry messages carry the STOP line', () => {
@@ -70,7 +68,7 @@ test('the missed-enquiry apology follows Appendix B: subject, apology, the five 
   assert.match(d.email.text, /so sorry for the very slow reply/);
   assert.equal(d.links.length, 5);
   for (const p of ['breed', 'sizes', 'colour', 'coats', 'health-tests']) assert.ok(d.email.text.includes('https://doc.labradoodles.co.uk/' + p), p);
-  assert.match(d.email.text, /Kind regards,\n\nLisa\n\nAustralian Labradoodles\/Cobberdogs, www\.cobberdogs\.com/);
+  assert.match(d.email.text, /Kind regards,\n\nUser\n\nAustralian Labradoodles\/Cobberdogs, www\.cobberdogs\.com/);
 });
 
 test('links follow what they asked; no name gives "Hi there"', () => {
@@ -97,7 +95,7 @@ test('case choice: missed after 7 days, abroad, adult dog, breeder, after a call
 test('styleSample stripping: no email, number, price, reference or recipient name survives; quoted text is cut', () => {
   const raw = ['Hi Buyerina,', '', 'Thank you so much for your message! I\'d love to help.', 'Call me on 07700 900501 or email buyer.x@example.com.',
     'Our girls are £2,500 and the ref is XYZ 0042. See https://doc.labradoodles.co.uk/breed?utm=1.', 'Buyerina, your garden sounds perfect.', '',
-    'Kind regards,', 'Lisa', '', 'On Mon, 1 Sep 2026 at 10:00, Buyerina Sample <buyer.x@example.com> wrote:', '> Hello, do you have puppies?'].join('\n');
+    'Kind regards,', 'User', '', 'On Mon, 1 Sep 2026 at 10:00, Buyerina Sample <buyer.x@example.com> wrote:', '> Hello, do you have puppies?'].join('\n');
   const r = C.stripForStyle(raw, { names: ['Buyerina Sample'] });
   assert.doesNotMatch(r.text, /Buyerina|Sample|7700|example\.com|2,500|XYZ|do you have puppies/);
   assert.match(r.text, /^Hi <name>,/);
@@ -107,3 +105,4 @@ test('styleSample stripping: no email, number, price, reference or recipient nam
   assert.deepEqual(r.links, ['https://doc.labradoodles.co.uk/breed']);
   assert.ok(r.words > 20);
 });
+

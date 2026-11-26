@@ -1,8 +1,3 @@
-// Web Estate Hub, Stage 4: live, down and SSL. Pure logic; the engine (Apps Script) does the fetching.
-// No network, no Drive, no DOM. Turns one HTTP/TLS result into a status word, picks a certificate expiry
-// from Certificate Transparency rows, and reads a domain's renewal date from a registrar CSV.
-// Rule: ClickFunnels "live mode" means live payments, not a visible page. It is never a status here;
-// the status comes only from the HTTP/TLS result.
 (function (root, factory) {
   'use strict';
   var api = factory();
@@ -20,8 +15,6 @@
     /attention required!?\s*\|?\s*cloudflare/i,
     /<title>\s*attention required/i
   ];
-  // Captcha markers also sit inside normal pages (a shop's login form script), so they count only on a
-  // short page or a non-2xx answer: a real challenge page is small and carries little else.
   var CAPTCHA = /g-recaptcha|h-captcha|hcaptcha\.com|captcha-delivery|px-captcha/i;
   var CHALLENGE_MAX = 20000;
   var PARKED_BODY = [
@@ -47,8 +40,6 @@
     return false;
   }
 
-  // One fetch result -> { live_status, http_code, note }.
-  // In: code (final HTTP status), finalUrl, body, tlsError, timeout, error (other failure text), redirects (count).
   function classifyResponse(r) {
     r = r || {};
     var code = Number(r.code) || 0;
@@ -101,7 +92,6 @@
     return isoOf(today) || new Date().toISOString().slice(0, 10);
   }
 
-  // ---- certificates (crt.sh JSON) ----
   function nameMatches(pattern, host) {
     var p = String(pattern || '').trim().toLowerCase().replace(/\.$/, '');
     if (!p) return false;
@@ -115,7 +105,6 @@
     return false;
   }
 
-  // Latest not_after (YYYY-MM-DD) among certificates valid today that cover host; '' when none.
   function certExpiryFromCt(entries, host, today) {
     var h = String(host || '').trim().toLowerCase().replace(/\.$/, '');
     var t = todayIso(today);
@@ -156,7 +145,6 @@
     return '';
   }
 
-  // Renewal date (YYYY-MM-DD) for the registrable domain of `domain`; '' when no row or no readable date.
   function domainExpiry(domainRows, domain) {
     var want = registrable(domain);
     if (!want) return '';
@@ -171,7 +159,6 @@
     return '';
   }
 
-  // ---- RDAP (caller fetches the JSON; nothing here contacts a registry) ----
   function vcardFn(entity) {
     var v = entity && entity.vcardArray;
     var rows = v && Array.isArray(v[1]) ? v[1] : [];
@@ -191,7 +178,6 @@
     return '';
   }
 
-  // RDAP domain document -> { nameservers, registrar }. Missing pieces are empty. Never throws.
   function rdapIdentity(doc) {
     var ns = [], registrar = '';
     var list = (doc && Array.isArray(doc.nameservers)) ? doc.nameservers : [];
@@ -211,7 +197,6 @@
     return { nameservers: ns, registrar: registrar };
   }
 
-  // A nameserver value from a row or a previous scan: hosts, lower case, no trailing dot, order kept, blanks dropped.
   function nameserverList(v) {
     var raw = Array.isArray(v) ? v : String(v == null ? '' : v).split(/[\s,;]+/);
     var out = [];
@@ -222,7 +207,6 @@
     return out;
   }
 
-  // null when no previous set is known, so a first scan is never a change. Otherwise { changed, previous, current }.
   function nameserverChange(current, previous) {
     var prev = nameserverList(previous);
     if (!prev.length) return null;
@@ -243,3 +227,4 @@
     nameserverChange: nameserverChange
   };
 });
+

@@ -1,15 +1,8 @@
-// Puppy Enquiries Hub: pure logic (JOB 13). PUBLIC repo: no data, no names, no ids, no keys.
-// The same file runs in three places: the enquiries/ page (window.EnquiriesCore), node tests (require) and the
-// RR_PUPPY-ENQUIRIES Apps Script engine, which embeds a copy under the version header below. No I/O in here:
-// nothing in this file reads, sends or writes anything; callers pass plain values in and get plain values back.
 (function (root) {
   'use strict';
 
   var VERSION = 'enquiries-core 1.15.0 (2026-11-13)';
 
-  // ---- Phone numbers -------------------------------------------------------------------------------------------
-  // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
-  // +1 covers the USA, Canada and parts of the Caribbean: shown as one name, never guessed further.
   var CALLING = {
     '1': ['US', 'United States or Canada'], '7': ['RU', 'Russia or Kazakhstan'], '20': ['EG', 'Egypt'],
     '27': ['ZA', 'South Africa'], '30': ['GR', 'Greece'], '31': ['NL', 'Netherlands'], '32': ['BE', 'Belgium'],
@@ -34,11 +27,8 @@
     for (var i = 0; i < CODES.length; i++) if (digits.indexOf(CODES[i]) === 0) return CODES[i];
     return '';
   }
-  // The country's own calling code (+44 for Jersey too), for E.164 checks.
   function baseCode(code) { return code.length > 3 && code.indexOf('44') === 0 ? '44' : code; }
 
-  // Any written phone number -> { e164, code, iso, country, valid }. A number with no + or 00 is read as a
-  // number in defaultCode's country (UK unless told otherwise): 07700 900123 -> +447700900123.
   function normalisePhone(raw, defaultCode) {
     var out = { e164: '', code: '', iso: '', country: '', valid: false };
     var s = String(raw == null ? '' : raw).trim();
@@ -49,7 +39,7 @@
     if (!d) return out;
     if (plus) { if (s.trim().indexOf('00') === 0) d = d.slice(2); }
     else if (d.charAt(0) === '0') d = String(defaultCode || '44') + d.slice(1);
-    else if (d.length <= 10) d = String(defaultCode || '44') + d;   // a bare national number with its 0 dropped
+    else if (d.length <= 10) d = String(defaultCode || '44') + d;
     var code = lookupCode(d);
     out.e164 = '+' + d;
     out.code = code ? '+' + baseCode(code) : '';
@@ -63,7 +53,6 @@
     return p.country ? { iso: p.iso, country: p.country } : null;
   }
 
-  // ---- Time zones ----------------------------------------------------------------------------------------------
   var TZ = {
     'Europe/London': 'GB', 'Europe/Belfast': 'GB', 'Europe/Jersey': 'JE', 'Europe/Guernsey': 'GG', 'Europe/Isle_of_Man': 'IM',
     'Europe/Dublin': 'IE', 'Europe/Zurich': 'CH', 'Europe/Vaduz': 'LI', 'Europe/Paris': 'FR', 'Europe/Monaco': 'MC',
@@ -84,7 +73,6 @@
   Object.keys(CALLING).forEach(function (c) { ISO_NAME[CALLING[c][0]] = CALLING[c][1]; });
   ISO_NAME.US = 'United States'; ISO_NAME.CA = 'Canada'; ISO_NAME.AU = 'Australia';
 
-  // IANA time zone -> { iso, country } or null. Whole regions that are one country are matched by prefix.
   function countryFromTimezone(tz) {
     tz = String(tz || '').trim();
     if (!tz) return null;
@@ -97,8 +85,6 @@
     return iso ? { iso: iso, country: ISO_NAME[iso] || iso } : null;
   }
 
-  // One country for an enquiry, with how we know: 'stated' (they said), else 'inferred' from the phone code, else from the
-  // time zone. conflict is true when the phone and the time zone point at different countries (shown, never hidden).
   function inferCountry(o) {
     o = o || {};
     var stated = String(o.stated || '').trim();
@@ -111,22 +97,17 @@
     return { country: '', basis: '', conflict: false };
   }
 
-  // ---- Email ---------------------------------------------------------------------------------------------------
-  // Lower case, no mailto:, no display name; Gmail's dots and +tags removed so one inbox gives one key.
   function normaliseEmail(raw) {
     var s = String(raw == null ? '' : raw).trim().toLowerCase().replace(/^mailto:/, '');
     var m = s.match(/<([^>]+)>/); if (m) s = m[1].trim();
     if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(s)) return '';
     var at = s.lastIndexOf('@'), local = s.slice(0, at), dom = s.slice(at + 1);
-    var G = 'g' + 'mail.com'; // assembled: the public repo keeps the personal mail domain out of its code (drives-submenu guard)
+    var G = 'g' + 'mail.com';
     if (dom === 'google' + G.slice(1)) dom = G;
     if (dom === G) local = local.replace(/\./g, '').replace(/\+.*$/, '');
     return local + '@' + dom;
   }
 
-  // ---- Keys ----------------------------------------------------------------------------------------------------
-  // FNV-1a, 2 x 32 bit -> 16 hex characters. Deterministic everywhere (page, node, Apps Script). Keys carry no
-  // readable email or number, so a key can sit in a log or a slip without naming anyone.
   function hash(s) {
     s = String(s);
     var h1 = 0x811c9dc5, h2 = 0x01000193 ^ 0x5bd1e995;
@@ -140,18 +121,12 @@
   function emailKey(email) { var e = normaliseEmail(email); return e ? 'em:' + hash(e) : ''; }
   function phoneKey(phone, defaultCode) { var p = normalisePhone(phone, defaultCode); return p.valid ? 'ph:' + hash(p.e164) : ''; }
 
-  // The Enquiries row key: one per source record (a Calendly booking, a Gmail thread, a form run). Same source + ref
-  // always gives the same key, so a re-read updates the row instead of adding a second one.
   function rowKey(channel, sourceRef) {
     channel = String(channel || '').trim().toLowerCase(); sourceRef = String(sourceRef || '').trim();
     if (!channel || !sourceRef) return '';
     return 'K-' + hash(channel + '|' + sourceRef);
   }
 
-  // ---- People --------------------------------------------------------------------------------------------------
-  // Group enquiry rows into people: rows sharing a normalised email or a valid phone are one person (transitively).
-  // Each row needs { key, email?, phone?, channel?, received_uk? }. Returns [{ person_key, rows: [keys], sources: [...],
-  // first_contact }]. Names alone never join two rows here (Stage 6 adds name similarity with a "check" flag).
   function groupPeople(rows, defaultCode) {
     var parent = {};
     function find(x) { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
@@ -180,8 +155,6 @@
     });
   }
 
-  // ---- Names (Stage 6) -----------------------------------------------------------------------------------------
-  // Lower case, accents off, titles off, letters and spaces only: "Mrs. Zoë O'Brien" -> "zoe obrien".
   var TITLES = { mr: 1, mrs: 1, ms: 1, miss: 1, mx: 1, dr: 1, prof: 1, sir: 1 };
   function nameKey(raw) {
     var s = String(raw == null ? '' : raw);
@@ -189,7 +162,6 @@
     s = s.toLowerCase().replace(/['’]/g, '').replace(/[^a-z\s-]/g, ' ').replace(/-/g, ' ');
     return s.split(/\s+/).filter(function (t) { return t && !TITLES[t]; }).join(' ');
   }
-  // Jaro-Winkler, 0 to 1.
   function jaroWinkler(a, b) {
     if (a === b) return a ? 1 : 0;
     if (!a || !b) return 0;
@@ -211,15 +183,13 @@
     while (p < 4 && a[p] && a[p] === b[p]) p++;
     return jaro + p * 0.1 * (1 - jaro);
   }
-  // How alike two names are, 0 to 1. Needs a first AND a last name on both sides to go above 0.7: a first name on its
-  // own never makes two people one. An initial matches its name at 0.85 ("j smith" / "jane smith").
   function nameSimilarity(a, b) {
     var x = nameKey(a).split(' ').filter(Boolean), y = nameKey(b).split(' ').filter(Boolean);
     if (!x.length || !y.length) return 0;
     if (x.length < 2 || y.length < 2) return Math.round(jaroWinkler(x.join(' '), y.join(' ')) * 0.7 * 100) / 100;
     function part(p, q) { return (p.length === 1 || q.length === 1) ? (p[0] === q[0] ? 0.85 : 0) : jaroWinkler(p, q); }
     var last = jaroWinkler(x[x.length - 1], y[y.length - 1]), s = 0.4 * part(x[0], y[0]) + 0.6 * last;
-    if (last < 0.9) s = Math.min(s, 0.85); // surnames must be (nearly) the same: Smith / Smyth stay two people
+    if (last < 0.9) s = Math.min(s, 0.85);
     return Math.round(s * 100) / 100;
   }
 
@@ -246,8 +216,6 @@
     return out.join(', ');
   }
   function stickyConsent(a, b) { return (CONSENT_RANK[b] || 0) > (CONSENT_RANK[a] || 0) ? b : (a || b || 'unknown'); }
-  // Merge two versions of one People row: blanks never overwrite, stated country beats inferred, sources add up,
-  // first contact is the earliest, last touch the latest, do-not-contact never switches itself off.
   function mergePerson(stored, incoming) {
     var out = {}, k; stored = stored || {}; incoming = incoming || {};
     for (k in stored) if (Object.prototype.hasOwnProperty.call(stored, k)) out[k] = stored[k];
@@ -317,9 +285,6 @@
     return { people: Object.keys(touched).map(function (i) { return people[i]; }), assign: assign };
   }
 
-  // ---- History: touches per person (Stage 6) -------------------------------------------------------------------
-  // From the Events tab (each event carries enquiry_key, and person_key once known) and the enquiry -> person map.
-  // Returns { person_key: { touches, first_uk, last_uk } }. A touch is any event (received, booked, replied ...).
   function personHistory(events, personOf) {
     var out = {};
     (events || []).forEach(function (e) {
@@ -334,10 +299,6 @@
     return out;
   }
 
-  // ---- Past deposits (Stage 6) ---------------------------------------------------------------------------------
-  // The litter allocation sheets (current tab and the old deposit list) are read by the engine and turned straight
-  // into hashed keys here: no name, email or number is kept, only 'em:', 'ph:' and 'nm:' hashes. A name-only match
-  // ('nm:') is weaker and sets check. repeatWords say a deposit ended in a sale (collected, sold ...).
   var REPEAT_WORDS = /\b(collected|sold|home|went home|completed|bought|handed over)\b/i;
   function depositKeys(rows, opts) {
     opts = opts || {};
@@ -353,9 +314,6 @@
     });
     return out;
   }
-  // Allocation-sheet values (header row first) to plain rows for depositKeys(). Column names vary between the current
-  // tab and the old deposit list, so each field takes the first header that fits. A row counts as a deposit only when
-  // a deposit column holds something (leads with no deposit are skipped by depositKeys).
   var DEP_COLS = { name: /^(name|xero_contact|contact|buyer)$/i, email: /^e-?mail$/i, phone: /^(whatsapp|phone|mobile)$/i,
     status: /^(status|section)$/i, outcome: /^(outcome.*|old_.*stage)$/i, deposit: /^(deposit_date|first_deposit|deposit_total|deposit)$/i };
   function depositRowsFrom(values) {
@@ -373,7 +331,6 @@
       return o;
     });
   }
-  // Flags for one person from depositKeys(). Returns { past_deposit, repeat_buyer, check }.
   function depositFlags(person, keys, dc) {
     keys = keys || {};
     var ids = strongIds(person || {}, dc), hit = keys[ids.em] || keys[ids.ph], check = '';
@@ -392,7 +349,6 @@
     var s = String(v == null ? '' : v).replace(/[£€$,\s]|GBP|EUR/gi, '');
     return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
   }
-  // A date cell to YYYY-MM-DD: 2026-08-01, 01/08/2026 (UK order), 1 Aug 2026 or a Date. '' when unreadable.
   function isoDate(v) {
     if (v instanceof Date) return isNaN(v.getTime()) ? '' : v.toISOString().slice(0, 10);
     var s = String(v == null ? '' : v).trim(), m;
@@ -402,7 +358,6 @@
       return m[3] + '-' + ('0' + (MONTHS.indexOf(m[2].toLowerCase()) + 1)).slice(-2) + '-' + ('0' + m[1]).slice(-2);
     return '';
   }
-  // CSV text (RFC 4180: quotes, doubled quotes, CRLF, a leading BOM) to rows of strings. Blank lines are dropped.
   function parseCsv(text) {
     var t = String(text || '').replace(/^﻿/, ''), rows = [], row = [], cell = '', q = false;
     for (var i = 0; i < t.length; i++) {
@@ -417,8 +372,6 @@
     if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
     return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); });
   }
-  // Allocation tab (header first) to Deposits rows: one per person whose deposit date or amount is filled. People are
-  // carried as hashed person keys only. opts as litterRowsFrom: { personKeyOf, litterRef, source, defaultCode }.
   var LEDGER_COLS = { section: /^section$/i, ref: /^(ref|xero_contact_id)$/i, status: /^status$/i, outcome: /^(outcome.*|old_.*stage)$/i,
     date: /^(deposit_date|first_deposit)$/i, amount: /^(deposit|deposit_total|deposit_amount)$/i, due: /^balance(_due)?$/i,
     paid: /^balance_paid$/i, collect: /^(collection|collection_date|collect(ion)?_on|go_home)$/i, pup: /^(provisional_pup|pup|pup_ref)$/i,
@@ -473,8 +426,6 @@
     });
     return { all: all, byLitter: by };
   }
-  // Xero invoice CSV export rows (header first) to paid invoices: { invoice_key, email, date, amount }. Only the
-  // email, number, date and paid amount are read: no name, address or line text is kept.
   var XERO_COLS = { email: /^(email ?address|e-?mail|\*?emailaddress)$/i, number: /^\*?invoice ?number$/i,
     date: /^(\*?invoice ?date|payment ?date|paid ?date|date)$/i, paid: /^(invoice ?amount ?paid|amount ?paid|paid)$/i,
     total: /^(\*?total|invoice ?total|amount)$/i, owed: /^(invoice ?amount ?due|amount ?due|due)$/i, status: /^status$/i };
@@ -491,8 +442,6 @@
     });
     return out;
   }
-  // Suggest Xero invoices as deposits: the email must match an open enquiry AND the amount must equal one of the
-  // deposit amounts in Settings. Same email, other amount: refused. Returns { suggested, refused, unmatched }.
   function matchInvoices(invoices, candidates, amounts) {
     var ok = (amounts || []).map(money).filter(function (n) { return !isNaN(n); }), byEm = {}, out = { suggested: [], refused: [], unmatched: 0 };
     (candidates || []).forEach(function (c) { var em = normaliseEmail(c.email); if (em && !byEm[em]) byEm[em] = c; });
@@ -504,7 +453,6 @@
     });
     return out;
   }
-  // The page's "deposit paid" tap (request-file pattern). Never carries an amount. depositKey confirms a suggested row.
   function depositPaidRequest(enquiryKey, depositKey, nowIso) {
     if (!/^K-[0-9a-f]{16}$/.test(String(enquiryKey || ''))) return { ok: false, error: 'Unknown enquiry.' };
     if (depositKey && !/^D-[0-9a-f]{16}$/.test(String(depositKey))) return { ok: false, error: 'Unknown deposit row.' };
@@ -513,8 +461,6 @@
       body: { v: 1, kind: 'deposit-paid', enquiry_key: enquiryKey, deposit_key: depositKey || '', at: at } };
   }
 
-  // ---- What they asked for (Stage 7) ---------------------------------------------------------------------------
-  // Sex, size, colour, coat and breed words in free text. Only fills what the enquiry row leaves blank.
   var PREF_WORDS = {
     sex: [['female', /\b(girls?|female|bitch(es)?)\b/i], ['male', /\b(boys?|males?)\b/i]],
     size: [['miniature', /\b(mini(ature)?)\b/i], ['medium', /\bmedium\b/i], ['standard', /\b(standard|large)\b/i]],
@@ -535,7 +481,6 @@
     });
     return out;
   }
-  // Does one pup fit what the enquiry asked? A field the enquiry leaves blank (or "either") fits anything.
   function pupFits(prefs, pup) {
     prefs = prefs || {}; pup = pup || {};
     return ['sex', 'size', 'colour', 'coat'].every(function (f) {
@@ -544,9 +489,8 @@
     });
   }
 
-  // When they want a pup, in months from now (0 = now), or null when the text does not say.
   var MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-  var SEASON = { spring: 2, summer: 5, autumn: 8, fall: 8, winter: 11 }; // the month a season starts (0 = January)
+  var SEASON = { spring: 2, summer: 5, autumn: 8, fall: 8, winter: 11 };
   function timingMonths(text, now) {
     var t = String(text || '').toLowerCase(), d = new Date(toMs(now) || Date.now());
     var y0 = d.getUTCFullYear(), m0 = d.getUTCMonth();
@@ -583,7 +527,7 @@
     return out;
   }
   var DEPOSIT_WORDS = /\b(deposit|ready to (pay|commit|go)|reserve|secure (a|one|our)|put (a|my|our) name down|waiting list|book (a|one|our) pup|how do (i|we) (pay|reserve|book))\b/i;
-  var HOME_WORDS = /\b(garden|fenced|work(s|ing)? from home|wfh|retired|at home all day|had dogs|have had|owned (a )?dogs?|experience(d)? (with|owner)|grew up with dogs|current dog|our (old|last) dog|dog walker|puppy class(es)?)\b/i;
+  var HOME_WORDS = /\b(garden|fenced|work(s|ing)? from home|wfh|retired|at home all day|had dogs|have had|owned (a )?dogs?|experience(d)? (with|user)|grew up with dogs|current dog|our (old|last) dog|dog walker|puppy class(es)?)\b/i;
   var SENSITIVE = [
     ['allergies', /\b(allerg\w*|asthma\w*)\b/i],
     ['neurodiverse home', /\b(autis\w*|asd|adhd|neurodiver\w*|sensory needs?|special needs|send)\b/i],
@@ -591,8 +535,6 @@
   ];
   var HOME_COUNTRIES = ['United Kingdom', 'Jersey', 'Guernsey', 'Isle of Man'];
   function listOf(v) { return Array.isArray(v) ? v : String(v || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
-  // e: an Enquiries row. ctx: { now, person (People row), openPups: [Litters rows], weights, bands, simpleCountries,
-  // hardCountries }. Returns { score, band, reasons: [3 at most, never none], flags: [], prefs }.
   function scoreEnquiry(e, ctx) {
     e = e || {}; ctx = ctx || {};
     var w = ctx.weights && typeof ctx.weights === 'object' ? Object.assign({}, WEIGHTS, ctx.weights) : parseNumbers(ctx.weights, WEIGHTS);
@@ -649,7 +591,6 @@
     var t = String(name || '').trim().split(/\s+/)[0] || '';
     return /^[A-Za-zÀ-ɏ'-]{2,}$/.test(t) ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : '';
   }
-  // Which links fit: always the breed page, then what they asked about; the missed-enquiry apology carries all five.
   function linksFor(kase, prefs) {
     prefs = prefs || {};
     if (kase === 'missed') return [LINKS.breed, LINKS.sizes, LINKS.colour, LINKS.coats, LINKS.health];
@@ -670,9 +611,8 @@
     });
     var own = map[String(country || '').toLowerCase()];
     if (own) return { text: 'The official rules for bringing a puppy to ' + country + ' are here: ' + own, link: own };
-    return { text: 'For travel from the UK the government page is ' + UK_PET_TRAVEL + '. The rules for ' + (country || 'your country') + ' are: Lisa to confirm.', link: UK_PET_TRAVEL };
+    return { text: 'For travel from the UK the government page is ' + UK_PET_TRAVEL + '. The rules for ' + (country || 'your country') + ' are: User to confirm.', link: UK_PET_TRAVEL };
   }
-  // Pick the case for an enquiry with no reply yet. ctx: { now, missedDays (7) }.
   function chooseCase(e, ctx) {
     e = e || {}; ctx = ctx || {};
     var days = hoursSince(e.received_uk, ctx.now) / 24, missed = ctx.missedDays || 7;
@@ -684,8 +624,7 @@
     if (e.country && HOME_COUNTRIES.indexOf(e.country) < 0) return 'first-abroad';
     return 'first-uk';
   }
-  function sign(lines) { return lines.concat(['', 'Kind regards,', '', 'Lisa', '', BRAND_LINE]); }
-  // Build one case as { email: { subject, text }, whatsapp, links }. o: { name, country, prefs, importPages }.
+  function sign(lines) { return lines.concat(['', 'Kind regards,', '', 'User', '', BRAND_LINE]); }
   function buildDraft(kase, o) {
     o = o || {};
     var fn = firstName(o.name), hi = fn ? 'Hi ' + fn + ',' : 'Hi there,', links = linksFor(kase, o.prefs), list = links.join('\n');
@@ -698,82 +637,82 @@
         body = [hi, '', 'Thank you for getting in touch about our puppies. I\'d love to help.', '',
           'These pages explain the breed and how we health test:', '', list].concat(imp ? ['', imp.text] : [])
           .concat(['', 'Just reply and tell me what you\'re looking for and when, and I\'ll let you know what we have coming up. If it\'s easier, we can have a short WhatsApp call.']);
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa from Australian Labradoodles/Cobberdogs. Thank you for your enquiry, I\'d love to help. The breed: ' + links[0]
-          + (imp ? '. Travel: ' + imp.link + ' (rules for ' + (o.country || 'your country') + ': Lisa to confirm)' : '') + '. What are you looking for, and when?';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User from Australian Labradoodles/Cobberdogs. Thank you for your enquiry, I\'d love to help. The breed: ' + links[0]
+          + (imp ? '. Travel: ' + imp.link + ' (rules for ' + (o.country || 'your country') + ': User to confirm)' : '') + '. What are you looking for, and when?';
         break;
       case 'after-call':
         subject = 'Lovely to talk to you';
         body = [hi, '', 'Thank you for your time on the call today. As promised, here are the pages we talked about:', '', list, '',
           'Have a read, and just reply with any questions. I\'ll be in touch about the next step.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', lovely to talk today. Here is the breed page we mentioned: ' + links[0] + '. Any questions, just message me. Lisa';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', lovely to talk today. Here is the breed page we mentioned: ' + links[0] + '. Any questions, just message me. User';
         break;
       case 'waiting-list':
         subject = 'Our waiting list';
         body = [hi, '', 'Thank you for waiting so patiently. We have a place on our waiting list for you if you would like it.', '',
           'The pages about the breed and our health testing are here:', '', list, '', 'Just reply if you\'d like me to put your name down, and I\'ll send you the details.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. We have a place on our waiting list for you if you\'d like it. Breed info: ' + links[0] + '. Shall I send you the details?';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User. We have a place on our waiting list for you if you\'d like it. Breed info: ' + links[0] + '. Shall I send you the details?';
         break;
       case 'pup-offer':
         subject = 'A puppy for you';
-        body = [hi, '', 'I think we may have the right puppy for you: [Lisa: which pup and why].', '', 'The pages about the breed and our health testing are here:', '', list, '',
+        body = [hi, '', 'I think we may have the right puppy for you: [User: which pup and why].', '', 'The pages about the breed and our health testing are here:', '', list, '',
           'Just reply and I\'ll send you the details.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. I think we may have the right puppy for you: [Lisa: which pup]. Breed info: ' + links[0] + '. Shall I send you the details?';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User. I think we may have the right puppy for you: [User: which pup]. Breed info: ' + links[0] + '. Shall I send you the details?';
         break;
       case 'no-fit-now':
         body = [hi, '', 'Thank you for getting in touch. I don\'t have a puppy that fits what you\'re looking for just now, but I\'d love to keep you in mind for our next litters.', '',
           'These pages explain the breed and how we health test:', '', list, '', 'Just reply if you\'d like me to keep you posted.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. I don\'t have a puppy that fits just now, but I\'d love to keep you posted about our next litters. Breed info: ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User. I don\'t have a puppy that fits just now, but I\'d love to keep you posted about our next litters. Breed info: ' + links[0];
         break;
       case 'adult-dog':
         subject = 'Our adult dogs';
         body = [hi, '', 'Thank you for asking about our adult dogs. Prices are on request, and I\'m happy to send you the details of any dog you\'re interested in.', '',
           'You can read about the breed and our health testing here:', '', list, '', 'Just reply and tell me what you\'re looking for.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Thank you for asking about our adult dogs. Price on request: I\'m happy to send details. Breed info: ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User. Thank you for asking about our adult dogs. Price on request: I\'m happy to send details. Breed info: ' + links[0];
         break;
       case 'breeder':
         stop = true;
         subject = 'Cobberdogs from Australian Labradoodles/Cobberdogs';
-        body = [hi, '', 'I\'m Lisa from Australian Labradoodles/Cobberdogs in Wales. Thank you for your interest in our breeding dogs.', '',
+        body = [hi, '', 'I\'m User from Australian Labradoodles/Cobberdogs in Wales. Thank you for your interest in our breeding dogs.', '',
           'You can read about the breed and our health testing here:', '', list, '', 'Prices are on request. Just reply and I\'ll send you the details, or message me on WhatsApp.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa from Australian Labradoodles/Cobberdogs. Thank you for your interest in our breeding dogs; price on request. Breed info: ' + links[0] + '. Reply STOP and I won\'t contact you again.';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User from Australian Labradoodles/Cobberdogs. Thank you for your interest in our breeding dogs; price on request. Breed info: ' + links[0] + '. Reply STOP and I won\'t contact you again.';
         break;
       case 'missed':
         stop = true;
         body = [hi, '', 'Thank you for getting in touch through our website, and I\'m so sorry for the very slow reply. A problem with our website form meant your message never reached me, and that has now been put right.', '',
           'If you are still looking for a puppy, I\'d love to help. These pages explain the breed, sizes, colours, coats and our health testing:', '', list, '',
           'Just reply and tell me what you\'re looking for, and I\'ll let you know what we have coming up.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa from Australian Labradoodles/Cobberdogs. I\'m so sorry for the very slow reply: a website problem meant your message never reached me. If you\'re still looking, I\'d love to help. Breed info: ' + links[0] + '. Reply STOP and I won\'t contact you again.';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User from Australian Labradoodles/Cobberdogs. I\'m so sorry for the very slow reply: a website problem meant your message never reached me. If you\'re still looking, I\'d love to help. Breed info: ' + links[0] + '. Reply STOP and I won\'t contact you again.';
         break;
       case 'gentle-close':
         subject = 'Still looking?';
         body = [hi, '', 'I just wanted to check in. If you\'re still looking for a puppy I\'d love to help, and if your plans have changed that\'s absolutely fine.', '',
           'The breed pages are here if useful:', '', list];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking in: if you\'re still looking I\'d love to help, and if plans have changed that\'s fine. ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User. Just checking in: if you\'re still looking I\'d love to help, and if plans have changed that\'s fine. ' + links[0];
         break;
       // Stage 12 follow-ups: short check-ins. Never a price, never a new offer (offers are the owner's alone).
       case 'check-in':
         subject = 'Just checking in';
         body = [hi, '', 'I just wanted to check my last message reached you. If you\'re still looking for a puppy I\'d love to help, and if now isn\'t the right time that\'s absolutely fine.', '',
           'The breed pages are here if useful:', '', list];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking my last message reached you. If you\'re still looking I\'d love to help. ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User. Just checking my last message reached you. If you\'re still looking I\'d love to help. ' + links[0];
         break;
       case 'call-check-in':
         subject = 'Following up on our call';
         body = [hi, '', 'Thank you again for your time on the call. I just wanted to see if you had any questions after reading the pages I sent.', '',
           'They are here again if useful:', '', list, '', 'Just reply, or message me on WhatsApp, and I\'ll help with the next step.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Following up on our call: any questions after reading ' + links[0] + '? Happy to help with the next step.';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User. Following up on our call: any questions after reading ' + links[0] + '? Happy to help with the next step.';
         break;
       case 'offer-check-in':
         subject = 'The puppy I mentioned';
         body = [hi, '', 'I just wanted to check you saw my message about the puppy. There\'s no pressure at all: just let me know either way when you can, so I can keep my list fair to everyone.', '',
           'The breed pages are here if useful:', '', list];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking you saw my message about the puppy. No pressure: let me know either way when you can. ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User. Just checking you saw my message about the puppy. No pressure: let me know either way when you can. ' + links[0];
         break;
       case 'waiting-check-in':
         subject = 'News from our waiting list';
-        body = [hi, '', 'A quick hello from our waiting list. [Lisa: litter news, or "no news yet"]. You are still on our list, and I\'ll be in touch as soon as I have more.', '',
+        body = [hi, '', 'A quick hello from our waiting list. [User: litter news, or "no news yet"]. You are still on our list, and I\'ll be in touch as soon as I have more.', '',
           'The breed pages are here if useful:', '', list, '', 'If anything has changed for you, just reply and let me know.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa with a quick waiting-list hello: [Lisa: litter news]. You are still on our list. Breed info: ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s User with a quick waiting-list hello: [User: litter news]. You are still on our list. Breed info: ' + links[0];
         break;
       default: return null;
     }
@@ -781,7 +720,6 @@
     return { email: { subject: subject, text: text }, whatsapp: wa, links: links };
   }
 
-  // Everything a draft must never contain. Returns plain-English problems ([] = fine).
   var PRICE_RE = /£|€|\$\s*\d|\b\d[\d,.]*\s*(k\b|pounds?|gbp|eur(os?)?|chf|francs?|usd|dollars?)|\b(gbp|eur|chf|usd)\s*\d|\bprice (is|of|will be|=)\s*\d/i;
   var LICENCE_WORDS = /\blicen[cs]e\s*(no\.?|number|#|ref(erence)?)\b/i, LICENCE_CODE = /\b[A-Z]{2,4}[\s\/-]?\d{3,}\b/;
   function checkDraft(text, o) {
@@ -819,7 +757,7 @@
     var names = (opts.names || []).map(String).join(' ').split(/[\s,<>"]+/).filter(function (n) { return /^[A-Za-zÀ-ɏ'-]{2,}$/.test(n); });
     if (gm && names.indexOf(gm[3]) < 0) names.push(gm[3]);
     names.forEach(function (n) {
-      if (/^(lisa|there|all|everyone)$/i.test(n)) return;
+      if (/^(user|there|all|everyone)$/i.test(n)) return;
       t = t.replace(new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g'), '<name>');
     });
     var first = (t.split('\n')[0] || '').trim(), tail = t.split('\n').filter(function (x) { return x.trim(); }).slice(-3).join(' / ');
@@ -827,9 +765,6 @@
       words: (t.match(/\S+/g) || []).length, links: links.filter(function (u, j) { return links.indexOf(u) === j; }) };
   }
 
-  // ---- Call prep and after the call (Stage 9) ------------------------------------------------------------------
-  // One IANA zone for countries that have one, so the prep card can show the caller's own clock. Countries with
-  // several zones (USA, Canada, Australia ...) show "their time: check" rather than a guess.
   var ONE_ZONE = { 'United Kingdom': 'Europe/London', Jersey: 'Europe/Jersey', Guernsey: 'Europe/Guernsey', 'Isle of Man': 'Europe/Isle_of_Man',
     Ireland: 'Europe/Dublin', Switzerland: 'Europe/Zurich', France: 'Europe/Paris', Germany: 'Europe/Berlin', Netherlands: 'Europe/Amsterdam',
     Belgium: 'Europe/Brussels', Italy: 'Europe/Rome', Austria: 'Europe/Vienna', Denmark: 'Europe/Copenhagen', Sweden: 'Europe/Stockholm',
@@ -844,7 +779,6 @@
       return p.weekday + ' ' + p.hour + ':' + p.minute;
     } catch (e) { return ''; }
   }
-  // The two questions most worth asking: the first two things the enquiry has not told us yet.
   function questionsToAsk(e, prefs, flags) {
     e = e || {}; prefs = prefs || {}; flags = flags || [];
     var text = [e.question_summary, e.timing, e.household_flags].join(' '), q = [];
@@ -857,9 +791,6 @@
     q.push('What made you choose a ' + (prefs.breed_interest === 'Labradoodle' ? 'Labradoodle' : 'Cobberdog') + '?');
     return q.slice(0, 2);
   }
-  // The prep card for one booked WhatsApp call. ctx: { now, person, openPups, events (all Events rows), weights,
-  // bands, simpleCountries, hardCountries, readyHours (2) }. The card is "ready" from readyHours before the call.
-  // Returns null for an enquiry with no booked call.
   function callPrep(e, ctx) {
     e = e || {}; ctx = ctx || {};
     if (e.channel !== 'calendly' || e.stage !== 'call-booked' || !e.next_due_uk) return null;
@@ -878,8 +809,6 @@
       pups: fits, touches: touches, questions: questionsToAsk(e, s.prefs, s.flags), repeat_buyer: truthy((ctx.person || {}).repeat_buyer)
     };
   }
-  // The page's one-tap "call held" request (request-file pattern). The engine moves the stage to call-held and the
-  // after-call WhatsApp draft follows in the same run.
   function callHeldRequest(enquiryKey, nowIso, note) {
     if (!/^K-[0-9a-f]{16}$/.test(String(enquiryKey || ''))) return { ok: false, error: 'Unknown enquiry.' };
     var at = nowIso || new Date().toISOString(), n = String(note == null ? '' : note).slice(0, 500);
@@ -887,12 +816,6 @@
       body: { v: 1, kind: 'call-held', enquiry_key: enquiryKey, note: n, at: at } };
   }
 
-  // ---- Waiting list and litters (Stage 10) ----------------------------------------------------------------------
-  // The allocation sheet's current tab, read only, turned into Litters rows: one row per pup (person_key blank) and
-  // one row per person on a list (pup_ref = their provisional pup, if any). People are carried as hashed person keys
-  // only: no name, email or number from the allocation sheet is ever written anywhere.
-  //   values: the tab, header first (section, ref, name, status, deposit_date, whatsapp, email, ppf, notes, provisional_pup)
-  //   opts: { personKeyOf(email, phone) -> person_key, litterRef, source, defaultCode }
   var LIT_COLS = { section: /^section$/i, ref: /^ref$/i, status: /^status$/i, deposit: /^deposit_date$/i, phone: /^(whatsapp|phone)$/i,
     email: /^e-?mail$/i, pref: /^ppf\b/i, notes: /^notes$/i, pup: /^provisional_pup$/i };
   function litterRowsFrom(values, opts) {
@@ -924,8 +847,6 @@
   }
   var OPEN_PUP = /^(open|available|for sale)$/i;
   function isClosedList(list) { return /closed|lost|refund/i.test(String(list || '')); }
-  // Waiting people matched to open pups by sex, colour, size and coat. Deposit holders come first, then each list in
-  // its own order. A person already holding a pup is not matched again. Returns [{ pup_ref, person_key, list, list_order }].
   function matchLitter(rows) {
     var pups = (rows || []).filter(function (r) { return r.list === 'pups' && OPEN_PUP.test(r.status); });
     var waiting = (rows || []).filter(function (r) { return r.list !== 'pups' && !isClosedList(r.list) && !r.pup_ref; })
@@ -959,9 +880,6 @@
     return out;
   }
 
-  // ---- Adult-dog sale (Stage 10) --------------------------------------------------------------------------------
-  // From the Sale sheet only three things are read: the sale group, the dog's name and the Status column. Price,
-  // COI and every other column are never read, so they can never reach a card.
   var SALE_COLS = { group: /^sale ?group$/i, dog: /^(name|dog|dog name)$/i, status: /^status$/i };
   function saleDogsFrom(values) {
     var v = values || [], head = (v[0] || []).map(function (h) { return String(h == null ? '' : h).trim(); }), at = {};
@@ -972,7 +890,6 @@
         sale_status: at.status < 0 ? '' : String(r[at.status] == null ? '' : r[at.status]).trim() };
     }).filter(function (d) { return d.group_ref && d.dog_ref; });
   }
-  // Adult-dog and breeding-set enquiries joined to a sale group by the dog's name or "group <n>" in what they wrote.
   var REPLY_KIND = { asked: 'reply', 'details-sent': 'reply', viewing: 'viewing', agreed: 'agreed', 'handed-over': 'agreed' };
   function saleReplyRows(enquiries, dogs) {
     var out = [];
@@ -992,8 +909,6 @@
     });
     return out;
   }
-  // One card per sale group: its dogs and their sale status, and counts of replies, viewings and agreed. Price on
-  // request only; never a price or a COI value.
   function saleGroupCards(dogs, replies) {
     var by = {};
     (dogs || []).forEach(function (d) { (by[d.group_ref] = by[d.group_ref] || { group_ref: d.group_ref, dogs: [], replies: 0, viewings: 0, agreed: 0, price: 'price on request' }).dogs.push({ dog_ref: d.dog_ref, sale_status: d.sale_status || 'no status' }); });
@@ -1005,7 +920,6 @@
     });
     return Object.keys(by).map(function (k) { return by[k]; });
   }
-  // A card is refused if any text in it looks like a price or a COI value.
   function checkCard(card) {
     var t = JSON.stringify(card || {}), why = [];
     if (PRICE_RE.test(t) || /"price":"(?!price on request")/.test(t)) why.push('a price');
@@ -1013,15 +927,12 @@
     return why;
   }
 
-  // ---- Do-not-contact gate (Stage 6; used by every draft and follow-up writer) ---------------------------------
-  // A person or enquiry marked do-not-contact or unsubscribed is never drafted to and never gets a follow-up.
   function mayContact(person, enquiry) {
     var p = person || {}, e = enquiry || {};
     if (truthy(p.do_not_contact) || CONSENT_RANK[p.consent] >= 2) return { ok: false, why: p.consent && CONSENT_RANK[p.consent] >= 2 ? p.consent : 'do-not-contact' };
     if (truthy(e.do_not_contact) || CONSENT_RANK[e.consent] >= 2) return { ok: false, why: e.consent && CONSENT_RANK[e.consent] >= 2 ? e.consent : 'do-not-contact' };
     return { ok: true, why: '' };
   }
-  // Split FollowUps (or Drafts) rows into the ones that may be written and the ones a contact rule blocks.
   function gateContact(items, peopleByKey, enquiriesByKey) {
     var keep = [], blocked = [];
     (items || []).forEach(function (it) {
@@ -1031,8 +942,6 @@
     return { keep: keep, blocked: blocked };
   }
 
-  // ---- Follow-ups (Stage 12) ------------------------------------------------------------------------------------
-  // Rules from Settings (followup_rules): days to each follow-up, and tries before the hub suggests lost.
   var FU_DEFAULTS = { 'first-reply': 2, 'after-call': 1, offer: 3, 'waiting-list': 30, 'lost-after': 3 };
   function followUpRules(text) {
     var o = {}, k;
@@ -1043,13 +952,11 @@
     });
     return o;
   }
-  // Which rule an enquiry's stage follows, and the Events type that starts its clock. Other stages have no follow-up.
   var FU_RULE = { replied: 'first-reply', 'call-held': 'after-call', offered: 'offer', deposit: 'waiting-list' };
   var FU_EVENT = { 'first-reply': 'replied', 'after-call': 'call-held', offer: 'offered', 'waiting-list': 'deposit-paid' };
   var FU_CASE = { 'first-reply': 'check-in', 'after-call': 'call-check-in', offer: 'offer-check-in', 'waiting-list': 'waiting-check-in' };
   function followUpCase(rule) { return FU_CASE[rule] || ''; }
   var FU_OPEN = { waiting: 1, due: 1, snoozed: 1, 'suggest-lost': 1 };
-  // Move a time out of UK quiet hours ('21:00-08:00'): a time inside them goes to the end of them, UK clock.
   function outOfQuiet(ms, quiet) {
     var m = String(quiet || '').match(/^\s*(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})\s*$/);
     if (!m || isNaN(ms)) return ms;
@@ -1121,7 +1028,6 @@
       body: { v: 1, kind: 'done', followup_key: followupKey, lost: lost === true, at: at } };
   }
 
-  // ---- Merging one enquiry row ---------------------------------------------------------------------------------
   var STAGES = ['new', 'replied', 'call-booked', 'call-held', 'offered', 'deposit', 'balance', 'collected', 'lost', 'parked'];
   var ADULT_STAGES = ['asked', 'details-sent', 'viewing', 'agreed', 'handed-over'];
   var CLOSED = { lost: 1, parked: 1 };
@@ -1145,7 +1051,7 @@
       var v = incoming[k];
       if (v === '' || v == null) continue;
       if (k === 'stage' || k === 'received_uk') continue;
-      if (LISA_FIELDS.indexOf(k) >= 0 && stored[k]) continue;
+      if (USER_FIELDS.indexOf(k) >= 0 && stored[k]) continue;
       if (k === 'do_not_contact') { out[k] = stored[k] === true || stored[k] === 'TRUE' || v === true || v === 'TRUE'; continue; }
       out[k] = v;
     }
@@ -1159,9 +1065,6 @@
     return out;
   }
 
-  // ---- What kind of enquiry ------------------------------------------------------------------------------------
-  // Words that point at each kind, with a weight. The highest total wins; a tie goes to the earlier kind in ORDER.
-  // "puppy" is the fallback when the text names our breeds but nothing more specific; "other" when nothing matches.
   var KIND_ORDER = ['stud', 'breeding-set', 'adult-dog', 'food', 'puppy', 'other'];
   var KIND_WORDS = {
     stud: [[/\bstud\b|\bstud (dog|service|fee)s?\b/, 4], [/\b(mate|mating|cover)\b.{0,20}\b(my|our)\b.{0,10}\b(bitch|girl|female)\b/, 4], [/\bat stud\b/, 3]],
@@ -1184,34 +1087,28 @@
     return best;
   }
 
-  // ---- Time ----------------------------------------------------------------------------------------------------
   function toMs(v) {
     if (v instanceof Date) return v.getTime();
     if (typeof v === 'number') return v;
     var s = String(v || '').trim(); if (!s) return NaN;
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return Date.parse(s + 'T00:00:00Z');
     if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(s)) {
-      // A bare time is UK clock time (every *_uk column), so it is read as Europe/London, BST or GMT as on that day.
       var guess = Date.parse(s.replace(' ', 'T') + 'Z'), ms = guess;
       for (var i = 0; i < 2; i++) { var shown = Date.parse(toUk(ms) + 'Z'); if (!isNaN(shown)) ms = guess - (shown - ms); }
       return ms;
     }
     return Date.parse(s);
   }
-  // Whole hours from askedAt to now (now defaults to the clock). NaN-safe: an unreadable time gives null.
   function hoursSince(askedAt, now) {
     var a = toMs(askedAt), b = now == null ? Date.now() : toMs(now);
     if (isNaN(a) || isNaN(b)) return null;
     return Math.floor((b - a) / 3600000);
   }
 
-  // ---- Data contract: RR_ENQUIRIES --------------------------------------------------------------------------
-  // The page and the engine agree on these names. A tab whose header row is missing a column, or has one renamed or
-  // moved, is refused (fail closed): the page shows "the sheet changed" and no rows, rather than wrong rows.
   var COLUMNS = {
     Enquiries: ['key', 'person_key', 'source', 'source_ref', 'received_uk', 'channel', 'kind', 'brand', 'country',
       'country_basis', 'breed_interest', 'size', 'colour', 'coat', 'sex', 'timing', 'household_flags', 'question_summary',
-      'score', 'band', 'stage', 'next_step', 'next_due_uk', 'owner', 'do_not_contact', 'consent', 'litter_ref', 'pup_ref',
+      'score', 'band', 'stage', 'next_step', 'next_due_uk', 'user', 'do_not_contact', 'consent', 'litter_ref', 'pup_ref',
       'lost_reason', 'flag', 'ref', 'score_reasons', 'updated_uk', 'bld_litter_id', 'bld_subject_id'],
     People: ['person_key', 'ref', 'name', 'email', 'phone_e164', 'country', 'country_basis', 'sources', 'first_contact_uk',
       'last_touch_uk', 'touches', 'repeat_buyer', 'past_deposit', 'do_not_contact', 'consent', 'match_confidence', 'check', 'updated_uk', 'bld_person_id'],
@@ -1221,7 +1118,6 @@
     Litters: ['litter_key', 'litter_ref', 'pup_ref', 'sex', 'colour', 'size', 'coat', 'status', 'status_since_uk', 'person_key',
       'list', 'list_order', 'deposit_date', 'flag', 'source_sheet', 'read_uk', 'bld_litter_id', 'bld_subject_id'],
     'Sale Replies': ['reply_key', 'group_ref', 'dog_ref', 'enquiry_key', 'person_key', 'reply_kind', 'at_uk', 'sale_status', 'read_uk'],
-    // Stage 11: deposit_key, status (held, suggested, collected, refunded, closed) and check added. Private amounts.
     Deposits: ['deposit_key', 'litter_ref', 'pup_ref', 'person_key', 'deposit_date', 'deposit', 'balance_due', 'balance_paid',
       'collection_date', 'status', 'basis', 'check', 'read_uk', 'bld_litter_id'],
     Sources: ['source', 'lands_where', 'machine_readable', 'reader', 'last_read_uk', 'last_count', 'status', 'note'],
@@ -1230,7 +1126,6 @@
     Log: ['at_uk', 'level', 'step', 'message', 'count', 'dry_run', 'engine_version'],
     // Stage 8: the owner's own sent replies with names, emails and numbers stripped, read by styleSample(). Private.
     Style: ['style_key', 'sent_uk', 'words', 'greeting', 'sign_off', 'links', 'text', 'read_uk'],
-    // Stage 14: counts only, one row per month and source (and 'all'). basis: live, hubspot-history or deposit-list.
     Results: ['result_key', 'month', 'source', 'basis', 'enquiries', 'calls_booked', 'calls_held', 'offers', 'deposits', 'balances',
       'collected', 'lost', 'junk', 'adult_sale', 'median_reply_h', 'lost_reasons', 'made_uk']
   };
@@ -1240,13 +1135,11 @@
   var CONSENT = ['ok', 'do-not-contact', 'unsubscribed', 'unknown'];
   var BASIS = ['stated', 'inferred'];
   var BREEDS = ['Cobberdog', 'Labradoodle', 'either'];
-  // Enquiries columns that must hold one word from a list (blank allowed only where noted).
   var ENUMS = {
     channel: [CHANNELS, false], kind: [KIND_ORDER, false], stage: [STAGES.concat(ADULT_STAGES), false],
     band: [BANDS, true], consent: [CONSENT, true], country_basis: [BASIS, true], breed_interest: [BREEDS, true]
   };
 
-  // Trailing columns an older sheet may omit. A sheet that has them must keep them in this order, after the required columns.
   var OPTIONAL_TAIL = {
     Enquiries: ['bld_litter_id', 'bld_subject_id'],
     People: ['bld_person_id'],
@@ -1254,8 +1147,6 @@
     Deposits: ['bld_litter_id']
   };
 
-  // Check one header row against the contract. Returns [] when it matches, else plain-English problems.
-  // Required columns must be present in order. The trailing optional columns may be left off the end.
   function checkHeader(tab, header) {
     var want = COLUMNS[tab];
     if (!want) return ['unknown tab "' + tab + '"'];
@@ -1282,7 +1173,6 @@
 
   function truthy(v) { return v === true || /^(true|yes|y|1)$/i.test(String(v == null ? '' : v).trim()); }
 
-  // Check one Enquiries row: words outside the lists, and stage flow (see stageFlags).
   function validateRow(r) {
     var problems = [];
     Object.keys(ENUMS).forEach(function (col) {
@@ -1294,8 +1184,6 @@
     return problems;
   }
 
-  // A puppy enquiry must pass deposit before it is offered a pup, pays a balance or is collected. history is the list
-  // of stages the enquiry has been at (from Events), or the row may carry a deposit. Returns flag words ([] = fine).
   function stageFlags(r, history) {
     var s = String(r.stage || '').trim(), flags = [];
     var after = { offered: 1, balance: 1, collected: 1 };
@@ -1307,8 +1195,6 @@
     return flags;
   }
 
-  // Sheet values (first row = header) -> { ok, problems, rows }. ok is false when the header breaks the contract:
-  // then rows is EMPTY (fail closed). Each row object carries _row (sheet row number) and, for Enquiries, _problems.
   function parseTab(tab, values) {
     values = values || [];
     var header = values[0] || [];
@@ -1328,8 +1214,6 @@
     return { ok: true, problems: [], rows: rows };
   }
 
-  // ---- UK time ------------------------------------------------------------------------------------------------
-  // Any time -> 'YYYY-MM-DDTHH:mm:ss' on the UK clock (GMT or BST). '' when unreadable.
   var UK_FMT = null;
   function toUk(v) {
     var ms = toMs(v); if (isNaN(ms)) return '';
@@ -1346,11 +1230,6 @@
   }
   function lastPart(uri) { var s = String(uri || '').replace(/\/+$/, ''); return s.slice(s.lastIndexOf('/') + 1); }
 
-  // ---- Capture: Calendly "Whatsapp Call" ------------------------------------------------------------------------
-  // pairs: [{ event, invitee }] as the Calendly API v2 returns them (scheduled_events and their invitees, cancelled ones
-  // included). A reschedule in Calendly cancels the old invitee (rescheduled: true, new_invitee set) and books a new one
-  // (old_invitee set), so we follow old_invitee back to the first booking: one chain = one enquiry.
-  // Returns { enquiries: [row], events: [row], people: [person] }. Person details go only to the private People tab.
   function calendlyRecords(pairs, opts) {
     opts = opts || {};
     var byUri = {}, list = (pairs || []).filter(function (p) { return p && p.invitee && p.invitee.uri; });
@@ -1389,7 +1268,7 @@
       });
       var cancelled = inv.status === 'canceled' && !inv.rescheduled;
       var kind = help ? classifyKind(help) : 'puppy';
-      if (kind === 'other' && !/\w{3,}.*\w{3,}/.test(help)) kind = 'puppy';  // a one-word answer on the puppy call is a puppy enquiry
+      if (kind === 'other' && !/\w{3,}.*\w{3,}/.test(help)) kind = 'puppy';
       out.enquiries.push({
         key: key, person_key: '', source: 'Calendly ' + ((first.event && first.event.name) || 'Whatsapp Call'), source_ref: lastPart(rootUri),
         received_uk: toUk(first.invitee.created_at), channel: 'calendly', kind: kind, country: where.country,
@@ -1404,9 +1283,6 @@
     return out;
   }
 
-  // ---- Capture: email and website forms ---------------------------------------------------------------------------
-  // Form notifications (WordPress on labradoodles.co.uk, ClickFunnels, HubSpot) write "Label: value" lines. Pull the
-  // fields we know by any of their usual labels; keep the rest out (the sheet holds a 300 character summary at most).
   var FIELD_LABELS = {
     name: /^(your |full |first )?name$|^contact name$/, last: /^(last|sur) ?name$/, email: /^(your )?e-?mail( address)?$/,
     phone: /^(your )?(phone|mobile|telephone|tel|whats ?app)( number| no\.?)?$/, country: /^(your )?country( of residence)?$/,
@@ -1427,7 +1303,6 @@
     return out;
   }
 
-  // Senders and words that are never an enquiry. Settings can add more (noise_senders, comma list) at run time.
   var NOISE_SENDERS = /@(calendly\.com|github\.com|google\.com|accounts\.google\.com|wordfence\.com|semrush\.com|xero\.com|paypal\.|stripe\.com|shopify\.com|mailchimp|hubspot\.com$|e\.hubspot\.com|linkedin\.com|facebookmail\.com$)|^(no-?reply|noreply|mailer-daemon|postmaster)@/i;
   var NOISE_SUBJECT = /\b(invoice|statement|remittance|receipt|order confirm(ation|ed)|price ?list|newsletter|webinar|seo (report|audit)|ranking report|weekly (activity|report)|security alert|wordfence|new user registration|password reset|unsubscribe|% off|sale ends|your order|payment (received|failed)|direct debit)\b/i;
   var NOISE_BODY = /\b(view (this email )?in (your )?browser|to unsubscribe|manage (your )?preferences|invoice (no|number)|amount due|vat (no|number)|keyword rankings?|domain authority|backlinks?)\b/i;
@@ -1435,9 +1310,6 @@
   var DOG_WORDS = /\b(pupp(y|ies)|pups?|litters?|cobberdogs?|labradoodles?|doodles?|stud|breed(ing|er)?|waiting list|dog|girl|boy|deposit)\b/i;
   var ASK_WORDS = /\?|\b(interested|enquir|inquir|looking for|would (like|love)|available|availability|how much|cost|price|waiting list|can (i|we|you)|do you have)\b/i;
 
-  // One email -> { enquiry: bool, channel, kind, reason, fields }.
-  // m: { from, to, subject, body, labels: [..], noiseSenders: [..], formSenders: [..] }. formSenders are the addresses or
-  // domains that send form notifications (the website, ClickFunnels, HubSpot): their mail is judged on its fields.
   function classifyEmail(m) {
     m = m || {};
     var from = String(m.from || '').toLowerCase(), subject = String(m.subject || ''), body = String(m.body || '');
@@ -1466,8 +1338,6 @@
   }
   function kindOrPuppy(text) { var k = classifyKind(text); return k === 'other' && DOG_WORDS.test(text) ? 'puppy' : k; }
 
-  // Gmail search for the reader: mail to the business addresses or from the form senders, newest first, never
-  // promotions, spam or trash. Addresses and senders come from Settings (kept out of this public file).
   function gmailQuery(o) {
     o = o || {};
     var to = (o.addresses || []).filter(Boolean), frm = (o.formSenders || []).filter(Boolean);
@@ -1478,9 +1348,6 @@
     return (q + ' newer_than:' + (o.days || 90) + 'd -category:promotions -category:social -in:spam -in:trash').trim();
   }
 
-  // ---- Contact rules (SYS-CK) ---------------------------------------------------------------------------------
-  // Do-not-contact lives in ClickFunnels tags and in every unsubscribe. A person with any of these is never drafted to
-  // and never gets a follow-up. Settings can add tag words (dnc_tags) at run time.
   var DNC_TAGS = /x-?dont-?contact|do-?not-?(contact|market)|ldd-bad/i;
   var UNSUB_TAGS = /opted-?out|unsubscrib/i;
   function consentFrom(o) {
@@ -1493,11 +1360,6 @@
     return { consent: 'unknown', do_not_contact: false };
   }
 
-  // ---- Junk check (HubSpot integration batches, form spam) ----------------------------------------------------
-  // Stage 0 found about 20 of 23 new HubSpot contacts in 30 days were junk: random mixed-case letter names, dotted
-  // throwaway mail, test domains, a dummy number. Returns the reasons ([] = looks real). Shown, and kept out of counts.
-  // opts.testDomains replaces the built-in test-domain list (the tests pass [] because their invented people use
-  // example.com, which in real data is a test entry).
   var TEST_DOMAINS = ['example.com', 'example.org', 'example.net', 'mailinator.com', 'guerrillamail.com', 'yopmail.com', 'sharklasers.com', 'tempmail.com'];
   function junkReasons(p, opts) {
     p = p || {}; opts = opts || {};
@@ -1516,8 +1378,6 @@
     return why;
   }
 
-  // ---- ClickFunnels guard --------------------------------------------------------------------------------------
-  // Before every read batch the engine reads the workspace live and compares id and exact name with Script Properties.
   function workspaceGuard(expected, live) {
     expected = expected || {}; live = live || {};
     if (!expected.id || !expected.name) return { ok: false, why: 'CF_WORKSPACE_ID and CF_WORKSPACE_NAME are not both set' };
@@ -1526,10 +1386,6 @@
     return { ok: true, why: '' };
   }
 
-  // ---- Capture: ClickFunnels workflow runs ---------------------------------------------------------------------
-  // runs: [{ id, workflow, created_at, page, contact: { id, email, phone, first_name, last_name, tags: [names] } | null }]
-  // A run with no email and no phone is an anonymous page view: noise, never an enquiry (27 of 27 Breeding Cobberdogs
-  // runs on 29 Oct were like this). Returns { enquiries, people, events, noise: n, byWorkflow: { name: { runs, real } } }.
   var CF_WORKFLOWS = [
     [/website ?opt-?in/i, 'cf-website-optin', 'puppy'], [/breeding cobberdogs|breeder/i, 'cf-breeding', 'breeding-set'],
     [/waiting ?list|application/i, 'cf-waiting-list', 'puppy']
@@ -1559,8 +1415,6 @@
     return out;
   }
 
-  // OW-0003: match each breeder-form run to a page submission that carries a contact, by page and time (within
-  // windowMin minutes). Returns { matched: [{ run, submission }], unmatched: [run] }. Counts only go in a slip.
   function matchSubmissions(runs, submissions, windowMin) {
     var w = (windowMin || 10) * 60000, used = {}, out = { matched: [], unmatched: [] };
     (runs || []).forEach(function (r) {
@@ -1576,9 +1430,6 @@
     return out;
   }
 
-  // ---- Capture: HubSpot contacts --------------------------------------------------------------------------------
-  // contacts: HubSpot v3 objects { id, properties: { email, firstname, lastname, phone, mobilephone, country, createdate,
-  // message, hs_email_optout, recent_conversion_event_name } }. Junk is counted, not captured.
   function hubspotRecords(contacts, opts) {
     opts = opts || {};
     var out = { enquiries: [], people: [], events: [], junk: 0 };
@@ -1616,7 +1467,6 @@
     return { ok: true, name: 'ENQ-add-' + at.replace(/[^0-9]/g, '').slice(0, 14) + '-' + hash(channel + text).slice(0, 6) + '.json',
       body: { v: 1, kind: 'add', channel: channel, enquiry_kind: kind || classifyKind(text), text: text, at: at } };
   }
-  // The engine's read of a pasted message: name, email and phone if the text gives them.
   function parsePasted(text, defaultCode) {
     var t = String(text || ''), f = formFields(t);
     var em = f.email || ((t.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/) || [])[0]) || '';
@@ -1626,21 +1476,16 @@
     return { name: name, email: normaliseEmail(em), phone_e164: ph.valid ? ph.e164 : '', message: f.message || t.trim() };
   }
 
-  // ---- The enquiries page (Stage 13) ------------------------------------------------------------------------------
-  // Pure logic for enquiries/index.html: order, counts, filters kept in the URL hash, the detail view, and the local
-  // copy of a tap (the engine does the real work from the request file; the page shows the result at once).
   var BAND_RANK = { hot: 0, warm: 1, cool: 2, 'not-a-fit': 3 };
   var DONE_STAGES = { lost: 1, parked: 1, collected: 1, 'handed-over': 1 };
   var PAGE_FILTERS = ['source', 'band', 'stage', 'litter', 'country'];
   function ukDay(v) { return toUk(v).slice(0, 10); }
-  // Newest and hottest first: band (hot, warm, cool, not-a-fit, blank), then newest received, then key.
   function sortEnquiries(rows) {
     return (rows || []).slice().sort(function (a, b) {
       var ra = BAND_RANK[a.band] == null ? 4 : BAND_RANK[a.band], rb = BAND_RANK[b.band] == null ? 4 : BAND_RANK[b.band];
       return ra - rb || (toMs(b.received_uk) || 0) - (toMs(a.received_uk) || 0) || String(a.key).localeCompare(String(b.key));
     });
   }
-  // '#/list?band=hot&country=Spain' -> { view: 'list', key: '', f: { band: 'hot', country: 'Spain' } }; '#/e/K-...' opens one.
   function filtersFromHash(h) {
     var s = String(h || '').replace(/^#\/?/, ''), q = s.indexOf('?'), path = q < 0 ? s : s.slice(0, q), f = {};
     (q < 0 ? '' : s.slice(q + 1)).split('&').forEach(function (p) {
@@ -1663,7 +1508,6 @@
         && (!f.litter || e.litter_ref === f.litter) && (!f.country || e.country === f.country);
     });
   }
-  // The choices each filter offers: the words found in the rows, sorted, blanks left out.
   function filterOptions(rows) {
     var out = {}, col = { source: 'source', band: 'band', stage: 'stage', litter: 'litter_ref', country: 'country' };
     PAGE_FILTERS.forEach(function (k) {
@@ -1673,8 +1517,6 @@
     return out;
   }
   function openPupRows(litters) { return (litters || []).filter(function (r) { return r.list === 'pups' && OPEN_PUP.test(String(r.status || '').trim()); }); }
-  // Everything the front of the page shows. tabs: { Enquiries, People, Events, Drafts, FollowUps, Litters, 'Sale Replies',
-  // Deposits, Settings } as row lists (parseTab rows); opts: { now, dueDays }. Nothing here writes anywhere.
   function hubView(tabs, opts) {
     tabs = tabs || {}; opts = opts || {};
     var now = opts.now == null ? Date.now() : toMs(opts.now), today = ukDay(now);
@@ -1716,8 +1558,6 @@
       options: filterOptions(enq)
     };
   }
-  // One enquiry opened: score reasons, touches, the draft to copy (none when a contact rule says no), the prep card,
-  // its follow-ups and the actions that fit its stage.
   function enquiryDetail(tabs, key, opts) {
     tabs = tabs || {}; opts = opts || {};
     var e = (tabs.Enquiries || []).filter(function (x) { return x.key === key; })[0];
@@ -1770,13 +1610,7 @@
     return tabs;
   }
 
-  // ---- Results (Stage 14) --------------------------------------------------------------------------------------
-  // Counts per month (the month an enquiry came in, UK) and source (its channel). An enquiry counts at every step up to
-  // the furthest it reached, from its stage or its Events (a lost row keeps the steps its Events show), so each step
-  // is a subset of the one before. Junk rows (flag junk?) are counted as junk and nowhere else. A rate with nothing
-  // under it is null and shows "no data", never 0%. Counts only: no names, no amounts.
   var RESULT_COUNTS = ['enquiries', 'calls_booked', 'calls_held', 'offers', 'deposits', 'balances', 'collected', 'lost', 'junk', 'adult_sale'];
-  // The conversion chain in the order a sale moves (FLOW: the deposit comes before the offer).
   var RESULT_STEPS = ['enquiries', 'calls_booked', 'calls_held', 'deposits', 'offers', 'balances', 'collected'];
   var STEP_OF_STAGE = { 'call-booked': 1, 'call-held': 2, deposit: 3, offered: 4, balance: 5, collected: 6 };
   var STEP_OF_EVENT = { booked: 1, rescheduled: 1, 'call-held': 2, 'deposit-paid': 3 };
@@ -1814,8 +1648,6 @@
     var got = toMs(e.received_uk), h = first != null && !isNaN(got) && first >= got ? Math.round((first - got) / 360000) / 10 : null;
     return { step: step, lost: e.stage === 'lost', reply_h: h };
   }
-  // Live Results rows from the Enquiries, Events and Sale Replies tabs: per month x source, plus source 'all'.
-  // opts: { from: 'YYYY-MM-DD' } leaves out enquiries received before it.
   function resultsRows(tabs, opts) {
     tabs = tabs || {}; opts = opts || {};
     var from = opts.from ? String(opts.from).slice(0, 7) : '', evs = {}, sale = {}, cells = {}, hours = {}, lost = {};
@@ -1841,7 +1673,6 @@
       return r;
     });
   }
-  // Rates for one Results row: conversion at each step of the chain, deposits per 10 calls held, median reply hours.
   function resultRates(r) {
     r = r || {};
     var n = function (k) { return Number(r[k]) || 0; }, steps = [];
@@ -1853,16 +1684,12 @@
     var med = r.median_reply_h === '' || r.median_reply_h == null || isNaN(Number(r.median_reply_h)) ? null : Number(r.median_reply_h);
     return { steps: steps, overall: rate(n('collected'), n('enquiries')), lost: rate(n('lost'), n('enquiries')), deposits_per_10_calls: dep10, median_reply_h: med };
   }
-  // Months from 'YYYY-MM' to 'YYYY-MM', newest first.
   function monthsBetween(from, to) {
     var out = [], y = Number(String(from).slice(0, 4)), m = Number(String(from).slice(5, 7)), ty = Number(String(to).slice(0, 4)), tm = Number(String(to).slice(5, 7));
     if (!y || !m || !ty || !tm) return out;
     while ((y < ty || (y === ty && m <= tm)) && out.length < 240) { out.push(y + '-' + ('0' + m).slice(-2)); m++; if (m > 12) { m = 1; y++; } }
     return out.reverse();
   }
-  // What the Results card and tab show. Live rows are computed from the tabs; history rows (basis not live) come from
-  // the Results tab and are added to the same month and source. Every month from opts.from to now is listed, so a
-  // month with nothing in it shows "no data". opts: { now, from }.
   function resultsView(tabs, opts) {
     tabs = tabs || {}; opts = opts || {};
     var now = opts.now == null ? Date.now() : toMs(opts.now), from = String(opts.from || '2026-05-01').slice(0, 7);
@@ -1877,7 +1704,6 @@
       c.lost_reasons = reasonsText(reasonsTally(r.lost_reasons, reasonsTally(c.lost_reasons)));
       if (src !== 'all') sources[src] = 1;
       if (r.basis && r.basis !== 'live') {
-        // History rows have no 'all' row of their own: add them to it.
         var aid = month + '|all', a = cells[aid] = cells[aid] || emptyResult(month, 'all', 'view');
         RESULT_COUNTS.forEach(function (k) { a[k] += Number(r[k]) || 0; });
         a.lost_reasons = reasonsText(reasonsTally(r.lost_reasons, reasonsTally(a.lost_reasons)));
@@ -1930,8 +1756,6 @@
     for (var i = 0; i < res.length; i++) for (var j = 0; j < ks.length; j++) if (res[i].test(ks[j]) && String(o[ks[j]]).trim()) return String(o[ks[j]]).trim();
     return '';
   }
-  // rows: parseCsv output of one export (deals or contacts; told apart by a deal stage column).
-  // Returns { rows: Results rows (basis hubspot-history, source hubspot-legacy), read, counted, junk, later, undated, stages }.
   function hubspotHistoryFrom(exportsRows, opts) {
     opts = opts || {};
     var before = opts.before ? String(opts.before).slice(0, 10) : '', seen = {}, recs = [];
@@ -1967,8 +1791,6 @@
     out.rows = Object.keys(cells).sort().map(function (k) { return cells[k]; });
     return out;
   }
-  // The old deposit list (a sheet tab, header first): deposits counted per month of the deposit date. Counts only:
-  // nothing about the person is kept. Rows on or after opts.before are left to the live hub.
   function depositHistoryFrom(values, opts) {
     opts = opts || {};
     var before = opts.before ? String(opts.before).slice(0, 10) : '', head = ((values && values[0]) || []).map(function (h) { return String(h).trim(); });
@@ -2007,7 +1829,6 @@
     for (var k in o) a[k] = o[k];
     return a;
   }
-  // The last finished engine run, from the Log rows in sheet order: { start, done, read, errors } or null.
   function lastRun(log) {
     log = log || [];
     for (var i = log.length - 1; i >= 0; i--) {
@@ -2023,7 +1844,6 @@
     }
     return null;
   }
-  // tabs as hubView takes them, plus Log and Sources. Returns the alerts, oldest first within each kind.
   function alertsView(tabs, opts) {
     tabs = tabs || {}; opts = opts || {};
     var now = opts.now == null ? Date.now() : toMs(opts.now), H = 3600000, out = [];
@@ -2032,26 +1852,22 @@
     (tabs.People || []).forEach(function (p) { people[p.person_key] = p; });
     (tabs.Events || []).forEach(function (v) { if (REPLY_EVENTS[v.type]) replied[v.enquiry_key] = 1; });
     var live = enq.filter(function (e) { return !DONE_STAGES[e.stage] && !/junk/.test(String(e.flag || '')); });
-    // 1. A hot enquiry still at "new" with no reply event, received replyHours or more ago (contactable only).
     live.forEach(function (e) {
       var h = hoursSince(e.received_uk, now);
       if (e.band !== 'hot' || e.stage !== 'new' || replied[e.key] || h == null || h < replyH || !mayContact(people[e.person_key], e).ok) return;
       out.push(makeAlert('hot-no-reply', e.key, { ref: e.ref || '', enquiry_key: e.key, since_uk: e.received_uk, text: (e.ref || 'An enquiry') + ': hot, no reply for ' + h + ' h' }));
     });
-    // 2. The engine's last run read nothing from any reader, or no run has finished for runHours (Log read only when given).
     if (tabs.Log && tabs.Log.length) {
       var run = lastRun(tabs.Log), ago = run ? hoursSince(run.done, now) : null;
       if (!run) out.push(makeAlert('blank-run', 'none', { text: 'The engine has started but never finished a run' }));
       else if (ago != null && ago >= runH) out.push(makeAlert('blank-run', 'stale', { since_uk: run.done, text: 'No engine run for ' + ago + ' h' }));
       else if (!run.read) out.push(makeAlert('blank-run', String(run.done), { since_uk: run.done, text: 'The last run read nothing from any source' + (run.errors ? ' (' + run.errors + ' errors)' : '') }));
     }
-    // 3. A live enquiry a contact rule blocks while it still waits on a reply or a follow-up (so no draft is made).
     live.forEach(function (e) {
       var g = mayContact(people[e.person_key], e);
       if (g.ok || ['new', 'replied', 'call-held', 'offered'].indexOf(e.stage) < 0) return;
       out.push(makeAlert('contact-blocked', e.key, { ref: e.ref || '', enquiry_key: e.key, since_uk: e.updated_uk || e.received_uk, text: (e.ref || 'An enquiry') + ': draft blocked (' + g.why + ')' }));
     });
-    // 4. A call starting within prepHours with no prep card, or a prep card with nothing from the booking form.
     live.forEach(function (e) {
       var t = toMs(e.next_due_uk);
       if (e.stage !== 'call-booked' || isNaN(t) || t < now || t > now + prepH * H) return;
@@ -2059,7 +1875,6 @@
       if (p && String(e.question_summary || '').trim()) return;
       out.push(makeAlert('call-no-prep', e.key, { ref: e.ref || '', enquiry_key: e.key, since_uk: e.next_due_uk, text: (e.ref || 'A call') + ': call at ' + toUk(t).slice(11, 16) + ', nothing to prepare from' }));
     });
-    // 5. An open pup nobody holds, open for more than offerDays (an unreadable or blank date counts as long enough).
     var since = {};
     (tabs.Litters || []).forEach(function (r) { if (r.list === 'pups') since[r.litter_key] = r.status_since_uk; });
     litterFlags(tabs.Litters || [], now, offerD).forEach(function (f) {
@@ -2068,7 +1883,6 @@
       if (!isNaN(s) && now - s <= offerD * 86400000) return;
       out.push(makeAlert('pup-no-offer', f.pup_ref || f.litter_key, { pup_ref: f.pup_ref, since_uk: since[f.litter_key] || '', text: (f.pup_ref || 'A pup') + ': open, no offer' }));
     });
-    // 6. A held deposit whose collection date has passed with balance still owed (no amount shown).
     (tabs.Deposits || []).forEach(function (r) {
       if (r.status !== 'held') return;
       var due = money(r.balance_due), paid = money(r.balance_paid), c = toMs(r.collection_date);
@@ -2076,7 +1890,6 @@
       if (isNaN(c) || c >= now || owed <= 0) return;
       out.push(makeAlert('balance-overdue', r.deposit_key || r.pup_ref, { pup_ref: r.pup_ref || '', since_uk: String(r.collection_date), text: (r.pup_ref || r.litter_ref || 'A deposit') + ': balance overdue since ' + ukDay(c) }));
     });
-    // 7. A source on the Sources tab (not off, retired, paused or manual) with no enquiry for silentDays.
     var last = {};
     enq.forEach(function (e) { var t = toMs(e.received_uk); if (isNaN(t)) return; [e.source, e.channel].forEach(function (s) { s = String(s || '').toLowerCase(); if (s && !(last[s] >= t)) last[s] = t; }); });
     (tabs.Sources || []).forEach(function (s) {
@@ -2088,22 +1901,19 @@
     });
     return out.sort(function (a, b) { return ALERT_KINDS.indexOf(a.kind) - ALERT_KINDS.indexOf(b.kind) || String(a.since_uk).localeCompare(String(b.since_uk)); });
   }
-  // Alerts as suggested RR_OPEN-WORK rows for the run slip (never written by code). Refs only.
   function openWorkRows(alerts, nowIso) {
     var at = toUk(nowIso || Date.now());
     return (alerts || []).map(function (a) {
-      return { key: a.key, area: 'Puppy Enquiries Hub', item: a.text, next_step: a.todo, owner: 'Lisa', raised_uk: at, source: 'enquiries alerts (' + a.kind + ')' };
+      return { key: a.key, area: 'Puppy Enquiries Hub', item: a.text, next_step: a.todo, user: 'User', raised_uk: at, source: 'enquiries alerts (' + a.kind + ')' };
     });
   }
 
-  // ---- Links into the BLD tables (pure: no reading or writing) ---------------------------------------------
-  // Plain words only. lost and parked map to closed, which is not one of the four.
   var PLAIN_STAGES = ['enquiry', 'deposit', 'working to collection', 'after collection'];
   var BLD_COLUMNS = {
     person: ['id', 'tenant_id', 'full_name', 'known_as'],
     household: ['id', 'tenant_id', 'name', 'primary_person_id', 'stage'],
     household_member: ['id', 'tenant_id', 'household_id', 'person_id'],
-    subject_owner: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'role'],
+    subject_user: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'role'],
     sale: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'deposit', 'deposit_date', 'sold_on', 'price'],
     match_candidate: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'score']
   };
@@ -2111,7 +1921,6 @@
 
   function cellText(v) { return v == null ? '' : String(v).trim(); }
 
-  // BLD litter id when external_ref matches and the system is the allocation sheet. Else ''.
   function bldLitterFor(litterRef, litterRows) {
     var ref = cellText(litterRef);
     if (!ref) return '';
@@ -2130,7 +1939,6 @@
     var m = cellText(pupRef).match(/(?:^|[^0-9])(\d+)\s*$/);
     return m ? m[1] : '';
   }
-  // Same pup number as its own token. 01 matches 1 and 01, and does not match 001.
   function samePupToken(token, num) {
     if (token === num) return true;
     if (!/^\d+$/.test(token) || !/^\d+$/.test(num)) return false;
@@ -2138,7 +1946,6 @@
     if (a !== b) return false;
     return token === num || token === a || num === b;
   }
-  // Subject id for a pup: birth litter matches, and the pup number is a token in the subject id. Else ''.
   function bldSubjectFor(pupRef, litterId, subjectRows) {
     var num = pupNumber(pupRef), lid = cellText(litterId);
     if (!num || !lid) return '';
@@ -2152,7 +1959,6 @@
     return hits.length === 1 ? hits[0] : '';
   }
 
-  // One plain word. A row with bld_subject_id set is working to collection, unless it is already collected or closed.
   function plainStage(stage, row) {
     var s, sub = '';
     if (stage && typeof stage === 'object') { row = stage; s = cellText(row.stage); sub = cellText(row.bld_subject_id); }
@@ -2196,13 +2002,13 @@
       household_id: input.household_id || '', person_id: input.person_id || ''
     });
   }
-  function bldSubjectOwnerRow(input) {
+  function bldSubjectUserRow(input) {
     input = input || {};
     var role = cellText(input.role);
-    if (role !== 'assigned' && role !== 'owner') role = plainStage(input) === 'after collection' ? 'owner' : 'assigned';
-    if (role !== 'assigned' && role !== 'owner') return null;
+    if (role !== 'assigned' && role !== 'user') role = plainStage(input) === 'after collection' ? 'user' : 'assigned';
+    if (role !== 'assigned' && role !== 'user') return null;
     if (!cellText(input.subject_id || input.bld_subject_id)) return null;
-    return bldFill('subject_owner', {
+    return bldFill('subject_user', {
       id: input.id || '', tenant_id: input.tenant_id || '',
       subject_id: input.subject_id || input.bld_subject_id || '',
       person_id: input.person_id || '', household_id: input.household_id || '', role: role
@@ -2210,7 +2016,7 @@
   }
   function bldSaleRow(input) {
     input = input || {};
-    var own = input.role === 'owner' || plainStage(input) === 'after collection' || input.atOwnership === true;
+    var own = input.role === 'user' || plainStage(input) === 'after collection' || input.atHolding === true;
     return bldFill('sale', {
       id: input.id || '', tenant_id: input.tenant_id || '',
       subject_id: input.subject_id || '', person_id: input.person_id || '', household_id: input.household_id || '',
@@ -2254,8 +2060,9 @@
     PLAIN_STAGES: PLAIN_STAGES, OPTIONAL_TAIL: OPTIONAL_TAIL, BLD_COLUMNS: BLD_COLUMNS,
     bldLitterFor: bldLitterFor, bldSubjectFor: bldSubjectFor, plainStage: plainStage,
     bldPersonRow: bldPersonRow, bldHouseholdRow: bldHouseholdRow, bldHouseholdMemberRow: bldHouseholdMemberRow,
-    bldSubjectOwnerRow: bldSubjectOwnerRow, bldSaleRow: bldSaleRow
+    bldSubjectUserRow: bldSubjectUserRow, bldSaleRow: bldSaleRow
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+

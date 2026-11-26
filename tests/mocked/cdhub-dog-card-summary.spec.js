@@ -35,7 +35,7 @@ function put(world, name, content) {
   world.file('fx-' + name, name, content, { parents: like.parents, driveId: like.driveId, mimeType: like.mimeType });
 }
 
-test('a parasite dose is on the dog card medications, once, newest first @regression', async ({ page, guard }) => {
+test('t-cdhub-dog-card-summary-spec-1', async ({ page, guard }) => {
   const w = guard.world;
   put(w, 'BLD-subject.csv', SUBJECT);
   put(w, 'BLD-subject_status.csv', STATUS);
@@ -47,9 +47,9 @@ test('a parasite dose is on the dog card medications, once, newest first @regres
     'ct-med,t,medicine,Medicine given,dog,true,2026-01-01'
   ]));
   put(w, 'BLD-check_log.csv', csv('id,tenant_id,check_type_id,subject_id,item,amount,outcome,happened_at,note,taken_by', [
-    'clg-1,t,cty-parasites-1,sub-x1,Moxiclear,1 pipette,ok,2026-11-01T12:00:00Z,backfill Lisa 25 Nov,Lisa Carson',
-    'clg-2,t,cty-parasites-1,sub-x1,Panacur,4.5 ml,ok,2026-11-20T12:00:00Z,with food,Lisa Carson',
-    'clg-3,t,ct-med,sub-x1,Propofol,2 ml,ok,2026-11-21T12:00:00Z,vet procedure,Lisa Carson'
+    'clg-1,t,cty-parasites-1,sub-x1,Moxiclear,1 pipette,ok,2026-11-01T12:00:00Z,backfill User 25 Nov,User',
+    'clg-2,t,cty-parasites-1,sub-x1,Panacur,4.5 ml,ok,2026-11-20T12:00:00Z,with food,User',
+    'clg-3,t,ct-med,sub-x1,Propofol,2 ml,ok,2026-11-21T12:00:00Z,vet procedure,User'
   ]));
   await HUBS.cdhub.open(page, guard);
   await page.evaluate(() => go('dogs/sub-x1'));
@@ -89,7 +89,7 @@ test.describe('CD Hub dog card summary', () => {
     // layout A (the owner 12 Nov 2026): weight, medications and chip show; DNA, litters and the rest sit behind More
     await expect(card.locator('[data-k="weight"]')).toBeVisible();
     await expect(card.locator('[data-k="meds"]')).toBeVisible();
-    await expect(card.locator('.dc-sects > [data-k="chip"]')).toBeVisible();   // a plain line now, not a fold (12 Nov)
+    await expect(card.locator('.dc-sects > [data-k="chip"]')).toBeVisible();
     await expect(card.locator('[data-k="more"]')).not.toHaveAttribute('open', '');
     await expect(card.locator('[data-k="dna"]')).toBeHidden();
     await expect(card.locator('[data-k="litters"]')).toBeHidden();
@@ -99,7 +99,6 @@ test.describe('CD Hub dog card summary', () => {
     await expect(page).toHaveURL(/#\/litters\/sub-x1$/);
     await expect(page.locator('#lm')).toHaveValue('sub-x1');
 
-    // a weight drop shows a down arrow; a dog with no litters, meds or DNA shows no such rows
     await page.evaluate(() => go('dogs/sub-x2'));
     const stud = page.locator('#rows article.dc');
     await expect(stud.locator('[data-k="weight"]')).toHaveText('14.1 kg ↓ 0.5 · 15 Feb 2026');
@@ -117,7 +116,7 @@ test.describe('CD Hub dog card summary', () => {
     await page.evaluate(() => go('dogs/sub-x1'));
     const card = page.locator('#rows article.dc');
     await expect(card.locator('[data-k="dob"]')).toHaveText('\u00b7 DOB 1 Jan 2021');
-    await expect(card.locator('[data-k="colour"]')).not.toContainText('Colour');   // the word itself is gone (12 Nov)
+    await expect(card.locator('[data-k="colour"]')).not.toContainText('Colour');
     const box = await card.locator('.dc-info .ricon').boundingBox();
     expect(box.width).toBeLessThanOrEqual(16);
     expect(box.height).toBeLessThanOrEqual(16);
@@ -148,20 +147,20 @@ test.describe('CD Hub dog card summary', () => {
     await HUBS.cdhub.open(page, guard);
     await page.evaluate(() => go('dogs/sub-x1'));
     const card = page.locator('#rows article.dc');
-    await expect(card).toHaveAttribute('data-size', 'small');          // 8.4 kg beats the record's medium
+    await expect(card).toHaveAttribute('data-size', 'small');
     await expect(card).toHaveAttribute('data-size-from', 'weight');
     await expect(card.locator('[data-k="size"]')).toHaveText('Small');
     await expect(card.locator('[data-k="size"]')).toHaveAttribute('title', /8\.4 kg on 12 Jan 2026/);
-    expect(await card.locator('.ph').evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe('3px');   // the photo has the size-coloured frame (12 Nov)
+    expect(await card.locator('.ph').evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe('3px');
     await page.evaluate(() => go('dogs/sub-x2'));
-    await expect(page.locator('#rows article.dc')).toHaveAttribute('data-size', 'medium');   // 14.1 kg; the future row is not in force
+    await expect(page.locator('#rows article.dc')).toHaveAttribute('data-size', 'medium');
     await page.evaluate(() => go('dogs/sub-x3'));
-    await expect(page.locator('#rows article.dc')).not.toHaveAttribute('data-size', /./);  // no weight: no size (never the record, 12 Nov)
+    await expect(page.locator('#rows article.dc')).not.toHaveAttribute('data-size', /./);
     await expect(page.locator('#rows [data-k="size"]')).toHaveCount(0);
     expect(await page.evaluate(() => roomDogs(['sub-x1', 'sub-x2']).map((d) => d.size))).toEqual(['small', 'medium']);
   });
 
-  test('size words are the owner\'s size_label rows (newest in force); without them Small / Medium / Large', async ({ page, guard }) => {
+  test('size words are the user\'s size_label rows (newest in force); without them Small / Medium / Large', async ({ page, guard }) => {
     const w = guard.world;
     put(w, 'BLD-subject.csv', csv('id,tenant_id,name,sex,dob,kind,neuter_status', ['sub-x1,t,Pretend Dam One,Female,2021-01-01,Breeding Female,entire']));
     put(w, 'BLD-subject_status.csv', csv('id,tenant_id,subject_id,state', ['s1,t,sub-x1,Active']));
@@ -173,7 +172,7 @@ test.describe('CD Hub dog card summary', () => {
     await HUBS.cdhub.open(page, guard);
     await page.evaluate(() => go('dogs/sub-x1'));
     const card = page.locator('#rows article.dc');
-    await expect(card).toHaveAttribute('data-size', 'medium');   // 24.9 kg is medium; 25.0 counts as large (live row)
+    await expect(card).toHaveAttribute('data-size', 'medium');
     await expect(card.locator('[data-k="size"]')).toHaveText('Pretend Mid');
     expect(await page.evaluate(() => [sizeName('small'), sizeName('large')])).toEqual(['Small', 'Large']);
   });
@@ -211,7 +210,6 @@ test.describe('CD Hub dog card summary', () => {
     await expect(page.locator('#rows details.vacc .dcs-row').first()).toContainText('3 Feb 2025');
     await page.evaluate(() => go('dogs/sub-x2'));
     await expect(page.locator('#rows [data-k="vacc"] [data-due]')).toHaveAttribute('data-due', 'ok');
-    // next due is blank by design on some rows: say so (licence audit 12 Nov, item 28)
     expect(await page.evaluate(() => { var d = CD._byId['sub-x2']; var keep = d.vacc; d.vacc = [{ on: '2026-10-01', product: 'PV', due: '' }]; var h = vaccRow(d); d.vacc = keep; return h; })).toContain('next due not entered');
   });
 
@@ -293,5 +291,6 @@ test('dated limits: a past day uses the cut-offs in force then and the weight on
       on11: BLDCapacity.check({ areaId: 'z', access: 'free', capacity: cap, dogs: four, date: '2026-11-11' }).status,
       on12: BLDCapacity.check({ areaId: 'z', access: 'free', capacity: cap, dogs: four, date: '2026-11-12' }).status };
   });
-  expect(r).toEqual({ march: 'medium', august: 'large', nov: 'small', on11: 'ok', on12: 'over' });   // 22 kg: medium under the 25 kg row, large under the 20 kg row
+  expect(r).toEqual({ march: 'medium', august: 'large', nov: 'small', on11: 'ok', on12: 'over' });
 });
+

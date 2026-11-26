@@ -25,3 +25,4 @@ test('the table has no How column, and outside-limit rows are not red', () => {
   assert.doesNotMatch(src, /'How'/);
   assert.doesNotMatch(src, /\.tg-br td\{color:var\(--bad\)/);
 });
+

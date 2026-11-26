@@ -37,8 +37,7 @@ test('a pup with no room has Place on its card; Off-site and a move save through
   await pup.getByRole('button', { name: 'Place' }).click();
   const mv = page.locator('[data-move-panel]');
   await expect(mv).toBeVisible();
-  await expect(mv.locator('[data-move-off]')).toHaveCount(0);   // not in a cabin, so nothing to take off site
-  // the pup joins its dam (Test Dog One, medium, in area-1): a dam with her litter counts once, against the 'medium + pups' row
+  await expect(mv.locator('[data-move-off]')).toHaveCount(0);
   const dest = mv.locator('[data-move-to="area-1"]');
   await expect(dest).toBeVisible();
   const to = 'area-1';
@@ -69,7 +68,7 @@ test('BFFs and Fren. show on the dog card from dated link rows, both ways, with 
   await tabClick(page, '#nav button[data-go="dogs"]');
   const one = page.locator('.dc[data-dog="sub-test-dog-1"] [data-k="links"]');
   await expect(one).toHaveText('BFFs: Test Dog Two · Fren.: Test Pup One');
-  await expect(page.locator('.dc[data-dog="sub-test-dog-2"] [data-k="links"]')).toHaveText('BFFs: Test Dog One');   // the 2020 link has ended
+  await expect(page.locator('.dc[data-dog="sub-test-dog-2"] [data-k="links"]')).toHaveText('BFFs: Test Dog One');
   await expect(one.getByRole('link', { name: 'Test Dog Two' })).toHaveAttribute('href', '#/dogs/sub-test-dog-2');
 });
 
@@ -81,3 +80,4 @@ test('no link file yet: the hub still loads and no card shows a links line', asy
   await expect(page.locator('.dc').first()).toBeVisible();
   await expect(page.locator('[data-k="links"]')).toHaveCount(0);
 });
+

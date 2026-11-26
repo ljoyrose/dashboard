@@ -1,6 +1,3 @@
-// Clicks every top-level page and the hash routes under it (SOP rows, tabs, chips, cards, menus).
-// Each target must stay on this origin, answer, paint a heading, and not throw or hang.
-// Invented rows only. The optional live host is not called.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -58,7 +55,7 @@ test('shipped files do not point internal links at the old host or a /dashboard/
   expect(bad).toEqual([]);
 });
 
-test('an old-host SOP address stays on this site and opens that SOP @regression', async ({ page }) => {
+test('t-route-crawl-spec-1', async ({ page }) => {
   test.setTimeout(60_000);
   const crashes = [];
   page.on('crash', () => crashes.push('crashed'));
@@ -152,7 +149,6 @@ test('each top-level page loads, and its links stay on this origin or are https 
   page.on('crash', () => crashes.push('crashed'));
   await page.route(/https:\/\/docs\.google\.com\/spreadsheets\//, (route) =>
     route.fulfill({ status: 200, contentType: 'text/csv', body: 'on_date\n' }));
-  // A tap on Food or Marketplace signs in and reads a sheet. Answer it here so the crawl never calls out.
   await page.route(/https:\/\/sheets\.googleapis\.com\//, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '{"values":[],"valueRanges":[]}' }));
   const bad = [];
@@ -216,3 +212,4 @@ test('staff hash routes render', async ({ page, allowedConsole }) => {
   expect(crashes).toEqual([]);
   expect(origin).toBeTruthy();
 });
+

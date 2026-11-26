@@ -1,5 +1,3 @@
-// Places where dogs are not placed (overseer 12 Nov 2026): a corridor is marked by a dated room.no_dogs need row,
-// never by its name. The Where screen and a room-sign scan never offer it; temperatures still list it. Pretend data only.
 const { test, expect } = require('../support/test');
 
 test.use({ allowedConsole: [/404/] });
@@ -43,3 +41,4 @@ test('Moves: scanning the sign of a room.no_dogs place says dogs are not placed 
   await page.goto('cdhub/staff/#mv/TAGCCC');
   await expect(page.getByText('Hall C: dogs are not placed here.')).toBeVisible();
 });
+

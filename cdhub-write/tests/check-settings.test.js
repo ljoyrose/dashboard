@@ -1,8 +1,4 @@
 'use strict';
-/**
- * Check settings (owner) and one session row per round.
- * The live check_type row is the floor. No setting row leaves today's save behaviour unchanged.
- */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
@@ -29,11 +25,11 @@ const recs = (env, title) => {
   return rows.map((r) => Object.fromEntries(h.map((c, i) => [c, r[i] || ''])));
 };
 const addType = (env, key, extra) => {
-  const r = save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: Object.assign({ type_key: key, label: key, target: 'dog', effective_from: '2026-01-01' }, extra || {}) }));
+  const r = save(env, req(env, { code: env.codes.user, table: 'check_type', fields: Object.assign({ type_key: key, label: key, target: 'dog', effective_from: '2026-01-01' }, extra || {}) }));
   assert.equal(r.ok, true, JSON.stringify(r));
   return r.result.id;
 };
-const set = (env, fields) => save(env, req(env, { code: env.codes.owner, table: 'check_setting', fields }));
+const set = (env, fields) => save(env, req(env, { code: env.codes.user, table: 'check_setting', fields }));
 const site = (env, fields, action) => save(env, req(env, { code: env.codes.staff, table: 'check_log', action: action || 'add_site', fields }));
 
 test('no setting row: a per-dog check that is not a round still writes one line per dog', () => {
@@ -69,7 +65,7 @@ test('Exercise all and Health check all save one session row when no setting has
 test('how one tap is stored follows the setting; with no setting it stays one line per dog', () => {
   const env = env0();
   const id = addType(env, 'health_check_all', { label: 'Health check: all dogs', target: 'none', site_scope: 'per_dog', not_in_areas: 'none', every_days: '1' });
-  assert.equal(set(env, { type_key: 'health_check_all', record_as: 'logged', every_days: '1', site_scope: 'one_line', session_row: 'false', from_date: '2026-01-01', to_date: '2026-12-31', source: 'owner' }).ok, true);
+  assert.equal(set(env, { type_key: 'health_check_all', record_as: 'logged', every_days: '1', site_scope: 'one_line', session_row: 'false', from_date: '2026-01-01', to_date: '2026-12-31', source: 'user' }).ok, true);
   const r = site(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-a|sub-test-b' });
   assert.equal(r.ok, true, JSON.stringify(r));
   const rows = recs(env, 'BLD-check_log.csv');
@@ -89,7 +85,7 @@ test('floors: less often is refused, more often is kept, print only is refused f
   addType(env, 'incident', { label: 'Incident or near miss', target: 'optional' });
   addType(env, 'fit_to_breed', { label: 'Vet check: fit to breed', every_days: '365', frequency: 'Yearly' });
   addType(env, 'photo', { label: 'Photo', evidence: 'required', every_days: '7' });
-  const base = { record_as: 'logged', from_date: '2026-11-01', source: 'owner' };
+  const base = { record_as: 'logged', from_date: '2026-11-01', source: 'user' };
   const ask = (extra) => set(env, Object.assign({}, base, extra));
   assert.match(ask({ type_key: 'health_check_all', every_days: '2' }).fields.every_days, /more often, not less/);
   assert.match(ask({ type_key: 'health_check_all', every_days: '' }).fields.every_days, /more often, not less/);
@@ -109,18 +105,18 @@ test('floors: less often is refused, more often is kept, print only is refused f
 test('one line for the round is only offered for the three checks, and a change must start after the last one', () => {
   const env = env0();
   addType(env, 'nails', { every_days: '28' });
-  const bad = set(env, { type_key: 'nails', record_as: 'logged', every_days: '28', session_row: 'true', from_date: '2026-11-01', source: 'owner' });
+  const bad = set(env, { type_key: 'nails', record_as: 'logged', every_days: '28', session_row: 'true', from_date: '2026-11-01', source: 'user' });
   assert.match(bad.fields.session_row, /Present, Health check/);
   addType(env, 'health_check_all', { label: 'Health check: all dogs', target: 'none', site_scope: 'per_dog', not_in_areas: 'none', every_days: '1' });
-  assert.equal(set(env, { type_key: 'health_check_all', record_as: 'both', every_days: '1', session_row: 'true', from_date: '2026-11-01', source: 'owner' }).ok, true);
-  const again = set(env, { type_key: 'health_check_all', record_as: 'logged', every_days: '1', session_row: 'true', from_date: '2026-11-01', source: 'owner' });
+  assert.equal(set(env, { type_key: 'health_check_all', record_as: 'both', every_days: '1', session_row: 'true', from_date: '2026-11-01', source: 'user' }).ok, true);
+  const again = set(env, { type_key: 'health_check_all', record_as: 'logged', every_days: '1', session_row: 'true', from_date: '2026-11-01', source: 'user' });
   assert.match(again.fields.from_date, /after that date/);
 });
 
 test('session switch off writes one line per dog and refuses a session save; the default is one session row', () => {
   const env = env0();
   const id = addType(env, 'exercise_all', { label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', not_in_areas: 'none', every_days: '1' });
-  assert.equal(set(env, { type_key: 'exercise_all', record_as: 'logged', every_days: '1', session_row: 'false', from_date: '2026-01-01', source: 'owner' }).ok, true);
+  assert.equal(set(env, { type_key: 'exercise_all', record_as: 'logged', every_days: '1', session_row: 'false', from_date: '2026-01-01', source: 'user' }).ok, true);
   const off = site(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-b' }, 'add_session');
   assert.equal(off.ok, false, JSON.stringify(off));
   assert.match((off.fields && off.fields.check_type_id) || off.message || '', /one line per dog|one line for the round/i);
@@ -142,7 +138,7 @@ test('session switch off writes one line per dog and refuses a session save; the
 test('print only refuses a log row; logged and both still save', () => {
   const env = env0();
   const id = addType(env, 'bowls', { label: 'Bowls', target: 'none', site_scope: 'one_line', every_days: '1' });
-  assert.equal(set(env, { type_key: 'bowls', record_as: 'print', every_days: '1', from_date: '2026-01-01', source: 'owner' }).ok, true);
+  assert.equal(set(env, { type_key: 'bowls', record_as: 'print', every_days: '1', from_date: '2026-01-01', source: 'user' }).ok, true);
   const refused = save(env, req(env, { code: env.codes.staff, table: 'check_log', fields: { check_type_id: id, outcome: 'ok' } }));
   assert.match(refused.fields.check_type_id, /print sheet only/i);
   assert.equal(recs(env, 'BLD-check_log.csv').length, 0);
@@ -150,9 +146,9 @@ test('print only refuses a log row; logged and both still save', () => {
 
 test('check records cannot be kept for fewer than 6 years', () => {
   const env = env0();
-  const low = save(env, req(env, { code: env.codes.owner, table: 'retention_setting', fields: { section: 'checks', keep_years: '5', from_date: '2026-11-01', basis: 'owner' } }));
+  const low = save(env, req(env, { code: env.codes.user, table: 'retention_setting', fields: { section: 'checks', keep_years: '5', from_date: '2026-11-01', basis: 'user' } }));
   assert.match(low.fields.keep_years, /6 years/);
-  const ok = save(env, req(env, { code: env.codes.owner, table: 'retention_setting', fields: { section: 'checks', keep_years: '7', from_date: '2026-11-01', basis: 'owner' } }));
+  const ok = save(env, req(env, { code: env.codes.user, table: 'retention_setting', fields: { section: 'checks', keep_years: '7', from_date: '2026-11-01', basis: 'user' } }));
   assert.equal(ok.ok, true, JSON.stringify(ok));
   assert.equal(recs(env, 'BLD-retention_setting.csv')[0].keep_years, '7');
 });
@@ -167,7 +163,7 @@ test('a session row counts as done for each listed dog, an exception stays outst
   ];
   const dog = (id) => [{ id, area_id: 'r1' }];
   const all = Due.forTarget(types, logs, { dogs }, '2026-11-25');
-  assert.equal(all.find((j) => j.type_key === 'health_check_all').status, 'never');   // b is an exception, so the round is not done for every dog
+  assert.equal(all.find((j) => j.type_key === 'health_check_all').status, 'never');
   assert.equal(Due.forTarget(types, logs, { dogs: dog('a') }, '2026-11-25')[0].last_done, '2026-11-25');
   assert.equal(Due.forTarget(types, logs, { dogs: dog('b') }, '2026-11-25')[0].status, 'never');
   assert.equal(Due.forTarget(types, logs, { dogs: dog('c') }, '2026-11-25')[0].last_done, '2026-11-24');
@@ -198,3 +194,4 @@ test('a past day uses the setting in force that day, not a later one', () => {
   assert.equal(Rules.keepYears([], '2026-11-25'), 6);
   assert.equal(Rules.keepYears([{ section: 'checks', keep_years: '8', from_date: '2026-01-01' }], '2026-11-25'), 8);
 });
+

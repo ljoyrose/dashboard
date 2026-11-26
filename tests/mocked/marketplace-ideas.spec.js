@@ -1,4 +1,3 @@
-// Marketplace "Product ideas" page (MKT-IDEAS stage 2). Pretend Google only; every row is invented (SAMPLE).
 const { test, expect } = require('../support/test');
 const { DETAIL, FOLDER, row, rowsFor, world, open } = require('../support/mkt-ideas-world');
 
@@ -148,7 +147,7 @@ test.describe('Marketplace ideas: empty, error and edge states', () => {
     await open(page);
     await expect(page.locator('#view')).toContainText('The card shows in about 10 minutes.');
     await expect(page.locator('#view')).toContainText('no card yet. The engine may be off');
-    await expect(page.locator('#view .card', { hasText: 'SAMPLE arrived' })).toHaveCount(1);   // the real card only, not a "sent" note as well
+    await expect(page.locator('#view .card', { hasText: 'SAMPLE arrived' })).toHaveCount(1);
   });
   test('a card the engine wrote badly shows a problem note, not a blank page', async ({ page }) => {
     await world(page, [row('IDEA-SAMPLE-1', 'SAMPLE broken', { kind: 'idea', v: 1, status: 'new', gate: 9, verdict: '', intake: {} })]);
@@ -243,3 +242,4 @@ test.describe('Marketplace ideas: loaded on demand', () => {
     await expect(page.locator('#view h2').first()).toHaveText('SAMPLE pet brush');
   });
 });
+

@@ -1,6 +1,3 @@
-// Web Estate Hub: shop and funnel logic (Stages 7 and 8). Pure: no network, no Drive, no DOM.
-// Tag words follow core.js: a word and a count, never an id. Missing shop facts say "not reported", never "ok" or 0.
-// Every example in the tests is invented; no estate row ever lives in this repo.
 (function (root, factory) {
   'use strict';
   var core = (typeof module === 'object' && module.exports) ? require('./core.js') : root.EstateCore;
@@ -11,11 +8,10 @@
   'use strict';
 
   var NOT_REPORTED = 'not reported';
-  var MC_LINKED = 'linked (per Lisa, not machine-checked)';
+  var MC_LINKED = 'linked (per User, not machine-checked)';
   var PLATFORM_APPS = ['Google & YouTube app', 'Facebook & Instagram app', 'Shopify web pixels', 'ClickFunnels'];
 
   // ---- Stage 7: tags ----
-  // readTags() result -> words only. loaded_by names the platform app that injects the tags, or '' when none seen.
   function tagSummary(tags, checked) {
     var t = tags || {};
     var ok = !!checked && !!tags;
@@ -55,8 +51,6 @@
     return String(v).trim();
   }
 
-  // row: a shop row; report: a free-listings report {feed_status, merchant_center_status, products, channels,
-  // plan, currency} or nothing. Without a report, feed and Merchant Center are "not reported".
   function shopCard(row, report) {
     var r = row || {}, rep = report || null;
     var get = function (k) { return rep ? rep[k] : undefined; };
@@ -71,14 +65,12 @@
     };
   }
 
-  // ---- Stage 8: ClickFunnels funnels, read-only ----
   function workspaceOf(r) {
     var m = /workspace:\s*([^;|,\n]+)/i.exec(String(r.access_note || ''));
     if (m && m[1].trim()) return m[1].trim();
     return r.brand || r.company || 'no workspace';
   }
 
-  // Groups ClickFunnels rows by workspace: [{workspace, count, live, down}], sorted by workspace name.
   function funnelsByWorkspace(rows) {
     var by = {};
     (rows || []).forEach(function (r) {
@@ -103,3 +95,4 @@
     funnelsByWorkspace: funnelsByWorkspace
   };
 });
+

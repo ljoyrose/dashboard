@@ -22,9 +22,6 @@
 <link rel="stylesheet" href="../house.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
-  /* Greys, lines, frame, radius and the control line: ../tokens.css (house tokens) through ../house.css, so Studio and every hub
-     share them. Only Studio's own extras live here: its colour (--me), the column band and chip fills, the coloured-word set and
-     the status colours on the dark frame. */
   :root { --me: var(--ljr-7); --bd: var(--line); --band: var(--card); --chip: transparent;
     --w2: #AF2420; --w3: #894C01; --w4: #695B01; --w5: #1C6A27; --w6: #01628E; --w7: #76459E;
     --frame-ok: #8BCF8F; --frame-bad: #F28B85; --frame-warn: #F2A65A; }
@@ -39,7 +36,6 @@
   :root[data-theme="dark"] { --bd: var(--line); --band: var(--card); --chip: transparent;
     --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; }
   :root.look-cool[data-theme="dark"] { --bd: var(--line); --band: var(--card); --chip: var(--card); }
-  /* Coloured words are the darker set (Look › Coloured words › Lighter swaps it). */
   :root, :root[data-theme] { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); } }
   :root.sel-soft { --sel-bd: var(--house-press); --sel-fill: var(--hov); }   /* grey too (the owner, 12 Nov 2026): no purple on hover or selected */
@@ -58,8 +54,6 @@
   .stamp:empty { display: none; }
   .btn { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 14px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
   .btn[disabled] { cursor: not-allowed; opacity: .55; }
-  /* Five tabs in a bar at the bottom, like Marketplace (thumb reach on the phone); a sub-row of links inside Line, Decide and Kits. */
-  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
   html { scroll-padding-bottom: 96px; }
   .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
   .subnav a { text-decoration: none; font-size: var(--fs-small); font-weight: 600; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
@@ -67,7 +61,6 @@
   .subnav a[aria-current="page"], .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { background: var(--sel-fill); outline: 1px solid var(--sel-bd); outline-offset: -1px; }
   @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .achip:hover, .ico:hover, a.tag:hover, .chk li button:hover, .room:hover, .col-list .crow:hover { background:var(--hov); } }
   .n:empty { display: none; }
-  /* Counts: the house count pill (../house.css, 30 x 22). Studio's counts wear an ink ring; "needs you" counts the rose ring + tint. */
   .cnt, .fbtn .n:not(:empty) { border-color: var(--ink); }
   .fbtn .n:not(:empty) { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border: 1px solid var(--ink); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
@@ -90,7 +83,6 @@
   .sect { font-size: var(--fs-small); font-weight: 600; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 10px 0 0; }
   .sect:first-child { margin-top: 0; }
   .sect a { color: var(--ink); text-decoration: none; }
-  /* Rows (the Factory calm row): type icon · title · flag; icons; actions; stage strip. */
   .crow { padding: 10px 0; border-top: 1px solid var(--line); }
   .grp + .crow, .sect + .crow { border-top: 0; padding-top: 12px; } /* room under the group header line */
   .card > .crow:last-child { padding-bottom: 16px; }
@@ -98,7 +90,6 @@
   .crow .type { flex: none; width: 28px; display: inline-flex; justify-content: center; }
   .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-size: var(--fs-head); font-weight: 600; overflow-wrap: anywhere;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; } /* titles wrap to 2 lines, then … */
-  /* Brand on its own small line above the title; never run together with it. */
   .crow .bline { display: flex; gap: 6px; align-items: center; font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; overflow-wrap: anywhere; }
   .crow .bline .dot { width: 8px; height: 8px; }
   .crow .ttl:focus-visible { text-decoration: underline; }
@@ -116,7 +107,6 @@
   .hero h2 { margin: 0; font-size: var(--fs-head); }
   .hero p { margin: 0; color: var(--muted); font-size: var(--fs-small); }
   .stage { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
-  /* Steps: outlined, never solid. Done = green ring + tint + ✓; current = purple ring + tint, label bold; future = grey ring, muted number. */
   .stage .n { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--fs-small); font-weight: 600; background: transparent; border: 1px solid var(--line); color: var(--muted); flex: none; }
   .stage.d .n { background: var(--ljr-5-tint); border-color: var(--ljr-5); color: var(--ink); }
   .stage.c .n { background: var(--ljr-7-tint); border-color: var(--ljr-7); color: var(--ink); }
@@ -136,11 +126,9 @@
   .panel { margin: 8px 0 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: var(--fs-small); display: flex; flex-direction: column; gap: 6px; }
   .kv { display: grid; grid-template-columns: max-content 1fr; column-gap: 12px; font-size: var(--fs-small); margin: 0; }
   .kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
-  /* Key/value rows: a 1px divider between rows, none before the first or after the last. */
   .kv dt, .kv dd { padding: 6px 0; border-top: 1px solid var(--line); } .kv dt:first-of-type, .kv dd:first-of-type { border-top: 0; }
   .more { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 4px 10px; margin-top: 4px; cursor: pointer; }
   .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: var(--fs-small); color: var(--muted); cursor: help; margin-left: 4px; vertical-align: 1px; }
-  /* Find bar: Search · Brand · Type always; Stage · Who · Fit · Timing · Flags · Sort · TEST behind Filter. */
   .fbar { display: flex; flex-direction: column; gap: 8px; position: relative; }
   .srow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .fbar .sbox { flex: 1 1 220px; max-width: 420px; border-radius: var(--radius); min-height: 32px; }
@@ -210,13 +198,11 @@
   .row .bar { width: 3px; align-self: stretch; border-radius: var(--radius); background: color-mix(in srgb, var(--c) 18%, transparent); box-shadow: inset 0 0 0 1px var(--c); flex: none; }
   .row .txt { flex: 1; min-width: 0; }
   .row .meta { font-size: var(--fs-small); color: var(--muted); text-align: right; }
-  /* Calm focus: one line, a shade darker. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus, button:focus { outline: none; }
   :focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; } /* never the browser blue */
   a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; border-color: var(--ink) !important; }
   footer { color: var(--muted); font-size: var(--fs-small); padding: 0 16px 24px; }
-  /* v0.2: Kits tab (playbooks by outcome, packs, kits, styles, formats), sources, gaps, tool form */
   a.tag { text-decoration: none; }
   .ogrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
   .steps { margin: 0; padding-left: 22px; font-size: var(--fs-small); }
@@ -231,21 +217,16 @@
   .src .ask .fin { font-size: var(--fs-small); }
   .chk li button { all: unset; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius); padding: 0 4px; }
   .fsub { font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 6px 0 4px; }
-  /* Cool clear: neutral chips get a faint fill; the red and green outlines (needs you, On) stay as they are. */
   :root.look-cool .ch, :root.look-cool .tag, :root.look-cool .fbtn, :root.look-cool .pill { background: var(--chip); }
-  /* Hover and selected still show the pale grey fill in the cool look (12 Nov 2026). */
   :root.look-cool :is(.ch, .fbtn, button.pill, a.pill).on { background: var(--sel-fill); }
   @media (hover: hover) { :root.look-cool :is(.ch, .fbtn, button.pill, a.pill, button.tag, a.tag):hover { background: var(--hov); } }
-  /* Look menu (header palette button). Stored in localStorage 'dash-look' so other hubs can read it. */
   #lookMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(340px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
   #lookMenu .lrow { display: flex; flex-direction: column; gap: 4px; }
   .seg { display: flex; flex-wrap: wrap; gap: 4px; }
   .seg button, .vsw button { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 12px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
-  /* Board / List switch at the top of Line and Decide. */
   .vtop { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   .vsw { display: inline-flex; gap: 4px; margin-left: auto; }
   .vsw button { min-height: 36px; justify-content: center; padding: 4px 12px; }
-  /* Board (HubSpot-style): fixed columns that scroll inside themselves; head and foot stay put; details on the right. */
   html.board-on main.wrap { padding-bottom: 0; }
   .bwrap { display: flex; gap: 12px; min-height: 0; }
   .board { flex: 1 1 auto; min-width: 0; display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; scrollbar-width: thin; }
@@ -261,7 +242,6 @@
   .col-list .crow, .col-list .row { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); position: relative; }
   .col-list .crow .ttl { font-weight: 600; font-size: var(--fs-head); }
   .col-list .crow.sel { background: var(--sel-fill); outline: 1px solid var(--sel-bd); outline-offset: -1px; }
-  /* An empty column shrinks to one short line; full columns keep the full height. */
   .col.col-empty { align-self: flex-start; }
   .col.col-empty .col-list { flex: none; }
   .cempty { font-size: var(--fs-small); }
@@ -272,7 +252,6 @@
   .side .shead { display: flex; gap: 8px; align-items: flex-start; font-weight: 600; }
   .side .shead span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .side .panel, .panel:has(> .kv) { padding: 0; border: 0; background: transparent; } .side .panel { margin: 0; } /* details: no grey box inside the white panel */
-  /* HubSpot sizing (CRM UI spec, s3/4/6/7/15/16). Corners: ONE radius token, --radius (12px), on everything; circles only for status dots. */
   .btn, .vsw button, .lk, .ico { border-radius: var(--radius); }
   .pill { padding: 4px 12px; min-height: 28px; }
   .subnav a { border-radius: var(--radius); }
@@ -293,7 +272,6 @@
   header .top > .pill.warn { border-color: var(--frame-warn); } header .top > .pill.bad { border-color: var(--frame-bad); }
   @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover { background:var(--frame-hov); } } /* a quiet frame fill, no line (12 Nov 2026) */
   header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
-  /* Phone top bar: the engine and budget pills stay on a desktop only (the one 56px row has no room); Look opens full width. */
   @media (max-width: 600px) {
     header .top > #enginePill, header .top > #budgetPill { display: none !important; }
     .lookwrap { position: static; }
@@ -303,8 +281,6 @@
     .board { scroll-snap-type: x mandatory; }
     .col { flex-basis: calc(100vw - 48px); }
   }
-  /* Two pill sizes only. Small = things you read (counts, tags, the TEST stamp): 24px high, 13px text.
-     Button = anything you press (buttons, filter and pick chips, sub-tabs, switches, menu items, icon buttons): 36px, 44px on the phone. */
   .tag, .stamp { height: 24px; min-height: 24px; min-width: 24px; font-size: var(--fs-small); line-height: 1; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
   .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, .fbar .sbox { min-height: 36px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; display: inline-flex; align-items: center; }
   .lk, .ico { min-width: 36px; width: auto; height: 36px; }
@@ -312,10 +288,8 @@
     .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, .fbar .sbox { min-height: 44px; }
     .lk, .ico { min-width: 44px; height: 44px; }
   }
-  /* Control edges (things you press or read as a chip) use --ctl: the line colour in light, a 3:1 line in dark so every ring shows. */
   .btn, .pill, .ch, .fbtn, .achip, .fbar .sbox, .tag, .seg button, .vsw button, .undo, .lk, .stage .n, .stamp { border-color: var(--ctl); }
   .strip i { box-shadow: inset 0 0 0 1px var(--ctl); }
-  /* Calm rows: date pill (plain 1px ring, muted text; rose ring + tint when late, amber ring + tint when due within 3 days), one need chip. */
   .crow .bline .bn { min-width: 0; overflow-wrap: anywhere; }
   .bmark { width: 20px; height: 20px; flex: none; border-radius: 4px; box-sizing: border-box; display: inline-grid; place-items: center; }
   img.blogo { object-fit: contain; }
@@ -342,7 +316,6 @@
   .more-d .l3 { display: flex; align-items: center; gap: 8px; }
   .more-d .type { display: inline-flex; gap: 4px; align-items: center; font-size: var(--fs-small); color: var(--muted); }
   .more-d .lk { width: auto; padding: 0 10px; gap: 4px; font-size: var(--fs-small); text-decoration: none; }
-  /* Me: summary strip, Next, Needs you today; friendly empty states. */
   .three { display: flex; gap: 8px; flex-wrap: wrap; }
   .three .sum { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 8px 14px 8px 8px; font-weight: 600; }
   /* Ringed numbers (the owner's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
@@ -378,11 +351,9 @@
   .fbar .sbox { font-weight: 400; }
   @media (max-width: 544px) { .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { min-height: 44px; } .ico, .lk { min-width: 44px; height: 44px; } }
   @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover { background:var(--hov); } }
-  /* Meaning-coloured buttons keep their icon colour; hover is the same grey fill as every control (../house.css, 12 Nov 2026). */
   .btn.yes .ti, .acts .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .acts .btn.no .ti { color: var(--ljr-2-text); }
   .fbtn .n.wide { width: auto; padding: 0 6px; }
   .pthumb svg, .pthumb .pimg { border-radius: var(--radius); }
-  /* Comments: two threads, Team (internal, default) and Client (client-visible, always labelled). */
   .cmts { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
   .cmhd { font-weight: 600; }
   .cmts .seg button .ti { color: var(--ink); }
@@ -396,13 +367,11 @@
   .cvis { margin: 0; font-size: var(--fs-small); font-weight: 600; display: flex; gap: 6px; align-items: center; }
   .cform { display: flex; gap: 8px; align-items: flex-end; }
   .cform textarea { flex: 1; min-width: 0; min-height: 44px; resize: vertical; }
-  /* List view: each row has a 3px bar in its stage colour down its left edge (the same colour as the column's bar); not on board cards. */
   .crow { position: relative; }
   .card .crow { padding-left: 14px; }
   .card .crow { --house-lbar-out: 0px; }   /* the bar itself: ../house.css section 10 (full height, 3px) */
   .card .crow.house-lbar::before { border-radius: 0; }   /* a row has square corners, so its bar is a straight 3px line, never a "(" (the owner, 2 Nov) */
   .col-list .crow::before { content: none; }
-  /* Library: + New / Edit form and the Suggest box. */
   .libbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .libbar .srow { flex: 1 1 260px; }
   .pbh { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
@@ -522,10 +491,6 @@
   var REFRESH_MS = 5 * 60 * 1000;
   var accessToken = null, signedIn = false, S = null, EX = false, err = null, timer = null;
   var $ = function (id) { return document.getElementById(id); };
-  // Links from the sheet: only http(s) opens; anything else becomes a dead '#'.
-  // Brand website (engine v0.2.14: kit.website from the BRANDS Sheet, or null): a small "↗ host" link, new tab; hidden when missing or not http(s).
-  // Brand mark: always a 20x20 slot so names never shift. The logo (engine kit.logo, https only) when there is one; else, or if it
-  // fails to load, an initials avatar (1-2 letters, 1px ring in the brand colour, pale tint).
   function brandInitials(b) { var n = String((b && (b.shortName || b.short_name)) || (b && b.name) || '?').trim().split(/\s+/); return (n.length > 1 ? n[0].charAt(0) + n[n.length - 1].charAt(0) : n[0].slice(0, 2)).toUpperCase(); }
   function brandAvatar(b) { return '<span class="bmark bav" data-bmark="' + esc(b.id) + '" style="--c:' + col(b.colour) + '" aria-hidden="true">' + esc(brandInitials(b)) + '</span>'; }
   function brandMark(b) {
@@ -533,7 +498,6 @@
     if (u && /^https:\/\//i.test(String(u).trim())) return '<img class="bmark blogo" data-bmark="' + esc(b.id) + '" data-ini="' + esc(brandInitials(b)) + '" data-col="' + esc(col(b.colour)) + '" src="' + safeUrl(u) + '" alt="" width="20" height="20" loading="lazy">';
     return brandAvatar(b);
   }
-  // A logo that fails to load swaps to the initials avatar in the same slot.
   document.addEventListener('error', function (e) {
     var t = e.target; if (!t || !t.matches || !t.matches('img.blogo')) return;
     var sp = document.createElement('span'); sp.className = 'bmark bav'; sp.setAttribute('data-bmark', t.getAttribute('data-bmark')); sp.setAttribute('aria-hidden', 'true');
@@ -547,7 +511,7 @@
   }
   function safeUrl(u) { u = String(u == null ? '' : u).trim(); return /^https?:\/\//i.test(u) ? esc(u) : '#'; }
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function cnt(n) { n = (n === 0 || n === '0' || n == null) ? '' : n; return '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + '">' + n + '</span>'; } // 1-2 characters: one exact box; 3+ grow; 0 shows no ring
+  function cnt(n) { n = (n === 0 || n === '0' || n == null) ? '' : n; return '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + '">' + n + '</span>'; }
   function info(t) { return t ? '<span class="info" tabindex="0" title="' + esc(t) + '" aria-label="' + esc(t) + '">i</span>' : ''; }
   function I(n) { return '<i class="ti ti-' + n + '" aria-hidden="true"></i>'; }
   function hm(ts) { return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
@@ -556,9 +520,6 @@
   function daysTo(iso) { var t = Date.parse(iso); return isNaN(t) ? null : Math.round((new Date(t).setHours(0, 0, 0, 0) - dayStart(0)) / 864e5); }
   function money(n) { return '£' + (Math.round((Number(n) || 0) * 100) / 100); }
 
-  /* ---------- Look (header palette menu): one JSON in localStorage 'dash-look' so other hubs can read it later ----------
-   * { bg: warm|cool, sel: line|soft, words: dark|light, text: n|lg|xl, space: n|roomy, mode: device|light|dark }.
-   * Classes on <html>; stage colours, brand dots and the red "needs you" never change. */
   var LOOKS = [['bg', 'Background', [['warm', 'Warm clear'], ['cool', 'Cool clear']]], ['sel', 'Selected', [['line', 'Outline'], ['soft', 'Soft tint']]],
     ['words', 'Coloured words', [['dark', 'Darker'], ['light', 'Lighter']]], ['text', 'Text', [['n', 'Normal'], ['lg', 'Larger'], ['xl', 'Largest']]],
     ['space', 'Spacing', [['n', 'Normal'], ['roomy', 'Roomy']]], ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]]];
@@ -575,7 +536,6 @@
     return LOOKS.map(function (l) { return '<div class="lrow"><span class="flab">' + l[1] + '</span><div class="seg" role="group" aria-label="' + l[1] + '">' + l[2].map(function (x) { return '<button type="button" data-look="' + l[0] + '" data-val="' + x[0] + '" aria-pressed="' + (lookOf(l[0]) === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></div>'; }).join('');
   }
   function showLook(on) { var m = document.getElementById('lookMenu'); if (on) m.innerHTML = lookMenu() + DashKit.look.extras(); m.classList.toggle('hidden', !on); document.getElementById('lookBtn').setAttribute('aria-expanded', String(on)); }
-  /* ---------- Board / List on Line and Decide: desktop starts on Board, the phone on List; the choice is kept per page ---------- */
   var vmode = (function () { try { var o = JSON.parse(localStorage.getItem('st-view') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } })();
   function phone() { return window.matchMedia('(max-width: 760px)').matches; }
   function viewOf(tab) { return vmode[tab] === 'board' || vmode[tab] === 'list' ? vmode[tab] : phone() ? 'list' : 'board'; }
@@ -586,14 +546,13 @@
     ['social', 'photo', 'Social graphic'], ['page', 'layout', 'Page draft'], ['email', 'mail', 'Email draft'],
     ['video', 'movie', 'Video'], ['audio', 'headphones', 'Audio'], ['image', 'photo-scan', 'Image'], ['listing', 'tag', 'Listing'], ['book', 'book-2', 'Book'],
     ['appstore', 'device-mobile', 'App store'], ['funnel', 'filter', 'Funnel'], ['course', 'school', 'Course'], ['podcast', 'microphone', 'Podcast'], ['other', 'dots', 'Other']];
-  // How a finished item reaches a client (engine DELIVERY_MODE): a copied file, a copied Doc, or a link.
   var DMODE = { script: 'text', social: 'text', email: 'text', page: 'link', funnel: 'link', listing: 'link', podcast: 'link' };
   var DESTS = [['main-site', 'world-www', 'Main site'], ['app', 'apps', 'App'], ['funnel', 'filter', 'Funnel'], ['shop', 'building-store', 'Shop'], ['social', 'share', 'Social'], ['client-site', 'user-share', 'Client site'], ['email', 'mail', 'Email'], ['print', 'printer', 'Print'], ['other', 'dots', 'Other']];
   var REASONS = [['tone', 'mood', 'Tone'], ['facts', 'checks', 'Facts'], ['design', 'palette', 'Design'], ['length', 'ruler-2', 'Length'], ['brand', 'brand-apple', 'Brand'], ['legal', 'scale', 'Legal'], ['format', 'aspect-ratio', 'Format'], ['slow', 'clock', 'Slow'], ['cost', 'coin', 'Cost'], ['great', 'star', 'Great']];
   var CHANNELS = ['facebook', 'instagram', 'tiktok', 'youtube', 'pinterest', 'linkedin', 'email', 'website', 'etsy', 'amazon', 'other'];
   var RKEYS = [['views', 'eye', 'Views'], ['clicks', 'click', 'Clicks'], ['leads', 'user-plus', 'Leads'], ['sales', 'shopping-cart', 'Sales'], ['revenue', 'currency-pound', '\u00a3']];
   var DSTAT = { 'ready (not sent)': ['package', 'Ready', 4], sent: ['send', 'Sent', 5], 'no file': ['alert-triangle', 'No file', 2] };
-  var WHO = [['lisa', 'Lisa', 'user'], ['claude', 'Claude', 'sparkles'], ['grok', 'Grok', 'bolt'], ['engine', 'Studio helper', 'settings']];
+  var WHO = [['user', 'User', 'user'], ['claude', 'Claude', 'sparkles'], ['grok', 'Grok', 'bolt'], ['engine', 'Studio helper', 'settings']];
   var VERDICTS = [['GO', 'Go', 'check', 5], ['HOLD', 'Hold', 'player-pause', 4], ['RESHAPE', 'Reshape', 'shape', 7], ['REFINE', 'Refine', 'adjustments', 6], ['KILL', 'Kill', 'x', 2], ['RECYCLE', 'Recycle', 'recycle', 0]];
   var PROVIDERS = ['Claude', 'Grok', 'ChatGPT', 'Gemini'];
   var PRI = { urgent: 1, high: 2, normal: 3, low: 4 };
@@ -608,7 +567,7 @@
     ['image-generate', 'Images', 'photo'], ['logo-generate', 'Logos', 'badge'], ['background-remove', 'Cut-out', 'scissors'], ['video-template', 'Video', 'video'],
     ['video-reformat', 'Resize video', 'aspect-ratio'], ['video-captions', 'Captions', 'badge-cc'], ['voice-tts', 'Voice', 'microphone'], ['voice-clone', 'Voice clone', 'microphone'],
     ['page-build', 'Pages', 'layout'], ['email-draft', 'Email', 'mail'], ['transcribe', 'Transcribe', 'message-2'], ['research', 'Research', 'search'], ['translate', 'Translate', 'language']];
-  var GROUP_ICON = { 'grp-dogs': 'dog', 'grp-apps': 'apps', 'grp-services': 'briefcase', 'grp-lisa': 'user' };
+  var GROUP_ICON = { 'grp-dogs': 'dog', 'grp-apps': 'apps', 'grp-services': 'briefcase', 'grp-user': 'user' };
   var KSUBS = [['playbooks', 'Playbooks', 'route'], ['packs', 'Packs', 'package'], ['kits', 'Kits', 'box'], ['bricks', 'Parts', 'puzzle'], ['styles', 'Styles', 'palette'], ['formats', 'Formats', 'aspect-ratio']];
   function pickOf(list, k) { return list.filter(function (x) { return x[0] === k; })[0] || null; }
   function capOf(k) { return pickOf(CAPS, k) || [k, k, 'tools']; }
@@ -617,10 +576,9 @@
   function stSlot(n) { return n <= 2 ? 7 : n <= 4 ? 4 : n === 5 ? 3 : n <= 7 ? 6 : 5; }
   function col(slot) { return 'var(--ljr-' + (+slot >= 0 && +slot <= 8 ? +slot : 0) + ')'; }
 
-  /* ---------- Built-in EXAMPLE state: generic and invented. Shown only when studio-state.json is not on Drive yet. ---------- */
   function example(now) {
     var D = 864e5, iso = function (o) { return new Date(now + o).toISOString(); }, day = function (o) { return new Date(now + o * D).toISOString().slice(0, 10); };
-    var a = function (o) { return Object.assign({ accountId: 'ex-owner', brandIds: ['ex-a'], productId: null, projectName: 'Example project', type: 'pdf', recipe: 'Example recipe', size: 'M', stage: 1, who: 'claude', fit: 'AUTO', evergreen: true, dated: false, eventDate: null, provider: 'Claude', cost: 0, rating: null, reviewLink: '', docLink: '', version: 1, priority: null, updated: iso(-D), flags: [], gate: null,
+    var a = function (o) { return Object.assign({ accountId: 'ex-user', brandIds: ['ex-a'], productId: null, projectName: 'Example project', type: 'pdf', recipe: 'Example recipe', size: 'M', stage: 1, who: 'claude', fit: 'AUTO', evergreen: true, dated: false, eventDate: null, provider: 'Claude', cost: 0, rating: null, reviewLink: '', docLink: '', version: 1, priority: null, updated: iso(-D), flags: [], gate: null,
       kitId: null, groupId: null, playbookId: null, outcome: null, frameworkId: null, voiceId: null, lookId: null, formatIds: [], language: '', length: '', masterId: null, purpose: null, test: null, result: null, sourceIds: [] }, o); };
     var st = function (id, name, steps, when, extra) { return Object.assign({ id: id, name: name, steps: steps, when: when, notes: '' }, extra); };
     var fm = function (id, name, channel, ratio, size, fileType, extra) { return Object.assign({ id: id, name: name, channel: channel, ratio: ratio, size: size, maxLength: '', safeZone: '', fileType: fileType, notes: '' }, extra); };
@@ -628,8 +586,8 @@
       generated_at: iso(0), example: true,
       studio: { on: false, mode: 'TEST', budgetMonth: 40, spentMonth: 12 },
       health: { lastRun: null, jobs: [] },
-      accounts: [{ id: 'ex-owner', name: 'Example owner', kind: 'owner' }, { id: 'ex-client', name: 'Example client', kind: 'client' }],
-      groups: [{ id: 'grp-dogs', name: 'Dogs' }, { id: 'grp-apps', name: 'Apps' }, { id: 'grp-services', name: 'Client services' }, { id: 'grp-lisa', name: 'Lisa' }],
+      accounts: [{ id: 'ex-user', name: 'Example user', kind: 'user' }, { id: 'ex-client', name: 'Example client', kind: 'client' }],
+      groups: [{ id: 'grp-dogs', name: 'Dogs' }, { id: 'grp-apps', name: 'Apps' }, { id: 'grp-services', name: 'Client services' }, { id: 'grp-user', name: 'User' }],
       playbooks: [
         { id: 'ex-pb1', name: 'Example list builder', outcome: 'attract', steps: [{ kind: 'kit', id: 'ex-k1', text: 'Example lead magnet kit' }, { kind: 'kit', id: 'ex-k3', text: 'Example social kit' }, { kind: 'action', id: null, text: 'Share in the group' }], notes: '' },
         { id: 'ex-pb2', name: 'Example webclass launch', outcome: 'convert', steps: [{ kind: 'pack', id: 'ex-pk1', text: 'Example webclass funnel' }, { kind: 'action', id: null, text: 'Send the replay' }], notes: '' }
@@ -659,21 +617,21 @@
       sources: [{ id: 'ex-s1', targetId: 'ex-2', kind: 'link', url: 'https://example.com/', fileName: '', note: '', rights: 'inspiration', by: 'example', at: iso(-D) }],
       gaps: [{ capability: 'video-reformat', format: 'fmt-reel', ratio: '9:16', reason: 'no owned tool can do video-reformat at 9:16', assetIds: ['ex-2'] }],
       products: [
-        { id: 'ex-p1', accountId: 'ex-owner', brandId: 'ex-a', name: 'Example course', type: 'course' },
-        { id: 'ex-p2', accountId: 'ex-owner', brandId: 'ex-b', name: 'Example starter guide', type: 'lead-magnet' },
+        { id: 'ex-p1', accountId: 'ex-user', brandId: 'ex-a', name: 'Example course', type: 'course' },
+        { id: 'ex-p2', accountId: 'ex-user', brandId: 'ex-b', name: 'Example starter guide', type: 'lead-magnet' },
         { id: 'ex-p3', accountId: 'ex-client', brandId: 'ex-c', name: 'Example client service', type: 'service' }
       ],
       brands: [
-        { id: 'ex-a', accountId: 'ex-owner', name: 'Example Brand A', colour: 7, stage: 'Running', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }, { name: 'Colours', ok: true }, { name: 'Domain', ok: true }, { name: 'Email list', ok: false }], groupId: 'grp-dogs', voiceId: 'ex-v1', lookId: 'look-mascot' },
-        { id: 'ex-b', accountId: 'ex-owner', name: 'Example Brand B', colour: 6, stage: 'Identity', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: false }, { name: 'Colours', ok: false }], groupId: 'grp-apps', voiceId: null, lookId: 'look-wordmark' },
+        { id: 'ex-a', accountId: 'ex-user', name: 'Example Brand A', colour: 7, stage: 'Running', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }, { name: 'Colours', ok: true }, { name: 'Domain', ok: true }, { name: 'Email list', ok: false }], groupId: 'grp-dogs', voiceId: 'ex-v1', lookId: 'look-mascot' },
+        { id: 'ex-b', accountId: 'ex-user', name: 'Example Brand B', colour: 6, stage: 'Identity', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: false }, { name: 'Colours', ok: false }], groupId: 'grp-apps', voiceId: null, lookId: 'look-wordmark' },
         { id: 'ex-c', accountId: 'ex-client', name: 'Example Client Brand', colour: 5, stage: 'Launch', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }], groupId: 'grp-services', voiceId: null, lookId: null }
       ],
       assets: [
         a({ id: 'ex-1', title: 'Example lead magnet PDF', type: 'lead', productId: 'ex-p1', stage: 7, size: 'S', cost: 0.4, updated: iso(-2 * 36e5), kitId: 'ex-k1', frameworkId: 'fw-pas', formatIds: ['fmt-a4'], outcome: 'attract' }),
         a({ id: 'ex-2', title: 'Example webclass script', brandIds: ['ex-a', 'ex-b'], type: 'script', stage: 5, size: 'L', provider: 'Grok', evergreen: false, dated: true, eventDate: day(20),
           kitId: 'ex-k2', playbookId: 'ex-pb2', outcome: 'convert', frameworkId: 'fw-webinar', formatIds: ['fmt-youtube', 'fmt-reel'], sourceIds: ['ex-s1'] }),
-        a({ id: 'ex-3', title: 'Example email draft', brandIds: ['ex-b'], type: 'email', stage: 3, who: 'lisa', fit: 'HAND', gate: { question: 'Lock the spec?', at: iso(-36e5) } }),
-        a({ id: 'ex-4', title: 'Example social graphic', type: 'social', stage: 4, who: 'lisa', fit: 'HAND', size: 'S', flags: ['needs-input'] }),
+        a({ id: 'ex-3', title: 'Example email draft', brandIds: ['ex-b'], type: 'email', stage: 3, who: 'user', fit: 'HAND', gate: { question: 'Lock the spec?', at: iso(-36e5) } }),
+        a({ id: 'ex-4', title: 'Example social graphic', type: 'social', stage: 4, who: 'user', fit: 'HAND', size: 'S', flags: ['needs-input'] }),
         a({ id: 'ex-5', title: 'Example puppy pack', brandIds: ['ex-b'], type: 'pack', stage: 8, version: 2, rating: 4, updated: iso(-9 * D) }),
         a({ id: 'ex-6', title: 'Example slides', type: 'slides', stage: 8, evergreen: false, dated: true, eventDate: day(-10), flags: ['refresh'], updated: iso(-30 * D) }),
         a({ id: 'ex-9', title: 'Example puppy pack, square', brandIds: ['ex-b'], type: 'social', stage: 4, kitId: 'ex-k3', formatIds: ['fmt-fb-feed'], masterId: 'ex-5', purpose: 'reformat' }),
@@ -681,8 +639,8 @@
         a({ id: 'ex-8', accountId: 'ex-client', title: 'Example client flyer', brandIds: ['ex-c'], productId: 'ex-p3', type: 'pdf', stage: 6, size: 'S' })
       ],
       ideas: [
-        a({ id: 'ex-i1', title: 'Example ebook idea', type: 'ebook', stage: 0, who: 'lisa', gate: { question: 'Research it?', at: iso(-5 * 36e5) } }),
-        a({ id: 'ex-i2', title: 'Example family tree idea', brandIds: ['ex-b'], type: 'tree', stage: 0, who: 'lisa', updated: iso(-3 * D) })
+        a({ id: 'ex-i1', title: 'Example ebook idea', type: 'ebook', stage: 0, who: 'user', gate: { question: 'Research it?', at: iso(-5 * 36e5) } }),
+        a({ id: 'ex-i2', title: 'Example family tree idea', brandIds: ['ex-b'], type: 'tree', stage: 0, who: 'user', updated: iso(-3 * D) })
       ],
       tools: [
         { product: 'Example AI tool', thing: 'Image credits', unit: 'credits', allowance: 100, period: 'month', resetsOn: day(3), used: 40, left: 60, carriesOver: false, fit: 'AUTO',
@@ -705,7 +663,6 @@
       return r;
     });
   }
-  // null = not there yet (example mode); two = an error, never a guess.
   function findFile(folder, name) {
     var q = encodeURIComponent("'" + folder + "' in parents and name = '" + name + "' and trashed = false");
     return drive(CFG.urls.files + '?q=' + q + '&fields=files(id,name,modifiedTime)&supportsAllDrives=true&includeItemsFromAllDrives=true')
@@ -717,8 +674,8 @@
   function media(id) { return drive(CFG.urls.files + '/' + id + '?alt=media&supportsAllDrives=true', { cache: 'no-store' }); }
   function load() {
     if (!accessToken) return;
-    if (OT.st !== 'loading') OT.st = 'idle'; // Refresh re-reads the Owned Tools tab too
-    if (!S) render();   // J34-F84: show "Reading…" while the first read runs, not the sign-in card again
+    if (OT.st !== 'loading') OT.st = 'idle';
+    if (!S) render();
     findFile(ST.logsFolderId, ST.stateFile).then(function (f) {
       if (!f) return null;
       return media(f.id).then(function (r) { return r.json(); });
@@ -736,7 +693,7 @@
     S.studio = S.studio || {}; S.health = S.health || {}; S.learning = S.learning || {};
     ['groups', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'gaps', 'legalSets', 'styles', 'series', 'suggestions', 'comments'].forEach(function (k) { S[k] = S[k] || []; });
     S.tools.forEach(function (t) { t.capabilities = t.capabilities || []; t.outputs = t.outputs || []; t.inputs = t.inputs || []; t.fit = t.fit || 'AUTO'; });
-    all().forEach(function (a) { a.flags = a.flags || []; a.brandIds = a.brandIds || []; a.formatIds = a.formatIds || []; a.sourceIds = a.sourceIds || []; if (a.stage == null) a.stage = 0; a._t = Date.parse(a.updated) || 0; if (!a.accountId) a.accountId = brandOf(a).accountId || ownerId(); });
+    all().forEach(function (a) { a.flags = a.flags || []; a.brandIds = a.brandIds || []; a.formatIds = a.formatIds || []; a.sourceIds = a.sourceIds || []; if (a.stage == null) a.stage = 0; a._t = Date.parse(a.updated) || 0; if (!a.accountId) a.accountId = brandOf(a).accountId || userId(); });
     applyPend(); applyCpend();
   }
   function byIdIn(list, id) { return id ? (S[list] || []).filter(function (x) { return x.id === id; })[0] || null : null; }
@@ -748,22 +705,19 @@
   function byId(id) { return all().filter(function (a) { return a.id === id; })[0]; }
   function brand(id) { return S.brands.filter(function (b) { return b.id === id; })[0] || { id: id || 'none', name: id ? id : 'No brand', colour: 0, stage: '', setupChecklist: [] }; }
   function brandOf(a) { return brand(a.brandIds[0]); }
-  function account(id) { return S.accounts.filter(function (x) { return x.id === id; })[0] || { id: id || '', name: id || 'No account', kind: 'owner' }; }
-  // Who is signed in (engine v0.2.20): their Google email matched to accounts[].emails (lowercase). Role owner | team | client.
-  // No match keeps the old behaviour (everything as the owner).
+  function account(id) { return S.accounts.filter(function (x) { return x.id === id; })[0] || { id: id || '', name: id || 'No account', kind: 'user' }; }
   function meAcct() {
     var em = String(whoAmI || '').split(' \u00b7 ')[0].trim().toLowerCase(); if (!em || em === '?' || !S) return null;
     var a = (S.accounts || []).filter(function (x) { return (x.emails || []).map(function (e) { return String(e).toLowerCase(); }).indexOf(em) >= 0; })[0];
-    return a ? { id: a.id, role: a.role || (a.kind === 'owner' ? 'owner' : a.kind === 'client' ? 'client' : 'team') } : null;
+    return a ? { id: a.id, role: a.role || (a.kind === 'user' ? 'user' : a.kind === 'client' ? 'client' : 'team') } : null;
   }
-  function bizAccts() { return (S.accounts || []).filter(function (x) { return x.role !== 'team'; }); } // the team (backup) account owns no work
+  function bizAccts() { return (S.accounts || []).filter(function (x) { return x.role !== 'team'; }); }
   function isTeam() { var m = meAcct(); return !!m && m.role === 'team'; }
-  // Owner-only controls for the backup person: switched off with the reason.
-  function own() { return isTeam() ? ' disabled title="Owner only" data-owneronly' : ''; }
-  function ownWhy() { return isTeam() ? '<span class="sent" data-owneronly-why>Owner only</span>' : ''; }
-  function ownerId() { var o = S.accounts.filter(function (x) { return x.kind === 'owner'; })[0] || S.accounts[0]; return o ? o.id : null; }
+  function own() { return isTeam() ? ' disabled title="User only" data-useronly' : ''; }
+  function ownWhy() { return isTeam() ? '<span class="sent" data-useronly-why>User only</span>' : ''; }
+  function userId() { var o = S.accounts.filter(function (x) { return x.kind === 'user'; })[0] || S.accounts[0]; return o ? o.id : null; }
   function product(id) { return S.products.filter(function (x) { return x.id === id; })[0] || null; }
-  function brandAcct(id) { return brand(id).accountId || ownerId(); }
+  function brandAcct(id) { return brand(id).accountId || userId(); }
   function isClient(a) { return account(a.accountId).kind === 'client'; }
   function isTest(a) { return /^(TEST-|ZZ_DELETE_)/i.test(a.title) || a.flags.indexOf('test') >= 0; }
   function bare(a) { return String(a.title).replace(/^TEST-/, ''); }
@@ -772,11 +726,10 @@
   function reviews() { return all().filter(function (a) { return a.stage === 7; }); }
   function library() { return all().filter(function (a) { return a.stage === 8; }); }
   function gates() { return all().filter(function (a) { return a.gate && a.gate.question && a.stage < 7; }); }
-  function hands() { return all().filter(function (a) { return a.fit === 'HAND' && a.who === 'lisa' && a.stage < 7 && !(a.gate && a.gate.question); }); }
+  function hands() { return all().filter(function (a) { return a.fit === 'HAND' && a.who === 'user' && a.stage < 7 && !(a.gate && a.gate.question); }); }
   function meItems() { var out = reviews().slice(); gates().concat(hands()).forEach(function (a) { if (out.indexOf(a) < 0) out.push(a); }); return out; }
-  function kindFor(a) { return a.stage === 7 ? 'review' : a.gate && a.gate.question && a.stage < 8 ? 'gate' : a.stage === 8 ? 'lib' : a.fit === 'HAND' && a.who === 'lisa' ? 'hand' : 'view'; }
+  function kindFor(a) { return a.stage === 7 ? 'review' : a.gate && a.gate.question && a.stage < 8 ? 'gate' : a.stage === 8 ? 'lib' : a.fit === 'HAND' && a.who === 'user' ? 'hand' : 'view'; }
 
-  /* ---------- Meters (Tools): 80% · 100% · renews within 7 days with some left that does not carry over ---------- */
   function meterOf(m) {
     var pct = m.allowance ? (Number(m.used) || 0) / m.allowance : 0, d = daysTo(m.resetsOn), left = m.left != null ? Number(m.left) : (m.allowance || 0) - (m.used || 0);
     if (pct >= 1) return { k: 'full', slot: 2, icon: 'alert-octagon', text: 'Used up' + (d !== null && d >= 0 ? ' · resets in ' + d + (d === 1 ? ' day' : ' days') : ''), pct: 1 };
@@ -786,7 +739,6 @@
   }
   function toolWarnings() { return (S.tools || []).filter(function (m) { return owned(m) && meterOf(m).k !== 'ok'; }).length; }
 
-  /* ---------- Find bar (the Factory model). Each tab keeps its own filters (st-fs), and the address carries them. ---------- */
   var BAR_TABS = /^(me|decide|do|line|ideas|assets|review|library)$/;
   var FLAG_W = { 'needs-input': 'Needs input', refresh: 'Refresh', overdue: 'Overdue', blocked: 'Blocked', 'over-budget': 'Over budget', stale: 'Stale', test: 'Test', 'auto-approved': 'Approved by check', 'check-failed': 'Check failed', 'check-wait': 'Waiting for check' };
   var SORTS = [['date', 'calendar', 'Changed'], ['due', 'calendar-event', 'Due date'], ['priority', 'flag', 'Priority'], ['stage', 'stairs', 'Stage'], ['brand', 'tag', 'Brand'], ['name', 'sort-a-z', 'Name'], ['results', 'chart-bar', 'Results']];
@@ -826,8 +778,6 @@
   }
   function fchip(key, val, label, on, extra, style) { return '<button class="pill' + (on ? ' on' : '') + (extra || '') + '" type="button" data-fx="' + key + '" data-val="' + esc(val) + '" aria-pressed="' + on + '"' + (style || '') + '>' + label + '</button>'; }
   function counts(items, s, key, val) { var c = {}; items.filter(function (a) { return hit(a, s, key); }).forEach(function (a) { [].concat(val(a)).forEach(function (v) { c[v] = (c[v] || 0) + 1; }); }); return c; }
-  // Find bar (HubSpot style): ONE row = Search · Filter (count) · Sort, then a removable chip per active filter.
-  // Filter opens a panel with every filter group (Group, Account, Brand, Type, Stage, Who, Fit, Timing, Flags, Where, Series, Kit).
   var sortOpen = false;
   function fOnCount(tab) { var s = fsOf(tab); return LIST_KEYS.reduce(function (n, k) { return n + s[k].length; }, 0) + (s.test ? 1 : 0); }
   var FLAB = { grp: 'Group', acct: 'Account', brand: 'Brand', type: 'Type', st: 'Stage', who: 'Who', fit: 'Fit', ev: 'Timing', f: 'Flag', dest: 'Where', series: 'Series', kit: 'Kit' };
@@ -944,8 +894,6 @@
     if (kind === 'hand' && a.stage >= 1) return '<button class="btn yes" type="button" data-panel="done" data-id="' + esc(a.id) + '" aria-label="Done"' + dis() + '>' + I('check') + 'Done</button>';
     return '';
   }
-  // One row of pick chips for a set field; hidden when there is nothing to pick.
-  // Learning score: first-time approval and stars, once there are 3 or more.
   function scoreTag(list, id) {
     var s = ((S.learning || {})[list] || []).filter(function (x) { return x.id === id; })[0];
     if (!s || s.n < 3) return '';
@@ -999,13 +947,11 @@
         ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : ''],
         ['Board', infinityLink(a)]].filter(function (x) { return x[1]; });
       var inStep = Math.max(0, Math.floor((Date.now() - (Date.parse(a.stageSince) || a._t || Date.now())) / 864e5)), wo = waitingOn(a), acc = account(a.accountId);
-      kv.unshift(['With', wo.w], [isClient(a) ? 'Client' : 'Brand owner', isClient(a) ? esc(acc.name) : 'Own brand'], ['In this step', inStep + (inStep === 1 ? ' day' : ' days') + (inStep > 3 && a.stage < 8 ? ' \u00b7 stuck?' : '')]);
+      kv.unshift(['With', wo.w], [isClient(a) ? 'Client' : 'Brand user', isClient(a) ? esc(acc.name) : 'Own brand'], ['In this step', inStep + (inStep === 1 ? ' day' : ' days') + (inStep > 3 && a.stage < 8 ? ' \u00b7 stuck?' : '')]);
       body = rowMore(a) + stepsList(a) + comments(a) + rightsRows(a) + deliveryRows(a) + saveAsKit(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
     }
     return '<div class="panel" data-panelbox="' + esc(a.id) + '">' + body + '</div>';
   }
-  // Calm row (Bloodline + Marketplace): brand line with the due-date pill at its end · title · at most ONE need chip ·
-  // the decision buttons. Everything else (who, fit, size, chips, strip, preview, small tools) lives in the details panel.
   function needOf(a) {
     var d = a.dated && a.eventDate ? daysTo(a.eventDate) : null;
     if (d !== null && d < 0 && a.stage < 8) return 'Overdue';
@@ -1013,12 +959,11 @@
     if (a.stage === 7) return 'Approve';
     if (a.flags.indexOf('blocked') >= 0) return 'Blocked';
     if (a.flags.indexOf('needs-input') >= 0) return 'Needs input';
-    if (a.fit === 'HAND' && a.who === 'lisa' && a.stage >= 1 && a.stage < 7) return 'Your task';
+    if (a.fit === 'HAND' && a.who === 'user' && a.stage >= 1 && a.stage < 7) return 'Your task';
     if (a.flags.indexOf('prompt-unapproved') >= 0) return 'Prompt?';
     if (a.stage <= 3 && a.stage >= 1 && !(a.legal && a.legal.setId)) return 'Legal set?';
     return '';
   }
-  // Bot maker loop (engine v0.2.24): who is making it, the automatic check's verdict and reasons. Nothing when absent.
   var CHECK_CHIP = { 'auto-approved': ['circle-check', 'Approved by check'], 'check-failed': ['circle-x', 'Check failed'], 'check-wait': ['hourglass', 'Waiting for check'] };
   function checkChips(a) { return a.flags.filter(function (f) { return CHECK_CHIP[f]; }).map(function (f) { return '<span class="tag" data-chip="' + f + '" title="Automatic check">' + I(CHECK_CHIP[f][0]) + CHECK_CHIP[f][1] + '</span>'; }).join(''); }
   function claimLine(a) {
@@ -1054,14 +999,12 @@
   function waitingOn(a) {
     if (isClient(a) && (a.flags.indexOf('client-review') >= 0 || (a.ask && a.ask.status === 'sent'))) return { k: 'client', l: (account(a.accountId).name || 'Client').trim().split(/\s+/).slice(0, 2).map(function (x) { return x.charAt(0).toUpperCase(); }).join(''), t: 'Waiting on the client', w: 'Client' };
     var n = needOf(a);
-    if (a.who === 'lisa' || n === 'Gate' || n === 'Approve' || n === 'Your task' || n === 'Needs input') return { k: 'you', l: 'L', t: 'Waiting on you', w: 'You' };
+    if (a.who === 'user' || n === 'Gate' || n === 'Approve' || n === 'Your task' || n === 'Needs input') return { k: 'you', l: 'L', t: 'Waiting on you', w: 'You' };
     return { k: 'claude', l: 'C', t: 'Claude is on it', w: 'Claude' };
   }
-  // Who has it, as an icon at the card's bottom-right (like Trello / Asana / Jira): you = person, Claude = spark, client = initials.
   var WHO_SVG = { you: '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
     claude: '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3 L13.8 10.2 L21 12 L13.8 13.8 L12 21 L10.2 13.8 L3 12 L10.2 10.2 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>' };
   function whoRing(a) { var w = waitingOn(a); return '<span class="whor' + (w.k === 'you' ? ' me' : '') + '" data-who="' + w.k + '" title="' + w.t + '" aria-label="' + w.t + '" role="img">' + (WHO_SVG[w.k] || '<span class="ini">' + esc(w.l) + '</span>') + '</span>'; }
-  // Preview thumbnail left of the title: the real image when there is one, else a line drawing of the format (muted, never coloured).
   var THUMB_SHORT = { social: 'Social', lead: 'Lead magnet', tree: 'Family tree', pack: 'Pack', page: 'Page', email: 'Email' };
   function pthumb(a) {
     var k = a.type, s = '', line = function (y, w) { return '<rect x="17" y="' + y + '" width="' + w + '" height="3" rx="1.5" fill="currentColor" opacity=".45"/>'; };
@@ -1075,7 +1018,6 @@
     else if (k === 'pack') s = '<rect x="10" y="16" width="36" height="28" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 24 H46 M28 16 V44" stroke="currentColor" stroke-width="1.5" opacity=".5"/><path d="M20 16 Q28 6 28 16 Q28 6 36 16" fill="none" stroke="currentColor" stroke-width="1.5"/>';
     else if (k === 'slides') s = '<rect x="6" y="10" width="44" height="28" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M28 38 V46 M20 46 H36" stroke="currentColor" stroke-width="1.5"/>' + line(18, 22) + line(25, 16);
     else s = '<path d="M14 6 H34 L42 14 V46 H14 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>' + line(20, 18) + line(27, 22) + line(34, 14);
-    // One size for every thumb (44×44): a real preview is cropped to fill it; a format drawing sits inside it. The format word goes under both.
     var box = a.thumbUrl ? '<img class="pimg" src="' + safeUrl(a.thumbUrl) + '" alt="" loading="lazy">' : '<svg viewBox="0 0 56 52" width="44" height="44">' + s + '</svg>';
     return '<span class="pthumb" data-thumb="' + (a.thumbUrl ? 'image' : esc(k)) + '" aria-hidden="true">' + box + '<span class="fmt">' + esc(word) + '</span>' + (a.parts && a.parts.total ? '<span class="fmt" data-parts>' + esc(a.parts.approved || 0) + '/' + esc(a.parts.total) + '</span>' : '') + '</span>';
   }
@@ -1113,11 +1055,9 @@
     cpend[id] = cpend[id] || { list: [], at: Date.now() }; cpend[id].list.push(c); cpend[id].at = Date.now(); saveLocal('st-cpend', cpend);
     delete drafts[key]; saveLocal('st-drafts', drafts); render();
     var back = function () { cpend[id].list = cpend[id].list.filter(function (x) { return x !== c; }); drafts[key] = text; saveLocal('st-cpend', cpend); saveLocal('st-drafts', drafts); render(); };
-    withWrite(function () { return putRequest('comment', { kind: 'comment', accountId: ownerId(), assetId: id, thread: thread, text: text, at: c.at }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+    withWrite(function () { return putRequest('comment', { kind: 'comment', accountId: userId(), assetId: id, thread: thread, text: text, at: c.at }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
-  // A sent comment shows at once ("Sending…" until the engine returns it in state.comments; dropped after a day).
   function applyCpend() { Object.keys(cpend).forEach(function (id) { var p = cpend[id]; p.list = (p.list || []).filter(function (c) { return !S.comments.some(function (x) { return x.assetId === id && x.text === c.text && (x.thread || 'team') === c.thread; }) && Date.now() - Date.parse(c.at) < 864e5; }); if (!p.list.length) delete cpend[id]; }); saveLocal('st-cpend', cpend); }
-  // The details panel starts with everything the calm row leaves out.
   function rowMore(a) {
     var t = typeOf(a.type), p = a.priority && PRI[a.priority] ? a.priority : null, link = a.reviewLink || a.docLink;
     return '<div class="more-d" data-more="' + esc(a.id) + '"><div class="icons">' +
@@ -1130,8 +1070,7 @@
       (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="' + ({ canva: 'Open in Canva', gdoc: 'Open the Google file', drive: 'Open in Drive', clickfunnels: 'Open in ClickFunnels' }[a.linkKind] || 'Preview') + '">' + I('eye') + 'Preview</a>' : '') +
       '<span class="grow"></span><span class="date" title="Changed">' + (a._t ? dmy(a._t) : '') + '</span></div></div>';
   }
-  // Steps (engine v0.2.24): the playbook steps copied onto this piece, in order. Only when the engine sends item.tasks.
-  var TASK_WHO = { lisa: 'Lisa', claude: 'Claude', grok: 'Grok', engine: 'Studio helper' };
+  var TASK_WHO = { user: 'User', claude: 'Claude', grok: 'Grok', engine: 'Studio helper' };
   function stepsList(a) {
     if (!Array.isArray(a.tasks) || !a.tasks.length) return '';
     return '<div class="steps" data-steps="' + esc(a.id) + '"><div class="fsub">' + I('list-check') + 'Steps</div><ol>' + a.tasks.map(function (t) {
@@ -1163,10 +1102,8 @@
   }
 
   /* ---------- Views ---------- */
-  // Me (Bloodline + Marketplace): greeting, a three-number summary, the one Next item, what needs you today, then the decision lists.
   function lateOf(a) { var d = a.dated && a.eventDate ? daysTo(a.eventDate) : null; return d !== null && d < 0 && a.stage < 8; }
   function urgency(a) { var d = a.dated && a.eventDate ? daysTo(a.eventDate) : 9999; return (lateOf(a) ? -1e5 : 0) + d; }
-  // Stage 8: "Open in Infinity" when the engine has given the item its Studio Line card link (https on startinfinity.com only).
   function infinityLink(a) { var u = String(a.lineCardUrl || '').trim(); return /^https:\/\/([a-z0-9-]+\.)*startinfinity\.com\//i.test(u) ? '<a href="' + safeUrl(u) + '" target="_blank" rel="noopener" data-infinity>Open in Infinity</a>' : ''; }
   // Main (the owner's house style, 2 Nov 2026): Next, Needs you (at most 5 rows from Decide and Do), then Studio's 3 numbers, the same as its
   // Dashboard tile (root index.html HubRead studio). Built by ../toolkit.js DashKit.hubMain. What used to sit here moved:
@@ -1188,8 +1125,6 @@
     add(all().filter(function (a) { return a.delivery && a.delivery.status === 'ready (not sent)'; }), 'deliver');
     return out;
   }
-  // Approve = pieces waiting at stage 7; Due Today = dated pieces due today (no ring: due today is not late); Sold (this week): Studio's state keeps
-  // running sales totals only (results.sales), never dated sales, so it is "–" until the engine sends dated sales. Never invented.
   function mainNums(ok) {
     var rv = ok ? reviews().filter(function (a) { return !isTest(a); }).length : null, dt = ok ? dueTodayL().length : null;
     return [{ label: 'Approve', value: rv, href: '#/review' }, { label: 'Due Today', value: dt, href: '#/me/today' },
@@ -1220,8 +1155,6 @@
         '<span class="acts"><button class="btn yes" type="button" data-sug="' + esc(g.id) + '" data-val="accepted" aria-label="Accept"' + dis() + '>' + I('check') + '</button><button class="btn no" type="button" data-sug="' + esc(g.id) + '" data-val="declined" aria-label="Decline"' + dis() + '>' + I('x') + '</button></span></div>';
     }).join('');
   }
-  // Board: one column per stage (Line) or per decision (Decide). Head and foot stay put; the list scrolls inside the column.
-  // On a desktop the details of the picked card open on the right; on the phone they open under the card.
   var sideOn = false;
   function icnt(n) { return '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + '" aria-label="' + n + ' items">' + ((n === 0 || n === '0' || n == null) ? '' : n) + '</span>'; }
   function needsYou(a) { var k = kindFor(a); return k === 'gate' || k === 'review' || k === 'hand' || a.flags.indexOf('needs-input') >= 0; }
@@ -1248,7 +1181,6 @@
       return { attr: 'data-stage="' + n + '"', slot: stSlot(n), step: n, name: STAGES[n], items: l, body: l.map(function (a) { return row(a, kindFor(a), true); }).join('') };
     }));
   }
-  // Keep each column's place when the page redraws (a click redraws everything).
   function boardScroll() {
     var b = document.querySelector('.board'); if (!b) return null;
     var o = { x: b.scrollLeft, y: {} };
@@ -1263,7 +1195,6 @@
     w.style.height = Math.max(360, Math.floor((innerHeight - th - 12) / z - (w.getBoundingClientRect().top + scrollY) / z)) + 'px';
     if (keep) { var b = w.querySelector('.board'); b.scrollLeft = keep.x; Array.prototype.forEach.call(b.querySelectorAll('.col'), function (c, i) { if (keep.y[i]) c.querySelector('.col-list').scrollTop = keep.y[i]; }); }
   }
-  // Bottom tabs (Me, Decide, Do, Line, Kits): which tab each page sits under, and the sub-row of links inside it.
   var NAV_OF = { me: 'me', decide: 'decide', review: 'decide', do: 'do', line: 'line', ideas: 'line', assets: 'line', library: 'line', asset: 'line', new: 'line', kits: 'kits', tools: 'kits', brands: 'kits', engine: 'kits' };
   function wN(l) { return l.filter(function (a) { return !sent[a.id] && !isTest(a); }).length; }
   function navGroup(r) { return NAV_OF[r || 'me'] || 'me'; }
@@ -1289,7 +1220,6 @@
     var body = sect('traffic-lights', 'Gates', keep(gates()), 'gate') + sect('eye-check', 'Review', keep(reviews()), 'review') + vSuggest();
     return findBar('decide', gates().concat(reviews())) + (body || oneEmpty('decide'));
   }
-  // The lists that were Main's summary (On track / Needs you / Overdue, and Needs you today) now open from the top of Do.
   function meLinks() {
     var live = all().filter(function (a) { return !isTest(a) && !sent[a.id] && a.stage < 8; });
     var n = { need: live.filter(function (a) { return needOf(a); }).length, ok: live.filter(function (a) { return a.stage >= 1 && !needOf(a); }).length, over: live.filter(lateOf).length };
@@ -1317,18 +1247,15 @@
       STAGES.map(function (name, i) { return '<div class="stage ' + (i < a.stage ? 'd' : i === a.stage ? 'c' : '') + '"><span class="n" aria-hidden="true">' + (i < a.stage ? '\u2713' : i === a.stage ? '\u25cf' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i < a.stage ? ' <span class="sr">done</span>' : i === a.stage ? ' <span class="sr">now</span>' : '') + '</div>'; }).join('') +
       '<p><a href="#/assets">← Assets</a></p></div>';
   }
-  // Brand kit from the BRANDS Sheet: colour swatches, fonts, Canva kit and the Sheet row. Never a link built from an id.
   function kitStrip(b) {
     var k = b.kit || {}, sw = (k.colours || []).map(function (c) { return /^#[0-9a-fA-F]{6}$/.test(c) ? '<i class="sw" style="background:' + c + '" title="' + c + '"></i>' : ''; }).join('');
     var links = siteLink(b) + (k.canvaKitUrl ? '<a class="tag" data-kit="canva" href="' + safeUrl(k.canvaKitUrl) + '" target="_blank" rel="noopener">' + I('palette') + 'Canva kit</a>' : '') + (b.sheetRowUrl ? '<a class="tag" data-kit="sheet" href="' + safeUrl(b.sheetRowUrl) + '" target="_blank" rel="noopener">' + I('table') + 'Brand sheet</a>' : '');
     var fonts = [k.fontHeading, k.fontBody].filter(Boolean).map(esc).join(' · ');
     return sw || links || fonts ? '<div class="kit">' + (sw ? '<span class="sws">' + sw + '</span>' : '') + (fonts ? '<span class="muted">' + I('typography') + fonts + '</span>' : '') + links + '</div>' : '';
   }
-  // Search (and for Tools, sort) on the pages without the find bar. Text is kept per page for this visit.
   var lq = {}, toolSort = 'name';
   function qbox(key, extra) { return '<div class="srow"><label class="sbox">' + I('search') + '<input type="search" data-lq="' + key + '" value="' + esc(lq[key] || '') + '" aria-label="Search" autocomplete="off"></label></div>' + (extra || ''); }
   function lqHit(key, text) { var q = (lq[key] || '').toLowerCase().trim(); return !q || q.split(/\s+/).every(function (w) { return String(text).toLowerCase().indexOf(w) >= 0; }); }
-  // VAT rates (engine v0.2.18, read-only; edited in the Sheet): country, rate, the date it was checked.
   function accountsCard() {
     var A = S.accounts || []; if (!A.length) return '';
     return '<div class="card" data-accounts><div class="sect">' + I('users') + 'Accounts</div>' + A.map(function (x) {
@@ -1420,10 +1347,8 @@
     }).join('') + '</div>' : '<div class="card muted">No tools yet.</div>';
     return qbox('tools', tsort) + ownedCard() + gaps + add + list;
   }
-  /* Add tool: one request file, kind 'tool'. Draft kept as you type. */
   var tdraft = (function () { try { return JSON.parse(localStorage.getItem('st-tool') || '') || {}; } catch (e) { return {}; } })(), toolOpen = false, toolErr = {}, toolNote = '';
   function saveTool() { try { localStorage.setItem('st-tool', JSON.stringify(tdraft)); } catch (e) {} }
-  // Edit = the Add tool form, filled from the tool; same product + thing updates that tool (a new name makes a new one).
   function editTool(m) { return '<button class="tag" type="button" data-edittool="' + esc(m.product + '|' + (m.thing || '')) + '" title="Edit"' + dis() + '>' + I('pencil') + 'Edit</button>'; }
   function toolToDraft(m) {
     return { edit: true, more: true, product: m.product, thing: m.thing || '', unit: m.unit || '', fit: m.fit || '', notes: m.accountNotes || '', audit: m.audit || '', caps: (m.capabilities || []).slice(), outputs: (m.outputs || []).slice(),
@@ -1452,7 +1377,7 @@
       '<div class="frow"><span class="muted">' + esc(toolNote) + '</span><button class="btn yes" type="button" data-action="sendtool" aria-label="Send tool"' + dis() + '>' + I('check') + 'Send</button></div></div>';
   }
   function sendTool() {
-    if (isTeam()) { banner('Owner only'); return; }
+    if (isTeam()) { banner('User only'); return; }
     if (EX) return;
     toolErr = {};
     if (!(tdraft.product || '').trim()) toolErr.product = 'Add a name';
@@ -1461,8 +1386,7 @@
     ['allowance', 'cost'].forEach(function (k) { if (tdraft[k] !== undefined && tdraft[k] !== '' && !(Number(tdraft[k]) >= 0)) toolErr[k] = 'A number'; });
     if (Object.keys(toolErr).length) { if (toolErr.allowance || toolErr.cost || toolErr.audit) tdraft.more = true; render(); return; }
     var num = function (k) { return tdraft[k] === undefined || tdraft[k] === '' ? undefined : Number(tdraft[k]); };
-    // Only what was filled in is sent: the engine leaves the rest of an existing tool (same product + thing) alone.
-    var body = { kind: 'tool', accountId: ownerId(), at: new Date().toISOString(), product: tdraft.product.trim(), capabilities: tdraft.caps.slice() };
+    var body = { kind: 'tool', accountId: userId(), at: new Date().toISOString(), product: tdraft.product.trim(), capabilities: tdraft.caps.slice() };
     var txt = { thing: tdraft.thing, unit: tdraft.unit, fit: tdraft.fit, accountNotes: tdraft.notes, audit: tdraft.audit };
     Object.keys(txt).forEach(function (k) { if ((txt[k] || '').trim()) body[k] = txt[k].trim(); });
     if ((tdraft.outputs || []).length) body.outputs = tdraft.outputs.slice();
@@ -1480,7 +1404,6 @@
       }).catch(function (e) { delete busy.tool; toolNote = 'Not sent: ' + e.message; render(); });
     }, function () { delete busy.tool; toolNote = ''; render(); });
   }
-  /* Kits: the WHAT ladder (Playbook › Pack › Kit › Brick), styles and formats. */
   function kitSub() { var p = hashParts().path[1]; return pickOf(KSUBS, p) ? p : 'playbooks'; }
   /* ---------- Library: + New and Edit on Playbooks, Packs, Kits and Bricks (same fields as the Sheet, checked here and again
    * by the engine), and a Suggest box anyone on the team can use (lands as a pending suggestion for the owner to accept).
@@ -1504,8 +1427,6 @@
   var LIB_STATUS = [['live', 'Live'], ['archived', 'Archived'], ['retired', 'Retired']];
   Object.keys(LIB).forEach(function (t) { LIB[t].fields.push(['status', 'Status', 'pick', 0, function () { return LIB_STATUS; }, 'edit']); });
   var libDraft = loadLocal('st-lib'), libErr = {}, libSent = {};
-  // VAT (engine v0.2.18, all optional): state.vatRates [{country, name?, rate, checked, home?}], state.priceShow ex|inc|both,
-  // kits[] / packs[] price, priceBasis ex|inc, priceEx, priceInc. The viewer's own ex / inc / both choice is kept in this browser.
   function homeRate() { var v = (S.vatRates || []).filter(function (x) { return x.home; })[0] || (S.vatRates || []).filter(function (x) { return /^(GB|UK)$/i.test(x.country); })[0]; var r = v ? Number(v.rate) : 20; return isFinite(r) && r >= 0 ? r : 20; }
   function gbp(n) { return '\u00a3' + (Math.round(n * 100) % 100 ? n.toFixed(2) : String(Math.round(n))); }
   function vatLine(price, basis) {
@@ -1522,16 +1443,14 @@
     return ex === null ? null : { ex: ex, inc: inc };
   }
   function pshowSwitch() { var v = priceShow(); return '<div class="seg pshow" role="group" aria-label="Show prices">' + [['ex', 'ex VAT'], ['inc', 'inc VAT'], ['both', 'Both']].map(function (o) { return '<button type="button" data-pshow="' + o[0] + '" aria-pressed="' + (v === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>'; }
-  // Owner view only (this page): price and lead time on Kit and Pack cards, as one quiet line. Never in anything a client sees.
   function priceLine(x) {
     var pr = exInc(x), d = x && x.readyDays != null && x.readyDays !== '' && isFinite(Number(x.readyDays)) ? Number(x.readyDays) : null, sh = priceShow();
     var bits = []; if (pr) bits.push(sh === 'both' ? gbp(pr.ex) + ' ex \u00b7 ' + gbp(pr.inc) + ' inc VAT' : sh === 'inc' ? gbp(pr.inc) + ' inc VAT' : gbp(pr.ex) + ' ex VAT'); if (d !== null) bits.push(d + (d === 1 ? ' day' : ' days'));
     return bits.length ? '<div class="pline" data-price>' + bits.join(' \u00b7 ') + '</div>' : '';
   }
-  // Playbook step: who does it and how (engine v0.2.24), shown only when both are set. The engine shows as "Studio helper".
   function stepWho(x) { var w = pickOf(WHO, x.who); if (!w || (x.fit !== 'AUTO' && x.fit !== 'HAND')) return '';
     return ' <span class="tag" data-chip="step-who" title="Who · how">' + I(w[2]) + (x.who === 'engine' ? 'Studio helper' : esc(w[1])) + ' \u00b7 ' + (x.fit === 'AUTO' ? 'AUTO' : 'by hand') + '</span>'; }
-  var STEP_WHO = / @(lisa|claude|grok|engine)\/(AUTO|HAND)$/; // optional suffix on a library step line
+  var STEP_WHO = / @(user|claude|grok|engine)\/(AUTO|HAND)$/;
   function libEditBtn(table, id) { return '<button class="btn" type="button" data-libedit="' + table + '" data-id="' + esc(id) + '" aria-label="Edit"' + dis() + '>' + I('pencil') + 'Edit</button>'; }
   function libFrom(table, id) {
     var x = byIdIn(table, id) || {}, f = {};
@@ -1547,7 +1466,7 @@
     var L = LIB[table], f = d.f || {}, opt = function (fd) { return typeof fd[4] === 'function' ? fd[4]() : []; };
     return '<div class="card libform" data-libform="' + table + '"><div class="grp">' + (d.op === 'edit' ? 'Edit ' + L.one : 'New ' + L.one) + '</div>' +
       (table === 'bricks' && d.op === 'edit' && String(f.kind) === 'prompt' ? '<p class="muted" data-libnote>Changing a prompt\u2019s text sends it back for approval.</p>' : '') +
-      (isTeam() && (table === 'kits' || table === 'packs') ? '<p class="muted" data-owneronly-why>Prices: Owner only</p>' : '') +
+      (isTeam() && (table === 'kits' || table === 'packs') ? '<p class="muted" data-useronly-why>Prices: User only</p>' : '') +
       libFields(table, d.op).map(function (fd) {
         var k = fd[0], lab = fd[1] + (fd[3] ? ' <span class="req" aria-hidden="true">*</span>' : ''), err = libErr[k] ? '<div class="ferr">' + esc(libErr[k]) + '</div>' : '', v = f[k];
         if (fd[2] === 'basis') return '<div class="fq" data-lfq="' + k + '"><div class="seg" role="group" aria-label="Price is">' + [['ex', 'ex VAT'], ['inc', 'inc VAT']].map(function (o) { var on = (v || 'ex') === o[0]; return '<button type="button" data-lbasis="' + o[0] + '" aria-pressed="' + on + '">' + o[1] + '</button>'; }).join('') + '</div><p class="pline" data-vatline>' + esc(vatLine(f.price, v || 'ex')) + '</p></div>';
@@ -1559,9 +1478,8 @@
       }).join('') +
       '<div class="frow"><button class="btn" type="button" data-action="libcancel">Cancel</button><button class="btn yes" type="button" data-action="libsend"' + dis() + '>' + I('send') + (d.op === 'edit' ? 'Save' : 'Add') + '</button></div></div>';
   }
-  // The Sheet's rules, as engine v0.2.17 checks them: name 200, notes 2000, text 5000, steps 30 x 200 (no ';'), lists 30.
   var PRICE_FIELDS = ['price', 'priceBasis', 'sourcePrice'];
-  function libFields(table, op) { return LIB[table].fields.filter(function (fd) { return (fd[5] !== 'edit' || op === 'edit') && !(isTeam() && PRICE_FIELDS.indexOf(fd[0]) >= 0); }); } // prices: owner only
+  function libFields(table, op) { return LIB[table].fields.filter(function (fd) { return (fd[5] !== 'edit' || op === 'edit') && !(isTeam() && PRICE_FIELDS.indexOf(fd[0]) >= 0); }); }
   function libCheck(table, f, op) {
     var e = {};
     libFields(table, op).forEach(function (fd) {
@@ -1591,7 +1509,7 @@
       if (fd[2] === 'money' || fd[2] === 'int') { if (String(v == null ? '' : v).trim() !== '') fields[fd[0]] = Number(v); return; }
       if (fd[2] === 'basis') { if (String(f.price == null ? '' : f.price).trim() !== '') fields[fd[0]] = v === 'inc' ? 'inc' : 'ex'; return; }
  fields[fd[0]] = fd[2] === 'multi' ? (v || []).slice() : fd[2] === 'lines' ? String(v || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean) : String(v || '').trim(); });
-    var body = { kind: 'library', accountId: ownerId(), table: t, op: libDraft.op, fields: fields, at: new Date().toISOString() }; if (libDraft.op === 'edit') body.id = libDraft.id; if (libDraft.from) body.fromAssetId = libDraft.from;
+    var body = { kind: 'library', accountId: userId(), table: t, op: libDraft.op, fields: fields, at: new Date().toISOString() }; if (libDraft.op === 'edit') body.id = libDraft.id; if (libDraft.from) body.fromAssetId = libDraft.from;
     var keep = libDraft; libDraft = {}; saveLocal('st-lib', libDraft); libSent[t] = 'Sent · applies at the Studio helper’s next run'; render();
     withWrite(function () { return putRequest('library', body).catch(function (e) { libDraft = keep; saveLocal('st-lib', libDraft); delete libSent[t]; banner('Not sent: ' + e.message); render(); }); }, function () { libDraft = keep; delete libSent[t]; render(); });
   }
@@ -1605,8 +1523,8 @@
     if (EX) return;
     var key = 'ls|' + table, box = $('lsbox-' + table), text = (box ? box.value : drafts[key] || '').trim().slice(0, 1000);
     if (!text) { if (box) box.focus(); return; }
-    delete drafts[key]; saveLocal('st-drafts', drafts); libSent['s|' + table] = 'Suggested · waiting for Lisa'; render();
-    withWrite(function () { return putRequest('libsuggest', { kind: 'libsuggest', accountId: ownerId(), table: table, text: text, at: new Date().toISOString() }).catch(function (e) { drafts[key] = text; delete libSent['s|' + table]; banner('Not sent: ' + e.message); render(); }); }, function () { drafts[key] = text; delete libSent['s|' + table]; render(); });
+    delete drafts[key]; saveLocal('st-drafts', drafts); libSent['s|' + table] = 'Suggested · waiting for User'; render();
+    withWrite(function () { return putRequest('libsuggest', { kind: 'libsuggest', accountId: userId(), table: table, text: text, at: new Date().toISOString() }).catch(function (e) { drafts[key] = text; delete libSent['s|' + table]; banner('Not sent: ' + e.message); render(); }); }, function () { drafts[key] = text; delete libSent['s|' + table]; render(); });
   }
   function vKits() {
     var sub = kitSub(), n = { playbooks: S.playbooks.length, packs: S.packs.length, kits: S.kits.length, bricks: S.bricks.length, styles: S.frameworks.length + S.voices.length + S.looks.length, formats: S.formats.length };
@@ -1686,7 +1604,6 @@
       (ST.rootFolderId ? '<p><a href="https://drive.google.com/drive/folders/' + esc(ST.rootFolderId) + '" target="_blank" rel="noopener">Studio folder</a></p>' : '') + '</div>';
   }
 
-  /* ---------- New idea (brief). One request file, kind 'idea'. Draft kept as you type. ---------- */
   var draft = loadDraft(), formErr = {}, formNote = '';
   function loadDraft() { try { return JSON.parse(localStorage.getItem('st-idea') || '') || {}; } catch (e) { return {}; } }
   function saveDraft() { try { localStorage.setItem('st-idea', JSON.stringify(draft)); } catch (e) {} }
@@ -1740,7 +1657,6 @@
       '<button class="more" type="button" data-action="nmore" aria-expanded="' + !!draft.more + '">' + I(draft.more ? 'chevron-up' : 'chevron-down') + 'More</button>' + more +
       '<div class="frow"><span class="muted" id="formNote">' + esc(formNote) + '</span><button class="btn yes" type="button" data-action="sendidea" aria-label="Send"' + dis() + '>' + I('check') + 'Send</button></div></div>';
   }
-  // Sources on a brief: each is a link, a file dropped in the Inbox, or a note, with a rights flag.
   function vSources() {
     var inbox = ST.inboxFolderId ? '<a class="pill" href="https://drive.google.com/drive/folders/' + esc(ST.inboxFolderId) + '" target="_blank" rel="noopener" data-inbox title="Drop the file here first">' + I('inbox') + 'Inbox</a>' : '';
     return draft.sources.map(function (x, i) {
@@ -1788,7 +1704,6 @@
     }, function () { delete busy.idea; formNote = ''; render(); });
   }
 
-  /* ---------- Requests (the Factory write-back): one file per click; ✓ HH:MM · applies by HH:MM; Undo trashes the file ---------- */
   function appliesBy(ts) { var d = new Date(ts), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next + 1); return hm(d.getTime()); }
   function undoUntil(at) { var d = new Date(at), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next - 1, 0, 0); return d.getTime(); }
   function sentLine(id) {
@@ -1803,13 +1718,13 @@
   }
   function sendAct(id, act, verdict) {
     if (EX || busy[id]) return;
-    if (isTeam() && !/^(approve|redo|deliver|ask)$/.test(act)) { banner('Owner only'); return; } // engine v0.2.20: what the backup person may do
-    var x = byId(id), n = $('note-' + id), body = { kind: act, accountId: /^(ask|deliver|retire|refresh|result)$/.test(act) ? ownerId() : x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() };
+    if (isTeam() && !/^(approve|redo|deliver|ask)$/.test(act)) { banner('User only'); return; }
+    var x = byId(id), n = $('note-' + id), body = { kind: act, accountId: /^(ask|deliver|retire|refresh|result)$/.test(act) ? userId() : x ? x.accountId : userId(), assetId: id, at: new Date().toISOString() };
     if (act === 'redo') { body.note = n ? n.value.trim() : ''; if (!body.note) { if (n) n.focus(); return; } }
     if (act === 'gate') body.verdict = verdict;
     if (/^(approve|redo|bin)$/.test(act) && fbDraft[id]) { if (fbDraft[id].stars) body.stars = fbDraft[id].stars; if (fbDraft[id].reasons.length) body.reasons = fbDraft[id].reasons.slice(); }
-    if (act === 'part') { var pn0 = $('pname-' + id), pw = $('pwords-' + id); body = { kind: 'part', accountId: ownerId(), parentId: id, name: pn0 ? pn0.value.trim().slice(0, 200) : '', at: body.at }; if (!body.name) { if (pn0) pn0.focus(); return; } var parts = all().filter(function (c) { return c.parentId === id; }); body.order = parts.length + 1; if (pw && Number(pw.value) > 0) body.targetWords = Math.round(Number(pw.value)); }
-    if (act === 'assemble') { body = { kind: 'assemble', accountId: ownerId(), parentId: id, at: body.at }; }
+    if (act === 'part') { var pn0 = $('pname-' + id), pw = $('pwords-' + id); body = { kind: 'part', accountId: userId(), parentId: id, name: pn0 ? pn0.value.trim().slice(0, 200) : '', at: body.at }; if (!body.name) { if (pn0) pn0.focus(); return; } var parts = all().filter(function (c) { return c.parentId === id; }); body.order = parts.length + 1; if (pw && Number(pw.value) > 0) body.targetWords = Math.round(Number(pw.value)); }
+    if (act === 'assemble') { body = { kind: 'assemble', accountId: userId(), parentId: id, at: body.at }; }
     if (act === 'result') { var rd = resDraft[id] || {}; rd.err = !rd.channel ? 'Pick a channel' : !/^\d{4}-\d{2}-\d{2}$/.test(rd.date || '') ? 'Pick a date' : !RKEYS.some(function (r) { return rd[r[0]] !== undefined && rd[r[0]] !== ''; }) ? 'Add a number' : RKEYS.some(function (r) { return rd[r[0]] !== undefined && rd[r[0]] !== '' && !(Number(rd[r[0]]) >= 0); }) ? 'Numbers only' : '';
       if (rd.err) { render(); return; }
       body.channel = rd.channel; body.date = rd.date; RKEYS.forEach(function (r) { if (rd[r[0]] !== undefined && rd[r[0]] !== '') body[r[0]] = Number(rd[r[0]]); }); delete resDraft[id]; }
@@ -1825,7 +1740,6 @@
         .catch(function (e) { delete busy[id]; banner('Not sent: ' + e.message); render(); });
     }, function () { delete busy[id]; render(); });
   }
-  // set (who / priority) and studio (on/off) change at once on screen; the engine catches up at its next run.
   var pend = loadLocal('st-pend');
   function applyPend() {
     var now = Date.now();
@@ -1841,7 +1755,7 @@
       if (p.destination !== undefined) a.destination = p.destination;
       if (p.legalSetId !== undefined) { var lsx = byIdIn('legalSets', p.legalSetId); a.legal = Object.assign({}, a.legal || {}, { setId: p.legalSetId, setName: lsx ? lsx.name : p.legalSetId }); }
       if (p.priority !== undefined) a.priority = p.priority === 'none' ? null : p.priority;
-      if (p.clientMaterial !== undefined) { a.clientMaterial = p.clientMaterial; if (p.clientMaterial === 'yes') a.reuse = 'one-off'; } // engine: client material is never a template
+      if (p.clientMaterial !== undefined) { a.clientMaterial = p.clientMaterial; if (p.clientMaterial === 'yes') a.reuse = 'one-off'; }
       if (p.reuse !== undefined) a.reuse = p.reuse;
       if (p.sourceRights !== undefined) a.sourceRights = p.sourceRights;
       if (p.paid !== undefined) a.paid = p.paid;
@@ -1851,8 +1765,8 @@
     saveLocal('st-pend', pend);
   }
   function sendSet(id, field, val) {
-    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
-    var x = byId(id), body = { kind: 'set', accountId: x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() }; body[field] = val;
+    if (EX) return; if (isTeam()) { banner('User only'); return; }
+    var x = byId(id), body = { kind: 'set', accountId: x ? x.accountId : userId(), assetId: id, at: new Date().toISOString() }; body[field] = val;
     pend[id] = Object.assign(pend[id] || {}, body, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); openPanel = null; render();
     var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
     withWrite(function () { return putRequest('set', body).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
@@ -1860,10 +1774,10 @@
   // Ownership (the owner, 28 Oct 2026): the client owns the finished file once paid; the owner keeps the source files unless the client
   // pays for them. One 'rights' request {assetId, clientMaterial, sourceRights: kept|sold} (owner); shows at once.
   function sendRights(id, patch) {
-    if (EX) return; if (isTeam() && (patch.sourceRights !== undefined || patch.protect !== undefined)) { banner('Owner only'); return; }
+    if (EX) return; if (isTeam() && (patch.sourceRights !== undefined || patch.protect !== undefined)) { banner('User only'); return; }
     var x = byId(id); if (!x) return;
-    var body = { kind: 'rights', accountId: ownerId(), assetId: id, at: new Date().toISOString() }, show = {};
-    if (patch.disclose !== undefined || patch.protect !== undefined) { // engine v0.2.19: one of these on its own; protect '' = inherit
+    var body = { kind: 'rights', accountId: userId(), assetId: id, at: new Date().toISOString() }, show = {};
+    if (patch.disclose !== undefined || patch.protect !== undefined) {
       if (patch.disclose !== undefined) body.disclose = show.disclose = patch.disclose;
       if (patch.protect !== undefined) { body.protect = patch.protect; show.protectOwn = patch.protect; }
     } else {
@@ -1874,22 +1788,18 @@
     var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
     withWrite(function () { return putRequest('rights', body).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
-  // Proof protection, payment and the AI note (engine v0.2.18 item fields, all optional): protect, paid, disclose, hasProof,
-  // hasFinal, needsWatermark, proofLowRes. The final file's link is never in the state, so it can never show here; full size is
-  // released at stage 8 + paid. Paid is the owner's switch: one 'paid' request {assetId, paid: yes|no}.
   function sendPaid(id, val) {
-    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
+    if (EX) return; if (isTeam()) { banner('User only'); return; }
     var x = byId(id); if (!x) return;
     pend[id] = Object.assign(pend[id] || {}, { paid: val }, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); render();
     var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
-    withWrite(function () { return putRequest('paid', { kind: 'paid', accountId: ownerId(), assetId: id, paid: val, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+    withWrite(function () { return putRequest('paid', { kind: 'paid', accountId: userId(), assetId: id, paid: val, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
-  // Account default and project protection: one owner-side 'protect' request {target: account|project, id, protect: ''|yes|no}.
   function sendProtect(target, id, val) {
-    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
+    if (EX) return; if (isTeam()) { banner('User only'); return; }
     var key = 'prot|' + target + '|' + id; pend[key] = { protect: val, at: Date.now() }; saveLocal('st-pend', pend); render();
     var back = function () { delete pend[key]; saveLocal('st-pend', pend); render(); };
-    withWrite(function () { return putRequest('protect', { kind: 'protect', accountId: ownerId(), target: target, id: id, protect: val, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+    withWrite(function () { return putRequest('protect', { kind: 'protect', accountId: userId(), target: target, id: id, protect: val, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
   function protOf(target, x) { var p = pend['prot|' + target + '|' + x.id]; return p ? p.protect : (x.protect || ''); }
   var PROT_SRC = { item: 'set here', project: 'from project', account: 'from account', kind: 'by account kind' };
@@ -1910,14 +1820,11 @@
     var remind = 'proofCheck' in a ? proofCheckRow(a) : a.needsWatermark || a.proofLowRes ? '<div class="rrow"><span class="tag" data-chip="lowres" title="' + esc(a.proofLowRes || '') + '">Low-res + watermark</span><span class="muted" data-watermark>Add Studio watermark layer</span></div>' : '';
     return '<div class="rights" data-delivery="' + esc(a.id) + '">' + rows + remind + '</div>';
   }
-  // Proof check (engine v0.2.24 item field proofCheck: missing|hand|ok|stale, null = not protected): one chip in place of the
-  // low-res + watermark reminder. Absent on older state, which keeps the reminder above.
   var PROOF_CHECK = { ok: 'Proof ready', hand: 'Proof added by hand', missing: 'Proof due', stale: 'Proof out of date' };
   function proofCheckRow(a) {
     var w = PROOF_CHECK[a.proofCheck];
     return w ? '<div class="rrow"><span class="tag" data-chip="proofcheck" data-check="' + esc(a.proofCheck) + '">' + w + '</span></div>' : '';
   }
-  // Save a finished item's set-up as a new kit: opens the kit form; the request carries fromAssetId. Never from client material.
   function saveAsKit(a) {
     if (a.stage < 8) return '';
     return isCM(a) ? '<div class="rrow"><button class="btn" type="button" disabled data-noreuse title="Client material: the client owns it, so it is never reused">' + I('box') + 'Save as a kit</button><span class="sent">Client material \u00b7 never reused</span></div>'
@@ -1933,9 +1840,8 @@
       '<div class="rrow"><span class="rlab">Reuse</span><div class="seg" role="group" aria-label="Reuse">' +
       [['one-off', 'One-off'], ['template', 'Template']].map(function (o) { var on = (a.reuse === 'template' ? 'template' : 'one-off') === o[0], off = o[0] === 'template' && cm; return '<button type="button" data-set="reuse" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + on + '"' + (off ? ' disabled title="Client material: never a template"' : dis() + own()) + '>' + o[1] + '</button>'; }).join('') + '</div></div></div>';
   }
-  // Brand set-up tick: shows at once, one 'check' request file; the engine writes it into BRANDS at its next run.
   function sendCheck(bid, item) {
-    if (isTeam()) { banner('Owner only'); return; }
+    if (isTeam()) { banner('User only'); return; }
     if (EX) return;
     var b = brand(bid), key = 'chk|' + bid + '|' + item, cur = pend[key] ? pend[key].ok : !!((b.setupChecklist || []).filter(function (x) { return x.name === item; })[0] || {}).ok;
     var body = { kind: 'check', accountId: brandAcct(bid), brandId: bid, item: item, ok: !cur, at: new Date().toISOString() };
@@ -1945,18 +1851,17 @@
   }
   function studioOn() { var p = pend.studio; return p && Date.now() - p.at < 36e5 ? p.on : !!S.studio.on; }
   function sendSuggestion(sid, status) {
-    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
+    if (EX) return; if (isTeam()) { banner('User only'); return; }
     var key = 'sug|' + sid, back = function () { delete pend[key]; saveLocal('st-pend', pend); render(); };
     pend[key] = { status: status, at: Date.now() }; saveLocal('st-pend', pend); render();
-    withWrite(function () { return putRequest('suggestion', { kind: 'suggestion', accountId: ownerId(), id: sid, status: status, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+    withWrite(function () { return putRequest('suggestion', { kind: 'suggestion', accountId: userId(), id: sid, status: status, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
   function sendStudio() {
-    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
+    if (EX) return; if (isTeam()) { banner('User only'); return; }
     var on = !studioOn(); pend.studio = { on: on, at: Date.now() }; saveLocal('st-pend', pend); render();
     var back = function () { delete pend.studio; saveLocal('st-pend', pend); render(); };
-    withWrite(function () { return putRequest('studio', { kind: 'studio', accountId: ownerId(), on: on, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+    withWrite(function () { return putRequest('studio', { kind: 'studio', accountId: userId(), on: on, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
-  // Every request says who clicked (email + device).
   var whoAmI = null;
   function device() { var u = navigator.userAgent; return /iPhone|iPad/.test(u) ? 'iPhone/iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'other'; }
   function who() {
@@ -1969,14 +1874,13 @@
     if (EX) return Promise.reject(new Error('example data'));
     return who().then(function (by) {
       body.by = by;
-      var me = meAcct(); if (me && me.role === 'team') body.accountId = me.id; // the backup person signs as themselves (engine v0.2.20)
+      var me = meAcct(); if (me && me.role === 'team') body.accountId = me.id;
       var meta = { name: prefix + '-' + Date.now() + '.json', parents: [ST.requestsFolderId], mimeType: 'application/json' };
       var b = 'st' + Date.now();
       var payload = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(body) + '\r\n--' + b + '--';
       return drive('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: payload });
     });
   }
-  // One write waits for Google's Allow prompt at a time; cancel = the screen goes back (back()).
   var pendingWrite = null, pendingBack = null, busy = {};
   function withWrite(go, back) {
     var saved = DashAuth.valid();
@@ -2081,7 +1985,7 @@
     if (a && !a.disabled) {
       var k = a.getAttribute('data-action');
       if (k === 'look') { showLook(document.getElementById('lookMenu').classList.contains('hidden')); return; }
-      if (k === 'signin') auth.requestInteractive(CFG.money && CFG.money.owner ? { login_hint: CFG.money.owner } : {}); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
+      if (k === 'signin') auth.requestInteractive(CFG.money && CFG.money.user ? { login_hint: CFG.money.user } : {}); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'filters') { filtersOpen = !filtersOpen; sortOpen = false; render(); fFocus(); }
       else if (k === 'sort') { sortOpen = !sortOpen; filtersOpen = false; render(); fFocus(); }
       else if (k === 'fdone') { closeF(); }
@@ -2138,23 +2042,19 @@
   });
   window.addEventListener('resize', function () { if (S && signedIn && phone() !== wasPhone) { wasPhone = phone(); render(); } else fitBoard(boardScroll()); });
   var wasPhone = phone();
-  // Filter and Sort panels: focus goes in on open and back to the button on close (Done, Esc, a click outside).
   function fFocus() { var p = document.querySelector('.fbar > .fpanel'); if (p) { var f = p.querySelector('.on, button'); if (f) f.focus(); } }
   function closeF(quiet) { var back = filtersOpen ? 'filtersBtn' : sortOpen ? 'sortBtn' : null; filtersOpen = sortOpen = false; render(); if (back && !quiet) { var b = $(back); if (b) b.focus(); } }
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (filtersOpen || sortOpen)) { closeF(); return; } });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('lookMenu').classList.contains('hidden')) { showLook(false); document.getElementById('lookBtn').focus(); } });
   window.addEventListener('hashchange', function () { openPanel = null; filtersOpen = sortOpen = false; formErr = {}; formNote = ''; fromUrl(); render(); window.scrollTo(0, 0); });
-  // "/" puts the cursor in this page's search box (before toolkit.js's own search dialog).
   window.addEventListener('keydown', function (e) {
     if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
     var b = document.querySelector('[data-f="fq"]'); if (b) { e.preventDefault(); e.stopPropagation(); b.focus(); }
   }, true);
 
-  /* ---------- Sign-in (one sign-in for the whole site, auth.js) ---------- */
   function startTimer() { stopTimer(); timer = setInterval(load, REFRESH_MS); }
   function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
   setInterval(function () { if (Object.keys(sentF).length && S) { if (typing()) needRender = true; else render(); } }, 6e4);
-  // Never redraw under someone's cursor: wait until they leave the box.
   function typing() { var el = document.activeElement; return !!(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && $('view').contains(el) && el.getAttribute('data-f') !== 'fq'); }
   document.addEventListener('focusout', function () { setTimeout(function () { if (needRender && !typing()) { needRender = false; render(); } }, 0); });
   function expired() { stopTimer(); accessToken = null; DashAuth.markExpired(); if (!auth.requestSilent()) banner('Sign-in expired. Sign in again.'); }
@@ -2191,3 +2091,4 @@
 </script>
 </body>
 </html>
+

@@ -8,12 +8,8 @@
 //    3 Nov 2026) means broken: it sits with something down, expired, stuck or failed, and its link (if it has a label) says the word.
 // Each check returns a list of plain-words problems, so a red run says what to fix.
 
-// Runs in the page: every style rule (inline <style> and the site's own sheets) that styles a state, and what it changes.
-// Returns [{ sel, prop, value, sheet }] for rules that fill (a background) or move (a transform) in a state. Moves of the box
-// (padding, margins, size) are read from the drawn page by the pointer test, since many rules pin the same box in every state.
 function stateRules() {
   const STATE = /:(hover|focus|focus-visible|focus-within|active)\b|\[aria-(pressed|current|selected|expanded)(="[^"]*")?\]|\.(on|sel|active|is-on|selected|current)\b|:checked\b/;
-  // Typing boxes may change their background; so may an on/off switch (a form control: its track shows on or off).
   const TYPING = /(^|[\s>+~(,])(input|textarea|select)\b|\[contenteditable|::placeholder|::-webkit|::selection|\.fin\b|\.sw\b/;
   const noNot = (x) => { let y = x, z; while ((z = y.replace(/:not\([^()]*\)/g, '')) !== y) y = z; return y; };   // :not(:hover) is the resting state
   // The one pale grey state fill (the owner, 12 Nov 2026) is the house rule, not a fill to find.
@@ -36,29 +32,26 @@ function stateRules() {
       for (const prop of ['transform', 'translate', 'scale']) {
         const value = r.style.getPropertyValue(prop).trim();
         if (!value || /^none$/.test(value)) continue;
-        if (/svg|\.hi\b|\.ti\b|::(before|after)/.test(sel)) continue;   // an icon turning (the fold chevron) is not the control moving
+        if (/svg|\.hi\b|\.ti\b|::(before|after)/.test(sel)) continue;
         out.push({ kind: 'move', sel, prop, value, sheet });
       }
     }
   };
   for (const s of document.styleSheets) {
-    let rules; try { rules = s.cssRules; } catch (e) { continue; }   // a sheet from another site (fonts) cannot be read: not ours
+    let rules; try { rules = s.cssRules; } catch (e) { continue; }
     const href = s.href ? new URL(s.href).pathname.replace(/^.*\//, '') : 'inline <style>';
     if (s.href && new URL(s.href).origin !== location.origin) continue;
     walk(rules, href);
   }
-  // Each finding once.
   const seen = new Set();
   return out.filter((f) => { const k = f.kind + f.sel + f.prop + f.value; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
-// Runs in the page: the drawn view. Returns { selected, groups, explainers, rose, broken } problem lists.
 function drawn() {
   const seen = (e) => { if (!e.getClientRects().length) return false; const s = getComputedStyle(e); if (s.visibility === 'hidden' || +s.opacity === 0) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const name = (e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + ([...e.classList].slice(0, 3).map((c) => '.' + c).join('')) + ' "' + (e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 28) + '"';
   const alpha = (c) => { if (!c || c === 'transparent') return 0; const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return 1; const p = m[1].split(/[,/ ]+/).filter(Boolean); return p.length > 3 ? +p[3] : 1; };
   const bgOf = (e) => { for (let x = e; x && x.nodeType === 1; x = x.parentElement) { const c = getComputedStyle(x).backgroundColor; if (alpha(c) > 0.05) return c; } return 'rgb(255, 255, 255)'; };
-  // Typing boxes, and on/off switches (.sw: a form control whose track shows on or off), may change their background.
   const typing = (e) => e.matches('input, textarea, select, [contenteditable="true"], [contenteditable=""], .sw, [role="switch"]');
   const out = { selected: [], groups: [], explainers: [], rose: [], broken: [] };
 
@@ -77,13 +70,10 @@ function drawn() {
     if (!same || (s.backgroundImage !== 'none' && !/url\(/.test(s.backgroundImage))) out.selected.push(name(e) + ': selected fill ' + got + (s.backgroundImage !== 'none' ? ' ' + s.backgroundImage.slice(0, 40) : '') + ' (beside ' + want + ')');
   }
 
-  // 2 Number groups: numbers side by side (same row, siblings of one kind) share one size and weight.
   const NUM = /^(–|-|[£$€]?\s?[\d.,]+\s?[kKmM%]?|\d+\s+of\s+\d+)$/;
-  // Cheap tests first (no children, a number's text), then the drawn ones: big pages have thousands of elements.
   const leaves = [...document.querySelectorAll('body *')].filter((e) => !e.children.length && NUM.test((e.textContent || '').trim()) && seen(e) && !e.closest('nav.house-tabs, header, svg, .cnt, .n, .dpill, .date, .tag, .pill, table, time, label, button.house-fold'));
   const groups = new Map();
   for (const e of leaves) {
-    // The unit that repeats: a number that is itself one of several like siblings, or the number inside one of several like siblings.
     let unit = e;
     for (let up = e, i = 0; up && i < 3; up = up.parentElement, i++) {
       const p = up.parentElement; if (!p) break;
@@ -97,7 +87,6 @@ function drawn() {
   }
   for (const [p, list] of groups) {
     if (list.length < 2) continue;
-    // Side by side: on one row.
     const rows = new Map();
     for (const e of list) { const t = Math.round(e.getBoundingClientRect().top / 8); if (!rows.has(t)) rows.set(t, []); rows.get(t).push(e); }
     for (const row of rows.values()) {
@@ -107,7 +96,6 @@ function drawn() {
     }
   }
 
-  // 3 Explainer lines: a sub-line that tells you how to use the page, or that repeats the label above it.
   const SUB = '.hsub, .sub, .hint, .explain, .lead, .help, p.what, .note, .ph-sub, .hint-line, small.sub';
   const norm = (t) => (t || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
   const HOWTO = /^(tap|click|press|select|choose|use (this|the)|this (page|card|list|tab|view) (shows|lists|is)|here you can|opens? (in|the|a|your)\b)/i;
@@ -120,7 +108,6 @@ function drawn() {
     if (h && h !== e && !h.contains(e)) { const a = norm(h.textContent), b = norm(t); if (a.length > 3 && (b === a || (b.startsWith(a) && b.length < a.length + 12))) out.explainers.push(name(e) + ': repeats "' + h.textContent.trim().slice(0, 30) + '"'); }
   }
 
-  // 5 Rose counts: a rose ring (late) sits with something late, overdue, down or expired in its card, row or link label.
   const ROSE = '.cnt.need, .hm-v.need, .hk b.need, .n.need';
   const LATE = '.dpill.late, .date.late, .late, [data-kind="late"], .over, .overdue, .n-risk, .st-bad, .bad';
   const LATEWORD = /(?<![a-z])(late|overdue|down|expired|expires? today|past (its|their) due|stuck|blocked)(?![a-z])/i;   // "2Overdue" counts
@@ -129,14 +116,12 @@ function drawn() {
     const c = e.closest('[data-open-row], li, .hk, .hm-n, .card, section') || e.parentElement;
     const a = e.closest('a'); const label = ((a && (a.getAttribute('aria-label') || a.textContent)) || '') + ' ' + (c ? c.textContent : '');
     if (c && (c.querySelector(LATE) || LATEWORD.test(label))) continue;
-    // A group heading's count (Marketplace's "Post 3"): the late thing is in the cards under it, up to the next heading of its kind.
     let sib = c && c.nextElementSibling, hit = false;
     while (sib && !(c.className && sib.className === c.className)) { if (sib.matches(LATE) || sib.querySelector(LATE)) { hit = true; break; } sib = sib.nextElementSibling; }
     if (hit) continue;
     out.rose.push(name(e) + ': rose ring with nothing late in ' + (c ? name(c) : 'its place'));
   }
 
-  // 5b Black counts (broken): with something down, expired, stuck or failed in its card, row or link label; never also rose.
   const BROKEWORD = /(?<![a-z])(down|expired|stuck|fail(s|ed|ing)?|engine)(?![a-z])/i;
   for (const e of document.querySelectorAll('.cnt.broken, .hm-v.broken, .hk b.broken, .v.broken')) {
     if (!seen(e) || e.closest('nav.house-tabs') || !(e.textContent || '').trim()) continue;
@@ -150,8 +135,6 @@ function drawn() {
   return out;
 }
 
-// Runs in the page: the bottom tab counts that are rose (".need" = read out as "N late") or black (".broken" = "N down" ...).
-// Returns [{ href, word, n, broken, label }].
 function roseTabs() {
   return [...document.querySelectorAll('nav.house-tabs .ht, nav.house-tabs .house-more > a')].map((t) => {
     const n = t.querySelector(':scope > .n, :scope > .cnt'); if (!n || !(n.classList.contains('need') || n.classList.contains('broken')) || !n.textContent.trim()) return null;
@@ -160,7 +143,6 @@ function roseTabs() {
   }).filter(Boolean);
 }
 
-// Runs in the page: is anything late shown on the view (rows, pills, words)? brokenToo: down / expired / stuck / failed count too.
 function lateShown(brokenToo) {
   const seen = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
   const v = document.querySelector('#view, main') || document.body;
@@ -181,7 +163,6 @@ function textContrast(min = 4.5) {
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
   const name = (e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + ([...e.classList].slice(0, 3).map((c) => '.' + c).join('')) + ' "' + (e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 28) + '"';
   const hex = (c) => '#' + c.slice(0, 3).map((v) => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase();
-  // The colour behind e: see-through layers are kept and laid over the first solid one; a picture or gradient means "unknown".
   const behind = (e) => {
     const layers = [];
     for (let x = e; x && x.nodeType === 1; x = x.parentElement) {
@@ -206,11 +187,9 @@ function textContrast(min = 4.5) {
     if (r.width <= 1 || r.height <= 1 || !e.getClientRects().length) continue;
     const s = getComputedStyle(e);
     if (s.visibility !== 'visible' || /rect\(0(px)?,? 0(px)?,? 0(px)?,? 0(px)?\)|inset\(50%\)/.test(s.clip + ' ' + s.clipPath)) continue;
-    // A faded parent (opacity under 1) fades its text too: counted as a see-through text colour.
     let fade = 1;
     for (let x = e; x && x.nodeType === 1; x = x.parentElement) fade *= +getComputedStyle(x).opacity;
     if (fade === 0) continue;
-    // The text's own box must be on the page (a scroller's hidden part still counts: it scrolls into view).
     const range = document.createRange(); range.selectNodeContents(n);
     const tr = range.getBoundingClientRect(); if (tr.width < 1 || tr.height < 1) continue;
     const bg = behind(e); if (!bg) continue;
@@ -224,3 +203,4 @@ function textContrast(min = 4.5) {
 }
 
 module.exports = { stateRules, drawn, roseTabs, lateShown, textContrast };
+

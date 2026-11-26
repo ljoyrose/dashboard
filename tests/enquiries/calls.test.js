@@ -1,5 +1,3 @@
-// Stage 9: call prep and after the call. Run: node --test tests/enquiries/calls.test.js
-// Every person and pup here is invented. Times are UK clock time; "now" is fixed.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -73,3 +71,4 @@ test('"call held" request: one small file per tap, only for a real enquiry key; 
   assert.equal(sent.length, 1);
   assert.match(sent[0][1].body, /"kind":"call-held"/);
 });
+

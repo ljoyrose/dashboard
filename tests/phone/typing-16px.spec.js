@@ -24,7 +24,6 @@ const PAGES = {
 };
 const SHOTS = process.env.SWEEP_SHOTS;
 
-// Runs in the page: every visible typing box under 16px, as "what: size".
 function small() {
   const sel = 'input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="image"]), textarea, select, [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]';
   return [...document.querySelectorAll(sel)].filter((e) => {
@@ -45,7 +44,6 @@ test.describe('typing boxes are 16px on a phone (no zoom on tap)', () => {
         await go(page, v);
         bad.push(...(await page.evaluate(small)).map((x) => '#/' + v + ' ' + x));
       }
-      // The shared search box (every page that has DashKit.search).
       if (await page.evaluate(() => !!(window.DashKit && DashKit.search && DashKit.search.open))) {
         await page.evaluate(() => DashKit.search.open());
         const box = page.locator('#dashSearchBox');
@@ -70,3 +68,4 @@ test.describe('typing boxes are 16px on a phone (no zoom on tap)', () => {
     if (SHOTS) { await box.fill('Looks good, one small change'); await box.scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(SHOTS, 'comment-box-focused-390.png') }); }
   });
 });
+

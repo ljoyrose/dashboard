@@ -1,6 +1,3 @@
-// Private settings loader (config.js, bottom block) in the browser, on the pretend Drive.
-// After Google sign-in the page looks for ONE trusted file called DASH_CONFIG.json. Not there, broken, slow, shared in
-// by someone else, or no sign-in = the settings written in config.js, exactly as before. Every id and value is invented.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
 
@@ -21,7 +18,6 @@ const settled = async (page, want) => { await expect.poll(async () => (await sta
 const settings = (page) => page.evaluate(() => JSON.stringify(window.DASH_CONFIG));
 const lookups = (world) => world.calls.filter((c) => c.path === '/files' && c.query.includes(NAME)).length;
 const reads = (world, id) => world.calls.filter((c) => c.path === '/files/' + id && /alt=media/.test(c.url)).length;
-// Changes the privateConfig block the page is served (the real config.js ships enabled, in dry run).
 const serve = (page, change) => page.route('**/config.js', async (route) => {
   const res = await route.fetch();
   const body = change(await res.text());
@@ -51,9 +47,7 @@ test.describe('Private settings file: found or not, the page stays safe', () => 
     expect(st).toMatchObject({ found: 0, values: 0, wouldChange: 0, inUse: 0, pendingReload: false });
     expect(lookups(guard.world)).toBe(1);
     expect(await settings(page)).toBe(before);
-    // Nothing is kept in the browser for it: the sign-in is still the only thing stored.
     expect(await page.evaluate(() => ({ local: Object.keys(localStorage), session: sessionStorage.length }))).toEqual({ local: ['ljr-dash-auth'], session: 0 });
-    // One look per page load, however many times the sign-in is refreshed on the page.
     await page.evaluate(() => { const a = window.DashAuth.valid(); window.DashAuth.save(a.access_token, a.expires_at, a.scope); });
     await page.evaluate(() => window.DashConfigLoader.refresh());
     expect(lookups(guard.world)).toBe(1);
@@ -72,10 +66,9 @@ test.describe('Private settings file: found or not, the page stays safe', () => 
     const st = await settled(page, 'checked');
     expect(st).toMatchObject({ dryRun: true, found: 1, values: 2, drives: 1, wouldChange: 3, inUse: 0, pendingReload: false });
     expect(st.skipped).toEqual([{ path: 'clientId', why: 'never changed from Drive' }, { path: 'food.live', why: 'never changed from Drive' }]);
-    expect(JSON.stringify(st)).not.toContain(RUNLOG); // counts and setting names only, never a value
+    expect(JSON.stringify(st)).not.toContain(RUNLOG);
     expect(await settings(page)).toBe(before);
     expect(reads(guard.world, 'cfg-1')).toBe(1);
-    // Nothing is kept in the browser in dry run.
     expect(await page.evaluate((k) => localStorage.getItem(k), KEPT)).toBeNull();
     expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
     expect(n.loads).toBe(1); // no reload
@@ -102,7 +95,7 @@ test.describe('Private settings file: found or not, the page stays safe', () => 
     });
     await page.goto('./');
     const before = await settings(page);
-    await signIn(page); // the page's own reads are not held up by the look
+    await signIn(page);
     expect(await settled(page, 'slow')).toMatchObject({ values: 0, inUse: 0 });
     expect(await settings(page)).toBe(before);
     expect(reads(guard.world, 'cfg-1')).toBe(0);
@@ -120,13 +113,11 @@ test.describe('Private settings file: found or not, the page stays safe', () => 
   });
 
   test('a shared-drive file counts only when Google limits that drive to its own domain', async ({ page, guard }) => {
-    // drv-alpha1 has no such limit: a file there is not trusted, whoever put it there.
     guard.world.file('cfg-open', NAME, JSON.stringify(GOOD), { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'application/json' });
     await page.goto('./');
     await signIn(page);
     expect((await settled(page, 'untrusted')).found).toBe(1);
     expect(reads(guard.world, 'cfg-open')).toBe(0);
-    // The same file in a domain-only shared drive is trusted.
     guard.world.byId('cfg-open').trashed = true;
     guard.world.addDrive('drv-domain-only', 'Invented domain-only drive');
     guard.world.drives[guard.world.drives.length - 1].restrictions = { domainUsersOnly: true };
@@ -159,7 +150,6 @@ test.describe('Private settings file in use (dryRun switched off)', () => {
   test('first sign-in: the page reloads once, then runs on the private values end to end', async ({ page, guard }) => {
     const world = guard.world;
     world.file('cfg-1', NAME, JSON.stringify(GOOD), MINE);
-    // A run log in the PRIVATE folder: config.js ships that folder id empty, so a row on screen proves the value was used.
     world.file('zz-ready', 'ZZ_DELETE_ready.txt', 'invented', A);
     world.byId(IDS.ledger).content = 'file_id\nzz-ready\n';
     world.file('private-runlog-test', 'RUN-LOG.csv', 'date_uk,job,place,mode,found,changed,ledger_rows_added,errors,result,lesson\n' +
@@ -167,7 +157,7 @@ test.describe('Private settings file in use (dryRun switched off)', () => {
     await live(page);
     const n = countLoads(page);
     await page.goto('./#/bin');
-    expect(JSON.parse(await settings(page)).home.runLogFolderId).toBe(''); // as written in config.js
+    expect(JSON.parse(await settings(page)).home.runLogFolderId).toBe('');
     await page.locator('#signInBtn').click();
     await expect.poll(() => n.loads).toBe(2); // one reload, on its own
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/); // still signed in after the reload
@@ -175,13 +165,12 @@ test.describe('Private settings file in use (dryRun switched off)', () => {
     expect(cfg.home.runLogFolderId).toBe(RUNLOG);
     expect(cfg.cdhub.folderName).toBe('Invented / private folder name');
     expect(cfg.excludedDrives).toContain('private-never-read-test');
-    expect(cfg.excludedDrives).toContain(IDS.excludedDrive); // the built-in never-read drive is still there
+    expect(cfg.excludedDrives).toContain(IDS.excludedDrive);
     expect(await status(page)).toMatchObject({ state: 'in-use', dryRun: false, values: 2, drives: 1, inUse: 3, pendingReload: false });
     await expect(page.locator('#sweepCard [title="ZZ_DELETE_ready.txt"]')).toHaveCount(1);
     await page.locator('#logCard > summary').click();
     await expect(page.locator('#runLog [data-run]')).toHaveCount(1);
     await expect(page.locator('#runLog')).toContainText('Invented lesson');
-    // No second reload, and no second look inside 15 minutes.
     await page.waitForTimeout(400);
     expect(n.loads).toBe(2);
     expect(lookups(world)).toBe(1);
@@ -202,7 +191,7 @@ test.describe('Private settings file in use (dryRun switched off)', () => {
     const after = JSON.parse(await settings(page));
     expect(after.home.runLogFolderId).toBe(RUNLOG);
     after.home.runLogFolderId = '';
-    expect(after).toEqual(before); // the one allowed value is the only difference
+    expect(after).toEqual(before);
   });
 
   test('never reloads under someone who is typing or tapping: the new values wait for the next page load', async ({ page, guard }) => {
@@ -213,12 +202,12 @@ test.describe('Private settings file in use (dryRun switched off)', () => {
     await page.goto('./');
     const before = await settings(page);
     await signIn(page);
-    await page.keyboard.press('Shift'); // someone is using the page while the file is still being read
+    await page.keyboard.press('Shift');
     const st = await settled(page, 'in-use');
     expect(st.pendingReload).toBe(true);
     expect(n.loads).toBe(1);
     expect(await settings(page)).toBe(before); // this page carries on unchanged
-    await page.reload(); // the next load starts with the private values
+    await page.reload();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
     expect(JSON.parse(await settings(page)).home.runLogFolderId).toBe(RUNLOG);
     expect(n.loads).toBe(2);
@@ -236,7 +225,7 @@ test.describe('Private settings file in use (dryRun switched off)', () => {
     expect(await page.evaluate(() => window.DashConfigLoader.refresh(true))).toMatchObject({ state: 'in-use', pendingReload: false });
     expect(JSON.parse(await settings(page)).home.runLogFolderId).toBe(RUNLOG);
     expect(JSON.parse(await page.evaluate((k) => localStorage.getItem(k), KEPT)).values.home.runLogFolderId).toBe(RUNLOG);
-    await page.evaluate(() => window.DashAuth.clear()); // what the page's Sign out button calls
+    await page.evaluate(() => window.DashAuth.clear());
     expect(await page.evaluate((k) => localStorage.getItem(k), KEPT)).toBeNull();
     expect(n.loads).toBe(2);
   });
@@ -253,3 +242,4 @@ test.describe('Private settings file in use (dryRun switched off)', () => {
     expect(guard.world.calls.length).toBe(0);
   });
 });
+

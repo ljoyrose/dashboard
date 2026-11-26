@@ -20,9 +20,9 @@ const open = async (page, id) => {
 };
 
 const WORK = [
-  'id,area,item,status,owner,blocked_on,evidence,note',
-  'W001,sample,Sample item waiting on Lisa,BLOCKED,Lisa,a sample answer,,',
-  'W010,medicine,Identify the medicine given in February,BLOCKED,Lisa,,,',
+  'id,area,item,status,user,blocked_on,evidence,note',
+  'W001,sample,Sample item waiting on User,BLOCKED,User,a sample answer,,',
+  'W010,medicine,Identify the medicine given in February,BLOCKED,User,,,',
 ].join('\n') + '\n';
 const DISPENSE = [
   'id,subject_id,given_on,product,dose_volume,route,ruling_needed,note',
@@ -31,7 +31,7 @@ const DISPENSE = [
 ].join('\n') + '\n';
 
 test.describe('CD Hub: a medicine ask finishes on the record', () => {
-  test('Identify the medicine given in February opens that dog’s February record, and a second click does not return to Outstanding @regression', async ({ page, guard }) => {
+  test('t-cdhub-round-paths-spec-1', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-WORK.csv', WORK);
     setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
     await page.goto('cdhub/');
@@ -77,10 +77,9 @@ test.describe('CD Hub: a medicine ask finishes on the record', () => {
     const answer = page.locator('#medAnswer');
     await expect(answer.locator('tbody tr')).toHaveCount(3);
     const one = page.locator('.dc[data-dog="sub-test-dog-1"]'), two = page.locator('.dc[data-dog="sub-test-dog-2"]');
-    await expect(one.locator('details.meds')).not.toHaveAttribute('open', '');   // two dogs: nothing is opened for you
+    await expect(one.locator('details.meds')).not.toHaveAttribute('open', '');
     await expect(two.locator('details.meds')).not.toHaveAttribute('open', '');
 
-    // the dog's name in each row is a button; it opens that dog's medicines and moves to them
     await answer.locator('tr[data-med="sub-test-dog-2"]').getByRole('button', { name: 'Open Test Dog Two: medicines' }).click();
     await expect(two.locator('details.meds')).toHaveAttribute('open', '');
     await expect(two.locator('details.meds > summary')).toBeFocused();
@@ -88,21 +87,18 @@ test.describe('CD Hub: a medicine ask finishes on the record', () => {
     await expect(two).toContainText('Not named');
     await expect(one.locator('details.meds')).not.toHaveAttribute('open', '');
     await expect(page).toHaveURL(/#\/dogs\/feb$/);
-    await expect(answer).toBeVisible();   // the February list stays, to pick the next dog
+    await expect(answer).toBeVisible();
 
-    // a tap anywhere on a row does the same
     await answer.locator('tr[data-med="sub-test-dog-1"] td').first().click();
     await expect(one.locator('details.meds')).toHaveAttribute('open', '');
     await expect(one.locator('details.meds > summary')).toBeFocused();
 
-    // a dog the list is not showing (filtered out) is brought into the list, not skipped
     await page.locator('#q').fill('Test Dog One');
     await expect(two).toHaveCount(0);
     await answer.locator('tr[data-med="sub-test-dog-2"]').getByRole('button').click();
     await expect(two).toHaveCount(1);
     await expect(two.locator('details.meds')).toHaveAttribute('open', '');
 
-    // a row for an animal that is not on the dog list is words only: no button that could go nowhere
     const gone = answer.locator('tr[data-med="sub-not-on-list"]');
     await expect(gone).toContainText('not on the current list');
     await expect(gone.getByRole('button')).toHaveCount(0);
@@ -114,7 +110,7 @@ test.describe('CD Hub: a medicine ask finishes on the record', () => {
   });
 
   test('a February medicine ask with no dispense row is not a button that reopens Outstanding', async ({ page, guard }) => {
-    setFile(guard.world, 'BLD-WORK.csv', 'id,area,item,status,owner,blocked_on,evidence,note\nW010,medicine,Identify medicine given in Feb,BLOCKED,Lisa,,,\n');
+    setFile(guard.world, 'BLD-WORK.csv', 'id,area,item,status,user,blocked_on,evidence,note\nW010,medicine,Identify medicine given in Feb,BLOCKED,User,,,\n');
     setFile(guard.world, 'BLD-dispense.csv', 'id,subject_id,given_on,product,dose_volume,route,ruling_needed,note\n');
     await page.goto('cdhub/');
     await signIn(page);
@@ -131,7 +127,7 @@ test.describe('CD Hub: a medicine ask finishes on the record', () => {
     await page.goto('cdhub/');
     await signIn(page);
     await open(page, 'work');
-    const jump = page.locator('#needsCard .mrow', { hasText: 'Sample item waiting on Lisa' }).locator('button');
+    const jump = page.locator('#needsCard .mrow', { hasText: 'Sample item waiting on User' }).locator('button');
     await expect(jump).toHaveAttribute('data-jump', 'work-W001');
     await jump.click();
     await expect(page).toHaveURL(/#\/work$/);
@@ -140,7 +136,7 @@ test.describe('CD Hub: a medicine ask finishes on the record', () => {
 });
 
 test.describe('CD Hub: The round controls', () => {
-  test('date, saving, flap, move, temperatures and history each finish or explain @regression', async ({ page, guard }) => {
+  test('t-cdhub-round-paths-spec-3', async ({ page, guard }) => {
     const errors = [];
     page.on('pageerror', (err) => errors.push(String(err)));
     setFile(guard.world, 'BLD-area_access.csv', 'id,area_id,access_type\nax-1,area-1,free\n');
@@ -252,7 +248,7 @@ test.describe('CD Hub: The round controls', () => {
 
     await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export\?/, (route) =>
       route.fulfill({ status: 200, contentType: 'text/csv', body: 'on_date,reading_kind,max_temp,min_temp\n2026-01-15,sample,12.0,4.0\n' }));
-    await page.clock.resume();   // the history page waits on timers; a paused clock leaves it on 'Getting temperatures'
+    await page.clock.resume();
     await page.getByRole('link', { name: 'Temperature history' }).click();
     await expect(page).toHaveURL(/history\.html/);
     await expect(page.getByRole('link', { name: 'Back to the round' })).toBeVisible();
@@ -262,3 +258,4 @@ test.describe('CD Hub: The round controls', () => {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 });
+

@@ -1,5 +1,3 @@
-// Yearly print on Compliance: the shared A4 page, opened from the daily calendars and the checks register.
-// Read only. Invented rows only.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -114,7 +112,7 @@ test('screenshots: a health-check month, a sparse month, and a medicines month',
 const YPrint = require('../../cdhub/yearly-print.js');
 const MedsReg = require('../../cdhub/meds-register.js');
 
-test('exercise rows on another type and round rows still fill the year grid @regression', () => {
+test('t-cdhub-yearly-print-spec-1', () => {
   const today = '2026-11-25';
   const types = [
     { id: 'cty-play-9', type_key: 'exercise_and_play', label: 'Exercise and play', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-11-01' },
@@ -134,7 +132,7 @@ test('exercise rows on another type and round rows still fill the year grid @reg
   expect(sep.marks.ada['2026-09-15']).toBe('tick');
 });
 
-test('a litter puppy is left off the exercise grid @regression', () => {
+test('t-cdhub-yearly-print-spec-2', () => {
   const today = '2026-11-25';
   const types = [{ id: 'cty-exercise_all-1', type_key: 'exercise_all', label: 'Exercise and play', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-01-01' }];
   const dogs = [
@@ -147,7 +145,7 @@ test('a litter puppy is left off the exercise grid @regression', () => {
   expect(nov.rows.find((r) => r.id === 'pup')).toBeFalsy();
 });
 
-test('the yearly print header uses the kennel name and never says Kennel not recorded @regression', () => {
+test('t-cdhub-yearly-print-spec-3', () => {
   const ctx = {
     today: '2026-11-25', kennel: '', types: [], logs: [], dogs: [], areas: [],
     tables: {
@@ -164,7 +162,7 @@ test('the yearly print header uses the kennel name and never says Kennel not rec
   expect(blank).not.toContain('LIC-12345');
 });
 
-test('room temperatures print as one daily min and max sheet a month @regression', () => {
+test('t-cdhub-yearly-print-spec-4', () => {
   const rows = [];
   for (let d = 1; d <= 20; d++) {
     const day = '2026-10-' + String(d).padStart(2, '0');
@@ -180,10 +178,10 @@ test('room temperatures print as one daily min and max sheet a month @regression
   expect(built.html.match(/<tr>/g).length).toBeLessThan(5);
 });
 
-test('an empty medicines month says no records and optional fields stay blank @regression', () => {
+test('t-cdhub-yearly-print-spec-5', () => {
   const [line] = MedsReg.build([{ id: 'd', subject_id: 'a', given_on: '2026-02-03', product: 'Wormer', dose_volume: '1 tablet' }], { month: '2026-02', dog: () => ({ name: 'Ada', chip: '' }) });
   expect(MedsReg.cell(line, 'dose')).toBe('1 tablet');
-  expect(MedsReg.cell(line, 'given_by')).toBe('Lisa Carson');
+  expect(MedsReg.cell(line, 'given_by')).toBe('User');
   expect(MedsReg.cell(line, 'time')).toBe('');
   expect(MedsReg.cell(line, 'batch')).toBe('');
   expect(MedsReg.cell(line, 'expiry')).toBe('');
@@ -280,7 +278,7 @@ function pdfPageText(buf) {
   return out;
 }
 
-test('types flow onto the next page only when the page is full @regression', async ({ page }) => {
+test('t-cdhub-yearly-print-spec-6', async ({ page }) => {
   const css = YPrint.CSS;
   const clash = '@media print{body{padding:10mm!important;box-decoration-break:clone}}';
   const block = (title, line) => '<section class="yp-page"><div class="yp-stick"><div class="yp-head">' + title + '</div><p>' + line + '</p></div></section>';
@@ -307,7 +305,7 @@ test('types flow onto the next page only when the page is full @regression', asy
   expect(flow[0]).not.toContain('Heading A');
 });
 
-test('a month with exercise records paints marks in the yearly grid @regression', () => {
+test('t-cdhub-yearly-print-spec-7', () => {
   const today = '2026-11-25';
   const types = [
     { id: 'cty-exercise-1', type_key: 'exercise', label: 'Exercise and play', target: 'area', site_scope: 'per_dog', every_days: '1', effective_from: '2026-11-09' },
@@ -341,7 +339,7 @@ test('a month with exercise records paints marks in the yearly grid @regression'
   expect(octPage.html).toContain('data-mark="tick"');
 });
 
-test('the yearly print page loads with no console errors @regression', async ({ page, guard }) => {
+test('t-cdhub-yearly-print-spec-8', async ({ page, guard }) => {
   const errors = [];
   page.on('pageerror', (err) => errors.push(String(err && err.message || err)));
   page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
@@ -354,3 +352,4 @@ test('the yearly print page loads with no console errors @regression', async ({ 
   await expect(page.locator('#ypPrint')).toBeVisible();
   expect(errors).toEqual([]);
 });
+

@@ -23,7 +23,6 @@ test('hub: four saves sent together reach the save script one at a time, each an
   expect(most).toBe(1);
 });
 
-// OV12 16 Nov 2026: leaving the page while saves wait their turn dropped them. The page now asks "Leave site?" first.
 test('hub: leaving while saves are still waiting asks first; once answered it does not', async ({ page }) => {
   let release;
   const held = new Promise((r) => { release = r; });
@@ -40,3 +39,4 @@ test('hub: leaving while saves are still waiting asks first; once answered it do
   await page.evaluate(() => window.__p);
   expect(await asks()).toBe(false);
 });
+

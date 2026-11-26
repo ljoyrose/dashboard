@@ -1,10 +1,6 @@
 name: Gate checker tests
 
-# Tests for tools/gate/gate.mjs (the App Factory gate checker). Plain Node, no browser, no packages, no secrets.
-# Kept in its own workflow on purpose: the Playwright suite and its required check
-# ("Browser tests (pretend Google and Drive)") in tests.yml are untouched.
 on:
-  # Minutes trim (20 Nov 2026): once per pull request push, and on main. Not twice (push AND pull request) for one commit.
   push:
     branches: [main]
   pull_request:
@@ -31,3 +27,4 @@ jobs:
         run: node tools/gate/gate.mjs --selftest
       - name: Gate checker tests
         run: node --test tests/gate/gate.test.mjs
+

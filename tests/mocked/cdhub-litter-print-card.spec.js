@@ -40,7 +40,7 @@ test('print: litter cards look like kennel cards and list only litters still on 
       { type_key: 'old', label: 'Retired job', target: 'dog', effective_from: '2026-01-01', active: 'false' },
       { type_key: 'clean', label: 'Daily clean', target: 'area', every_days: '1', effective_from: '2026-01-01', active: 'true' },
       { type_key: 'deep', label: 'Deep clean', target: 'area', every_days: '7', effective_from: '2026-01-01', active: 'true' },
-      { type_key: 'social', label: 'Socialisation', target: 'litter', frequency: 'daily', effective_from: '2026-01-01', active: 'true' }
+      { type_key: 'social', label: 'Socialization', target: 'litter', frequency: 'daily', effective_from: '2026-01-01', active: 'true' }
     ]
   };
   tables.subject[0].coat_colour_id = 'cc-1'; tables.subject[0].coat_pattern_id = 'cp-1';
@@ -53,11 +53,11 @@ test('print: litter cards look like kennel cards and list only litters still on 
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
     return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [] } } });
   });
-  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-USER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
   await page.getByRole('button', { name: 'Litter cards' }).click();
   const card = page.locator('.dcard.lcard');
-  await expect(card).toHaveCount(1);                                   // the old litter has no pup left on site
+  await expect(card).toHaveCount(1);
   await expect(card).toHaveAttribute('data-litter', 'lit-new');
   await expect(card.locator('.who b')).toHaveText('Litter of Pretend Dam');
   await expect(card.locator('[data-k="born"]')).toHaveText('Born30 Sep 2026');
@@ -71,8 +71,7 @@ test('print: litter cards look like kennel cards and list only litters still on 
   await expect(page.locator('.sheet')).toHaveClass(/\bper1\b/);
   await page.getByRole('button', { name: '2 per A4' }).click();
   await expect(page.locator('.sheet')).toHaveClass(/\blitters\b.*\bper2\b|\bper2\b.*\blitters\b/);
-  await expect(card.locator('[data-k="jobs"] li')).toHaveText(['Socialisationdaily']);
-  // a litter has no photo: the size-colour frame prints blank, never the word "Photo" (overseer 21 Nov 2026, same as dog cards)
+  await expect(card.locator('[data-k="jobs"] li')).toHaveText(['Socializationdaily']);
   await page.emulateMedia({ media: 'print' });
   const frame = await card.locator('[data-k="photo"]').evaluate((e) => { const st = getComputedStyle(e), r = e.getBoundingClientRect(); return { text: e.textContent.trim(), w: r.width, h: r.height, border: parseFloat(st.borderTopWidth), colour: st.borderTopColor }; });
   expect(frame.text, 'no placeholder word printed').toBe('');
@@ -108,3 +107,4 @@ test('print: litter cards look like kennel cards and list only litters still on 
   expect(margins.length).toBeGreaterThan(0);
   for (const m of margins) expect(m).toMatch(/^0(px)?$/);
 });
+

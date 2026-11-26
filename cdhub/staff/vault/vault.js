@@ -18,11 +18,9 @@
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function inForce(r, t) { var f = String(r.from_date || '').slice(0, 10), e = String(r.to_date || '').slice(0, 10); return (!f || f <= t) && (!e || e >= t); }
 
-  /* can(key): BLD-permission rows when the save script serves them (person row beats role row; at one level no beats
-     yes; judged on today's date). No row for this permission at all: the starting default, role OWNER. */
   function can() {
     var t = today(), rows = S.perm.filter(function (r) { return r.table_name === PERM.table && r.action === PERM.action && inForce(r, t); });
-    if (!rows.length) return S.role === 'OWNER';
+    if (!rows.length) return S.role === 'USER';
     var yes = function (r) { return String(r.allowed).toLowerCase() === 'yes'; };
     var mine = rows.filter(function (r) { return S.me && r.person_id === S.me; });
     if (mine.length) return mine.every(yes);
@@ -71,7 +69,7 @@
     var h = '<h1>' + 'Codes vault' + '</h1>';
     if (S.state === 'start' || S.state === 'reading') h += '<p>Reading…</p>';
     else if (S.state === 'nodevice') h += '<p>Open this on a phone or computer set up with your code.</p><p><a href="../#device">Set up this device</a></p>';
-    else if (S.state === 'refused') h += '<p>Only people the owner allows can open the vault.</p>';
+    else if (S.state === 'refused') h += '<p>Only people the user allows can open the vault.</p>';
     else if (S.state === 'notyet') h += '<p>The vault starts after the save-script update.</p>';
     else if (S.state === 'error') h += '<p role="alert">' + esc(S.msg || 'Something went wrong.') + '</p><p><button type="button" class="btn" data-v="retry">Try again</button></p>';
     else if (S.state === 'first') {
@@ -168,7 +166,7 @@
       hideShown();
       S.sess.show(row).then(function (code) {
         var el = document.getElementById('vShown'); if (!el) return;
-        el.textContent = id + ': ' + code;   // one code at a time, never logged, gone after 30 s
+        el.textContent = id + ': ' + code;
         S.shownTimer = setTimeout(hideShown, SHOW_MS);
       }, function () { S.msg = 'That entry could not be opened.'; draw(); });
     }
@@ -177,3 +175,4 @@
   root.BLDVaultPage = { can: can, state: function () { return S.state; } };
   load();
 })(typeof window !== 'undefined' ? window : this);
+

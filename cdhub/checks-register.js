@@ -42,11 +42,9 @@
       .replace(/\s+([.,;:])/g, '$1').replace(/([.,;:·|])(\s*[.,;:·|])+/g, '$1')
       .replace(/\s{2,}/g, ' ').replace(/^[\s.,;:·|]+|[\s,;:·|]+$/g, '').trim();
   }
-  /* Who did it: a name. A visitor's record says visit:<link id>; that prints as "Visitor (shared link)". */
   function who(s) { s = str(s); return /^visit:/i.test(s) ? 'Visitor (shared link)' : clean(s); }
 
 
-  /* UK date and time of an ISO instant: {date:'YYYY-MM-DD', time:'HH:MM'|''}. A bare date has no time. */
   var FMT = null;
   function london(at) {
     var s = str(at);
@@ -64,17 +62,12 @@
 
   function isNoteFor(r) { return str(r.outcome) === 'note' && !!str(r.note_for_id); }
 
-  /** The months with a record, newest first ('YYYY-MM'). Notes added to another record are not counted. */
   function months(logs) {
     var seen = {};
     (logs || []).forEach(function (r) { if (isNoteFor(r)) return; var d = whenOf(r).date; if (d) seen[d.slice(0, 7)] = 1; });
     return Object.keys(seen).sort().reverse();
   }
 
-  /**
-   * The register lines for one month, oldest first.
-   * opts: { month:'YYYY-MM', types:[check_type rows], typeId: '' (all) | id, subject: function(row) -> name | '' }
-   */
   function build(logs, opts) {
     opts = opts || {};
     var ym = str(opts.month), only = str(opts.typeId), name = typeof opts.subject === 'function' ? opts.subject : function () { return ''; };
@@ -128,7 +121,6 @@
     return out;
   }
 
-  /** A line's value for a column. Blank only where nothing is owed (no detail asked, no note, no action needed). */
   function cell(l, key, iso) {
     if (key === 'date') return l.date ? (iso ? l.date : ymd(l.date)) : NR;
     if (key === 'time') return l.noTime ? NO_TIME : (l.time || NR);
@@ -137,7 +129,6 @@
     return l[key] || NR;
   }
 
-  /** How many lines miss each column that is owed: {key: n}, in column order. */
   function gaps(lines) {
     var g = {};
     lines.forEach(function (l) { COLUMNS.forEach(function (c) { var v = cell(l, c[0]); if (v === NR || v === NO_TIME) g[c[0]] = (g[c[0]] || 0) + 1; }); });
@@ -151,7 +142,6 @@
     return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   }
 
-  /** CSV (UTF-8 with a BOM): header lines, a blank line, then the table. Dates YYYY-MM-DD. */
   function toCsv(head, lines) {
     var out = [
       ['Checks register', str(head.kennel) || NR],
@@ -168,7 +158,6 @@
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  /* Print styles, scoped to the report, for printing inside the page (as Temperatures does): everything else is hidden. */
   var CSS = '#ckrReport{display:none}'
     + '@media print{@page{size:A4 landscape;margin:10mm}body.ckr-printing>*:not(#ckrReport){display:none!important}'
     + 'body.ckr-printing{background:#FFFFFF!important}body.ckr-printing #ckrReport{display:block;color:#111111;font:10px/1.3 system-ui,sans-serif}'
@@ -177,7 +166,6 @@
     + '#ckrReport th{background:#ECEAE6}#ckrReport thead{display:table-header-group}#ckrReport tr{break-inside:avoid}#ckrReport .nr{font-style:italic}'
     + '#ckrReport .sign{margin-top:20px}#ckrReport .sign span{display:inline-block;min-width:220px;border-top:1px solid #111111;margin-right:36px;padding-top:2px}}';
 
-  /** The report's inner HTML (put inside #ckrReport). */
   function reportHtml(head, lines) {
     var g = gaps(lines), gk = COLUMNS.map(function (c) { return c[0]; }).filter(function (k) { return g[k]; });
     return '<h1>Checks register · ' + esc(monthWords(head.month)) + '</h1>'
@@ -199,3 +187,4 @@
   return { NR: NR, NO_TIME: NO_TIME, COLUMNS: COLUMNS, CSS: CSS, clean: clean, months: months, build: build, cell: cell, gaps: gaps,
     toCsv: toCsv, reportHtml: reportHtml, fileName: fileName, monthWords: monthWords };
 }));
+

@@ -1,6 +1,3 @@
-// Web Estate Hub: keywords and ads accounts (Stage 9). Pure: no network, no Drive, no DOM.
-// Keyword rows come from a private sheet tab typed by hand. A source with no rows is "not connected"; a blank or 0
-// position is "no position", never shown as a real rank.
 (function (root, factory) {
   'use strict';
   var api = factory();
@@ -13,7 +10,6 @@
 
   function str(v) { return v === undefined || v === null ? '' : String(v).trim(); }
 
-  // A real position is a positive number. '', 0, '-' or text is null.
   function positionOf(v) {
     var s = str(v);
     if (!/^\d+(\.\d+)?$/.test(s)) return null;
@@ -21,11 +17,6 @@
     return n > 0 ? n : null;
   }
 
-  // manualRows: [{source, keyword, position, url, ads_account, updated}].
-  // Returns one card per SOURCES entry, in that order:
-  //   {source, connected:false, word:'not connected', rows:[]}  or
-  //   {source, connected:true, word:'n keyword(s)', rows:[{keyword, position, position_word, url, ads_account, updated}]}
-  // Rows are sorted best position first; rows with no position go last.
   function keywordCard(manualRows) {
     return SOURCES.map(function (src) {
       var mine = (manualRows || []).filter(function (r) {
@@ -52,7 +43,6 @@
     });
   }
 
-  // Ads-account rows from the Properties tab -> {client, account_label, access_note}.
   function adsAccounts(rows) {
     return (rows || []).filter(function (r) { return r && r.kind === 'ads-account'; }).map(function (r) {
       return {
@@ -65,3 +55,4 @@
 
   return { SOURCES: SOURCES, positionOf: positionOf, keywordCard: keywordCard, adsAccounts: adsAccounts };
 });
+

@@ -13,7 +13,6 @@
   else root.BLDSort = factory();
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  /* [id, label, field, direction]. Ids kept from the old Dogs select ('', name, young, old). */
   var ALL = [
     ['best', 'Best to worst', 'status', 1],
     ['due', 'Due soonest', 'due', 1],
@@ -26,11 +25,9 @@
     ['', 'As on file', null, 0]
   ];
   function has(fields, f) { return !!(fields && fields[f]); }
-  /** The sorts this list can offer, as [id, label] pairs, in the order above. */
   function options(fields) {
     return ALL.filter(function (o) { return !o[2] || has(fields, o[2]); }).map(function (o) { return [o[0], o[1]]; });
   }
-  /** The sort a list opens with. */
   function byDefault(fields) {
     if (has(fields, 'status')) return 'best';
     if (has(fields, 'due')) return 'due';
@@ -38,8 +35,6 @@
     return '';
   }
   function day(v) { var s = String(v == null ? '' : v).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
-  /** A sorted copy. get: {status: row -> rank (0 = best), due/expires/made/dob: row -> ISO date, name: row -> text}.
-      Blanks go last whatever the direction; ties keep their file order. An id the list cannot offer leaves the order alone. */
   function sort(rows, id, get) {
     var o = null; for (var i = 0; i < ALL.length; i++) if (ALL[i][0] === (id || '')) o = ALL[i];
     var list = (rows || []).map(function (r, n) { return { r: r, n: n }; });
@@ -61,3 +56,4 @@
   }
   return { options: options, byDefault: byDefault, sort: sort, ALL: ALL };
 }));
+

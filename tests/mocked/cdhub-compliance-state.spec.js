@@ -1,4 +1,3 @@
-// Compliance mock-up gaps (7 Nov 2026): requirements state, inspections, "What was true on". Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 
@@ -92,3 +91,4 @@ test.describe('CD Hub: Compliance requirements, inspections, as at', () => {
     await expect(page.locator('#asAtNote')).toHaveCount(0);
   });
 });
+

@@ -76,7 +76,7 @@
       });
     }
     var fields = 'nextPageToken,files(id,name,parents,mimeType,size,md5Checksum,modifiedTime,ownedByMe,driveId)';
-    var q = " and 'me' in owners and trashed = false";
+    var q = " and 'me' in users and trashed = false";
     pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "'" + q, pageSize: '1000', fields: fields }, take, tok)
       .then(function () { return pcpAllPages({ corpora: 'user', q: "name contains 'ZZ-DELETE'" + q, pageSize: '200', fields: fields }, take, tok); })
       .then(function () { return pcpAllPages({ corpora: 'user', q: "name contains 'ZZ DELETE'" + q, pageSize: '200', fields: fields }, take, tok); })
@@ -186,7 +186,6 @@
       qRefresh();
     });
   }
-  // The opted-in part of the Personal Drive page: Rename (exact copies from the last scan) and Ready to bin.
   function qBinBlock() {
     var html = '<div data-qbin-block>';
     html += '<ul class="notes"><li>Bin actions allowed for your personal account until you sign out or close this tab.</li><li>Only renames, and moves to the bin after a fresh check. Nothing is deleted for good.</li></ul>';
@@ -237,7 +236,6 @@
     }
     return html + '</div></div>';
   }
-  // Plain words for why a personal file is not ready.
   function qWhy(reason) {
     if (/ledger row/i.test(reason)) return 'Waiting for the tidy bot to log it';
     if (/Ledger could not/i.test(reason)) return 'The log could not be read';
@@ -246,7 +244,6 @@
     if (/RR_|E02|money|protected/i.test(reason)) return 'Protected, never binned';
     return reason;
   }
-  // Tick rules for the two Personal Drive lists (index.html rowAllowed asks here).
   P.allowed = function (group, it) {
     if (group === 'qmark') return qLive() && !nameHasRr(it.name) && !isZeroByte(it) && !isZzFamilyName(it.name);
     if (group === 'qbin') return qLive() && X.Q().ledgerOk && !it.blocked && spellingOf(it.name, PCP_PREFIX) === 'exact' && !nameHasRr(it.name) && !isZeroByte(it) && it.mimeType !== FOLDER_MIME;
@@ -262,3 +259,4 @@
     return (q.candidates || []).filter(function (f) { return !f.blocked; });
   };
 })(window);
+

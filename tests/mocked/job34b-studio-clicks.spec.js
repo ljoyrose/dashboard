@@ -1,7 +1,3 @@
-// JOB 34b (Studio): every-click.spec.js and every-view-access.spec.js crawl the home page, Money and CD Hub but NOT Studio,
-// and job34-studio-flows only follows Studio's links. This adds, for every Studio view: every control has a name,
-// every button changes something when pressed, axe finds nothing (light and dark), and the keys ("/", Escape, Tab) work.
-// Writes go to a pretend upload (nothing real is sent). Invented data only (tests/fixtures/studio/state.js via HUBS.studio).
 const { test, expect, HUBS, go } = require('../fixtures/job34/load');
 const AxeBuilder = require('@axe-core/playwright').default;
 
@@ -9,10 +5,8 @@ const UPLOAD = /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files/;
 const SUBS = ['kits/playbooks', 'kits/packs', 'kits/kits', 'kits/bricks', 'kits/styles', 'kits/formats'];
 const ALL = HUBS.studio.views.concat(['engine', 'asset/sa-make', 'asset/sa-lib', 'asset/sa-rev1'], SUBS);
 const view = (page) => page.locator('#view');
-// axe-core asks the browser for preload hints it never sends: Chrome's own warning, not a page problem.
 const AXE_NOISE = /Couldn't load preload assets/;
 
-// Pretend upload: every request file lands in the pretend Drive, so Undo (trash) finds it.
 async function uploads(page, guard) {
   let n = 0;
   await page.route(UPLOAD, (route) => {
@@ -24,7 +18,6 @@ async function uploads(page, guard) {
   return () => n;
 }
 
-// Tag every visible, enabled button in the view (fixed order, so the same index means the same button after a redraw).
 function tagButtons() {
   document.querySelectorAll('[data-crawl]').forEach((e) => e.removeAttribute('data-crawl'));
   const out = [];
@@ -36,7 +29,6 @@ function tagButtons() {
   });
   return out;
 }
-// Everything a press could change: the address, the page, the header, the html classes, storage, the focus.
 const snap = () => [location.hash, document.getElementById('view').innerHTML, document.querySelector('header').innerHTML, document.documentElement.className,
   document.getElementById('banner').className + document.getElementById('banner').textContent, JSON.stringify(localStorage), document.activeElement && document.activeElement.outerHTML].join('\u0001');
 
@@ -76,11 +68,10 @@ test.describe('JOB 34b Studio: every control', () => {
       const names = await page.evaluate(tagButtons);
       const dead = [];
       for (let i = 0; i < names.length; i++) {
-        // Fresh view each time: leave and come back, so open panels and forms close (hashchange resets them).
         await go(page, v === 'me' ? 'decide' : 'me');
         await go(page, v);
         const now = await page.evaluate(tagButtons);
-        if (now[i] !== names[i]) continue; // an earlier press changed the list (a sent item drops out): skip, not dead
+        if (now[i] !== names[i]) continue;
         const before = await page.evaluate(snap);
         await page.evaluate((k) => document.querySelector(`[data-crawl="${k}"]`).click(), String(i));
         await page.waitForTimeout(120);
@@ -127,8 +118,6 @@ test.describe('JOB 34b Studio: accessibility on every view', () => {
 });
 
 test.describe('JOB 34b Studio: keyboard', () => {
-  // Since house style 3 (#259) Me is the hub Main (Next, Needs you, three numbers) and has no find box of its own, so "/"
-  // there opens the site-wide search (toolkit.js); Decide, Do and Assets keep their find bar and "/" goes to it.
   test('"/" puts the cursor in the find box on Decide, Do and Assets (on Me, the site search); it types into a field as normal', async ({ page, guard }) => {
     await HUBS.studio.open(page, guard);
     for (const v of ['decide', 'do', 'assets']) {
@@ -163,8 +152,6 @@ test.describe('JOB 34b Studio: keyboard', () => {
     await expect(page.locator('#lookBtn')).toHaveAttribute('aria-expanded', 'false');
   });
 
-  // Walk backwards (Shift+Tab) from the first control in the view to the top of the page, so the walk starts from the view
-  // whatever had focus before (the Sign in button that hides itself on sign-in sits last in the header).
   test('Tab reaches every header control (Dashboard, Engine, budget, New, Refresh, Look, Sign out) before the view, in that order', async ({ page, guard }) => {
     await HUBS.studio.open(page, guard);
     await page.evaluate(() => document.querySelector('#view a[href], #view button:not([disabled])').focus());
@@ -196,3 +183,4 @@ test.describe('JOB 34b Studio: keyboard', () => {
     await expect(page.locator('#filtersBtn')).toBeFocused();
   });
 });
+

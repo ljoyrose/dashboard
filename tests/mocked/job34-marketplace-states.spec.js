@@ -1,13 +1,8 @@
 const { tabClick, tabTo } = require('../support/tabs');
-// JOB 34 (group D): Marketplace gaps not proved by marketplace.spec.js, house-look or phone.spec.js.
-// Sign out, unknown address, load errors in plain words, an expired sign-in, Refresh after a failure, a slow read,
-// the drop-off QR window, label sheet Close, the Stock round (shelves, tick, Round saved, no round open),
-// Numbers tile breakdown, phone width on Round and Numbers, keyboard reach. Pretend Google and Sheets only; every row invented.
 const { test, expect, HUBS, go, sheets, sideScroll, tabWalk, SHEETS } = require('../fixtures/job34/load');
 
 const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
 
-// Pretend Sheets answering from `rows`; returns the list of writes (range + values).
 async function book(page, rows) {
   const writes = [];
   page.on('request', (req) => {
@@ -58,7 +53,7 @@ test.describe('Marketplace (JOB 34)', () => {
     [403, 'Request had insufficient authentication scopes.', 'tick every box Google shows'],
   ]) {
     test(`a ${status} "${message}" when reading says what to do in plain words`, async ({ page, allowedConsole }) => {
-      allowedConsole.push(new RegExp('status of ' + status)); // the browser logs the refused request; the banner is the handling
+      allowedConsole.push(new RegExp('status of ' + status));
       await page.route(SHEETS, (route) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ error: { code: status, message } }) }));
       await page.goto('marketplace/');
       await page.locator('#view [data-action="signin"]').click();
@@ -89,13 +84,11 @@ test.describe('Marketplace (JOB 34)', () => {
     await expect(page.locator('#view [data-hm="next"]')).toBeVisible();
   });
 
-  // J34-F70 (fixed in marketplace/index.html).
   test('J34-F70 while the list is being read after sign-in, the page says it is reading (not the sign-in card again)', async ({ page }) => {
     await page.route(SHEETS, async (route) => { await new Promise((r) => setTimeout(r, 2500)); route.fulfill({ status: 200, contentType: 'application/json', body: '{"values":[]}' }); });
     await page.goto('marketplace/');
     await page.locator('#view [data-action="signin"]').click();
     await page.waitForTimeout(400);
-    // Read once, mid-load: today the header says "Sign in" and the view is the sign-in card for the whole read.
     expect(await page.locator('#signin').getAttribute('aria-label'), 'header button mid-read').toBe('Sign out');
     expect(await page.locator('#view').innerText(), 'view mid-read').not.toContain('Sign in to see what needs you');
   });
@@ -187,3 +180,4 @@ test.describe('Marketplace (JOB 34)', () => {
     expect(await tabTo(page, 'nav.tabs a[data-nav="insights"]', 70), 'Tab reaches Insights under More').toBe(true);
   });
 });
+

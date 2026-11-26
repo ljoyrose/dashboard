@@ -1,5 +1,3 @@
-// Stage 13: the enquiries page's pure logic. Run: node --test tests/enquiries/page.test.js
-// Invented rows only (enquiries/examples.js). Nothing is sent: taps are request files, the page keeps its own copy.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -125,3 +123,4 @@ test('example rows are invented: example.test addresses and 07700 900xxx numbers
   for (const m of s.match(/\+44\d{10}/g) || []) assert.match(m, /^\+447700900\d{3}$/);
   assert.doesNotMatch(s, /licence number|\b[A-Z]{2,4}\d{3,}\b/i);
 });
+

@@ -21,7 +21,6 @@ async function go(page, v) {
   await page.evaluate((h) => { location.hash = '#/' + h; }, v);
   await expect(page.locator('#view')).toHaveAttribute('data-view', v.split('/')[0]);
 }
-// Wait until every CSS transition has finished (the tab colour bar widens over .15s): the shared helper.
 const { settle } = require('../support/settle');
 const shown = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
 
@@ -38,7 +37,6 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
           const norm = (c) => { const d = document.createElement('i'); d.style.color = c; document.body.appendChild(d); const v = getComputedStyle(d).color; d.remove(); return v; };
           const ink = norm(root.getPropertyValue('--ink')), muted = norm(root.getPropertyValue('--muted')), frameInk = norm(root.getPropertyValue('--frame-ink')), ctl = norm(root.getPropertyValue('--ctl'));
           const what = (e) => (e.id ? '#' + e.id : e.tagName.toLowerCase() + '.' + String(e.className && e.className.baseVal !== undefined ? e.className.baseVal : e.className).replace(/\s+/g, '.')) + ' "' + (e.textContent || '').trim().slice(0, 24) + '"';
-          // 3: text size, weight and colour (no coloured words) on every element that holds text.
           document.querySelectorAll('body *').forEach((e) => {
             if (!seen(e) || e.closest('svg')) return;
             if (!Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) return;
@@ -47,7 +45,6 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
             if (!['400', '600'].includes(cs.fontWeight)) out.push('weight ' + cs.fontWeight + ': ' + what(e));
             if (![ink, muted, frameInk].includes(cs.color)) out.push('coloured words ' + cs.color + ': ' + what(e));
           });
-          // 4: one radius. Corners are 12px; circles (50%) only on status dots / the (i) ring; count pills 11px.
           document.querySelectorAll('body *').forEach((e) => {
             if (!seen(e) || e.closest('svg')) return;
             const r = getComputedStyle(e).borderTopLeftRadius;
@@ -59,7 +56,6 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
             const ok = tabShape || (r === '12px' && !tabN) || (r === '50%' && (cls.contains('dot') || cls.contains('info')));
             if (!ok) out.push('radius ' + r + ': ' + what(e));
           });
-          // 1: pressables rest on the same clear line, 1px, 12px, 36px+, 14px 600; never ink at rest.
           document.querySelectorAll(PRESS).forEach((e) => {
             if (!seen(e)) return;
             const cs = getComputedStyle(e), inHeader = !!e.closest('header');
@@ -82,7 +78,6 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
             if (cs.borderTopWidth !== '1px') out.push('count line: ' + what(e));
             if (cs.fontSize !== '14px') out.push('count words ' + cs.fontSize + ': ' + what(e));
           });
-          // 2: date pills wear a 1px ring; late = rose, soon = amber, plain = the control line.
           const rose = norm(root.getPropertyValue('--r-risk')), amber = norm(root.getPropertyValue('--r-warn'));
           document.querySelectorAll('.date').forEach((e) => {
             if (!seen(e)) return;
@@ -155,7 +150,6 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
         await settle(el);
         const got = await el.evaluate((e, kind) => {
           const r = e.getBoundingClientRect(), cs = getComputedStyle(e), root = getComputedStyle(document.documentElement);
-          // Expected colours, resolved by the browser itself through a probe element.
           const probe = (prop, val, host) => { const d = document.createElement('i'); d.style[prop] = val; (host || document.body).appendChild(d); const out = getComputedStyle(d)[prop]; d.remove(); return out; };
           const want = kind === 'tab'
             ? { line: null, fill: probe('backgroundColor', 'var(--card)') }
@@ -173,7 +167,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
           continue;
         }
         expect(got.os, `${where} draws no line on hover`).toBe('none');
-        expect(got.bg, `${where} hover is the pale grey fill (Lisa, 12 Nov 2026)`).toBe(got.want.fill);
+        expect(got.bg, `${where} hover is the pale grey fill (User, 12 Nov 2026)`).toBe(got.want.fill);
         expect(restBg, `${where} rests without that fill`).not.toBe(got.want.fill);
       }
     });
@@ -184,7 +178,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
     await go(page, 'todo');
     const look = (sel) => page.locator(sel).evaluate((e) => { const cs = getComputedStyle(e); return [cs.outlineStyle, cs.outlineWidth, cs.outlineOffset, cs.outlineColor, cs.backgroundColor]; });
     const sub = await look('.subnav a[aria-current="page"]');
-    await page.mouse.move(0, 0); // nothing hovered: the bar must be wide because it is selected
+    await page.mouse.move(0, 0);
     await settle(page.locator('nav.main a[aria-current="page"]'));
     const tab = await page.locator('nav.main a[aria-current="page"]').evaluate((e) => {
       const d = document.createElement('i'); d.style.backgroundColor = 'var(--card)'; e.appendChild(d); const card = getComputedStyle(d).backgroundColor; d.remove();
@@ -203,7 +197,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
 
   test('read-only pills (flags, dates, counts, the read stamp) have no hover', async ({ page }) => {
     await open(page, 'light');
-    await go(page, 'todo'); // Main holds no flags or date pills now; To-do has all three
+    await go(page, 'todo');
     for (const sel of ['#view .tag', '#view .date', '#view .cnt', '#readStamp']) {
       const el = page.locator(sel).first();
       await el.scrollIntoViewIfNeeded();
@@ -234,7 +228,7 @@ test.describe('Money Hub look: contrast (text 4.5:1, control lines 3:1)', () => 
       for (const v of ['now', 'e/TESTCO', 'control']) {
         await go(page, v);
         const bad = await page.evaluate(() => {
-          const rgb = (c) => { const n = c.match(/[\d.]+/g).map(Number); return /^color\(srgb/.test(c) ? n.map((x, i) => (i < 3 ? x * 255 : x)) : n; }; // color-mix() tints come back as color(srgb 0-1)
+          const rgb = (c) => { const n = c.match(/[\d.]+/g).map(Number); return /^color\(srgb/.test(c) ? n.map((x, i) => (i < 3 ? x * 255 : x)) : n; };
           const L = (c) => { const [r, g, b] = rgb(c).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
           const ratio = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
           const bgOf = (e, self) => { for (let n = self ? e : e.parentElement; n; n = n.parentElement) { const c = getComputedStyle(n).backgroundColor; const a = rgb(c); if (a.length < 4 || a[3] > 0.5) return c; } return getComputedStyle(document.body).backgroundColor; };
@@ -301,18 +295,17 @@ test.describe('Money Hub look: control line and count pills hold in every look',
 test.describe('Money Hub: summary strip, Next card and friendly empty states', () => {
   test('Money opens with On track / Needs you / Overdue, and Main has one Next card with one button', async ({ page }) => {
     await open(page, 'light');
-    // The trio moved from Main to the top of Money (Hub Mains, 2 Nov 2026).
     await go(page, 'money');
     const three = page.locator('#view .three');
     await expect(three.locator('.sum')).toHaveText([/^\d+\s*On track/, /^\d+\s*Needs you/, /^\d+\s*Overdue/]);
-    await expect(three.locator('[data-sum="over"] .num')).toHaveText('2'); // the overdue filing and the overdue tax
+    await expect(three.locator('[data-sum="over"] .num')).toHaveText('2');
     await expect(three.locator('[data-sum="need"] .num')).toHaveText('2');
     await go(page, 'now');
     const next = page.locator('#view [data-hm="next"]');
     await expect(next).toContainText('Sample overdue filing');
     await expect(next.locator('a.btn')).toHaveCount(1);
     await next.locator('a.btn').click();
-    await expect(page).toHaveURL(/#\/e\/TESTCO$/); // a dated row opens its entity's Dates card
+    await expect(page).toHaveURL(/#\/e\/TESTCO$/);
   });
 
   test('tab counts: needs-you counts wear the rose ring, totals the grey one', async ({ page }) => {
@@ -328,7 +321,6 @@ test.describe('Money Hub: summary strip, Next card and friendly empty states', (
   test('an empty list says so in plain words with a green-ring check', async ({ page, guard }) => {
     const f = guard.world.files.find((x) => x.name === 'MON-REGISTER.csv');
     f.content = f.content.split('\n').filter((l, i) => i === 0 || !/^R\d/.test(l)).join('\n');
-    // Yours also lists every Needs you item now (Hub Mains, 2 Nov 2026), so nothing may be overdue or due either.
     const dates = guard.world.files.find((x) => x.name === 'MON-DATES.csv');
     dates.content = dates.content.split('\n').filter((l) => !/^D\d/.test(l)).join('\n');
     const liab = guard.world.files.find((x) => x.id === 'l-co-LIABILITIES.csv');
@@ -344,3 +336,4 @@ test.describe('Money Hub: summary strip, Next card and friendly empty states', (
     expect(ring).toBe('1px');
   });
 });
+

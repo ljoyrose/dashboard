@@ -1,5 +1,3 @@
-// Actions minutes card settings (JOB 46, 30 Oct 2026). config.js holds only the Drive folder, the file name, the free
-// allowance, the amber/red lines and short labels: never a token, never a real repo name.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -22,10 +20,11 @@ test.describe('Actions minutes settings', () => {
     expect(a.usageUrl).toMatch(/^https:\/\/github\.com\/settings\/billing/);
   });
 
-  test('the block holds no token and no owner/repo name', () => {
+  test('the block holds no token and no user/repo name', () => {
     const block = SRC.slice(SRC.indexOf('actionsMinutes:'), SRC.indexOf('marketplace: {'));
     expect(block).not.toMatch(/gh[pousr]_|github_pat_|token\s*:/i);
     expect(block).not.toMatch(/ljoyrose\//);
     load().actionsMinutes.repoLabels.forEach((l) => expect(l.length).toBeLessThanOrEqual(20));
   });
 });
+

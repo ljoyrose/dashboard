@@ -1,8 +1,5 @@
 name: Teeth check (weekly)
 
-# Proves the tests can still FAIL. Makes about eight deliberate breaks on a temporary copy of the site and
-# expects the tests to go red each time. If a break goes unnoticed, this run turns red and opens an issue.
-# Separate from the main suite: it can never block a merge. No secrets.
 on:
   schedule:
     - cron: '43 6 * * 2' # Tuesdays 06:43 UTC
@@ -58,3 +55,4 @@ jobs:
         run: node tests/support/report-issue.js --state green --label teeth-red
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

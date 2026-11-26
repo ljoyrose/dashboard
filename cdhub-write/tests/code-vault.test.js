@@ -15,21 +15,21 @@ function env(on = true) {
 }
 const post = (e, body) => JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify(body) } }).getContent());
 
-test('a sealed row saves for an owner code; staff codes and a switched-off table are refused', () => {
+test('a sealed row saves for an user code; staff codes and a switched-off table are refused', () => {
   const e = env();
-  const r = save(e, req(e, { code: e.codes.owner, table: 'code_vaults', fields: ROW }));
+  const r = save(e, req(e, { code: e.codes.user, table: 'code_vaults', fields: ROW }));
   assert.equal(r.ok, true, JSON.stringify(r));
   const lines = e.file('BLD-code_vaults.csv')[0].content.trim().split(/\r?\n/);
   assert.equal(lines.length, 2);
   assert.match(lines[1], /,vault-check,(ab)+,(ab)+,(ab)+,PBKDF2-SHA256\/AES-GCM-256,600000,\d{4}-\d{2}-\d{2},,/);
   assert.equal(save(e, req(e, { code: e.codes.staff, table: 'code_vaults', fields: Object.assign({}, ROW, { cipher: hex(31) }) })).ok, false);
   const off = env(false);
-  assert.equal(save(off, req(off, { code: off.codes.owner, table: 'code_vaults', fields: ROW })).ok, false);
+  assert.equal(save(off, req(off, { code: off.codes.user, table: 'code_vaults', fields: ROW })).ok, false);
 });
 
 test('anything that is not sealed hex is refused: a plain code, a weak seal, a strange id', () => {
   const e = env();
-  const bad = (f) => save(e, req(e, { code: e.codes.owner, table: 'code_vaults', fields: Object.assign({}, ROW, f) }));
+  const bad = (f) => save(e, req(e, { code: e.codes.user, table: 'code_vaults', fields: Object.assign({}, ROW, f) }));
   assert.equal(bad({ cipher: 'TESTCODE23' }).ok, false);
   assert.equal(bad({ kdf_iter: '1000' }).ok, false);
   assert.equal(bad({ kdf: 'none' }).ok, false);
@@ -40,12 +40,12 @@ test('anything that is not sealed hex is refused: a plain code, a weak seal, a s
 
 test('code check: match true only for the right code against its own id; nothing logged or echoed', () => {
   const e = env();
-  const logs0 = e.logs.length;   // set-up logs (adminAddStaffCode prints a new code to its owner) are not part of this check
-  const chk = (typed, id, code = e.codes.owner) => post(e, { v: 1, action: 'code_check', code, code_id: id, typed });
+  const logs0 = e.logs.length;
+  const chk = (typed, id, code = e.codes.user) => post(e, { v: 1, action: 'code_check', code, code_id: id, typed });
   const yes = chk(e.codes.staff, e.ids.staff);
   assert.deepEqual(yes, { ok: true, result: { match: true } });
   assert.equal(chk(' ' + e.codes.staff + ' ', e.ids.staff).result.match, true);
-  assert.equal(chk(e.codes.staff, e.ids.owner).result.match, false, 'the right code under another person is a no');
+  assert.equal(chk(e.codes.staff, e.ids.user).result.match, false, 'the right code under another person is a no');
   assert.equal(chk('WRONGCODE9', e.ids.staff).result.match, false);
   assert.equal(chk(e.codes.staff, e.ids.staff, e.codes.staff).code, 'NOT_ALLOWED', 'staff codes cannot use the vault');
   assert.equal(chk(e.codes.staff, 'nope').code, 'INVALID');
@@ -56,6 +56,7 @@ test('code check: match true only for the right code against its own id; nothing
 test('code check misses count towards the sign-in limit', () => {
   const e = env();
   let last;
-  for (let i = 0; i < 30; i++) { last = post(e, { v: 1, action: 'code_check', code: e.codes.owner, code_id: e.ids.staff, typed: 'WRONG' + i }); if (!last.ok) break; }
+  for (let i = 0; i < 30; i++) { last = post(e, { v: 1, action: 'code_check', code: e.codes.user, code_id: e.ids.staff, typed: 'WRONG' + i }); if (!last.ok) break; }
   assert.equal(last.code, 'TOO_MANY_TRIES');
 });
+

@@ -1,6 +1,3 @@
-// Small shared helpers used by all three pages.
-// Google reads retry by themselves when Google says "too many requests" or has a hiccup:
-// up to 4 tries, waiting about 1s, 2s, then 4s (plus a little random extra so tabs do not retry in step).
 (function (root) {
   'use strict';
   var TRIES = 4;
@@ -17,17 +14,12 @@
   // "2 late", "1 down", "3 stuck", "4 failed"; a grey count is "N waiting" (or the page's own calm word).
   // why: true (= 'late') | 'late' | 'overdue' | 'down' | 'expired' | 'stuck' | 'failed'; anything else, or a count of 0 or "–", is grey.
   function isWhy(w) { return typeof w === 'string' && /^(late|overdue|down|expired|stuck|failed)$/.test(w); }
-  /** The word for a count ('late', 'down'...), or '' when it stays grey. */
   function countWhy(n, why) { var w = why === true ? 'late' : isWhy(why) ? why : ''; return w && n != null && n !== '' && n !== '–' && String(n) !== '0' && n !== false ? w : ''; }
-  /** 'late', 'broken' or '' (grey). */
   function countKind(n, why) { var w = countWhy(n, why); return !w ? '' : /^(late|overdue)$/.test(w) ? 'late' : 'broken'; }
-  /** The class to add to a count: ' need' (rose ring), ' broken' (black badge) or ''. */
   function countCls(n, why) { var k = countKind(n, why); return k === 'late' ? ' need' : k === 'broken' ? ' broken' : ''; }
-  /** What a screen reader hears for a count: "2 stuck" when late or broken, otherwise "2 <calm>" ("2 waiting" by default). */
   function countSay(n, why, calm) { return n + ' ' + (countWhy(n, why) || calm || 'waiting'); }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
-  // 429, any 5xx, and a 403 whose reason is a rate limit. Other 403s (no access, API off) are final.
   function shouldRetry(res) {
     if (res.status === 429 || res.status >= 500) return Promise.resolve(true);
     if (res.status !== 403) return Promise.resolve(false);
@@ -38,7 +30,6 @@
     }, function () { return false; });
   }
 
-  // fetch() for Google reads. Resolves with the last response (good or bad); never retries a write.
   function googleFetch(url, init) {
     var method = String((init && init.method) || 'GET').toUpperCase();
     var attempt = 0;
@@ -55,14 +46,10 @@
     return go();
   }
 
-  // True when an error means Google was rate-limiting (after the retries ran out).
   function isBusy(status, reason) {
     return status === 429 || (status === 403 && /rateLimit|userRateLimit/i.test(String(reason || '')));
   }
 
-  // ---- House look: follow the Look saved in Studio (localStorage 'dash-look', read only here; Studio's Look menu writes it) ----
-  // { bg: warm|cool, sel: line|soft, mode: device|light|dark } -> html.look-cool, html.sel-soft, [data-theme]. tokens.css and
-  // house.css do the rest, so every hub follows one setting. Runs at once (this file loads in <head>) and when another tab changes it.
   function applyLook() {
     var doc = root.document; if (!doc) return;
     var o = {}; try { o = JSON.parse(root.localStorage.getItem('dash-look') || '{}') || {}; } catch (e) { o = {}; }
@@ -84,7 +71,7 @@
     palette: '<path d="M12 21a9 9 0 0 1 0-18c4.97 0 9 3.58 9 8 0 1.06-.47 2.08-1.32 2.83-.84.75-1.99 1.17-3.18 1.17H14a2 2 0 0 0-1 3.75A1.3 1.3 0 0 1 12 21"/><circle cx="8.5" cy="10.5" r="1"/><circle cx="12.5" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/>',
     logout: '<path d="M14 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-2"/><path d="M9 12h12l-3-3"/><path d="M18 15l3-3"/>',
     plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
-    filter: '<path d="M4 6h16M7 12h10M10 18h4"/>', // the Filter button of a find bar (Dashboard Tech, TECH-HUB-1)
+    filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
     apps: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/><path d="M14 7h6M17 4v6"/>',
     // The bottom tabs' icons (the owner's picks, 2 Nov): <span class="hic"><svg class="hi"><use href="#hi-t-NAME"/></svg></span>.
     't-main': '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
@@ -104,7 +91,6 @@
     't-more': '<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>',
     't-temp': '<path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0z"/><path d="M10 9h4"/>',
     't-print': '<path d="M17 17h2a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2M17 9V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4M7 13h10v8H7z"/>',
-    // Status icons for badges (quality review, 12 Nov 2026: house icons, not emoji). Tabler shapes, the same stroke.
     's-check': '<circle cx="12" cy="12" r="9"/><path d="M9 12l2 2l4-4"/>',
     's-x': '<circle cx="12" cy="12" r="9"/><path d="M10 10l4 4m0-4l-4 4"/>',
     's-alert': '<path d="M12 9v4"/><path d="M10.4 3.6l-8.1 13.5a1.9 1.9 0 0 0 1.6 2.9h16.2a1.9 1.9 0 0 0 1.6-2.9l-8.1-13.5a1.9 1.9 0 0 0-3.2 0z"/><path d="M12 16h.01"/>',
@@ -121,9 +107,7 @@
       Object.keys(ICONS).map(function (k) { return '<symbol id="hi-' + k + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICONS[k] + '</symbol>'; }).join('') + '</svg>';
     doc.body.insertBefore(d.firstChild, doc.body.firstChild);
   }
-  /** The HTML of one icon from the top bar's set (hidden from screen readers: the button carries the name). */
   function icon(name) { return '<svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-' + name + '"/></svg>'; }
-  /** One top-bar button that is Sign in (a word button, the one call to action) when signed out and the Sign out icon when signed in. */
   function signButton(b, signedIn) {
     if (!b) return;
     b.setAttribute('data-action', signedIn ? 'signout' : 'signin');
@@ -150,7 +134,6 @@
     else if (key === 'mode') { if (val === 'light' || val === 'dark') r.setAttribute('data-theme', val); else r.removeAttribute('data-theme'); }
     else if (key === 'help') r.classList.toggle('show-help', val === 'on');
   }
-  // The page's own Sign out in the top bar, when it is there (signed in). Hidden only by the phone rule counts as there.
   function headSignout() {
     var doc = root.document, b = doc.querySelector('header [data-action="signout"], header [data-signout]');
     return b && !b.disabled && !b.hidden && !b.closest('.hidden, [hidden]') ? b : null;
@@ -159,7 +142,6 @@
     var e = root.document.querySelector('header [data-house-read]'); if (!e || e.closest('.hidden, [hidden]')) return '';
     return String(e.getAttribute('data-read') || e.textContent || '').trim();
   }
-  /** The phone-only part of a Look menu: the read time and Sign out (Studio adds it to its own fuller menu). */
   function lookExtras() {
     var t = headRead(), out = headSignout();
     return (t ? '<p class="house-mread house-phone" data-house-mread>' + escHtml(t) + '</p>' : '') +
@@ -229,7 +211,6 @@
     if (!rows.length) return;
     centreName();
     if (root.ResizeObserver) {
-      // The row and everything in it except the name (its own padding would start a loop): buttons that show, hide or change words.
       var ro = new root.ResizeObserver(centreNameSoon);
       Array.prototype.forEach.call(rows, function (row) { ro.observe(row); Array.prototype.forEach.call(row.children, function (c) { if (c.tagName !== 'H1') ro.observe(c); }); });
     }
@@ -253,14 +234,12 @@
   function shutMores(except, back) {
     Array.prototype.forEach.call(root.document.querySelectorAll('[data-house-more][aria-expanded="true"]'), function (b) { if (b !== except) showMore(b, false, back); });
   }
-  /** The HTML of one bottom tab: { href | go, nav, slot (0-8), icon (t-NAME), label, n (count id), need (true = late, rose ring; or the word, e.g. 'down' = broken, black badge: see countWhy) }. */
   function tabHtml(t) {
     var inner = '<span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true">' + icon(t.icon) + '</span><span class="htl">' + escHtml(t.label) + '</span>' +
       (t.count != null ? ' <span class="n' + countCls(t.count, t.need) + '"' + (t.n ? ' id="' + t.n + '"' : '') + (isWhy(t.need) ? ' data-why="' + t.need + '"' : '') + '>' + escHtml(t.count || '') + '</span>' : '');
     return t.href ? '<a class="ht" data-slot="' + t.slot + '" href="' + t.href + '"' + (t.nav ? ' data-nav="' + t.nav + '"' : '') + '>' + inner + '</a>'
       : '<button type="button" class="ht" data-slot="' + t.slot + '"' + (t.go ? ' data-go="' + t.go + '"' : '') + '>' + inner + '</button>';
   }
-  /** The HTML of More (always the last tab) and its menu; items is the menu's own HTML (links or buttons). */
   function moreHtml(id, items) {
     return '<div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="' + id + '">' +
       '<span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true">' + icon('t-more') + '</span><span class="htl">More</span></button>' +
@@ -282,7 +261,6 @@
     if (root.addEventListener) root.addEventListener('hashchange', function () { shutMores(null); });
   }
 
-  // ---- Tab names say the count, visible words first ("Do 3 waiting" / "Do 1 late" / "Do 1 down": the count's data-why, see DashKit.count; a phone shows only a dot), and --house-tab-fit = the longest word's room, so every phone tab is one size (house.css).
   function nameTabs(nav) {
     var fit = 0;
     Array.prototype.forEach.call(nav.querySelectorAll(':scope > .ht, :scope > .ht-more > .ht'), function (t) {
@@ -290,7 +268,7 @@
       s = root.getComputedStyle(w); fit = Math.max(fit, Math.ceil(w.scrollWidth + parseFloat(s.marginLeft) * 2));
       if (!n) return;
       var c = n.textContent.trim(), name = (w.querySelector(':scope > .htl-long') || w).textContent.trim() + (c ? ' ' + c + (n.classList.contains('need') || n.classList.contains('broken') ? ' ' + (isWhy(n.getAttribute('data-why')) ? n.getAttribute('data-why') : n.classList.contains('broken') ? 'broken' : 'late') : ' waiting') : '');
-      var lw = w.querySelector(':scope > .htl-long'), sw = w.querySelector(':scope > .htl-short');   // phone shows the short word: the name starts with it, then keeps the long one
+      var lw = w.querySelector(':scope > .htl-long'), sw = w.querySelector(':scope > .htl-short');
       if (lw && sw && root.getComputedStyle(lw).display === 'none') name = sw.textContent.trim() + name.slice(lw.textContent.trim().length) + ' (' + lw.textContent.trim() + ')';
       if (t.getAttribute('aria-label') !== name) t.setAttribute('aria-label', name);
     });
@@ -302,14 +280,11 @@
       nameTabs(nav);
       if (root.MutationObserver) new root.MutationObserver(function () { nameTabs(nav); }).observe(nav, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'aria-label'] });
     });
-    if (root.document.fonts) root.document.fonts.ready.then(all);   // words change width when the web font arrives
+    if (root.document.fonts) root.document.fonts.ready.then(all);
     root.addEventListener('resize', all);
   }
   if (root.document) { if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', watchTabs); else watchTabs(); }
 
-  // ---- Phone filters: one calm row. Filter groups (.house-filters, each with an id) fold behind ONE Filter button
-  // (.house-fbtn, data-house-filter="<id> [<id>...]") on a phone; on a desktop the button is hidden and the chips show inline (house.css).
-  // The open / shut state survives the page redrawing its chips (pages redraw on every tap).
   var openFilters = {};
   function syncFilters() {
     var doc = root.document; if (!doc) return;
@@ -331,19 +306,14 @@
       new root.MutationObserver(syncFilters).observe(root.document.body, { childList: true, subtree: true });
     });
   }
-  // The Filter button's own HTML: the word, and how many filters are on (a count pill; none when 0).
   function filterButton(id, on) {
     return '<button class="btn house-fbtn" type="button" data-house-filter="' + id + '" aria-controls="' + id + '" aria-expanded="' + !!openFilters[id] + '">Filter' + (on ? '<span class="cnt">' + on + '</span>' : '') + '</button>';
   }
 
-  // ---- Site root (where toolkit.js lives), so the same keys and install code work on all three pages ----
   var SITE = (function () {
     var s = root.document && root.document.currentScript;
     try { return new URL('./', s && s.src ? s.src : root.location.href).href; } catch (e) { return './'; }
   })();
-  // An address that belongs to this site, as a path on the current copy. The old pages host and a /dashboard/
-  // prefix are rewritten so a tap stays here. A hash on this document stays a hash (a full load of index.html
-  // plus a hash re-parses every icon and can recurse until the tab runs out of memory).
   var OLD_HOST = 'ljoyrose.github.io';
   function localHref(href) {
     var h = String(href == null ? '' : href).trim();
@@ -370,14 +340,10 @@
     if (next && next !== a.getAttribute('href')) a.setAttribute('href', next);
   }, true);
 
-  // ---- Phone install (service worker keeps page files only, never Drive data or the token) ----
   if (root.navigator && 'serviceWorker' in root.navigator && root.isSecureContext) {
     root.addEventListener('load', function () { root.navigator.serviceWorker.register(SITE + 'sw.js').catch(function () { /* install is optional */ }); });
   }
 
-  // ---- "Dashboard" button (top right of every page that is not the home page) ----
-  // Hub pages open in their own tab. If this tab was opened from the dashboard (same site), bring that tab
-  // to the front and close this one. Otherwise just go to the dashboard in this tab.
   function backHome(e) {
     var o = null;
     try { o = root.opener; } catch (x) { o = null; }
@@ -386,7 +352,6 @@
         if (e) e.preventDefault();
         o.focus();
         root.close();
-        // A phone or an installed app may refuse to close this tab: then the tap would do nothing, so go to the dashboard here.
         root.setTimeout(function () { if (!root.closed) root.location.href = SITE; }, 400);
         return true;
       }
@@ -398,8 +363,6 @@
     if (b && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) backHome(e);
   });
 
-  // ---- Icon-font fallback: a few pages draw icons with the Tabler icon font from a CDN. If that font does not arrive, a button with
-  // only an icon would show nothing, so it shows its name (from aria-label or title) as a word instead. Never runs when icons draw.
   function iconFontMissing() {
     var d = root.document, p = d.createElement('i'); p.className = 'ti ti-check'; p.style.cssText = 'position:absolute;left:-99px;top:0';
     d.body.appendChild(p); var c = root.getComputedStyle(p, '::before').content, w = p.getBoundingClientRect().width; d.body.removeChild(p);
@@ -455,20 +418,17 @@
     return foldMem;
   }
   function foldSave(k, v) {
-    var m = foldStore(); delete m[k]; if (v != null) m[k] = v;   // the newest goes last; the oldest go first past FOLD_MAX
+    var m = foldStore(); delete m[k]; if (v != null) m[k] = v;
     var ks = Object.keys(m); while (ks.length > FOLD_MAX) delete m[ks.shift()];
     try { root.localStorage.setItem(FOLD_KEY, JSON.stringify(m)); } catch (e) { /* private window: the fold still works on this page */ }
   }
   function foldPhone() { return !!(root.matchMedia && root.matchMedia('(max-width: 767.98px)').matches); }
   function foldPage() { var h = String(root.location.hash || '').split('?')[0]; return root.location.pathname + (h || '#'); }
-  // The heading's own words (not its count, pills or icons): the button's name and the remembered key.
   function foldName(h) {
     var s = '';
     (function walk(n) { for (var x = n.firstChild; x; x = x.nextSibling) { if (x.nodeType === 3) s += x.nodeValue; else if (x.nodeType === 1 && !x.matches(FOLD_NOTNAME)) walk(x); } })(h);
     return s.replace(/\s+/g, ' ').trim();
   }
-  // The heading row: one of the card's first two parts (our own button aside) that is an h2 / h3 / h4 or holds one as its own child.
-  // A short line before it (a label line, a mark) stays in view with it.
   function foldHead(c) {
     for (var k = c.firstElementChild, n = 0; k && n < 2; k = k.nextElementSibling) {
       if (k.classList.contains('house-fold') || k.getAttribute('aria-hidden') === 'true') continue;
@@ -498,7 +458,6 @@
       b = root.document.createElement('button');
       b.type = 'button'; b.className = 'house-fold'; b.setAttribute('data-house', 'text'); b.innerHTML = foldIcon();
     }
-    // In a heading row that is already a flex row, the chevron is its last part; otherwise it sits over the row's right end.
     if (inRow) { if (b.parentNode !== row || b !== row.lastElementChild) row.appendChild(b); }
     else if (b.parentNode !== c || b.nextElementSibling !== row) c.insertBefore(b, row);
     b.classList.toggle('house-fold-abs', !inRow);
@@ -506,7 +465,6 @@
     if (inRow) { b.style.top = ''; b.style.right = ''; c.classList.remove('house-fold-rel'); hd.h.classList.add('house-fold-h'); }
     else {
       if (!c.classList.contains('house-fold-rel') && root.getComputedStyle(c).position === 'static') c.classList.add('house-fold-rel');
-      // Level with the heading's first line, at the card's inner right edge (read from the drawn page; kept while it is not drawn).
       var ccs = root.getComputedStyle(c), hcs = root.getComputedStyle(hd.h), hr = hd.h.getBoundingClientRect(), cr = c.getBoundingClientRect();
       if (hr.height && cr.height) {
         var bh = b.offsetHeight || 36, lh = parseFloat(hcs.lineHeight) || parseFloat(hcs.fontSize) * 1.3 || bh;
@@ -524,7 +482,6 @@
     setAttr(b, 'aria-label', 'Fold ' + (name || 'this section'));
     foldLists(c, key, phone && !folded);
   }
-  // Phone: a list of more than 5 rows shows its first 3 rows and "+N more" (the rest open with one tap, remembered).
   function foldLists(c, key, phone) {
     var n = 0;
     Array.prototype.forEach.call(c.querySelectorAll('ul, ol'), function (l) {
@@ -532,7 +489,7 @@
       var lis = Array.prototype.filter.call(l.children, function (x) { return x.tagName === 'LI'; }), lk = key + '|rows' + (n++);
       var more = l.nextElementSibling && l.nextElementSibling.classList.contains('house-fold-more') ? l.nextElementSibling : null;
       var on = phone && lis.length > FOLD_ROWS && foldStore()[lk] !== 1;
-      if (on && !more) {   // only a list of rows (stacked) folds, never a line of chips; it must be drawn to tell
+      if (on && !more) {
         var r = lis.slice(0, FOLD_SHOW).map(function (x) { return x.getBoundingClientRect(); });
         on = r[2].height > 0 && r[1].top >= r[0].bottom - 1 && r[2].top >= r[1].bottom - 1;
       }
@@ -568,7 +525,6 @@
     foldSet(c, b.getAttribute('aria-expanded') === 'true');
   }
   if (root.document) {
-    // Capture, so a page's own click handlers on the card never also act on a fold.
     root.document.addEventListener('click', function (e) {
       var t = e.target; if (!t || !t.closest) return;
       var b = t.closest('.house-fold');
@@ -583,15 +539,14 @@
       }
       if (e.button !== 0 || e.defaultPrevented) return;
       var row = t.closest('[data-fold-row]'); if (!row || t.closest(FOLD_HOT)) return;
-      var c = row.parentNode; if (!c || !c.matches('[data-fold-box]') || c.closest('[data-open-row]')) return;   // a row that opens its item keeps doing that
+      var c = row.parentNode; if (!c || !c.matches('[data-fold-box]') || c.closest('[data-open-row]')) return;
       if (root.getSelection && String(root.getSelection())) return;   // selecting words, not folding
       var fb = c.querySelector(':scope > .house-fold, :scope > * > .house-fold'); if (!fb) return;
-      e.stopPropagation(); shutMores(null); foldToggleBtn(fb);   // a tap outside an open More menu still shuts it
+      e.stopPropagation(); shutMores(null); foldToggleBtn(fb);
     }, true);
     var foldStart = function () {
       foldAll();
       if (root.MutationObserver) new root.MutationObserver(function (recs) {
-        // Our own changes settle in one more pass (foldAll only writes what differs), so this never loops.
         for (var i = 0; i < recs.length; i++) { var t = recs[i].target; if (!(t.closest && t.closest('header, nav.house-tabs'))) { foldAll(); return; } }
       }).observe(root.document.body, { childList: true, subtree: true });
       root.addEventListener('hashchange', foldAll);
@@ -601,7 +556,6 @@
     if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', foldStart); else foldStart();
   }
 
-  // ---- Keyboard keys: g then a letter to go somewhere, r reread, / search, ? the list ----
   var KEYS = [
     ['g m', 'Dashboard', function () { go('./#/map'); }],
     ['g d', 'Drives', function () { go('./#/drives'); }],
@@ -615,7 +569,6 @@
   ];
   function go(rel) { var u = new URL(rel, SITE); if (u.href !== root.location.href) root.location.href = u.href; }
   function typing(t) { return t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)); }
-  /** Opens the keyboard-keys dialog, building it on first use. Exported as showKeys. */
   function help() {
     var doc = root.document, d = doc.getElementById('dashKeys');
     if (!d) {
@@ -642,11 +595,7 @@
     hit[2]();
   });
 
-  // ---- One search box (press /). Each page registers what it can search; results are grouped. ----
-  // A provider is function (query) -> Promise of [{ group, slot (0-8), title, sub, href | act }].
-  // Read-only: providers only read (Drive file names on home, tables already in memory elsewhere).
   var PROVIDERS = [], searchGen = 0, searchTimer = null;
-  /** Adds a search provider: fn(query) returns result items or a Promise of them. */
   function registerSearch(fn) { PROVIDERS.push(fn); }
   function escHtml(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function searchDialog() {
@@ -661,7 +610,6 @@
       '<div id="dashSearchResults"></div><form method="dialog" style="margin-top:8px"><button type="submit" class="house-close">Close</button></form>';
     doc.body.appendChild(d);
     var box = d.querySelector('#dashSearchBox');
-    // The hint follows every key at once (the search itself waits 300ms): shown under 2 letters, gone from the 2nd letter on.
     box.addEventListener('input', function () { searchHint(d, box.value); clearTimeout(searchTimer); searchTimer = setTimeout(function () { runSearch(box.value); }, 300); });
     d.addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('[data-search-act]');
@@ -670,15 +618,13 @@
     });
     return d;
   }
-  /** "Type at least 2 letters." shows under 2 letters and hides from the 2nd letter on. True when q is long enough to search. */
   function searchHint(d, q) {
     var ok = String(q || '').trim().length >= 2;
     d.querySelector('#dashSearchHint').hidden = ok;
     if (!ok) d.querySelector('#dashSearchStatus').textContent = '';
     return ok;
   }
-  var SLOT = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(function (n) { return 'var(--ljr-' + (n === 1 ? '1-edge' : n) + ')'; }); // slot colours from tokens.css
-  /** Runs every registered provider for q and draws the grouped results. Returns a Promise of all results ([] under 2 letters or when a newer search started). */
+  var SLOT = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(function (n) { return 'var(--ljr-' + (n === 1 ? '1-edge' : n) + ')'; });
   function runSearch(q) {
     var d = searchDialog(), st = d.querySelector('#dashSearchStatus'), out = d.querySelector('#dashSearchResults');
     q = String(q || '').trim();
@@ -700,10 +646,8 @@
         return all;
       });
   }
-  /** Opens the search dialog and focuses its box. */
   function openSearch() { var d = searchDialog(); if (!d.open) d.showModal(); var b = d.querySelector('#dashSearchBox'); b.focus(); b.select(); }
   if (root.document) root.document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-search-open]'); if (b) { e.preventDefault(); openSearch(); } });
-  /** Returns a test function: true when a text contains every word of q (case-insensitive). */
   function matches(q) { var words = String(q).toLowerCase().split(/\s+/).filter(Boolean); return function (text) { text = String(text || '').toLowerCase(); return words.every(function (w) { return text.indexOf(w) >= 0; }); }; }
 
   // ---- Hub Main (the owner's house style, 2 Nov 2026): EVERY hub's Main is exactly three parts, in this order:
@@ -743,7 +687,6 @@
       h += '<section class="card hm-next" data-open-row data-hm="next" data-kind="' + kind(x) + '" aria-labelledby="hmNextT"><div class="hm-head"><h3 id="hmNextT">Next</h3>' + hmPill(x) + '</div>' +
         '<p class="hm-what"><a class="house-open" href="' + escHtml(x.href) + '"' + hmTarget(x, x.ext) + ' aria-label="' + escHtml(x.text) + '">' + escHtml(x.text) + '</a></p>' + (x.sub ? '<p class="hm-sub">' + escHtml(x.sub) + '</p>' : '') +
         '<div class="hm-go">' + hmAct(x, 'hm-a') + '</div></section>';
-      // The count: black when a row is broken (broken wins), rose when one is late, else grey (DashKit.count).
       var late = rows.some(function (r) { return kind(r) === 'late'; }), bw = rows.filter(function (r) { return countKind(1, r.why) === 'broken'; })[0];
       h += '<section class="card hm-needs" data-hm="needs" aria-labelledby="hmNeedsT"><div class="hm-head"><h3 id="hmNeedsT"><a class="house-go" href="' + doHref + '" aria-label="Needs you: ' + rows.length + '. Open Do">Needs you</a></h3>' +
         '<a class="house-go" href="' + doHref + '" aria-label="' + rows.length + ' need you' + (bw ? ', some ' + bw.why : late ? ', some late' : '') + '. Open Do"><span class="cnt' + (bw ? ' broken' : late ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + rows.length + '</span></a></div>' +
@@ -753,7 +696,7 @@
         }).join('') + '</ol>' + (more > 0 ? '<a class="hm-more" data-hm-more href="' + doHref + '">+' + more + ' more</a>' : '') + '</section>';
     }
     h += '<section class="hm-nums" data-hm="nums" aria-label="Numbers">' + (spec.nums || []).map(function (n) {
-      var v = n.value == null || n.value === '' ? '–' : String(n.value), w = countWhy(v, n.late);   // late: true (late) or the broken word
+      var v = n.value == null || n.value === '' ? '–' : String(n.value), w = countWhy(v, n.late);
       return '<a class="card hm-n house-go" data-k="' + escHtml(n.label) + '" href="' + escHtml(n.href) + '"' + (n.ext ? ' target="_blank" rel="noopener"' : '') +
         ' aria-label="' + escHtml((n.aria && v !== '–' ? v + ' ' + n.label + '. ' + n.aria : n.aria) || (v === '–' ? n.label + ': could not be read. Open the list' : v + ' ' + n.label + (w ? ' ' + w : '') + '. Open the list')) + '"><span class="hm-v' + countCls(v, n.late) + '">' + escHtml(v) + '</span> <span class="hm-l">' + escHtml(n.label) + '</span></a>';
     }).join('') + (spec.extra || '') + '</section>';
@@ -762,3 +705,4 @@
 
   root.DashKit = { applyLook: applyLook, icon: icon, tabs: { tab: tabHtml, more: moreHtml, shut: function () { shutMores(null); } }, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, count: { why: countWhy, kind: countKind, cls: countCls, say: countSay }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, localHref: localHref, showKeys: help, hubMain: hubMain, hubMainSort: hmSort, fold: { run: foldAll, key: FOLD_KEY } };
 })(typeof window !== 'undefined' ? window : this);
+

@@ -12,22 +12,18 @@
 
   var VERSION = '1.0.0';
   var TAB = 'Traffic';
-  // The Traffic tab header. Matched by name, any order; extra columns are ignored.
   var COLUMNS = ['key', 'source', 'period', 'visits', 'used_gb', 'quota_gb', 'updated_uk', 'note'];
   var AMBER = 80, RED = 95, STALE_DAYS = 2;
-  // Web properties get a traffic line. DNS zones, email domains and ads accounts do not.
   var SITE_KINDS = ['site', 'shop', 'funnel', 'app'];
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   function str(v) { return v === undefined || v === null ? '' : String(v).trim(); }
   function isSite(row) { return !!row && SITE_KINDS.indexOf(str(row.kind)) !== -1; }
 
-  // "1,234" -> 1234. Blank or text -> null (never 0: a blank is "not reported").
   function count(v) {
     var s = str(v).replace(/,/g, '');
     return /^\d+(\.\d+)?$/.test(s) ? Math.round(+s) : null;
   }
-  // "8.1", "8.1 GB", "820 MB", "1.2 TB" -> GB. Blank or text -> null.
   function gb(v) {
     var m = /^(\d+(?:\.\d+)?)\s*(kb|mb|gb|tb)?$/i.exec(str(v).replace(/,/g, ''));
     if (!m) return null;
@@ -35,25 +31,21 @@
     return u === 'tb' ? n * 1024 : u === 'mb' ? n / 1024 : u === 'kb' ? n / 1048576 : n;
   }
 
-  // 'ok' under 80%, 'amber' from 80%, 'red' from 95%. No percentage -> 'none'.
   function level(pct) {
     if (pct === null || pct === undefined || isNaN(pct)) return 'none';
     return pct >= RED ? 'red' : pct >= AMBER ? 'amber' : 'ok';
   }
   var LEVEL_WORD = { ok: 'Under 80% of quota', amber: '80% or more of quota', red: '95% or more of quota', none: '' };
 
-  // One decimal under 10 GB, whole numbers above: "8.0 GB", "12 GB", "0.4 GB".
   function gbWord(n) { return n === null ? '' : (n < 10 ? (Math.round(n * 10) / 10).toFixed(1) : String(Math.round(n))) + ' GB'; }
   function numWord(n) { return n === null ? '' : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 
-  // UK month of a Date as "2026-11".
   function ukMonth(now) {
     var d = now instanceof Date ? now : new Date(now);
-    var s = d.toLocaleString('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit' }); // "11/2026"
+    var s = d.toLocaleString('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit' });
     var m = /(\d{2})\/(\d{4})/.exec(s);
     return m ? m[2] + '-' + m[1] : d.toISOString().slice(0, 7);
   }
-  // "2026-11", "11/2026" or "Nov 2026" -> "2026-11"; anything else -> ''.
   function periodKey(v) {
     var s = str(v), m;
     if ((m = /^(\d{4})-(\d{1,2})/.exec(s))) return m[1] + '-' + ('0' + m[2]).slice(-2);
@@ -66,7 +58,6 @@
   }
   function periodWord(key) { var m = /^(\d{4})-(\d{2})$/.exec(key || ''); return m ? MONTHS[+m[2] - 1] + ' ' + m[1] : ''; }
 
-  // "13/11/2026 09:00" or ISO -> ms; else null.
   function updatedAt(v) {
     var s = str(v), m;
     if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2}))?/.exec(s))) return Date.UTC(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0));
@@ -93,7 +84,7 @@
         'RR_WEB-ESTATE engine > Project Settings > Script Properties > ESTATE_SHOPIFY_TOKENS: one line per shop, "<shop key>=<token>".',
         'Shopify has no bandwidth quota, so this shows visits only.'] },
     { id: 'ga4', test: /ga4|google analytics/i, source: 'Google Analytics 4', property: 'ESTATE_GA4_PROPERTIES',
-      steps: ['No token needed: the engine reads GA4 as Lisa. In the RR_WEB-ESTATE engine editor: Services > + > Google Analytics Data API > Add.',
+      steps: ['No token needed: the engine reads GA4 as User. In the RR_WEB-ESTATE engine editor: Services > + > Google Analytics Data API > Add.',
         'GA4 > Admin > Property details: copy the property id (numbers only).',
         'Script Properties > ESTATE_GA4_PROPERTIES: one line per site, "<site key>=<property id>". Visits only; GA4 has no bandwidth quota.'] }
   ];
@@ -109,7 +100,6 @@
     return GENERIC;
   }
 
-  // The Traffic tab row for one site (matched by key), or null.
   function rowFor(site, tabRows) {
     var k = str(site && site.key).toLowerCase();
     if (!k) return null;
@@ -117,11 +107,6 @@
     return hit.length ? hit[hit.length - 1] : null;
   }
 
-  // site: a Properties row; tabRows: Traffic tab objects; now: Date.
-  // Not connected: { connected:false, word:'stats not connected', setup }
-  // Connected: { connected:true, visits, used_gb, quota_gb, pct, level, use_word, visits_word, period, period_word,
-  //   current, updated, updated_ms, stale, source, note, setup }
-  // A row counts as connected when it gives visits or used_gb. A blank stays blank, never 0.
   function trafficFor(site, tabRows, now) {
     now = now || new Date();
     var t = rowFor(site, tabRows), setup = setupFor(site, t);
@@ -142,7 +127,6 @@
     };
   }
 
-  // Counts for a list of Properties rows: sites, connected, not connected, amber, red.
   function summary(rows, tabRows, now) {
     var c = { sites: 0, connected: 0, notConnected: 0, amber: 0, red: 0 };
     (rows || []).forEach(function (r) {
@@ -157,7 +141,6 @@
     return c;
   }
 
-  // Header check for the Traffic tab: key plus at least one of visits / used_gb. Fails closed (no rows) otherwise.
   function checkHeader(header) {
     var h = (header || []).map(function (x) { return str(x).toLowerCase(); });
     var problems = [];
@@ -174,3 +157,4 @@
     setupFor: setupFor, rowFor: rowFor, trafficFor: trafficFor, summary: summary, checkHeader: checkHeader
   };
 });
+

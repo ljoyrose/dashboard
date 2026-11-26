@@ -1,4 +1,3 @@
-// Compliance mock-up gaps (7 Nov 2026): urgent warnings. Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 
@@ -22,7 +21,6 @@ const rooms = (world, occ) => {
 };
 
 test.describe('CD Hub: Compliance urgent warnings', () => {
-  // H-06: text AND icon AND red ring AND colour, never colour alone; never a work block.
   test('a closed room with a dog in it is Urgent, with word, icon and ring', async ({ page, guard }) => {
     rooms(guard.world, ['o1,t,sub-x1,ar-iso,,2026-01-01,,Breeding Bitch,', 'o2,t,sub-x2,ar-a,,2026-01-01,,Breeding Bitch,']);
     await HUBS.cdhub.open(page, guard);
@@ -37,7 +35,6 @@ test.describe('CD Hub: Compliance urgent warnings', () => {
     await expect(page.locator('#compUrgent')).toContainText('never stops anyone working');
   });
 
-  // A dog's room is its row with the latest moved_in, not the last row in the file (Specs.gs occupancy rule, 12 Nov 2026).
   test('a dog is in the room of its latest move, even when an older row comes later in the file', async ({ page, guard }) => {
     rooms(guard.world, ['o1,t,sub-x1,ar-iso,,2026-02-01,,Breeding Bitch,', 'o2,t,sub-x2,ar-a,,2026-01-01,,Breeding Bitch,', 'o0,t,sub-x1,ar-a,,2026-01-01,,Breeding Bitch,']);
     await HUBS.cdhub.open(page, guard);
@@ -45,7 +42,6 @@ test.describe('CD Hub: Compliance urgent warnings', () => {
     await expect(page.locator('#urgList > li[data-k="closed"]')).toContainText('Room A is closed but has a dog in it');
   });
 
-  // A move row leaves classification blank (it is the licence label, not a location): the dog keeps its label and stays on site.
   test('a move row with no classification keeps the dog on site, in its new room', async ({ page, guard }) => {
     rooms(guard.world, ['o1,t,sub-x1,ar-a,,2026-01-01,,Breeding Bitch,', 'o2,t,sub-x2,ar-a,,2026-01-01,,Breeding Bitch,', 'o3,t,sub-x1,ar-iso,,2026-02-01,,,']);
     await HUBS.cdhub.open(page, guard);
@@ -62,3 +58,4 @@ test.describe('CD Hub: Compliance urgent warnings', () => {
     await expect(page.locator('#compUrgent')).toContainText('Nothing urgent.');
   });
 });
+

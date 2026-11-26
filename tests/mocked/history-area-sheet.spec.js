@@ -1,7 +1,3 @@
-// Temperature history indoor areas: BLD-area_reading.csv may be a Google Sheet.
-// A spreadsheet is exported as CSV. A real CSV file is still read with alt=media.
-// The outdoor readings sheet (config.js) keeps its own export addresses.
-// Pretend Drive only. Every row here is invented. No real Drive file ids.
 const { test, expect } = require('../support/test');
 
 const SHEET = 'application/vnd.google-apps.spreadsheet';
@@ -16,7 +12,6 @@ const readsOf = (world, id) => world.calls.filter((c) => c.path === '/files/' + 
 const isExport = (c) => c.path.endsWith('/export') && /(?:\?|&)mimeType=text%2Fcsv(?:&|$)/.test(c.url);
 const isMedia = (c) => c.path.indexOf('/export') === -1 && /(?:\?|&)alt=media(?:&|$)/.test(c.url);
 
-// A trashed Sheet with the same title, and a ZZ_DELETE_ twin, must never be the file that is read.
 function plantTwins(world) {
   const src = live(world, 'BLD-area_reading.csv');
   world.file('bld-reading-trashed', 'BLD-area_reading.csv',
@@ -151,7 +146,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     expect(look.frame).not.toBe('rgba(0, 0, 0, 0)');
   });
 
-  test('year chips run current first, and a day detail does not show Source or the reading kind @regression', async ({ page }) => {
+  test('t-history-area-sheet-spec-1', async ({ page }) => {
     await openHistory(page);
     const years = page.locator('.yr-btn');
     await expect(years).toHaveText(['2026', '2025', '2024']);
@@ -221,7 +216,6 @@ test.describe('Temperature history reads area files by mime type', () => {
     await page.locator('#rdate').fill('2026-01-15');
     await page.locator('#rdate').dispatchEvent('change');
     const round = page.locator('#view-d');
-    // A room in use with no readings at all (Test Cabin Z) is still listed, and shows its missed slots (the audit).
     await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3TR', '4A', 'Test Cabin Z', '3S.2-iso']);
     await expect(round.locator('.rtile', { hasText: 'Test Cabin Z' })).toContainText('AM missed');
     await expect(round.locator('.rtile', { hasText: 'Test Cabin Z' })).toContainText('PM missed');
@@ -294,3 +288,4 @@ test.describe('Temperature history reads area files by mime type', () => {
     await expect(round.locator('.rtile .rn')).toHaveText(['3A.1/2']);
   });
 });
+

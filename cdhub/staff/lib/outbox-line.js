@@ -20,7 +20,7 @@
 
   function mount(save, beforeEl) {
     if (!save || !save.outbox || !beforeEl || !beforeEl.parentNode) return null;
-    var doc = beforeEl.ownerDocument;
+    var doc = beforeEl.userDocument;
     if (!doc.getElementById('outbox-css')) { var st = el(doc, 'style'); st.id = 'outbox-css'; st.textContent = CSS; doc.head.appendChild(st); }
     var box = el(doc, 'div', 'outbox'); box.id = 'outbox'; box.hidden = true; box.setAttribute('role', 'status');
     beforeEl.parentNode.insertBefore(box, beforeEl);
@@ -30,7 +30,7 @@
       var fresh = items.filter(function (x) { return !x.old; }), old = items.filter(function (x) { return x.old; });
       box.textContent = ''; box.hidden = !items.length && !rf.length;
       if (fresh.length) {
-        var signIn = !!(save.outbox.needsSignIn && save.outbox.needsSignIn());   // 22 Nov 2026: the sign-in has ended
+        var signIn = !!(save.outbox.needsSignIn && save.outbox.needsSignIn());
         var p1 = el(doc, 'p', '', fresh.length + (signIn ? ' waiting: sign in again to send. ' : ' waiting to send. ') + 'Kept on this phone: do not type again.');
         p1.setAttribute('data-outbox-waiting', String(fresh.length));
         if (signIn) p1.setAttribute('data-outbox-sign-in', '');
@@ -63,3 +63,4 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.BLDOutboxLine = api;
 }(typeof window !== 'undefined' ? window : this));
+

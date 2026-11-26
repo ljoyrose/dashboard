@@ -33,7 +33,6 @@ const Rules = require(path.join(__dirname, '..', '..', 'cdhub', 'staff', 'lib', 
 const HEADER = ['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by'];
 const SOURCES = [['subject', 'subjects'], ['area', 'areas'], ['litter', 'litters'], ['thermometer', 'thermometers'], ['item', 'items']];
 
-/** Latest status row per dog (latest from_date, ties to the later row). */
 function activeDogs(status) {
   const latest = {};
   (status || []).forEach((r) => { const c = latest[r.subject_id]; if (!c || String(r.from_date || '') >= String(c.from_date || '')) latest[r.subject_id] = r; });
@@ -42,10 +41,6 @@ function activeDogs(status) {
   return out;
 }
 
-/**
- * The pure back-fill. lists = { subjects, areas, litters, thermometers, items, status } (arrays of row objects).
- * Returns { rows: new BLD-qr_tag rows, report: { <kind>: { checked, rule_no, already, add } } }. Never changes its inputs.
- */
 function backfill(lists, rules, tags, opts) {
   const o = opts || {}, tenant = o.tenant || '', day = o.date || '';
   const bytes = o.bytes || ((n) => crypto.randomBytes(n));
@@ -121,3 +116,4 @@ if (require.main === module) {
 }
 
 module.exports = { backfill, toCsv, main, HEADER };
+

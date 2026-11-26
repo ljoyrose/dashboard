@@ -16,3 +16,4 @@ test('rooms sort by group_sort, then code naturally; a room with no group_sort g
   const got = O.dailyList({ area }, '2026-11-12').areas.map((a) => a.label);
   assert.deepEqual(got, ['P1', 'P10', 'R2', 'Q.1/2/3', 'Q.4/5', 'Q.9/10', 'Field']);
 });
+

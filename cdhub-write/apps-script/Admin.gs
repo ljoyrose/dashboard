@@ -1,10 +1,4 @@
-/**
- * Owner-only tools. Run these by hand from the Apps Script editor (Run button).
- * They are NOT reachable from the web: doPost/doGet never call them.
- * Output appears in the "Execution log" at the bottom of the editor.
- */
 
-/** 1. Run once. Makes the secret salt for staff codes. Safe to run again (does nothing if set). */
 function adminSetup() {
   if (!prop_(BLD.PROP.SALT)) {
     setProp_(BLD.PROP.SALT, Utilities.getUuid() + Utilities.getUuid());
@@ -16,10 +10,9 @@ function adminSetup() {
   Logger.log('Saving stays OFF until you set SAVE_ENABLED to true.');
 }
 
-/** 2. Edit NAME and ROLE, then Run. Prints a new staff code ONCE. Give it to that person; it cannot be shown again. */
 function adminAddStaffCode() {
   var NAME = 'Example Name';      // <- change this
-  var ROLE = 'STAFF';             // <- OWNER, STAFF, VET or TRAINER (see BLD-role.csv)
+  var ROLE = 'STAFF';
   if (ROLE_ALL.indexOf(ROLE) < 0) throw new Error('ROLE must be one of ' + ROLE_ALL.join(', '));
   var salt = prop_(BLD.PROP.SALT);
   if (!salt) throw new Error('Run adminSetup first.');
@@ -33,7 +26,6 @@ function adminAddStaffCode() {
   return code;
 }
 
-/** 3. Lists who has a code (names and roles only, never the codes). */
 function adminListStaff() {
   var reg = registry_(), n = 0;
   Object.keys(reg).forEach(function (h) {
@@ -43,7 +35,6 @@ function adminListStaff() {
   if (!n) Logger.log('No staff codes yet.');
 }
 
-/** 4. Edit NAME, then Run. Switches that person\'s code off (kept in the list, but refused). */
 function adminRevokeStaff() {
   var NAME = 'Example Name';      // <- change this
   var reg = registry_(), hit = 0;
@@ -52,28 +43,18 @@ function adminRevokeStaff() {
   Logger.log(hit ? ('Switched off ' + hit + ' code(s) for ' + NAME + '.') : ('No one called ' + NAME + ' found.'));
 }
 
-/** 4b. Run once on a project that had codes BEFORE ids existed: gives each code without one a public id (sc-xxxxxx). Changes nothing else. */
 function adminAssignCodeIds() {
   var reg = registry_(), n = 0;
-  Object.keys(reg).forEach(function (h) { if (!reg[h].id && !reg[h].was_id) { reg[h].id = newCodeId_(); n++; } });   // was_id: an old code replaced by a new one (Codes.gs) keeps no id
+  Object.keys(reg).forEach(function (h) { if (!reg[h].id && !reg[h].was_id) { reg[h].id = newCodeId_(); n++; } });
   setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));
   Logger.log(n ? ('Gave ' + n + ' code(s) a public id. Run adminListStaff to see them.') : 'Every code already has an id. Nothing changed.');
 }
 
-/**
- * 4c. Run on go-live day: dog moves go to the approvals queue for 14 days counting today, then straight in.
- * It only sets the Script Property MOVES_QUEUE_UNTIL (a date). Run it again on a new day to start a new 14 days.
- */
 function adminStartMovesQueue() {
   setProp_(BLD.PROP.MOVES_QUEUE_UNTIL, addDays_(todayLondon_(), BLD.LIMITS.MOVES_QUEUE_DAYS - 1));   // 14 days counting today
   Logger.log('Occupancy moves go straight in. MOVES_QUEUE_UNTIL was set to ' + prop_(BLD.PROP.MOVES_QUEUE_UNTIL) + ' but is ignored for moves.');
 }
 
-/**
- * 5. Creates EMPTY, header-only files - ONLY the ones listed, ONLY if they do not exist, and ONLY while
- * the Script Property ALLOW_CREATE is 'true'. This is Lisa's decision (2): creating the temperature log
- * and the approvals queue on Drive. Set ALLOW_CREATE back to anything else afterwards.
- */
 function adminCreateEmptyTables() {
   var TO_CREATE = [BLD.PENDING_FILE, 'BLD-area_reading.csv', 'BLD-occupancy_check.csv'];   // <- trim or extend, then Run
   if (prop_(BLD.PROP.ALLOW_CREATE) !== 'true') {
@@ -88,8 +69,6 @@ function adminCreateEmptyTables() {
   });
 }
 
-/** 6. Plain-English health check. Changes nothing. */
-/** Columns the dog card, files and links saves need in a file (they check by name, not exact order), or null. */
 function saveNeedFor_(title) {
   var out = null;
   var specs = [];
@@ -116,7 +95,7 @@ function adminCheckSetup() {
       var r = store_read_(title, false);
       if (!r) { Logger.log('--   ' + title + ' does not exist yet (fine until you switch that table on)'); return; }
       var spec = specFor_(title), need = spec ? null : saveNeedFor_(title);
-      if (need) { // dog card, files and links saves only need their columns present, in any order, so check the same way
+      if (need) {
         var miss = need.filter(function (c) { return r.header.indexOf(c) < 0; });
         say(!miss.length, title + ' exists with ' + r.records.length + ' row(s); ' + (miss.length ? 'header has no ' + miss.join(', ') : 'header has every column the save needs'));
         return;
@@ -133,7 +112,7 @@ function adminCheckSetup() {
   if (noId) Logger.log('FIX  ' + noId + ' staff code(s) have no public id yet (run adminAssignCodeIds)');
   Logger.log('--   SAVE_ENABLED is ' + (saveEnabled_() ? 'TRUE (saving is ON)' : 'not true (saving is OFF)'));
   Logger.log('--   dog photos: ' + (prop_(BLD.PROP.DOG_PHOTOS_FOLDER) ? 'folder id is set in Script Properties' : 'not set (create a Shared Drive folder and set DOG_PHOTOS_FOLDER_ID)'));
-  Logger.log('--   OWNER_EDIT_ENABLED is ' + (ownerEditEnabled_() ? 'TRUE (the owner page can overwrite an entry in place; no record of the old value is kept)' : 'not true (owner edit is OFF)'));
+  Logger.log('--   USER_EDIT_ENABLED is ' + (userEditEnabled_() ? 'TRUE (the user page can overwrite an entry in place; no record of the old value is kept)' : 'not true (user edit is OFF)'));
   Logger.log('--   READ_ENABLED is ' + (readEnabled_() ? 'TRUE (staff codes can read what the permissions file allows)' : 'not true (staff cannot read)'));
   Logger.log('--   Time zone: ' + (tzNotSet_() ? 'Time zone not set (BLD-locale has no time_zone in force; using the script setting ' + tzOn_() + ')' : tzOn_()));
   try {
@@ -143,19 +122,9 @@ function adminCheckSetup() {
   Logger.log(ok ? 'Everything checked is fine.' : 'Some things need fixing (lines starting FIX).');
 }
 
-/* ------------------------------------------------------------------------------------------------
- * OPTIONAL daily backup copy. Off unless Lisa turns it on. It never deletes anything.
- * Copies each existing allow-listed file into a sub-folder BLD-backups, once a day, named
- * <file>.pre-daily-<YYYY-MM-DD>.bak (the pattern in the naming protocol, N-14). The copies are .bak
- * files in a sub-folder, so CD Hub (which reads .csv files in the main folder) never loads them.
- * After each run, older <file>.pre-daily-<date>.bak copies go to Drive TRASH (setTrashed, never deleted for ever):
- * the newest copy of each file is kept. Only that exact pattern is touched; BACKUP_*, BAK_*, *.pre-cdhub-core-* and
- * anything else in BLD-backups are left alone (Lisa, 15 Nov 2026, card answer A).
- * ---------------------------------------------------------------------------------------------- */
 
 var BACKUP_FOLDER_NAME = 'BLD-backups';
 
-/** The daily job. Does nothing unless the Script Property BACKUP_ON is 'true'. */
 function adminDailyBackup() {
   if (prop_(BLD.PROP.BACKUP_ON) !== 'true') { Logger.log('Backup is off (BACKUP_ON is not true). Nothing copied.'); return; }
   var folder = store_folder_();
@@ -175,10 +144,6 @@ function adminDailyBackup() {
 
 var PRE_DAILY_RE = /^(.+)\.pre-daily-(\d{4}-\d{2}-\d{2})\.bak$/;
 
-/**
- * Moves older daily copies to Drive TRASH, keeping the newest copy of each live file. Exact pattern only.
- * Returns { trashed: [names], kept: [names] }. A file whose copy could not be trashed is logged and kept.
- */
 function backupTrashOld_(dest) {
   var newest = {}, all = [], it = dest.getFiles();
   while (it.hasNext()) {
@@ -200,14 +165,12 @@ function backupTrashOld_(dest) {
   return out;
 }
 
-/** Run once by hand: the same tidy as after each nightly run, without copying anything. */
 function adminTrashOldDailyBackups() {
   var it = store_folder_().getFoldersByName(BACKUP_FOLDER_NAME);
   if (!it.hasNext()) { Logger.log('No ' + BACKUP_FOLDER_NAME + ' folder. Nothing to tidy.'); return { trashed: [], kept: [] }; }
   return backupTrashOld_(it.next());
 }
 
-/** Run once to have the backup run every night about 03:00. Also set BACKUP_ON to true. */
 function adminInstallDailyBackup() {
   var existing = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === 'adminDailyBackup'; });
   if (existing.length) { Logger.log('The daily backup is already scheduled. Nothing changed.'); return; }
@@ -215,18 +178,12 @@ function adminInstallDailyBackup() {
   Logger.log('Daily backup scheduled for about 03:00. It only copies while BACKUP_ON is true.');
 }
 
-/** Run to stop the nightly backup. Leaves every copy already made exactly where it is. */
 function adminRemoveDailyBackup() {
   var n = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'adminDailyBackup') { ScriptApp.deleteTrigger(t); n++; } });
   Logger.log(n ? 'Stopped the nightly backup. Existing copies were not touched.' : 'No nightly backup was scheduled.');
 }
 
-/**
- * 7. Dry run (15 Nov 2026): how many rows are waiting in the approvals queue (BLD-_pending.csv), per file and per state.
- * Changes nothing: it reads the queue file only. It does not apply waiting room moves (doPost and a plain GET do that).
- * Rows waiting on a phone (not yet sent) are not in this file and cannot be counted from here.
- */
 function adminCountQueued() {
   var p;
   try { p = loadPending_(); }
@@ -248,9 +205,9 @@ function adminCountQueued() {
   return out;
 }
 
-// A room move (area set, not off site): the only queued occupancy rows applyWaitingOccupancyMoves_ applies.
 function isRoomMove_(queued) {
   var row = null;
   try { row = JSON.parse(queued.payload_json || '{}'); } catch (e) { row = null; }
   return !!row && !String(row.off_site_kind || '') && !!String(row.area_id || '');
 }
+

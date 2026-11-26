@@ -6,7 +6,7 @@
 const { test, expect } = require('../support/test');
 const P = require('../support/print-a4');
 
-test('dog card v4, 2 per A4: photo, Size tile and 62 mm QR line up as approved; labels; no tag text @regression', async ({ page }) => {
+test('t-cdhub-print-dog-card-v4-spec-1', async ({ page }) => {
   await P.openCards(page);
   await page.getByRole('button', { name: '2 per A4' }).click();
   await page.setViewportSize(P.PAPER.portrait);
@@ -24,7 +24,7 @@ test('dog card v4, 2 per A4: photo, Size tile and 62 mm QR line up as approved; 
   expect(cards.length).toBe(P.CARDS);
   expect(cards.filter((c) => c.size).length, 'the fixture has sized dogs').toBeGreaterThan(0);
   cards.forEach((c, i) => {
-    const quiet = c.qr.w * 4 / c.n;                                    // the white border, 4 squares a side
+    const quiet = c.qr.w * 4 / c.n;
     const squares = { t: c.qr.t + quiet, b: c.qr.b - quiet, w: c.qr.w - 2 * quiet };
     expect(Math.abs(c.card.w / mm - 194), 'card about 194 mm wide').toBeLessThan(1);
     expect(c.card.h / mm, 'two cards fit on one A4 (277 mm inside the margins)').toBeLessThanOrEqual(138.5);
@@ -47,11 +47,11 @@ test('dog card v4, 2 per A4: photo, Size tile and 62 mm QR line up as approved; 
 test('dog card v4: no photo, or a photo that fails to load, keeps the size-colour frame and prints no word in it', async ({ page, allowedConsole }) => {
   allowedConsole.push(/Failed to load resource.*404/);                                                          // the pretend broken Drive image
   await page.route(/drive\.google\.com\/thumbnail/, (route) => route.fulfill({ status: 404, body: '' }));   // the Drive image fails
-  await P.openCards(page, (t) => { t.subject[0].photo = 'PretendBrokenPhoto0'; });                              // d0 has a photo; the rest have none
+  await P.openCards(page, (t) => { t.subject[0].photo = 'PretendBrokenPhoto0'; });
   await page.getByRole('button', { name: '2 per A4' }).click();
   await page.setViewportSize(P.PAPER.portrait);
   await page.emulateMedia({ media: 'print' });
-  await expect(page.locator('.dcard[data-dog="d0"] .photo img')).toHaveCount(0);                                // the failed image is gone, no broken-image sign
+  await expect(page.locator('.dcard[data-dog="d0"] .photo img')).toHaveCount(0);
   const boxes = await page.locator('.dcard.vcard .photo').evaluateAll((els) => els.map((e) => {
     const st = getComputedStyle(e), r = e.getBoundingClientRect();
     return { text: e.textContent.trim(), w: r.width, h: r.height, border: parseFloat(st.borderTopWidth), colour: st.borderTopColor, card: getComputedStyle(e.closest('.dcard')).getPropertyValue('--c').trim() };
@@ -71,13 +71,13 @@ test('dog card v4: a pup under puppy.under_weeks prints purple (size_colour.pupp
   await page.clock.setFixedTime(new Date('2026-11-21T12:00:00Z'));                     // the print day
   await P.openCards(page, (t) => {
     t.subject[0].dob = '2026-08-30';                                                      // 11 weeks 6 days: a pup
-    t.subject[2].dob = '2026-08-29';                                                      // exactly 12 weeks: no longer a pup
+    t.subject[2].dob = '2026-08-29';
     delete t.subject[3].dob;                                                              // no date of birth
     t.subject[4].size_band = ''; t.subject[4].dob = '2022-03-01';                         // no weight, no size
     t.breeding_rule.push(
-      { rule_key: 'size_colour.puppy', value: 'purple', effective_from: '2026-11-21', source: 'Pretend owner rule' },
+      { rule_key: 'size_colour.puppy', value: 'purple', effective_from: '2026-11-21', source: 'Pretend user rule' },
       { rule_key: 'puppy.under_weeks', value: '8', effective_from: '2026-01-01', source: 'Pretend older rule' },
-      { rule_key: 'puppy.under_weeks', value: '12', effective_from: '2026-11-21', source: 'Pretend owner rule' },   // the newest in force wins
+      { rule_key: 'puppy.under_weeks', value: '12', effective_from: '2026-11-21', source: 'Pretend user rule' },   // the newest in force wins
       { rule_key: 'puppy.under_weeks', value: '20', effective_from: '2027-01-01', source: 'Pretend later rule' });  // not yet in force
   });
   await page.getByRole('button', { name: '2 per A4' }).click();
@@ -95,17 +95,17 @@ test('dog card v4: a pup under puppy.under_weeks prints purple (size_colour.pupp
   expect([tokens.purple, tokens.blue, tokens.orange], 'unknown size: a plain frame, no size or puppy colour').not.toContain(unknown.colour);
   expect(unknown.colour, 'the plain frame is the card ink colour').toBe(unknown.text);
   [pup, twelve, noDob, unknown].forEach((f) => { expect(f.word).toBe(''); expect(f.border).toBeGreaterThan(0); });
-  await expect(page.locator('.dcard[data-dog="d4"] [data-k="size"]')).toHaveCount(0);   // no size tile when the size is unknown
+  await expect(page.locator('.dcard[data-dog="d4"] [data-k="size"]')).toHaveCount(0);
 });
 
 for (const [rule, pupWord] of [[null, 'Small'], ['size', 'Small'], ['puppy', 'Puppy']]) {
   test('dog card v4: puppy.size_tile ' + (rule || 'with no row') + ': a pup\'s Size tile says ' + pupWord + '; a grown dog and a dog with no dob keep the size word', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-21T12:00:00Z'));
     await P.openCards(page, (t) => {
-      t.subject[0].dob = '2026-08-30';                                                    // a pup (11 weeks 6 days), small
+      t.subject[0].dob = '2026-08-30';
       delete t.subject[3].dob;                                                            // no date of birth, small
-      t.breeding_rule.push({ rule_key: 'puppy.under_weeks', value: '12', effective_from: '2026-11-21', source: 'Pretend owner rule' });
-      if (rule) t.breeding_rule.push({ rule_key: 'puppy.size_tile', value: rule, effective_from: '2026-11-21', source: 'Pretend owner rule' },
+      t.breeding_rule.push({ rule_key: 'puppy.under_weeks', value: '12', effective_from: '2026-11-21', source: 'Pretend user rule' });
+      if (rule) t.breeding_rule.push({ rule_key: 'puppy.size_tile', value: rule, effective_from: '2026-11-21', source: 'Pretend user rule' },
         { rule_key: 'puppy.size_tile', value: rule === 'puppy' ? 'size' : 'puppy', effective_from: '2026-01-01', source: 'Pretend older rule' });   // the newest row in force wins
     });
     const word = (id) => page.locator('.dcard[data-dog="' + id + '"] [data-k="size"] b');
@@ -114,3 +114,4 @@ for (const [rule, pupWord] of [[null, 'Small'], ['size', 'Small'], ['puppy', 'Pu
     await expect(word('d1')).toHaveText('Medium');                                        // a grown dog
   });
 }
+

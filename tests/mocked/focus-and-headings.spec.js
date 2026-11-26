@@ -1,9 +1,8 @@
-// Keyboard focus follows a screen change, and CD Hub headings never skip a level.
 const { test, expect } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 
 test.describe('Focus moves to the new screen title', () => {
-  test('home: clicking a menu item puts focus on the screen title @regression', async ({ page }) => {
+  test('t-focus-and-headings-spec-1', async ({ page }) => {
     await page.goto('./');
     await page.locator('#signInBtn').click();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
@@ -49,7 +48,7 @@ test.describe('CD Hub headings', () => {
     await page.goto('cdhub/');
     await page.locator('#signinbtn').click();
     await tabClick(page, '#nav button[data-go="dogs"]');
-    await page.locator('[data-fpanel="fp-dogs"]').click();   // status chips sit in Filter (quality review 12 Nov 2026)
+    await page.locator('[data-fpanel="fp-dogs"]').click();
     const chip = page.locator('.sfb').nth(1);
     expect(await chip.evaluate((b) => getComputedStyle(b).opacity)).toBe('1');
     await chip.click();
@@ -57,3 +56,4 @@ test.describe('CD Hub headings', () => {
     expect(await chip.evaluate((b) => getComputedStyle(b, '::after').content)).toContain('✓');
   });
 });
+

@@ -1,14 +1,4 @@
 #!/usr/bin/env node
-// LOCAL / MANUAL check (JOB 31b): do your REAL Factory and Home JSON files still have the shape the pages expect?
-//
-//   node tests/contract/check-real-state-b.js <folder-of-downloaded-files> [--all] [--counts]
-//   node tests/contract/check-real-state-b.js --dry-run     builds that folder from the invented fixtures, counts only
-//
-// Files it knows: af-state.json (Factory), DROPBOX-TOTALS.json and BIN-GUARD-WEBAPP.json (Home; the last name comes from
-// config.js binGuard.webAppFile). Other files are ignored. It prints key names and codes only, never a value.
-// It needs no sign-in, no key and no internet, and GitHub never runs it on real files. Sibling of check-real-headers.js
-// (JOB 31), kept separate so it touches no file in JOB 31's open PRs.
-// Exit code: 0 = all good, 1 = a key is missing, renamed, of the wrong type, the file is empty, or nothing matched.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -20,10 +10,9 @@ const LIST = { 'af-state.json': FACTORY, 'DROPBOX-TOTALS.json': HOME['DROPBOX-TO
 const REPO = path.resolve(__dirname, '..', '..');
 const argv = process.argv.slice(2);
 const DRY = argv.includes('--dry-run');
-const COUNTS = DRY || argv.includes('--counts'); // counts only: no file or key names printed
+const COUNTS = DRY || argv.includes('--counts');
 const say = (line) => { if (!COUNTS) console.log(line); };
 
-/** --dry-run: a throwaway folder holding the invented fixtures under the names the real downloads would have. */
 function dryFolder() {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'job31b-dry-'));
   const { build } = require('../fixtures/factory/state.js');
@@ -53,3 +42,4 @@ if (COUNTS) console.log('Problems by kind: ' + (Object.keys(byCode).length ? Obj
 if (DRY) fs.rmSync(dir, { recursive: true, force: true });
 if (!checked) console.log('Nothing matched. Check the folder has af-state.json, DROPBOX-TOTALS.json or BIN-GUARD-WEBAPP.json.');
 process.exit(bad || !checked ? 1 : 0);
+

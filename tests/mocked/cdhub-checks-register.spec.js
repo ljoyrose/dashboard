@@ -1,6 +1,3 @@
-// Checks register (priority 2, 21 Nov 2026): Compliance prints or downloads one month of check records for an inspector.
-// Read only. A detail the record does not hold says "not recorded"; a correction never hides the original; a later
-// note is the action taken. Invented rows only; nothing is posted.
 const fs = require('fs');
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
@@ -227,3 +224,4 @@ test.describe('Checks register: no internal codes on paper', () => {
     expect(R.reportHtml(head, lines).replace(/<[^>]+>/g, ' ').replace(/data-ckr="[^"]*"/g, '')).not.toMatch(ID_PATTERN);
   });
 });
+

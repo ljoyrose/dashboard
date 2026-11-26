@@ -1,6 +1,4 @@
 const { tabClick, tabTo } = require('../support/tabs');
-// JOB 34 (group A): home page views, states and keyboard paths no other spec checks.
-// Pretend Google and Drive only. Every row is invented.
 const { test, expect, sideScroll } = require('../fixtures/job34/load');
 
 const signIn = async (page) => {
@@ -31,7 +29,6 @@ test.describe('Home: views and states', () => {
       ['drives/work', 'Work My Drive'], ['drives/personal-drive', 'Personal Drive'], ['drives/usb', 'Drive check'], ['decide', 'Decide'], ['do', 'Do'], ['map', '']];
     for (const [h, name] of want) {
       await page.evaluate((x) => { location.hash = '#/' + x; }, h);
-      // Main (the map) is just "Dashboard"; every other view is "<view> · Dashboard".
       await expect(page).toHaveTitle(new RegExp('^(\\(\\d+\\) )?' + (name ? name + ' · ' : '') + 'Dashboard$'));
     }
   });
@@ -128,3 +125,4 @@ test.describe('Home: phone 390px on the Drives sub-pages', () => {
     }
   });
 });
+

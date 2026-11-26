@@ -17,7 +17,6 @@
       encodeURIComponent(TAB) + '?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE';
   }
 
-  // Plain words for what Google said.
   function why(status, msg) {
     if (status === 401) return 'sign-in expired: sign in again';
     if (/insufficient|scope/i.test(msg)) return 'Google did not give this page read access: sign out, sign in again and tick every box';
@@ -27,9 +26,6 @@
     return 'Google said ' + status + (msg ? ': ' + msg : '');
   }
 
-  // opts: { sheetId, token, fetch } where fetch defaults to DashKit.googleFetch (retries on busy) or plain fetch.
-  // Resolves { ok, rows, skipped, problems, state } and never rejects: state is one of
-  // 'not-set-up', 'signed-out', 'error', 'bad-columns', 'ok'.
   function read(opts) {
     opts = opts || {};
     var fetchFn = opts.fetch || (root && root.DashKit && root.DashKit.googleFetch) || (root && root.fetch);
@@ -50,9 +46,6 @@
       .catch(function (e) { return done('error', ['could not reach Google: ' + ((e && e.message) || e)]); });
   }
 
-  // An optional extra tab (Shops, Keywords, Mail map, Mail switch): plain objects by header, plus the raw values so a
-  // caller with its own header contract (estate/mail.js) can check the header row itself (raw = true). No contract here. A missing tab is not an error:
-  // it resolves { ok: true, rows: [], missing: true } so the page can say "not reported" / "not connected".
   function readTab(opts, tab, raw) {
     opts = opts || {};
     var fetchFn = opts.fetch || (root && root.DashKit && root.DashKit.googleFetch) || (root && root.fetch);
@@ -73,7 +66,6 @@
       .catch(function (e) { return { ok: false, rows: [], missing: false, problem: 'could not reach Google: ' + ((e && e.message) || e) }; });
   }
 
-  // The tab names in the sheet (one metadata read), so the page only asks for tabs that exist.
   function tabs(opts) {
     opts = opts || {};
     var fetchFn = opts.fetch || (root && root.DashKit && root.DashKit.googleFetch) || (root && root.fetch);
@@ -88,3 +80,4 @@
 
   return { TAB: TAB, rangeUrl: rangeUrl, read: read, readTab: readTab, tabs: tabs, why: why };
 });
+

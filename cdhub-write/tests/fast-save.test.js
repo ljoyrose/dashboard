@@ -1,9 +1,4 @@
 'use strict';
-/**
- * 16 Nov 2026: BLD-area_reading has ~31,000 rows and every save read all of them (~25 s a save). A reading add now
- * reads the last rows in full and, for every row, only the columns the repeat and id checks use. These tests prove
- * the checks still cover the WHOLE table, the save reads far fewer cells, and the write guards still hold.
- */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
@@ -13,7 +8,6 @@ const T = 'BLD-area_reading.csv';
 const H = fx.AREA_READING_HEADER;
 const col = (name) => H.indexOf(name);
 
-/** A Sheet area_reading with `n` old rows typed by hand (real numbers and dates), plus anything in `extra` first. */
 function bigEnv(n, extra) {
   const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
   ['BLD-area_reading.csv', 'BLD-_pending.csv'].forEach((t) => {
@@ -33,7 +27,6 @@ function bigEnv(n, extra) {
   return env;
 }
 
-/** Count the cells a save reads from area_reading. */
 function countReads(env) {
   const count = { cells: 0 };
   const orig = env.ctx.store_tab_;
@@ -68,7 +61,6 @@ test('fast save: a repeat of a reading saved long before the last rows is still 
   const probe = standardEnv();
   const now = probe.nowMs;
   const slot = new Date(now - 3600000).toISOString().slice(0, 13) + ':00:00Z';
-  // the matching reading is the FIRST data row, with 3000 rows after it (as if typed in out of order)
   const env = bigEnv(3000, [{ id: 'rdg-first', area: 'area-t1', ps: Date.parse(slot), at: now - 60000 }]);
   const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22', period_start: slot } }));
   assert.equal(r.code, 'DUPLICATE', JSON.stringify(r));
@@ -82,7 +74,7 @@ test('fast save: a late reading for a slot filled at the top of the table is ref
   const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22', period_start: slot } }));
   assert.equal(r.code, 'DUPLICATE', JSON.stringify(r));
   const london = new Date(Date.parse(slot)).toLocaleString('sv-SE', { timeZone: 'Europe/London' }).replace(' ', 'T');
-  const off = (Date.parse(london + 'Z') - Date.parse(slot)) / 3600000;   // the same instant written as London time
+  const off = (Date.parse(london + 'Z') - Date.parse(slot)) / 3600000;
   const same = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22', period_start: london + '+0' + off + ':00' } }));
   assert.equal(same.code, 'DUPLICATE', JSON.stringify(same));
   const other = save(env, req(env, { fields: { area_id: 'area-t2', min_c: '20', max_c: '22', period_start: slot } }));
@@ -91,16 +83,16 @@ test('fast save: a late reading for a slot filled at the top of the table is ref
 
 test('fast save: a correction still finds a row at the top of the table (full read)', () => {
   const env = bigEnv(500, [{ id: 'rdg-fix', area: 'area-t1', ps: Date.UTC(2025, 0, 1, 7), at: Date.UTC(2025, 0, 1, 7, 5) }]);
-  const r = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: 'rdg-fix', reason: 'typed it wrong', fields: { area_id: 'area-t1', min_c: '19', max_c: '21' } }));
+  const r = save(env, req(env, { code: env.codes.user, action: 'correct', corrects_id: 'rdg-fix', reason: 'typed it wrong', fields: { area_id: 'area-t1', min_c: '19', max_c: '21' } }));
   assert.equal(r.ok, true, JSON.stringify(r));
-  const missing = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: 'rdg-nothere', reason: 'typed it wrong', fields: { area_id: 'area-t1', min_c: '19', max_c: '21' } }));
+  const missing = save(env, req(env, { code: env.codes.user, action: 'correct', corrects_id: 'rdg-nothere', reason: 'typed it wrong', fields: { area_id: 'area-t1', min_c: '19', max_c: '21' } }));
   assert.equal(missing.code, 'INVALID');
 });
 
 test('fast save: a change to the last rows while saving is caught and nothing is saved', () => {
   const env = bigEnv(400);
   const read = env.ctx.store_readTail_(T, 200, ['id']);
-  env.rows(T)[400][col('taken_by')] = 'Edited';            // someone edits the last row between the read and the write
+  env.rows(T)[400][col('taken_by')] = 'Edited';
   const vals = H.map(() => ''); vals[0] = 'rdg-new';
   assert.throws(() => env.ctx.store_append_(T, env.ctx.TABLES.area_reading.columns, vals, read), /changed while saving/);
   assert.equal(env.rows(T).length, 401);
@@ -125,9 +117,6 @@ test('fast save: a small table (all rows inside the tail) and a CSV table save a
   assert.equal(csv.ctx.store_read_(T, true).records.length, 1);
 });
 
-// 22 Nov 2026 (saves 30-62 s live): for a recent slot every row is read for its id and time only; the checked columns
-// come from the last rows. Same answers: a repeat inside the window is caught wherever it sits, a late reading still
-// finds its slot. Measured on 30,000 rows that end before now (one every 40 minutes, as a live table does).
 function pastEnv(n, extra) {
   const env = bigEnv(0, extra), f = env.file(T)[0], now = env.nowMs;
   for (let i = 0; i < n; i++) {
@@ -144,7 +133,7 @@ test('save tail: on 30,000 rows a recent reading reads 2 columns of every row (w
   const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '11.3', max_c: '14.2' } }));
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(env.rows(T).length, 30002);
-  const before = 30000 * 5;   // id, area_id, thermometer_id, period_start, taken_at for every row
+  const before = 30000 * 5;
   assert.ok(count.cells < before / 2, 'read ' + count.cells + ' cells; the checked columns of every row are ' + before);
   assert.ok(count.cells < 30000 * 2 + 400 * H.length, 'read ' + count.cells);
 });
@@ -182,3 +171,4 @@ test('save tail: cells read grow at 2 per row, not 5 (3,000 vs 30,000 rows)', ()
   const perRow = (big - small) / 27000;
   assert.ok(perRow <= 2.05, 'extra cells per extra row: ' + perRow.toFixed(2));
 });
+

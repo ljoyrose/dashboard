@@ -1,20 +1,3 @@
-/*!
- * Breed Better: Add dog. One component for the standalone app, the BLD suite and the CD Hub.
- * Everything about the place it runs in comes through an adapter; nothing hub-only is in here.
- *
- *   adapter = {
- *     canWrite()                              -> true once a save route exists
- *     listCandidates()                        -> [{id, name, sex, dob, photo}]  animals already held, not yet enrolled
- *     species()                               -> [{id, name, sexes:[...]}]       the species rows, with their own sex words
- *     kinds()                                 -> optional, the kind words from rows (e.g. Adult, Pup)
- *     createSubject(fields, photoFile)        -> Promise<{id}>  (standalone and suite; the hub adds pups this way too)
- *     enrol(subjectId, schemeId, fromDate)    -> Promise
- *     photoUrl(photo)                         -> optional, a picture address for a candidate's photo cell
- *   }
- *   opts = { mode: 'pick' | 'new', schemeId, today, litterId, damName }
- *
- * Picking an existing animal links its record, so its photo (the subject's photo cell) comes with it. Nothing is copied.
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.BBAddDog = factory();
@@ -25,7 +8,6 @@
   function esc(s) { return t(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   var NOSAVE = 'Saving is not set up yet.';
 
-  /** Checks before saving. Returns { field: message }; empty when fine. No limits here: dates only must be real and not in the future. */
   function check(f, today) {
     var e = {};
     if (!t(f.name)) e.name = 'Add a name.';
@@ -40,7 +22,6 @@
     return '<label class="bb-lab" for="' + id + '">' + label + input + (err ? '<span class="bb-err" role="alert">' + esc(err) + '</span>' : '') + '</label>';
   }
 
-  /** The form. state = { mode, q, picked, fields, errors, busy, done, message } */
   function html(adapter, opts, state) {
     state = state || {};
     var can = !!(adapter && adapter.canWrite && adapter.canWrite());
@@ -85,7 +66,6 @@
     return out;
   }
 
-  /** Save: pick = enrol the chosen animal; new = create it (with the photo), then enrol. Resolves to the subject id. */
   function save(adapter, opts, state, photoFile) {
     if (!adapter.canWrite || !adapter.canWrite()) return Promise.reject(new Error(NOSAVE));
     var from = opts.today || '';
@@ -105,7 +85,6 @@
     });
   }
 
-  /** Wire a mounted form: redraws itself in place. */
   function bind(el, adapter, opts, onDone) {
     var state = { mode: opts.mode || (adapter.listCandidates ? 'pick' : 'new'), fields: {} }, photo = null;
     function draw() { el.innerHTML = html(adapter, opts, state); }
@@ -136,3 +115,4 @@
 
   return { html: html, bind: bind, save: save, check: check, NOSAVE: NOSAVE };
 }));
+

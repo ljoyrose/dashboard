@@ -1,5 +1,3 @@
-// Never lose an entry (OV12 20 Nov 2026): a save that gets no answer (the phone slept, the signal blinked) is kept on the
-// phone and sent again with the SAME request id. Pretend script, invented dogs and rooms; the codes are made up.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
 const { tabClick } = require('../support/tabs');
@@ -26,10 +24,8 @@ function rooms(world) {
 }
 
 function answer(body) {
-  // 16 Nov 2026: a signed-in hub first sends its Google sign-in; these pretend staff are not owners, so the script says
-  // so and the hub asks for the staff code (as the real script does when the account is not on the owner list).
   if (!body.code) return body.google_token
-    ? { ok: false, code: 'GOOGLE_NOT_OWNER', message: 'This Google account is not on the owner list. Enter your staff code. Nothing was saved.' }
+    ? { ok: false, code: 'GOOGLE_NOT_USER', message: 'This Google account is not on the user list. Enter your staff code. Nothing was saved.' }
     : { ok: false, code: 'NO_CODE', message: 'Enter your staff code.' };
   const who = WHO[body.code];
   if (!who) return { ok: false, code: 'BAD_CODE', message: 'That staff code was not recognised.' };
@@ -66,7 +62,7 @@ test('a save with no answer is kept on the phone, says "Not sent yet", and Send 
   await expect(page.locator('body')).not.toContainText('check your connection');
   const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('cdhub.outbox') || '[]'));
   expect(kept).toHaveLength(1);
-  expect(JSON.stringify(kept)).not.toContain('river-staff-441');   // the code is never kept with an entry
+  expect(JSON.stringify(kept)).not.toContain('river-staff-441');
   expect(kept[0].body).toMatchObject({ table: 'occupancy', action: 'add', fields: { subject_id: 'sub-test-pup-1', area_id: 'area-1' } });
 
   reachable = true;
@@ -75,11 +71,11 @@ test('a save with no answer is kept on the phone, says "Not sent yet", and Send 
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
   const ids = sent.map((b) => b.request_id);
   expect(ids.length).toBeGreaterThanOrEqual(2);
-  expect(new Set(ids).size).toBe(1);   // every try is the same entry: the script can never save it twice
+  expect(new Set(ids).size).toBe(1);
   expect(sent[sent.length - 1].code).toBe('river-staff-441');
 });
 
-test('a validation failure with no code is not retried; one job is one notice, with Clear all and Show what is wrong @regression', async ({ page }) => {
+test('t-cdhub-never-lose-spec-1', async ({ page }) => {
   let calls = 0;
   await page.route(SINK, async (route) => {
     calls += 1;
@@ -111,7 +107,7 @@ test('a validation failure with no code is not retried; one job is one notice, w
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox.refused'))).toBeNull();
 });
 
-test('a link the script says has already ended is not kept and is not listed as Not saved @regression', async ({ page }) => {
+test('t-cdhub-never-lose-spec-2', async ({ page }) => {
   let calls = 0;
   await page.route(SINK, async (route) => {
     calls += 1;
@@ -130,7 +126,7 @@ test('a link the script says has already ended is not kept and is not listed as 
   expect(calls).toBe(seen);
 });
 
-test('a photo link the script cannot find is listed once and is not sent again @regression', async ({ page }) => {
+test('t-cdhub-never-lose-spec-3', async ({ page }) => {
   let calls = 0;
   await page.route(SINK, async (route) => {
     calls += 1;
@@ -175,8 +171,6 @@ test('a refusal (a check failed) is not kept: it is listed as Not saved with the
   await expect(bar).toBeHidden();
 });
 
-// ITEMS2 / OV12 22 Nov 2026: saves typed faster than they send go as one list save. A script with no list save yet
-// answers "Unknown action": nothing is refused or lost, the same entries go one by one. Form answers go with their item.
 async function listPage(page, oldScript) {
   const sent = [];
   await page.route(SINK, async (route) => {
@@ -187,7 +181,7 @@ async function listPage(page, oldScript) {
       out = oldScript ? { ok: false, code: 'BAD_REQUEST', message: 'Unknown action.' }
         : { ok: true, result: { status: 'many', items: body.items.map((it, i) => ({ request_id: it.request_id, ok: true, result: { status: 'saved', id: 'clg-' + i } })) } };
     } else out = { ok: true, result: { status: 'saved', id: 'clg-one' } };
-    await new Promise((r) => setTimeout(r, 150));   // a slow script, so the later saves wait in line together
+    await new Promise((r) => setTimeout(r, 150));
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
   });
   await page.goto('cdhub/');
@@ -212,7 +206,7 @@ test('a script with no list save yet: the list is answered "Unknown action", not
   await expect(page.locator('#hub-outbox')).toBeHidden();
 });
 
-test('Send now sends the kept round taps as one list, not one at a time @regression', async ({ page }) => {
+test('t-cdhub-never-lose-spec-4', async ({ page }) => {
   const sent = [];
   const urls = [];
   page.on('request', (r) => { if (r.method() === 'POST') urls.push(r.url()); });
@@ -266,7 +260,7 @@ test('owner sign-in ends: the save is kept, the line says sign in again, and it 
   await page.route(SINK, async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
     let ans;
-    if (body.google_token) { saved.push(body.request_id); ans = { ok: true, result: { status: 'saved', id: 'occ-new', who: 'Lisa', at: '2026-11-13T10:00:00+00:00' } }; }
+    if (body.google_token) { saved.push(body.request_id); ans = { ok: true, result: { status: 'saved', id: 'occ-new', who: 'User', at: '2026-11-13T10:00:00+00:00' } }; }
     else ans = answer(body);
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ans) });
   });
@@ -276,7 +270,6 @@ test('owner sign-in ends: the save is kept, the line says sign in again, and it 
   await tabClick(page, '#nav button[data-go="dogs"]');
   const card = page.locator('.dc[data-dog="sub-test-pup-1"]');
   await expect(card).toBeVisible();
-  // the hour is up: the sign-in has ended on this phone
   const hold = await page.evaluate(() => { const e = TOKEN_EXP; TOKEN_EXP = 0; return e; });
   await card.getByRole('button', { name: 'Place' }).click();
   await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
@@ -288,19 +281,15 @@ test('owner sign-in ends: the save is kept, the line says sign in again, and it 
   const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('cdhub.outbox') || '[]'));
   expect(kept).toHaveLength(1);
   expect(JSON.stringify(kept)).not.toContain('pretend-token');
-  // waiting by itself never asks for a code
   await page.evaluate(() => hubFlush());
   await expect(page.getByRole('dialog', { name: 'Staff code' })).toHaveCount(0);
   expect(saved).toHaveLength(0);
-  // signed in again: it goes by itself, once
   await page.evaluate((e) => { TOKEN_EXP = e; return hubFlush(); }, hold);
   await expect(bar).toBeHidden();
   expect(saved).toEqual([kept[0].id]);
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
 });
 
-// OV13 22 Nov 2026: saves took 19-60 s; the first try saved but its answer never came; the resend was answered
-// DUPLICATE and the page said "Not saved". A DUPLICATE after a try with no answer means that try saved it.
 test('first try saved but its answer was lost: the resend answered DUPLICATE shows as saved, never Not saved', async ({ page, guard, allowedConsole }) => {
   allowedConsole.push(/ERR_FAILED/, /Failed to load resource/);
   rooms(guard.world);
@@ -309,8 +298,8 @@ test('first try saved but its answer was lost: the resend answered DUPLICATE sho
     const body = JSON.parse(route.request().postData() || '{}');
     if (!body.code) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer(body)) });
     tries++;
-    if (tries === 1) return route.abort('failed');   // the script saved it; the answer never reached the phone
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved. If that one is wrong, tell the owner.' }) });
+    if (tries === 1) return route.abort('failed');
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved. If that one is wrong, tell the user.' }) });
   });
   await page.goto('cdhub/');
   await page.evaluate((url) => { DASH_CONFIG.cdhub.saveScriptUrl = url; }, SINK);
@@ -324,7 +313,6 @@ test('first try saved but its answer was lost: the resend answered DUPLICATE sho
   await dlg.getByRole('button', { name: 'Use this code' }).click();
   const bar = page.locator('#hub-outbox');
   await expect(bar.locator('[data-outbox-waiting="1"]')).toBeVisible();
-  // watch what the page does with the answer: delivered as saved (a round reading would tick), not dropped unshown
   await page.evaluate(() => { window.__delivered = []; const real = hubDelivered; hubDelivered = function (it, j) { window.__delivered.push({ id: it.id, ok: !!(j && j.ok) }); return real(it, j); }; });
   await bar.locator('[data-outbox-send]').click();
   await expect(bar).toBeHidden();
@@ -336,3 +324,4 @@ test('first try saved but its answer was lost: the resend answered DUPLICATE sho
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox.refused'))).toBeNull();
   expect(tries).toBe(2);
 });
+

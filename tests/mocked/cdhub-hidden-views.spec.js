@@ -18,7 +18,7 @@ const signIn = async (page) => {
 };
 const HIDDEN = ['buyers', 'shape', 'litters', 'vet', 'enquiries'];
 
-test('with no rows, Assocs, Table map, Litters, Vet and Enquiries are off every menu and their addresses open Main @regression', async ({ page, guard }) => {
+test('t-cdhub-hidden-views-spec-1', async ({ page, guard }) => {
   setFile(guard.world, 'BLD-breeding_rule.csv', HEAD);
   await signIn(page);
   for (const id of HIDDEN) {
@@ -31,7 +31,7 @@ test('with no rows, Assocs, Table map, Litters, Vet and Enquiries are off every 
   }
 });
 
-test('an owner row nav.view.litters = 1 brings Litters back; the others stay off', async ({ page, guard }) => {
+test('an user row nav.view.litters = 1 brings Litters back; the others stay off', async ({ page, guard }) => {
   setFile(guard.world, 'BLD-breeding_rule.csv', HEAD + 'v1,t,nav.view.litters,1,2026-01-01,Pretend setting,,,\n');
   await signIn(page);
   expect(await page.evaluate(() => navHas('litters'))).toBe(true);
@@ -39,3 +39,4 @@ test('an owner row nav.view.litters = 1 brings Litters back; the others stay off
   await page.evaluate(() => go('litters'));
   await expect(page).toHaveURL(/#\/litters$/);
 });
+

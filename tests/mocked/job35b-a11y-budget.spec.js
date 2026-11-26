@@ -1,17 +1,9 @@
-// JOB 35b regression guard (30 Oct 2026) for the second half of the pages: marketplace, marketplace/privacy, money, studio.
-// Fails if any view gains an axe problem (WCAG 2.2 AA tags, 1280px and 390px), or if a page's own load (its files from
-// this site, signed in with pretend Google, Drive and Sheets) grows more than 10% over the size measured on 30 Oct 2026.
-// Every-view-access covers money with axe's default rules; this adds the WCAG 2.2 tags, phone width, marketplace,
-// privacy and studio. When a page is made smaller, lower its number here so it can never creep back.
 const { test, expect } = require('../support/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 const { HUBS, go } = require('../support/hubs');
 const { withGrowth } = require('../support/budgets');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
-// Body bytes of the page's own files on first load, measured 30 Oct 2026 (job35b-audit.spec.js). Allowed: +10%.
-// marketplace re-measured 31 Oct 2026 after Marketplace v11.10 (#221: post cards, supplier costs, New stock tab).
-// From 3 Nov 2026 a PR that adds weight adds a file in tests/budget-growth/ (see tests/support/budgets.js) instead of editing this line.
 const BYTES = withGrowth({ marketplace: 226000, money: 201500, studio: 334100, privacy: 15000 });
 // money 201100 > 201500 (+400) on 3 Nov 2026: config.js grew 336 bytes (TidyUp stage 9, #142), and every page loads it. Measured 221465.
 // money 197700 > 201100 (+3400) on 2 Nov 2026: Hub Mains (DashKit.hubMain in toolkit.js and house.css, Main's numbers and the moved
@@ -62,3 +54,4 @@ for (const p of PAGES) {
     });
   }
 }
+

@@ -1,10 +1,9 @@
-// One code run at a time. Opening another card type drops the previous progress line and does not keep saving that list.
 const { test, expect } = require('../support/test');
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
 
-test('switching card type stops the previous code run @regression', async ({ page }) => {
+test('t-cdhub-print-run-spec-1', async ({ page }) => {
   let release;
   const gate = new Promise((r) => { release = r; });
   let held = false;
@@ -24,13 +23,13 @@ test('switching card type stops the previous code run @regression', async ({ pag
   await page.route(SCRIPT, async (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }], version: 'test' } });
     const b = JSON.parse(route.request().postData());
-    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'OWNER' } } });
+    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'USER' } } });
     if (b.table === 'qr_tag' && !held) { held = true; await gate; }
     sent.push(b);
     if (b.table === 'qr_tag') tables.qr_tag.push({ ...b.fields, active: 'true' });
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'qrt-' + sent.length } } });
   });
-  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-USER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
   await page.getByRole('button', { name: 'Thermometer cards' }).click();
   await expect(page.locator('.msg')).toHaveText('Making code 1 of 24...');
@@ -48,3 +47,4 @@ test('switching card type stops the previous code run @regression', async ({ pag
   expect(sent.filter((b) => b.fields && b.fields.kind === 'litter')).toEqual([]);
   await expect(page.locator('.qcard')).toHaveCount(0);
 });
+

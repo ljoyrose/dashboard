@@ -1,4 +1,3 @@
-// Compliance gaps (mock-up 7 Nov 2026): the parts built after PR 405. Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 
@@ -35,7 +34,6 @@ function rooms(world, occ, rules) {
 }
 
 test.describe('CD Hub: Compliance gaps', () => {
-  // R4: "Room A is closed while Room Iso is in use" is a dated row, never code.
   test('room-to-room rule: closed room with a dog in it is flagged; ended rule is not', async ({ page, guard }) => {
     rooms(guard.world,
       ['o1,t,sub-x1,ar-iso,,2026-01-01,,Breeding Bitch,', 'o2,t,sub-x2,ar-a,,2026-01-01,,Breeding Bitch,'],
@@ -64,3 +62,4 @@ test.describe('CD Hub: Compliance gaps', () => {
     await expect(page.locator('#compRooms summary .cnt')).toHaveText('');
   });
 });
+

@@ -1,10 +1,8 @@
-// Factory Send gate and Prompts view: every state the factory-find "Factory send gate" block does not already cover.
-// Pretend Google and Drive only; the data is tests/fixtures/factory/state.js plus invented text here.
 const crypto = require('crypto');
 const { test, expect } = require('../support/test');
 const { build } = require('../fixtures/factory/state');
 
-const LOGS = require('../support/world').IDS.factoryLogs; // the Drive folder the page reads af-state.json from
+const LOGS = require('../support/world').IDS.factoryLogs;
 
 async function open(page, guard, hash, { change, now } = {}) {
   const state = build(now || Date.now());
@@ -17,7 +15,7 @@ async function open(page, guard, hash, { change, now } = {}) {
   await expect(page.locator('#appPick')).toBeVisible();
 }
 
-const ID = '869fk9d1r'; // the fixture's one fully-lined open send (Sample Links)
+const ID = '869fk9d1r';
 const PROMPT_DOC = '1SAMPLEpromptDocId00000000000';
 const PROMPT_TEXT = 'Invented prompt text for the gate test.\nTHE WORK.\n1. Do one invented thing.\n';
 const send = (st, id) => st.lists.sends.find((t) => t.id === id);
@@ -65,7 +63,7 @@ test.describe('Factory send gate: stamp states', () => {
   test('several lines missing: the gate names each in order, the checker reason last', async ({ page, guard }) => {
     await open(page, guard, '#/item/869fk6k00', { change: (st) => { send(st, '869fk6k00').tags.push('leak-open'); } });
     await expect(copyBtn(page, '869fk6k00')).toHaveCount(0);
-    await expect(gate(page, '869fk6k00')).toHaveText('Last turn · Prediction · Happy Hour · After send · Lisa available · Class · No checker stamp');
+    await expect(gate(page, '869fk6k00')).toHaveText('Last turn · Prediction · Happy Hour · After send · User available · Class · No checker stamp');
   });
 
   test('a closed send (done) shows no gate and no Copy, even with every line present', async ({ page, guard }) => {
@@ -149,7 +147,6 @@ test.describe('Factory send gate: Copy', () => {
   test('no prompt doc link on the task: "No prompt doc on this task."', async ({ page, guard }) => {
     await open(page, guard, '#/item/' + ID, { change: (st) => {
       const t = send(st, ID);
-      // No Drive file link at all: the Prediction and Simulation links point elsewhere (invented addresses).
       t.desc = t.desc.replace(/\nPrompt text:[^\n]*/, '').replace(/Prediction: \S+ · Simulation: \S+/, 'Prediction: https://notes.example.test/prediction · Simulation: https://notes.example.test/simulation');
     } });
     await copyBtn(page).click();
@@ -158,7 +155,7 @@ test.describe('Factory send gate: Copy', () => {
   });
 
   test('the gate goes stale between render and click (UK midnight passes): Copy re-renders locked, nothing copied', async ({ page, guard }) => {
-    const T = Date.parse('2026-10-30T23:55:00Z'); // GMT in late October: 23:55 in London
+    const T = Date.parse('2026-10-30T23:55:00Z');
     await page.clock.install({ time: T });
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     guard.world.file(PROMPT_DOC, 'prompt-sample.md', PROMPT_TEXT, { mimeType: 'text/markdown' });
@@ -176,7 +173,6 @@ test.describe('Factory send gate: Copy', () => {
 
 test.describe('Factory Prompts view', () => {
   const v = (page) => page.locator('#view [data-prompts]');
-  // [data-ps id, section] for each .pitem in page order.
   const order = (page) => page.locator('#view [data-prompts] .pitem').evaluateAll((els) => els.map((e) => {
     let s = e.previousElementSibling; while (s && !s.matches('.grpt')) s = s.previousElementSibling;
     return [e.querySelector('[data-ps]').getAttribute('data-ps'), s ? s.getAttribute('data-sec') : ''];
@@ -207,7 +203,7 @@ test.describe('Factory Prompts view', () => {
     await expect(rules.nth(0)).toContainText('Copy shows only when the task carries');
     await expect(rules.nth(1)).toContainText('Copy refuses text that does not match the stamp');
     await expect(rules.nth(2)).toContainText('Nothing that was not run counts as a pass');
-    await expect(rules.nth(3)).toContainText('Lisa available');
+    await expect(rules.nth(3)).toContainText('User available');
   });
 
   test('TEST- sends are hidden unless the Do tab\'s TEST filter is on', async ({ page, guard }) => {
@@ -251,3 +247,4 @@ test.describe('Factory Prompts view', () => {
     expect(await tok('--ljr-5')).not.toBe(await tok('--ljr-2'));
   });
 });
+

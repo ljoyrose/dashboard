@@ -48,3 +48,4 @@ test('Where: only rooms with limit rows in force, code only, in place order; Off
   await expect(page.locator('[data-dog="dog-1"] .bs-result')).toHaveText('Off-site.');
   expect(posts.some((b) => JSON.stringify(b).includes('occupancy_out'))).toBe(true);
 });
+

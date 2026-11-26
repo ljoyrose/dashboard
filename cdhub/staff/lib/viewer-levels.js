@@ -1,14 +1,3 @@
-/*!
- * Viewer levels: what each kind of OUTSIDE viewer (an inspector, a vet, another breeder) may see of an animal's records.
- * The breeder chooses, per viewer type, a level; each level is a list of things it shows. It sits on top of the per-link
- * choices already made for an inspector link (which dogs, which fields: BLD-inspect_link_subject / _field). It never widens them.
- *
- * Rows: optional BLD-viewer_level (viewer_type, viewer_label, level_key, level_label, shows = things joined by ';',
- * from_date, to_date). With no rows the owner's two levels are used (decided 18 Nov 2026): A records only; B records and
- * Pass / Unverified / Fail on the must-pass checks. Inspector = B; vet and another breeder = A.
- * Whatever any row says, an outside viewer never sees points, the target, ranking, notes or programme answers.
- * Pure: no page, no network. Works in a browser (window.BLDViewerLevels) and in Node.
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.BLDViewerLevels = factory();
@@ -17,18 +6,14 @@
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
 
-  /* the things a level can show, in the order they are listed */
   var THINGS = ['records', 'grades', 'due_dates', 'must_pass', 'points', 'target', 'ranking', 'notes', 'programme'];
   var THING_WORDS = {
     records: 'The records ticked on the link', grades: 'Grades and dates', due_dates: 'When each check is next due',
     must_pass: 'Pass, Unverified or Fail on the must-pass checks', points: 'Points', target: 'The target', ranking: 'Ranking (best to worst)',
     notes: 'Notes', programme: 'Programme answers'
   };
-  /* never shown to anyone outside, whatever a row says (only the owner sees scores) */
   var NEVER = { points: 1, target: 1, ranking: 1, notes: 1, programme: 1 };
 
-  /* The owner's two levels (decided 18 Nov 2026): A records only; B records and Pass / Unverified / Fail on the must-pass
-     checks. Inspector = B; vet and another breeder = A. Rows may change them, never past NEVER. */
   var DEFAULT = {
     levels: [
       { key: 'level_a', label: 'Level A: records only', shows: ['records', 'grades', 'due_dates'] },
@@ -48,7 +33,6 @@
   }
   function inForce(r, d) { var f = t(r.from_date), to = t(r.to_date); return (!f || !d || f <= d) && (!to || !d || to >= d); }
 
-  /** The levels in force: { fromRows, viewers:[{type,label,level}], byKey:{key:{label, shows}} }. */
   function levels(T, today) {
     var rows = ((T && T['BLD-viewer_level.csv']) || []).filter(function (r) { return t(r.viewer_type) && t(r.level_key) && inForce(r, today); });
     var src = rows.length ? {
@@ -61,7 +45,6 @@
     return { fromRows: !!rows.length, viewers: viewers, byKey: byKey };
   }
 
-  /** What one viewer type sees: a map of thing -> true. Unknown viewer or level: records only. */
   function showsFor(T, viewerType, today, levelKey) {
     var set = levels(T, today);
     var w = set.viewers.filter(function (x) { return x.type === t(viewerType).toLowerCase(); })[0];
@@ -69,8 +52,6 @@
     return lv ? Object.assign({}, lv.shows) : { records: true };
   }
 
-  /** Trim one animal's must-pass lines to what a level shows. Never points, target or ranking.
-   *  line: { label, outcome, answer, date, due_date, points?, target? } -> { label, outcome?, answer?, date?, due_date? } */
   function trimLines(lines, shows) {
     return (lines || []).map(function (l) {
       var o = { label: t(l.label) };
@@ -83,3 +64,4 @@
 
   return { THINGS: THINGS, THING_WORDS: THING_WORDS, NEVER: NEVER, DEFAULT: DEFAULT, levels: levels, showsFor: showsFor, trimLines: trimLines };
 }));
+

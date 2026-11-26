@@ -1,5 +1,3 @@
-// The AF-ENGINE stamp handler (tools/presend/stamp-handler.gs), run in a sandbox with a pretend ClickUp.
-// Invented ids and text only. Covers: a READY and a NOT READY stamp are posted as one plain comment; every bad request throws before any write.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -75,3 +73,4 @@ test.describe('presend stamp handler (AF-ENGINE)', () => {
     expect(e.writes()).toHaveLength(0);
   });
 });
+

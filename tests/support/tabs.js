@@ -3,7 +3,6 @@
 const MORE = 'nav.house-tabs [data-house-more]';
 const shutIn = (t) => t.evaluate((e) => { const m = e.closest('.house-more'); return !!m && m.hidden; });
 
-/** Clicks a tab or a view under More (opening More first only when the view sits in its shut menu). */
 async function tabClick(page, sel, opts) {
   const t = typeof sel === 'string' ? page.locator(sel).first() : sel;
   await t.waitFor({ state: 'attached' });
@@ -11,8 +10,6 @@ async function tabClick(page, sel, opts) {
   await t.click(opts);
 }
 
-/** Presses Tab until `target` has the focus, the way a keyboard user gets there: a view under More is reached by tabbing to More,
- *  pressing Enter (the menu opens and takes the focus) and tabbing on inside the menu. Returns true when reached. */
 async function tabTo(page, target, max = 150) {
   const t = typeof target === 'string' ? page.locator(target).first() : target;
   await t.waitFor({ state: 'attached' });
@@ -42,3 +39,4 @@ async function openView(page, id) {
   }
 }
 module.exports = { tabClick, tabTo, openView, MORE };
+

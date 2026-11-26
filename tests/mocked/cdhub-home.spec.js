@@ -1,6 +1,3 @@
-// Main answers "what needs me today?" (OV11 15 Nov 2026): cards, each a count or its top 3, then "See all" to the full list
-// in its own section. Each person builds their own Main: card order is owner-setting rows nav.home.<ROLE>.<card>, dated, with
-// a source; no rows = the pack's starter. Arrange saves one new row per card. Invented rows only; pretend save script.
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 const { SINK } = require('../support/dog-photo-world');
 
@@ -18,7 +15,7 @@ test.describe('CD Hub Main: the home each person builds', () => {
     expect(await ids(page)).toEqual(['needs']);
     await page.evaluate(() => {
       T['BLD-breeding_rule.csv'] = (T['BLD-breeding_rule.csv'] || []).concat([
-        { id: 'h0', rule_key: 'nav.home.OWNER.litters', value: '1', effective_from: '2020-01-01', source: 'Pretend' }]);
+        { id: 'h0', rule_key: 'nav.home.USER.litters', value: '1', effective_from: '2020-01-01', source: 'Pretend' }]);
       go('map', false);
     });
     expect(await ids(page)).toEqual(['litters']);
@@ -34,11 +31,11 @@ test.describe('CD Hub Main: the home each person builds', () => {
     await open(page, guard);
     await page.evaluate(() => {
       T['BLD-breeding_rule.csv'] = (T['BLD-breeding_rule.csv'] || []).concat([
-        { id: 'h1', rule_key: 'nav.home.OWNER.dogs', value: '1', effective_from: '2020-01-01', source: 'Pretend' },
-        { id: 'h2', rule_key: 'nav.home.OWNER.needs', value: '2', effective_from: '2020-01-01', source: 'Pretend' },
-        { id: 'h3', rule_key: 'nav.home.OWNER.areas', value: '3', effective_from: '2020-01-01', source: 'Pretend' },
-        { id: 'h4', rule_key: 'nav.home.OWNER.areas', value: '0', effective_from: '2021-01-01', source: 'Pretend' },
-        { id: 'h5', rule_key: 'nav.home.OWNER.sops', value: '3', effective_from: '2999-01-01', source: 'Pretend' }]);
+        { id: 'h1', rule_key: 'nav.home.USER.dogs', value: '1', effective_from: '2020-01-01', source: 'Pretend' },
+        { id: 'h2', rule_key: 'nav.home.USER.needs', value: '2', effective_from: '2020-01-01', source: 'Pretend' },
+        { id: 'h3', rule_key: 'nav.home.USER.areas', value: '3', effective_from: '2020-01-01', source: 'Pretend' },
+        { id: 'h4', rule_key: 'nav.home.USER.areas', value: '0', effective_from: '2021-01-01', source: 'Pretend' },
+        { id: 'h5', rule_key: 'nav.home.USER.sops', value: '3', effective_from: '2999-01-01', source: 'Pretend' }]);
       go('map', false);
     });
     expect(await ids(page)).toEqual(['dogs', 'needs']);
@@ -66,10 +63,10 @@ test.describe('CD Hub Main: the home each person builds', () => {
     const today = await page.evaluate(() => todayISO());
     const got = {};
     bodies.forEach((b) => { expect(b.table).toBe('breeding_rule'); expect(b.fields.effective_from).toBe(today); expect(b.fields.source).toBe('CD Hub, Arrange Main'); got[b.fields.rule_key] = b.fields.value; });
-    expect(got['nav.home.OWNER.unplaced']).toBe('1');
-    expect(got['nav.home.OWNER.needs']).toBe('2');
-    expect(got['nav.home.OWNER.dogs']).toBe('4');
-    expect(got['nav.home.OWNER.round']).toBe('0');
+    expect(got['nav.home.USER.unplaced']).toBe('1');
+    expect(got['nav.home.USER.needs']).toBe('2');
+    expect(got['nav.home.USER.dogs']).toBe('4');
+    expect(got['nav.home.USER.round']).toBe('0');
   });
 
   test('a failed save keeps Arrange open with a Not saved line', async ({ page, guard }) => {
@@ -91,9 +88,10 @@ test.describe('HubNav.home', () => {
   test('person beats role beats starter; unknown cards and ended rows ignored', () => {
     const cards = ['a', 'b', 'c'];
     expect(H({ cards, starter: ['c', 'x', 'a'] })).toEqual(['c', 'a']);
-    const rows = [r('nav.home.OWNER.b', 1), r('nav.home.OWNER.a', 2), r('nav.home.person.p1.c', 1), r('nav.home.OWNER.c', 3, '2020-01-01', '2020-06-01')];
-    expect(H({ rows, iso: '2026-11-15', role: 'OWNER', cards })).toEqual(['b', 'a']);
-    expect(H({ rows, iso: '2026-11-15', role: 'OWNER', person: 'p1', cards })).toEqual(['c']);
-    expect(H({ rows: [r('nav.home.OWNER.a', 0)], iso: '2026-11-15', role: 'OWNER', cards, starter: ['a'] })).toEqual([]);
+    const rows = [r('nav.home.USER.b', 1), r('nav.home.USER.a', 2), r('nav.home.person.p1.c', 1), r('nav.home.USER.c', 3, '2020-01-01', '2020-06-01')];
+    expect(H({ rows, iso: '2026-11-15', role: 'USER', cards })).toEqual(['b', 'a']);
+    expect(H({ rows, iso: '2026-11-15', role: 'USER', person: 'p1', cards })).toEqual(['c']);
+    expect(H({ rows: [r('nav.home.USER.a', 0)], iso: '2026-11-15', role: 'USER', cards, starter: ['a'] })).toEqual([]);
   });
 });
+

@@ -1,5 +1,3 @@
-// Dogs cards: a photo from the subject `photo` cell, the paw when there is none or it will not load,
-// and Take photo / Upload photo. Invented dogs only. The save script is pretend; no folder id is in this file.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -73,7 +71,6 @@ test.describe('CD Hub dog photos', () => {
       const up = c.locator('input[data-photo-src="upload"]');
       await expect(take).toHaveAttribute('accept', 'image/*');
       await expect(up).toHaveAttribute('accept', 'image/*');
-      // Take opens the camera on a phone; Upload has no capture, so it offers the library and files
       await expect(take).toHaveAttribute('capture', 'environment');
       expect(await up.getAttribute('capture')).toBeNull();
     }
@@ -154,3 +151,4 @@ test.describe('CD Hub dog photos', () => {
     await expect(two.locator('input[data-dog-photo]').first()).toBeEnabled();
   });
 });
+

@@ -1,4 +1,3 @@
-// Money Hub: https://ljoyrose.github.io/dashboard/money/
 const { test, expect, buildWorld } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 const { at } = require('../support/site');
@@ -51,7 +50,7 @@ test.describe('Money Hub: sign-in (mocked) and the the owner gate', () => {
     await page.goto('money/');
     await signIn(page);
     const req = await page.evaluate(() => window.__GIS_LAST_REQUEST);
-    expect(req.login_hint).toBe(IDS.moneyOwner);
+    expect(req.login_hint).toBe(IDS.moneyUser);
     expect(req.prompt).toBe('select_account');
   });
 
@@ -60,12 +59,10 @@ test.describe('Money Hub: sign-in (mocked) and the the owner gate', () => {
       guard.world.email = 'someone.else@example.test';
       await page.goto('money/');
       await signIn(page);
-      await expect(page.locator('#view')).toContainText('This page is for Lisa only');
+      await expect(page.locator('#view')).toContainText('This page is for User only');
       await expect(page.locator('#view')).toContainText('someone.else@example.test');
       await expect(page.locator('#view')).not.toContainText('£');
       await expect(page.locator('#view')).not.toContainText('TESTCO');
-      // after the account check the page must not go on to read any CSV
-      // (the one site-wide look for the private settings file is not a figures read; it is covered in private-config.spec.js)
       const csvReads = guard.world.calls.filter((c) => c.path === '/files' && /name = |trashed = false and \(name/.test(c.query) && !c.query.includes("'DASH_CONFIG.json'"));
       expect(csvReads).toEqual([]);
     });
@@ -137,7 +134,6 @@ test.describe('Money Hub: navigation', () => {
   test('links on the Now page lead to Dates and To-do', async ({ page }) => {
     await page.goto('money/');
     await signIn(page);
-    // Main's Due Soon number opens the dates due soon; the Needs you heading opens To-do (Hub Mains, 2 Nov 2026).
     await page.locator('#view [data-hm="nums"] a.hm-n', { hasText: 'Due Soon' }).click();
     await expect(page).toHaveURL(/#\/dates\/soon$/);
     await page.goBack();
@@ -169,16 +165,15 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     const v = page.locator('#view');
     await expect(v).toContainText('TESTCO');
     await expect(v).toContainText('TESTPERS');
-    await expect(v).toContainText('£12,000'); // BALANCES.csv, the account with a balance
+    await expect(v).toContainText('£12,000');
     await expect(v).toContainText('£3,000');
-    await expect(v).not.toContainText('OLDCO'); // retired in MON-SUBJECTS.csv
+    await expect(v).not.toContainText('OLDCO');
     await expect(v).not.toContainText('£15,000'); // never summed across entities
   });
 
   test('an account with no balance is counted as "no balance yet", not zero', async ({ page }) => {
     await page.goto('money/#/money');
     await signIn(page);
-    // Sample old account is status "nil" so it is ignored; the current account's balance is the entity total.
     await expect(page.locator('#view')).toContainText('In the bank');
   });
 
@@ -203,7 +198,6 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     await page.goto('money/');
     await signIn(page);
     const v = page.locator('#view');
-    // Main shows the first five; the full list lives on To-do (Hub Mains, 2 Nov 2026).
     await expect(v.locator('[data-hub-main]')).toContainText('Sample overdue filing');
     await expect(v.locator('[data-hub-main]')).toContainText(/TESTCO: 1 overdue on Sample tax body/);
     await page.evaluate(() => { location.hash = '#/todo'; });
@@ -330,3 +324,4 @@ test.describe('Money Hub: missing, duplicate or wrong files are shown as errors 
     });
   });
 });
+

@@ -1,7 +1,6 @@
 (function (root) {
   'use strict';
 
-  // Owner, shared drive and folder ids live in config.js (loaded first).
   var CFG = (root.DASH_CONFIG && root.DASH_CONFIG.money) || { folders: {} };
   var INDEX = [
     { key: 'register', name: 'MON-REGISTER.csv', folder: 'index', head: 'id' },
@@ -36,7 +35,6 @@
   var FOLDER_MIME = 'application/vnd.google-apps.folder';
   var FILE_FIELDS = 'id,name,mimeType,modifiedTime,webViewLink,parents,size';
   var STALE_DAYS = 8;
-  /** Splits CSV text into rows of cells. Handles quoted cells; drops a leading byte-order mark, carriage returns and blank rows. */
   function parseCSV(text) {
     var rows = [], row = [], cell = '', q = false;
     text = String(text || '').replace(/^\uFEFF/, '').replace(/\r/g, '');
@@ -51,7 +49,6 @@
     if (cell.length || row.length) { row.push(cell); rows.push(row); }
     return rows.filter(function (r) { return r.some(function (x) { return x.trim(); }); });
   }
-  /** Parses a CSV whose header row (within the first 6 rows) contains keyCol; lines above it become prov. Returns { prov, head, rows, held, countOk, ... }. */
   function parseTable(text, keyCol) {
     var rows = parseCSV(text);
     var hi = -1;
@@ -69,7 +66,6 @@
     return { prov: prov, head: head, rows: recs, held: held, countOk: held === null ? null : held === recs.length, hasCountLine: /^(CURRENT|COUNT)/i.test(prov) };
   }
   var MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
-  /** Finds a date in a provenance line (YYYY-MM-DD or day, month name, year). Returns YYYY-MM-DD or ''. */
   function provDate(prov) {
     var m = /(\d{4}-\d{2}-\d{2})/.exec(prov || '');
     if (m) return m[1];
@@ -79,17 +75,12 @@
   }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   var ukDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' });
-  /** Today's date in London as YYYY-MM-DD (root.__MONEY_TODAY overrides it). */
   function todayISO() { return root.__MONEY_TODAY || ukDay.format(new Date()); }
-  /** True when d is a YYYY-MM-DD string. */
   function isISO(d) { return /^\d{4}-\d{2}-\d{2}$/.test(d || ''); }
   function utc(iso) { var p = iso.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]); }
   function toISO(ms) { var d = new Date(ms); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); }
-  /** Returns the YYYY-MM-DD date n days after iso (n may be negative). */
   function addDays(iso, n) { return toISO(utc(iso) + n * 86400000); }
-  /** Whole days from date a to date b (negative when b is earlier). */
   function daysBetween(a, b) { return Math.round((utc(b) - utc(a)) / 86400000); }
-  /** Next due date for weekly:DAY or monthly:N values, on or after today. Any other value is returned unchanged. */
   function nextDue(d, today) {
     today = today || todayISO();
     var m = /^weekly:(MON|TUE|WED|THU|FRI|SAT|SUN)$/i.exec(d || '');
@@ -108,10 +99,8 @@
     return d;
   }
   function isRecurring(d) { return /^(weekly|monthly):/i.test(d || ''); }
-  /** Days from today to the next due date of d, or null when it has no usable date. */
   function daysTo(d, today) { today = today || todayISO(); var n = nextDue(d, today); return isISO(n) ? daysBetween(today, n) : null; }
   function isDone(status) { return /^(done|filed|paid|closed|complete|answered)/i.test(status || ''); }
-  /** Severity for a due item: 'risk' (urgent status or 14 days or fewer), 'soon' (45 or fewer), 'ok', or 'none' when days is null. */
   function sev(days, status) {
     if (/urgent/i.test(status || '')) return 'risk';
     if (days === null) return 'none';
@@ -120,13 +109,11 @@
     return 'ok';
   }
   var PRIORITY = { urgent: 0, high: 1, normal: 2, low: 3 };
-  /** True when a register row's state is not closed, done or answered. */
   function isOpen(r) { return !/^closed|^done|^answered/i.test(r.state || ''); }
   /** True when a register row's owner starts with the owner. */
   function isLisa(r) { return /^lisa\b/i.test(r.owner || ''); }
   /** True when a register row's kind is todo, question or decision. */
   function isTask(r) { return /^(todo|question|decision)$/i.test(r.kind || ''); }
-  /** Reads a register row's trigger_or_event: 'ready', 'waits for <ID>', or another short state. */
   function ready(rec, all) {
     var t = String(rec.trigger_or_event || '').toLowerCase();
     if (t === 'now') return 'ready';
@@ -144,7 +131,7 @@
   /** Open register tasks owned by the owner, each with its ready state. Sorted ready first, then by priority, then by id. */
   function yourTurn(data) {
     var all = data.register || [];
-    return all.filter(function (r) { return isOpen(r) && isLisa(r) && isTask(r); }).map(function (r) {
+    return all.filter(function (r) { return isOpen(r) && isUser(r) && isTask(r); }).map(function (r) {
       return { r: r, ready: ready(r, all) };
     }).sort(function (a, b) {
       var ra = a.ready === 'ready' ? 0 : 1, rb = b.ready === 'ready' ? 0 : 1;
@@ -154,11 +141,7 @@
       return String(a.r.id).localeCompare(String(b.r.id), 'en-GB', { numeric: true });
     });
   }
-  // ---- Deadlines worked out from UK rules (F6). NOT tax advice: every row says "check with accountant". ----
-  // Self Assessment for personal entities needs no extra data. Company and VAT dates need two optional
-  // MON-SUBJECTS columns: year_end (MM-DD, or a full date) and vat_quarter_end (MM-DD of any one quarter end).
   function lastDay(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); } // m is 1-12
-  /** Adds n months to iso. A month-end date stays on the month end; other days are capped at the month's last day. */
   function addMonths(iso, n) {
     var p = iso.split('-'), y = +p[0], m = +p[1], d = +p[2], end = d === lastDay(y, m);
     m += n; y += Math.floor((m - 1) / 12); m = ((m - 1) % 12 + 12) % 12 + 1;
@@ -166,12 +149,11 @@
     return y + '-' + pad(m) + '-' + pad(day);
   }
   function mmdd(v) { var m = /^(?:\d{4}-)?(\d{2})-(\d{2})$/.exec(String(v || '').trim()); return m && +m[1] >= 1 && +m[1] <= 12 && +m[2] >= 1 && +m[2] <= 31 ? m[1] + '-' + m[2] : null; }
-  /** UK deadlines worked out for each active entity, up to 400 days ahead, skipping any MON-DATES already holds. Sorted by date. */
   function ruleDeadlines(data, today) {
     today = today || todayISO();
     var out = [], horizon = addDays(today, 400), y0 = +today.slice(0, 4);
     var dates = data.dates || [];
-    function have(ent, due) { // MON-DATES already holds a row for this entity within 5 days: do not add a second
+    function have(ent, due) {
       return dates.some(function (r) { return (r.entity || '').split(';').indexOf(ent) >= 0 && isISO(r.due_on) && Math.abs(daysBetween(r.due_on, due)) <= 5; });
     }
     function add(ent, due, what, rule) {
@@ -206,7 +188,6 @@
     return out.filter(function (x) { var k = x.ent + x.due + x.what; if (seen[k]) return false; seen[k] = 1; return true; })
       .sort(function (a, b) { return a.due.localeCompare(b.due) || a.ent.localeCompare(b.ent); });
   }
-  // Projected balance points for the chart, oldest first. [] when there is no forecast file.
   function forecastPoints(files) {
     var fc = files && files.forecast && files.forecast.table;
     if (!fc) return [];
@@ -215,24 +196,19 @@
       .sort(function (a, b) { return a.date.localeCompare(b.date); });
   }
   function isCompany(name) { return /\b(limited|ltd|cic|llp|plc)\b/i.test(name || ''); }
-  /** Active entities from the subjects table as { code, name, folder, company }, companies first. */
   function entities(data) {
     var list = (data.subjects || []).filter(function (r) { return r.kind === 'entity' && !/retired|template/i.test(r.status || ''); }).map(function (r) {
       return { code: r.entity, name: r.name, folder: r.drive_id, company: isCompany(r.name) };
     });
     return list.filter(function (e) { return e.company; }).concat(list.filter(function (e) { return !e.company; }));
   }
-  /** Parses a money value, ignoring £, commas and spaces. Returns a number or null. */
   function n(x) { var v = parseFloat(String(x == null ? '' : x).replace(/[£,\s]/g, '')); return isNaN(v) ? null : v; }
-  /** Adds up n(f(row)) over rows, counting blanks as 0. */
   function sum(rows, f) { return rows.reduce(function (s, r) { var v = n(f(r)); return s + (v || 0); }, 0); }
-  /** The TOTAL rows of a monthly table, sorted by month. [] when there is no table. */
   function monthRows(mon) {
     if (!mon) return [];
     var t = mon.rows.filter(function (r) { return r.category === 'TOTAL' && r.month; });
     return t.slice().sort(function (a, b) { return a.month.localeCompare(b.month); });
   }
-  /** One entity's money summary (bank, next 30 days out, forecast, months, Xero figures, bills, liabilities) from its ledger files. */
   function entityMoney(ent, files, today) {
     today = today || todayISO();
     var f = files || {};
@@ -312,7 +288,6 @@
     out.noData = !out.has.length;
     return out;
   }
-  /** Dates rows with next due date, days left, severity and done/recurring flags. Sorted by due date, rows with no date last. */
   function datesView(data, today) {
     today = today || todayISO();
     return (data.dates || []).map(function (r) {
@@ -323,21 +298,17 @@
       return String(a.due).localeCompare(String(b.due));
     });
   }
-  /** Dates rows that are past due, not done and not recurring. */
   function overdueDates(data, today) { return datesView(data, today).filter(function (x) { return !x.done && !x.recurring && x.days !== null && x.days < 0; }); }
-  /** Dates rows not done and due between today and `days` days ahead. */
   function dueWithin(data, today, days) { return datesView(data, today).filter(function (x) { return !x.done && x.days !== null && x.days >= 0 && x.days <= days; }); }
-  /** Intake rows whose next_due has passed and whose status is not live or retired. */
   function intakeOverdue(data, today) {
     today = today || todayISO();
     return (data.intake || []).filter(function (r) { return isISO(r.next_due) && r.next_due < today && !/^(live|retired)/i.test(r.status || ''); });
   }
-  /** Items that need attention now: overdue dates and liabilities, forecasts going negative, urgent tasks, old statements, late uploads, dates due within 14 days. */
   function needsNow(data, money, today) {
     today = today || todayISO();
     var items = [];
     overdueDates(data, today).forEach(function (x) {
-      items.push({ level: 'risk', when: x.due, text: x.r.filing, who: x.r.owner, ent: x.r.entity, tag: 'Overdue ' + (-x.days) + (x.days === -1 ? ' day' : ' days'), href: '#/dates', src: 'MON-DATES ' + x.r.id });
+      items.push({ level: 'risk', when: x.due, text: x.r.filing, who: x.r.user, ent: x.r.entity, tag: 'Overdue ' + (-x.days) + (x.days === -1 ? ' day' : ' days'), href: '#/dates', src: 'MON-DATES ' + x.r.id });
     });
     (money || []).forEach(function (m) {
       if (m.liab && m.liab.overdue.length) {
@@ -349,7 +320,7 @@
       }
     });
     (data.register || []).filter(function (r) { return isOpen(r) && /urgent/i.test(r.priority || '') && isTask(r); }).forEach(function (r) {
-      items.push({ level: 'risk', text: r.subject, who: r.owner, ent: r.entity, tag: isLisa(r) ? 'Your turn · urgent' : 'Waiting on ' + r.owner, href: '#/register/' + r.id, src: 'MON-REGISTER ' + r.id });
+      items.push({ level: 'risk', text: r.subject, who: r.user, ent: r.entity, tag: isUser(r) ? 'Your turn · urgent' : 'Waiting on ' + r.user, href: '#/register/' + r.id, src: 'MON-REGISTER ' + r.id });
     });
     var stale = (money || []).filter(function (m) { return m.bankStale; });
     if (stale.length) {
@@ -360,16 +331,11 @@
     dueWithin(data, today, 14).forEach(function (x) {
       if (/urgent/i.test(x.r.status)) return;
       if (x.recurring && x.days > 1) return;
-      items.push({ level: 'ops', when: x.due, text: x.r.filing, who: x.r.owner, ent: x.r.entity, tag: x.days === 0 ? 'Today' : 'In ' + x.days + (x.days === 1 ? ' day' : ' days'), href: '#/dates', src: 'MON-DATES ' + x.r.id });
+      items.push({ level: 'ops', when: x.due, text: x.r.filing, who: x.r.user, ent: x.r.entity, tag: x.days === 0 ? 'Today' : 'In ' + x.days + (x.days === 1 ? ' day' : ' days'), href: '#/dates', src: 'MON-DATES ' + x.r.id });
     });
     return items;
   }
-  // Memory-only cache (never written to the browser's storage): file id -> { modifiedTime, text }, and
-  // folder id -> parent id. A file is downloaded again only when Drive says its modifiedTime changed.
-  // A cached copy is used only for a file id that this read's own folder listing just returned,
-  // so the signed-in account has just been shown to see it. Cleared on sign-out (clearCache).
   var CACHE = { content: {}, parent: {} };
-  /** Empties the in-memory Drive file cache (used on sign-out). */
   function clearCache() { CACHE = { content: {}, parent: {} }; }
   function Reader(getToken) { this.getToken = getToken; this.meta = CACHE.parent; this.downloads = 0; this.reused = 0; }
   Reader.prototype.get = function (url, asText) {
@@ -408,7 +374,7 @@
     if (this.meta[id]) return this.meta[id];
     var store = this.meta;
     store[id] = this.get(API + '/files/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,parents').then(function (m) { return (m.parents || [])[0] || null; });
-    store[id].catch(function () { if (store[id]) delete store[id]; }); // a failed lookup is asked again next time
+    store[id].catch(function () { if (store[id]) delete store[id]; });
     return this.meta[id];
   };
   Reader.prototype.owningEntity = function (file, stopIds) {
@@ -443,14 +409,13 @@
     if (hits.length > 1) return { error: 'duplicate ×' + hits.length, files: hits };
     return { file: hits[0] };
   }
-  /** Reads the index and ledger CSVs from Drive. Returns a Promise of { gate, data, meta, ents, files, money, ... }; gate is 'denied' unless the signed-in account is the owner. */
   function loadAll(getToken, opts) {
     opts = opts || {};
     var rd = new Reader(getToken), today = todayISO();
     var res = { readAt: Date.now(), today: today, data: {}, meta: {}, ents: [], files: {}, money: [], problems: [] };
     return rd.about().then(function (a) {
       res.email = a.user && a.user.emailAddress || '';
-      res.gate = res.email.toLowerCase() === CFG.owner ? 'ok' : 'denied';
+      res.gate = res.email.toLowerCase() === CFG.user ? 'ok' : 'denied';
       if (res.gate !== 'ok') return res;
       var keys = Object.keys(CFG.folders).filter(function (k) { return k !== 'drop'; });
       return Promise.all(keys.map(function (k) {
@@ -525,7 +490,6 @@
       return res;
     });
   }
-  /** One status row per file read by loadAll: state ok, warn (count line mismatch), fail or wait, with a note. */
   function fileChecks(res) {
     var out = [];
     Object.keys(res.meta).forEach(function (k) { out.push(check('Index', res.meta[k])); });
@@ -541,7 +505,6 @@
     return out;
   }
 
-  /** Formats v as pounds with dp decimal places (default 0). Returns '–' when v is not a number. */
   function gbp(v, dp) {
     if (v === null || v === undefined || isNaN(v)) return '–';
     var d = dp === undefined ? 0 : dp;
@@ -549,7 +512,6 @@
   }
   var dFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
   var dFmtY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-  /** Formats YYYY-MM-DD as a short day and month, adding the year when it is not this year. Other values are returned as text. */
   function fmtDate(iso, today) {
     if (!isISO(iso)) return String(iso || '');
     today = today || todayISO();
@@ -560,10 +522,11 @@
     CFG: CFG, INDEX: INDEX, LEDGER: LEDGER, XERO: XERO, STALE_DAYS: STALE_DAYS,
     parseCSV: parseCSV, parseTable: parseTable, provDate: provDate,
     todayISO: todayISO, addDays: addDays, daysBetween: daysBetween, nextDue: nextDue, daysTo: daysTo, sev: sev, isISO: isISO,
-    isOpen: isOpen, isLisa: isLisa, isTask: isTask, ready: ready, yourTurn: yourTurn,
+    isOpen: isOpen, isUser: isUser, isTask: isTask, ready: ready, yourTurn: yourTurn,
     entities: entities, entityMoney: entityMoney, monthRows: monthRows, n: n, sum: sum,
     datesView: datesView, overdueDates: overdueDates, dueWithin: dueWithin, intakeOverdue: intakeOverdue, needsNow: needsNow,
     ruleDeadlines: ruleDeadlines, addMonths: addMonths, forecastPoints: forecastPoints,
     loadAll: loadAll, clearCache: clearCache, fileChecks: fileChecks, gbp: gbp, fmtDate: fmtDate
   };
 })(window);
+

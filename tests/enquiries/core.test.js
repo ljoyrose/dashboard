@@ -1,5 +1,3 @@
-// Tests for enquiries/core.js. Run: node --test tests/enquiries/core.test.js
-// Every person here is invented: "Buyer A" style names, example.com addresses and Ofcom fiction numbers (07700 900xxx).
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -22,7 +20,6 @@ test('phone: +41 is Switzerland', () => {
   assert.equal(C.countryFromPhone('0041790000000').country, 'Switzerland');
 });
 
-// Made-up Jersey number, assembled so the privacy guard's UK-number rule does not read it as a real one.
 const JERSEY = '+44 1534 ' + '000000';
 test('phone: longest code wins (Jersey, Ireland, Portugal) and +1 is never guessed further', () => {
   assert.equal(C.normalisePhone(JERSEY).country, 'Jersey');
@@ -166,3 +163,4 @@ test('time: a bare *_uk time is UK clock time (BST in summer, GMT in winter); Z 
   assert.equal(C.toUk(C.toMs('2026-07-01T09:15:00')), '2026-07-01T09:15:00', 'round trip');
   assert.equal(C.hoursSince('2026-07-01T09:00:00', '2026-07-01T10:00:00Z'), 2, 'UK 09:00 BST is 08:00 UTC');
 });
+

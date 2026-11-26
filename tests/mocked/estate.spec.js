@@ -1,5 +1,3 @@
-// Web Estate page (30 Oct 2026): counts at the top, one card per property grouped by company, brand and client,
-// down and expiring first, filters kept in the URL hash, read only. Pretend Google only; every row is invented.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -9,7 +7,6 @@ const F = require('../fixtures/estate/rows.js');
 const SHEETS = /^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\//;
 const CONFIG = fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8');
 
-// Serve config.js with an invented estate sheet id, so the page reads (pretend) Sheets instead of showing examples.
 async function withSheet(page, values) {
   const seen = [];
   await page.route(/\/config\.js$/, (route) => route.fulfill({ status: 200, contentType: 'text/javascript',
@@ -20,8 +17,6 @@ async function withSheet(page, values) {
   });
   return seen;
 }
-// The old Home list (count tiles, filters, Add, every property) is the All tab since Hub Mains (2 Nov 2026); Main is Next,
-// Needs you and Down · Expiring · Live (tests/mocked/hub-main-others.spec.js).
 async function signIn(page, hash) {
   await page.goto('estate/' + (hash || '#/all'));
   await page.locator('#view [data-action="signin"]').click();
@@ -98,8 +93,9 @@ test.describe('Web Estate page', () => {
   test('Not checked tab lists only rows with no scan yet', async ({ page }) => {
     await withSheet(page, F.values());
     await signIn(page, '#/unchecked');
-    await expect(page.locator('.prop')).toHaveCount(3); // wait for the rows: reading them at once can catch "Loading…"
+    await expect(page.locator('.prop')).toHaveCount(3);
     const keys = await page.locator('.prop').evaluateAll((els) => els.map((e) => e.getAttribute('data-key')).sort());
     expect(keys).toEqual(['ads-account:client-b.example', 'dns-zone:example.com', 'email-domain:example.com']);
   });
 });
+

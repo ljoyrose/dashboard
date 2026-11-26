@@ -10,15 +10,14 @@ const signIn = async (page) => {
 test.describe('CD Hub Back', () => {
   test.use({ viewport: { width: 390, height: 600 } });
 
-  test('into a record and back: the phone Back and "← Back to" both return to the same place and scroll @regression', async ({ page }) => {
+  test('t-cdhub-back-spec-1', async ({ page }) => {
     await signIn(page);
     await page.evaluate(() => go('dogs'));
     await expect(page).toHaveURL(/#\/dogs$/);
-    await expect(page.locator('#rows')).toBeVisible();   // Dogs loads its scripts on first open: wait for the list, not the wait card
+    await expect(page.locator('#rows')).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 500));
     const y = await page.evaluate(() => window.scrollY);
     expect(y).toBeGreaterThan(100);
-    // Into a record (as a tap does)
     await page.evaluate(() => { go('areas/area-2'); focusView(); });
     await expect(page).toHaveURL(/#\/areas\/area-2$/);
     const back = page.locator('#main .hback');
@@ -26,7 +25,6 @@ test.describe('CD Hub Back', () => {
     await back.click();
     await expect(page).toHaveURL(/#\/dogs$/);
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(Math.round(y));
-    // The phone's own Back does the same
     await page.evaluate(() => { go('areas/area-2'); });
     await page.goBack();
     await expect(page).toHaveURL(/#\/dogs$/);
@@ -67,7 +65,7 @@ test.describe('CD Hub Back', () => {
     await signIn(page);
     const hb = page.locator('header #hubBack');
     await expect(page.locator('header #backHome')).toBeVisible();
-    await expect(hb).toBeHidden();                                   // opened cold: nowhere to go back to
+    await expect(hb).toBeHidden();
     await page.evaluate(() => go('dogs'));
     await expect(hb).toBeVisible();
     await expect(hb).toHaveAttribute('aria-label', 'Back (Main)');
@@ -98,3 +96,4 @@ test.describe('CD Hub Back', () => {
     await expect(page.locator('header #hubBack')).toBeHidden();
   });
 });
+

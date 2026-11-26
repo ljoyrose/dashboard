@@ -1,4 +1,3 @@
-// Dog cards stay wide enough to read: a name is not split letter by letter, the photo frame stays square, the size badge shows.
 const { test, expect } = require('../support/test');
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
@@ -12,10 +11,10 @@ function open(page, tables, deny) {
     const b = JSON.parse(route.request().postData());
     if (b.action === 'read') {
       if (deny && deny[b.table]) return route.fulfill({ headers: CORS, json: { ok: false, code: deny[b.table], message: 'Not allowed.' } });
-      return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'OWNER' } } });
+      return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'USER' } } });
     }
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'x' } } });
-  }).then(() => page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]));
+  }).then(() => page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-USER', SCRIPT]));
 }
 
 const dogs = {
@@ -59,7 +58,7 @@ async function measure(page, id) {
   });
 }
 
-test('dog cards keep a whole word, a square photo and a size badge at every layout @regression', async ({ page }) => {
+test('t-cdhub-print-dog-fit-spec-1', async ({ page }) => {
   await page.route(/^https:\/\/drive\.google\.com\/thumbnail/, (route) => route.fulfill({
     contentType: 'image/png',
     body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
@@ -94,7 +93,7 @@ test('dog cards keep a whole word, a square photo and a size badge at every layo
   }
 });
 
-test('an empty item list warns, and item rows print a card @regression', async ({ page }) => {
+test('t-cdhub-print-dog-fit-spec-2', async ({ page }) => {
   await open(page, Object.assign({}, dogs, { items: [] }));
   await page.goto('cdhub/staff/print/');
   await page.getByRole('button', { name: 'Item cards', exact: true }).click();
@@ -117,7 +116,7 @@ test('an empty item list warns, and item rows print a card @regression', async (
   await expect(page.locator('.icard .name')).toHaveText('Item A');
 });
 
-test('the chosen card type stays pressed, and photo frames stay square @regression', async ({ page }) => {
+test('t-cdhub-print-dog-fit-spec-3', async ({ page }) => {
   await page.route(/^https:\/\/drive\.google\.com\/thumbnail/, (route) => route.fulfill({
     contentType: 'image/png',
     body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
@@ -173,3 +172,4 @@ test('a room card prints its area in square metres', async ({ page }) => {
   await page.getByRole('button', { name: 'Room cards', exact: true }).click();
   await expect(page.locator('.rcard [data-k="area"] dd')).toHaveText('16.3 m²');
 });
+

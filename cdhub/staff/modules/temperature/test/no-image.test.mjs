@@ -50,3 +50,4 @@ test('reader.js returns numbers as text and nothing else', () => {
   assert.ok(flat.length < 2000, 'result carries no pixel data');
   assert.equal(/"(g|b|px|grid|data)":/.test(flat), false);
 });
+

@@ -12,7 +12,6 @@ const { HUBS, setLook, go, settle } = require('../support/hubs');
 const { textContrast } = require('../support/sweep-audit');
 
 const AUDIT = process.env.CONTRAST_AUDIT;
-// CONTRAST_MIN raises the bar for a look-around (say 4.6, the tokens' aim); it can never go under 4.5.
 const MIN = Math.max(4.5, Number(process.env.CONTRAST_MIN) || 0);
 const CONFIG = fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8');
 const PAGES = {
@@ -34,13 +33,11 @@ const LOOKS = [
   { bg: 'cool', scheme: 'light' }, { bg: 'cool', scheme: 'dark' },
 ];
 
-// One page load per hub and width; on each view the four looks are switched in place, the way the Look menu does it
-// (html.look-cool, and the device's light or dark), so the suite stays inside the CI time limit.
 for (const [hub, P] of Object.entries(PAGES)) {
   test.describe(hub, () => {
     for (const W of [1280, 390]) {
       test(`${W}, all four looks: all text 4.5:1 or better on what it sits on`, async ({ page, guard }) => {
-        test.setTimeout(300_000);   // every view of the page in four looks; the shared Mac is slow under a full run
+        test.setTimeout(300_000);
         await page.setViewportSize({ width: W, height: W > 600 ? 900 : 844 });
         await setLook(page, { bg: 'warm', mode: 'device', scheme: 'light' });
         await P.open(page, guard);
@@ -62,3 +59,4 @@ for (const [hub, P] of Object.entries(PAGES)) {
     }
   });
 }
+

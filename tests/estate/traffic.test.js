@@ -1,5 +1,3 @@
-// Web Estate traffic this month (13 Nov 2026). Run: node --test tests/estate/traffic.test.js
-// Every key, source and number here is invented.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const T = require('../../estate/traffic.js');
@@ -95,3 +93,4 @@ test('header check fails closed without key or a number column', () => {
   assert.equal(T.checkHeader(['site', 'visits']).ok, false);
   assert.equal(T.checkHeader(['key', 'source']).ok, false);
 });
+

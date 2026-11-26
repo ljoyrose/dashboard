@@ -10,11 +10,11 @@ const fx = require('./fixtures');
 const Rules = require('../../cdhub/staff/lib/qr-rules.js');
 const { backfill, main } = require('../tools/backfill-qr-tags.js');
 
-const NOW = Date.UTC(2026, 10, 16, 10, 0, 0);   // 16 Nov 2026
+const NOW = Date.UTC(2026, 10, 16, 10, 0, 0);
 const QR_H = ['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by'];
 const ITEM_H = ['id', 'tenant_id', 'item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'photo', 'note', 'corrects_id', 'created_at', 'created_by'];
 const KIND_H = ['id', 'tenant_id', 'kind_key', 'label', 'source', 'set_by', 'set_on'];
-const rule = (key, value, from, to) => ['r-' + key + '-' + from, fx.TENANT, key, value, from, 'Pretend owner rule', '', '', '', to || ''].join(',');
+const rule = (key, value, from, to) => ['r-' + key + '-' + from, fx.TENANT, key, value, from, 'Pretend user rule', '', '', '', to || ''].join(',');
 
 function env(rules, props) {
   const e = standardEnv({ nowMs: NOW, props: Object.assign({ TABLE_ON_qr_tag: 'true', TABLE_ON_items: 'true', TABLE_ON_item_kinds: 'true',
@@ -39,10 +39,10 @@ const recs = (e, title) => { const f = e.file(title)[0];
 let n = 0;
 function createDog(e, name) {
   n += 1;
-  const body = { v: 1, request_id: 'req-qr-' + String(n).padStart(5, '0'), code: e.codes.owner, action: 'subject_create', fields: { name, sex: 'Female', species: 'dog', kind: 'Adult', dob: '2024-0' + (1 + (n % 8)) + '-01' } };
+  const body = { v: 1, request_id: 'req-qr-' + String(n).padStart(5, '0'), code: e.codes.user, action: 'subject_create', fields: { name, sex: 'Female', species: 'dog', kind: 'Adult', dob: '2024-0' + (1 + (n % 8)) + '-01' } };
   return JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify(body) } }).getContent());
 }
-const owner = (e, table, fields) => save(e, req(e, { code: e.codes.owner, table, fields }));
+const user = (e, table, fields) => save(e, req(e, { code: e.codes.user, table, fields }));
 
 test('add a dog with qr.on_add.subject = yes: one tag row for that dog, made in the same save', () => {
   const e = env([rule('qr.on_add.subject', 'yes', '2026-11-15')]);
@@ -82,11 +82,11 @@ test('a newer effective_from beats an older row; a row not yet started changes n
 
 test('items: one item type can differ from the rest; a correction row keeps the first row\'s code', () => {
   const e = env([rule('qr.on_add.item', 'yes', '2026-11-15'), rule('qr.on_add.item.kettle', 'no', '2026-11-15')]);
-  ['extinguisher', 'kettle'].forEach((k) => assert.equal(owner(e, 'item_kinds', { kind_key: k, label: k, source: 'test' }).ok, true));
-  const ext = owner(e, 'items', { item_no: 'EXT-01', name: 'Pretend extinguisher', kind_key: 'extinguisher' });
-  const ket = owner(e, 'items', { item_no: 'K-01', name: 'Pretend kettle', kind_key: 'kettle' });
+  ['extinguisher', 'kettle'].forEach((k) => assert.equal(user(e, 'item_kinds', { kind_key: k, label: k, source: 'test' }).ok, true));
+  const ext = user(e, 'items', { item_no: 'EXT-01', name: 'Pretend extinguisher', kind_key: 'extinguisher' });
+  const ket = user(e, 'items', { item_no: 'K-01', name: 'Pretend kettle', kind_key: 'kettle' });
   assert.equal(ext.result.qr, 'made'); assert.equal(ket.result.qr, 'no');
-  const fix = owner(e, 'items', { item_no: 'EXT-01', name: 'Pretend extinguisher 2', kind_key: 'extinguisher', corrects_id: ext.result.id });
+  const fix = user(e, 'items', { item_no: 'EXT-01', name: 'Pretend extinguisher 2', kind_key: 'extinguisher', corrects_id: ext.result.id });
   assert.equal(fix.ok, true, JSON.stringify(fix)); assert.equal(fix.result.qr, undefined);
   const tags = recs(e, 'BLD-qr_tag.csv');
   assert.deepEqual(tags.map((t) => [t.kind, t.ref_id]), [['item', ext.result.id]]);
@@ -94,7 +94,7 @@ test('items: one item type can differ from the rest; a correction row keeps the 
 
 test('thermometers follow qr.on_add.thermometer', () => {
   const e = env([rule('qr.on_add.thermometer', 'yes', '2026-11-15')]);
-  const r = owner(e, 'thermometer', { name: 'Pretend probe', area_id: 'area-t1' });
+  const r = user(e, 'thermometer', { name: 'Pretend probe', area_id: 'area-t1' });
   assert.equal(r.ok, true, JSON.stringify(r)); assert.equal(r.result.qr, 'made');
   assert.equal(recs(e, 'BLD-qr_tag.csv')[0].kind, 'thermometer');
 });
@@ -161,3 +161,4 @@ test('back-fill command line: dry run prints counts only (no names, ids or tags)
   assert.deepEqual(fs.readdirSync(dir).sort(), ['q.csv', 'r.csv', 's.csv']);
   assert.throws(() => main(args.concat(['--out', path.join(dir, 'q.csv')]), () => {}, () => {}), /NEW file/);
 });
+

@@ -1,22 +1,9 @@
-/*!
- * VISITS (Admin -> Visits), owner-only. Lisa, 13 Nov 2026: inspectors, vets, auditors and guests get a time-boxed visit.
- * Loaded only when the Visits card opens (admin.js), so the hub's first load stays the same size.
- * One window shape: Now for X hours, Now until HH:MM, or Scheduled DD/MM/YY HH:MM to DD/MM/YY HH:MM. End now needs a reason. Field names follow Regulatory-Core (7 Nov): a visit is a DisclosureGrant.
- * A visit is given by a pre-printed visitor card (BLD-qr_tag kind visitor_card) or a link. Visit types (BLD-grant_type)
- * are the owner's own rows: length, rights, lists, fields and the jobs a visitor may record. No type, length, right or
- * list is fixed here: the three "suggested" types are only filled into the form for the owner to change and save.
- * Writes go through the save script (API: notes AA_VISIT-API_2026-11-13-2034). The SERVER clock decides open and ended;
- * this page only shows what the rows say. A link's address is shown once and never kept.
- */
 var VisitView = (function () {
   'use strict';
   var S = { mode: '', end: '', ext: '', msg: '', ok: '', busy: false, url: '', f: null, t: null };
-  /* what the visitor page can show today (inspect.js lists) and the rights it understands: capabilities, not rules */
   var LISTS = [['subject', 'Dogs'], ['microchip', 'Microchips'], ['subject_status', 'Status'], ['health_screen', 'Health tests'], ['fit_to_breed', 'Fit to breed'], ['litter', 'Litters'], ['check_log', 'Jobs done']];
-  /* rights are BLD-grant_right rows (Regulatory-Core GrantRight); this list is only the fallback until that table is live */
   var RIGHTS0 = [['view', 'View'], ['raise_finding', 'Review'], ['record', 'Record jobs'], ['print', 'Print'], ['export', 'Export']], RIGHTS = RIGHTS0;
   function today() { return ymd(new Date()); }
-  /* R3: a row is in force when from_date <= day and (to_date blank or >= day) */
   function dated(r, day) { var f = String(r.from_date || '').slice(0, 10), t = String(r.to_date || '').slice(0, 10); return (!f || f <= day) && (!t || t >= day); }
   function rlabel(code) { var x = RIGHTS.filter(function (r) { return r[0] === code; })[0]; return x ? x[1] : code; }
   function rightsFrom(T) {
@@ -24,7 +11,6 @@ var VisitView = (function () {
       .sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0); });
     RIGHTS = R.length ? R.map(function (r) { return [r.code, r.label || r.code]; }) : RIGHTS0;
   }
-  /* first-use suggestions only: filled into the form, saved only if the owner presses Save */
   var SUGGEST = {
     Inspector: { default_hours: '4', max_hours: '12', data_years: '3', rights: 'view|raise_finding', lists: 'subject|microchip|subject_status|health_screen|fit_to_breed|litter|check_log', email_code: 'yes' },
     Vet: { default_hours: '2', max_hours: '8', data_years: '', rights: 'view|raise_finding|record', lists: 'subject|microchip|health_screen', email_code: '' },
@@ -54,24 +40,16 @@ var VisitView = (function () {
   function pipe(s) { return String(s || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean); }
   function has(list, x) { return list.indexOf(x) >= 0; }
   function p2(n) { return ('0' + n).slice(-2); }
-  /* a time this device can show; the server's own clock decides open/ended */
   function when(iso) { var d = new Date(iso); if (isNaN(d)) return ''; return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes()); }
   function hm(iso) { var d = new Date(iso); return isNaN(d) ? '' : p2(d.getHours()) + ':' + p2(d.getMinutes()); }
-  /* datetime is stored in UTC (STANDARD S4.2), e.g. 2026-11-13T14:30:00Z */
   function iso(d) { return d.toISOString().replace(/\.\d{3}Z$/, 'Z'); }
-  /* a date column (S4.15 from_date/to_date): this device's calendar day, YYYY-MM-DD */
   function ymd(d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
-  /* DD/MM/YY and HH:MM typed -> Date, or null */
   function parse(dmy, t) {
     var a = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(String(dmy || '').trim()), b = /^(\d{1,2}):(\d{2})$/.exec(String(t || '').trim());
     if (!a || !b) return null;
     var y = +a[3] < 100 ? 2000 + +a[3] : +a[3], d = new Date(y, +a[2] - 1, +a[1], +b[1], +b[2]);
     return d.getDate() === +a[1] && d.getMonth() === +a[2] - 1 && +b[1] < 24 && +b[2] < 60 ? d : null;
   }
-  /* A visit is a grant (Regulatory-Core DisclosureGrant). Nothing is edited: extend and end each add a row whose
-     supersedes_id points at the row it replaces. The CURRENT row is the one nothing points at; child rows, the code
-     and the card stay on the ROOT row, so the hub sends grant_id = root id. cur() returns one merged row per visit:
-     id = root id, later rows' filled columns laid over earlier ones. */
   function cur(T) {
     var L = rows(T, 'BLD-inspect_link.csv'), by = {}, next = {};
     L.forEach(function (r) { by[r.id] = r; if (r.supersedes_id) next[r.supersedes_id] = r; });
@@ -81,7 +59,6 @@ var VisitView = (function () {
       m._cur = m._cur || root.id; return m;
     });
   }
-  /* window: usable_from/usable_to (datetimes); V1 rows have only `ends` (a date, to 23:59:59) */
   function win(r) {
     var s = Date.parse(r.usable_from || r.created_at || r.made_at || '') || 0;
     var e = r.usable_to ? Date.parse(r.usable_to) : (r.ends ? new Date(String(r.ends).slice(0, 10) + 'T23:59:59').getTime() : 0);
@@ -89,7 +66,6 @@ var VisitView = (function () {
     return { s: s, e: e || 0 };
   }
   function state(r, now) { var w = win(r); return w.e && now >= w.e ? 'ended' : (w.s > now ? 'soon' : 'live'); }
-  /* the type in force today (BLD-grant_type, R3): per type_key, the latest from_date on or before today; to_date ends it */
   function types(T, today) {
     var by = {};
     rows(T, 'BLD-grant_type.csv').forEach(function (r) {
@@ -113,7 +89,6 @@ var VisitView = (function () {
   function byId(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; }
   function cols(T, list) { var r = (T['BLD-' + list + '.csv'] || [])[0]; return r ? Object.keys(r).filter(function (c) { return c !== 'id' && c !== 'tenant_id'; }) : []; }
 
-  /* grant picker: rights, lists, fields (per list), record jobs (+ counts toward due). g = the values; p = name prefix */
   function grant(v, g, p) {
     rightsFrom(v.T);
     var R = pipe(g.rights), L = pipe(g.lists), F = pipe(g.fields), J = pipe(g.record_jobs), C = pipe(g.record_counts);
@@ -137,7 +112,6 @@ var VisitView = (function () {
     }
     return h + '<p class="mut">Print is asked of their page; a screen can always be photographed.</p><div class="vis-ticks">' + tick('email', 'yes', String(g.email_code).toLowerCase() === 'yes', 'Email code before viewing (links)') + '</div>';
   }
-  /* read the grant picker back into pipe lists */
   function readGrant(form, p) {
     var all = function (n) { return Array.prototype.filter.call(form.querySelectorAll('[name="' + p + n + '"]'), function (i) { return i.checked; }).map(function (i) { return i.value; }); };
     var cut = all('cut'), lists = all('lists');
@@ -172,13 +146,11 @@ var VisitView = (function () {
     }).join('');
   }
 
-  /* a choice from status_label rows of one group (values are rows, never fixed); no rows = the default only */
   function pick(v, group, label, val) {
     var R = (v.T['BLD-status_label.csv'] || []).filter(function (r) { return r.group === group && r.code; });
     if (!R.length) return '<input type="hidden" name="' + group + '" value="">';   /* no rows: send blank, the server applies its default */
     return '<label>' + label + '<select name="' + group + '">' + R.map(function (r) { return '<option value="' + v.esc(r.code) + '"' + (r.code === val ? ' selected' : '') + '>' + v.esc(r.label || r.code) + '</option>'; }).join('') + '</select></label>';
   }
-  /* how long the grant and its read log are kept: the owner's retention row for inspect_link, else blank (never a fixed number) */
   function keepUntil(v, end) {
     var k = rows(v.T, 'BLD-retention_setting.csv').filter(function (r) { return (r.section || r.table_name) === 'inspect_link' && +r.years > 0 && String(r.from_date || '').slice(0, 10) <= v.today; })
       .sort(function (a, b) { return String(b.from_date || '').localeCompare(String(a.from_date || '')); })[0];
@@ -235,16 +207,13 @@ var VisitView = (function () {
       + '<p class="mut">A change is a new row from today; earlier visits keep what they were given.</p></form>';
   }
 
-  /* WHO CAN GIVE VISITS (Lisa 13 Nov): giving access is a power of its own (BLD-delegation, power give_visit). No role
-     carries it; only the owner confers it, with its own limits and how many layers it may be passed on. The server
-     enforces "never more than the giver holds"; this list only shows the rows. */
   function person(T, id) {
-    if (!id || id === 'owner') return 'You';
+    if (!id || id === 'user') return 'You';
     var c = (T['BLD-code_register.csv'] || []).filter(function (r) { return r.code_id === id; })[0]; if (c) return c.who || id;   /* staff code: the holder survives a reset */
     var p = byId(rows(T, 'BLD-person.csv'), id); return p ? (p.known_as || p.full_name || id) : id;
   }
   function hk(r) { return r.holder_code_id || r.holder_person_id || ''; }   /* the server keys a holder on their code */
-  function by(x) { return !x || x === 'owner' ? '' : x; }
+  function by(x) { return !x || x === 'user' ? '' : x; }
   function dlive(r) { return !r.ended_at && dated(r, today()); }
   function limits(v, r) {
     var T = types(v.T, v.today), x = [];
@@ -319,10 +288,6 @@ var VisitView = (function () {
     return '';
   }
 
-  /* WHO GAVE WHAT (Lisa 13 Nov: "I can see who has given what from my admin screen?"). Owner-only, from rows:
-     powers held (BLD-delegation, any power) with the chain back to the owner, and everything each person gave:
-     visits (inspect_link.issued_by = the giver's code_id or 'owner'), codes (code_register.issued_by when the column exists, else the owner),
-     roles (person_role.granted_by). Blank issuer = the owner ("You"). */
   var KINDS = [['', 'All'], ['visit', 'Visits'], ['code', 'Codes'], ['role', 'Roles'], ['power', 'Powers']];
   var POWER = { give_visit: 'Give visits', issue_code: 'Give codes', issue_device: 'Set up phones', give_role: 'Give roles' };
   function chain(v, r) {
@@ -396,8 +361,6 @@ var VisitView = (function () {
     return n ? n + ' here now' : 'No one now';
   }
 
-  /* owner rescanned a visitor card while signed in here: open that visit's End now, or Give a visit when the card is free.
-     qr_tag keeps only sha256:<hex> of a card's tag (reading the table must not let anyone use a card), so hash the scanned tag. */
   function sha(text) {
     if (!(window.crypto && crypto.subtle && window.TextEncoder)) return Promise.resolve('');
     return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function (b) {
@@ -535,3 +498,4 @@ var VisitView = (function () {
   }
   return { body: body, sub: sub, bind: bind, rescan: rescan, _state: S, _win: win, _parse: parse };
 }());
+

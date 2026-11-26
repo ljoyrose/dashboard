@@ -93,7 +93,6 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .leg-sq{width:11px;height:11px;border-radius:2px;flex:none}
 
 /* Heat-map calendar */
-/* Months at least 320px wide, so every day is a 40px+ tap target (one month per row on a phone). */
 .month-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:10px;margin-bottom:20px}
 .mc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px;box-shadow:var(--shadow)}
 .mn{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin-bottom:6px}
@@ -112,10 +111,8 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 /* indoor corner dot */
 .d{position:relative}
 .d-dot{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;pointer-events:none}
-/* 21 Nov 2026: house colour rules (never red; no warning colour on the outside calendar): the indoor dot is ink. A ring = cannot be read, solid = outside the limit. */
 .d-dot.idot-warn{background:var(--ink)}.d-dot.idot-flag{background:var(--card);box-shadow:inset 0 0 0 1.5px var(--ink)}
 /* compliance mode cells */
-/* 22 Nov 2026 (OV12): house colour rules on the outside calendar - never red, no warning colour. Ink ring = cannot be read, solid ink = outside the limit. */
 .d.comp-flag{background:var(--card);box-shadow:inset 0 0 0 2px var(--ink)}.d.comp-warn{background:var(--ink)}.d.comp-ok{background:var(--ljr-5);opacity:.85}.d.comp-nd{background:var(--soft)}
 .sd.comp-flag{background:var(--card);box-shadow:inset 0 0 0 1.5px var(--ink)}.sd.comp-warn{background:var(--ink)}.sd.comp-ok{background:var(--ljr-5);opacity:.85}.sd.comp-nd{background:var(--soft)}
 /* view mode toggle */
@@ -170,7 +167,6 @@ button.mitem{display:block;width:100%;text-align:left;font:inherit;color:inherit
 .dr{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:var(--fs-small)}
 .dr:last-child{border-bottom:none}
 .dsec{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin:0 0 6px;letter-spacing:.04em}
-/* Solid orange text (.warn) = outside the limit. A framed chip (.miss) = a needed reading was missed. No red, no brown fill. */
 .warn{color:var(--ljr-3-text);font-weight:600}
 span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(--radius);padding:0 6px;background:var(--card);color:var(--ljr-3-text);font-weight:600}
 .tick{color:var(--ljr-5-text)}
@@ -257,7 +253,6 @@ span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(-
 </aside>
 <nav id="nav" class="house-tabs" aria-label="Sections"></nav>
 <script>document.getElementById('nav').innerHTML=HubNav.html({links:'href',current:'temps'});
-/* Back in the top bar: shown when this page was opened from the hub, so one tap returns to where you were there. */
 (function(){ var r=''; try{ var u=new URL(document.referrer); if(u.origin===location.origin&&/\/cdhub\/(index\.html)?$/.test(u.pathname)) r='CD Hub'; }catch(e){}
  HubNav.back.sync(document.getElementById('hubBack'), r&&history.length>1?{label:r}:null); })();</script>
 
@@ -316,13 +311,11 @@ function gjson(url){
   return fetch(url,{headers:{'Authorization':'Bearer '+TOKEN}})
     .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});
 }
-/* First non-trashed match (the query already sets trashed=false). Returns the file, including mimeType. */
 function findDriveFile(name){
   var q="'"+FOLDER_ID+"' in parents and name='"+name+"' and trashed=false";
   var url=DRIVE_API+'?q='+encodeURIComponent(q)+'&fields=files(id,name,mimeType)&supportsAllDrives=true&includeItemsFromAllDrives=true';
   return gjson(url).then(function(r){var f=r.files||[];return f.length?f[0]:null;});
 }
-/* A Google Sheet of that title is exported as CSV. A real CSV file is read as media. Same errors as gget. */
 function readDriveFile(f){
   var id=encodeURIComponent(f.id);
   if(f.mimeType==='application/vnd.google-apps.spreadsheet')
@@ -338,7 +331,6 @@ function readDriveFile(f){
    BAND = today's adult row, for the key. */
 var BANDS=[], BAND=null, SUBJ_DOB={}, OCC_BY_DOG={};
 function num(v){ if(v===''||v==null) return null; var n=parseFloat(v); return isNaN(n)?null:n; }
-/* ISO first; otherwise a D/M/Y date (Drive / sheet export). Used so a past day still matches its readings and limits. */
 function isoDay(v){
   var s=String(v==null?'':v).trim(), m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if(m) return m[1]+'-'+m[2]+'-'+m[3];
@@ -352,8 +344,6 @@ function readingWhen(at){
   return {day:day, slot:(isNaN(hr)||hr<12)?'am':'pm'};
 }
 function daysBetween(a,b){ var x=Date.parse(a+'T00:00:00Z'), y=Date.parse(b+'T00:00:00Z'); return isNaN(x)||isNaN(y)?null:Math.round((y-x)/86400000); }
-/* the room a dog was in on a day: its occupancy row with the latest moved_in on or before the day (rows are never
-   edited; a move adds a row), unless that row's moved_out is before the day */
 function roomOfDog(sid,day){
   var O=window.BLDOccupancy, row=O&&O.rowOn?O.rowOn(OCC_BY_DOG[sid]||[],sid,day):null;
   return row&&row.area_id?row.area_id:'';
@@ -374,11 +364,9 @@ function youngestCalc(aid,day){
   });
   return young;
 }
-/* The limit rows that apply to a room on a day (shared by bandOn and adultBandOn). */
 function bandRows(day,aid){
   day=isoDay(day)||String(day||'').slice(0,10);
   var on=BLDCapacity.inForce(BANDS,day);
-  /* A limit whose from_date is later than this day (typed in after the reading) still colours it, unless a row already in force covers the same room and age. A puppy row in force must not leave July adult days with no band: those cells stay a pale empty colour. */
   BANDS.forEach(function(b){
     if(on.indexOf(b)>=0) return;
     var f=isoDay(b.from_date), t=isoDay(b.to_date);
@@ -404,15 +392,12 @@ function bandOn(day,aid){
   fits.sort(function(a,b){ return (b.age_from||0)-(a.age_from||0)||String(b.from_date).localeCompare(String(a.from_date)); });
   return fits[0]||null;
 }
-/* The open-ended (adult) row in force for a room on a day: the room itself is always judged on it (Temps A, 17 Nov 2026). */
 function adultBandOn(day,aid){
   day=isoDay(day)||String(day||'').slice(0,10);
   var rows=bandRows(day,aid).filter(function(b){ return b.age_to===null; });
   rows.sort(function(a,b){ return String(b.from_date).localeCompare(String(a.from_date)); });
   return rows[0]||null;
 }
-/* A saved value must be a plain number (OV11 15 Nov 2026): "25,3" or other text in the sheet is never read as 25; a reading
-   with one side blank or not a number is "Check: not a number", counted with the problems, so text never hides from the counts. */
 function tempNum(v){ v=String(v==null?'':v).trim(); if(!v) return null; return /^-?\d+(\.\d+)?$/.test(v)?parseFloat(v):undefined; }
 function tempUnreadable(min,max){ var a=tempNum(min), b=tempNum(max); if(a===null&&b===null) return false; return a===undefined||b===undefined||a===null||b===null; }
 function tempSwapped(min,max){ var lo=tempNum(min), hi=tempNum(max); return typeof lo==='number'&&typeof hi==='number'&&hi<lo; }
@@ -479,8 +464,6 @@ async function loadAreaData(){
         if(!AREA_DAYS[date][u])AREA_DAYS[date][u]={};
         var v={min:r.min_c,max:r.max_c,spot:r.spot_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes',from:r.linked_from?[r.linked_from]:[]};
         var was=AREA_DAYS[date][u][slot];
-        /* A merged room: two old rooms' readings in one slot. Never averaged: the lowest MIN and highest MAX, so a breach stays visible. */
-        /* A reading taken in the room itself wins over linked copies (same rule as Compliance, SOPS 12 Nov). */
         if(was&&!was.from.length&&v.from.length) return;
         if(was&&was.from.length&&v.from.length&&window.BLDAreaLink){
           var w=window.BLDAreaLink.widest(was,v);
@@ -518,7 +501,6 @@ async function loadData(){
     el('cdSignout').classList.remove('hidden');
     renderPage();
   }catch(e){
-    /* try Drive API export (first sheet) as fallback */
     try{
       var txt2=await gget(DRIVE_EXPORT);
       var rows2=parseCSV(txt2);
@@ -548,7 +530,6 @@ function onError(){pill('sign-in failed','bad');showSignIn();}
 function onSilentFail(){}
 var auth=DashAuth.bind({clientId:CLIENT_ID,scope:SCOPE,onToken:onToken,onError:onError,onSilentFail:onSilentFail});
 function signIn(){auth.requestInteractive();}
-/* Close: back to the CD Hub page this was opened from (keeps its place), else CD Hub's Compliance. */
 function closeTemps(){
   try{ var r=document.referrer?new URL(document.referrer):null;
     if(r&&r.origin===location.origin&&/\/cdhub\/?(index\.html)?$/.test(r.pathname)&&history.length>1){ history.back(); return false; } }catch(e){}
@@ -692,11 +673,6 @@ function dpIndoor(v){
   return (Math.round(n*10)/10).toFixed(1);
 }
 function dpOutdoor(v){ return dpIndoor(v).replace(/\.0$/,''); }
-/* ---- the one set of rules every view uses (spec: tests/mocked/history-calm.spec.js) ---- */
-/* A reading is needed on a day when the room is in use (room.in_use) and it has a thermometer needed that day
-   (reading.temperature), up to today. It starts at the earliest from_date of the room's thermometer need rows, or,
-   with none, at the first day any room has a reading (so nothing is missed before readings began). A room in use
-   with no readings at all is still needed: its missed slots must show for the audit. */
 function needStart(aid){
   var ids={}, start='';
   THERMOS.forEach(function(t){ if(t.area_id===aid) ids[t.id]=1; });
@@ -742,7 +718,6 @@ function slotState(t,aid,day,slot){
   if(day>TODAY_STR) return {k:'due'};
   return {k:'miss'};
 }
-/* The rooms shown for a day: needed that day or with a reading, in round order. */
 function dayRooms(day){
   var ar=AREA_DAYS[day]||{};
   var ids=Object.keys(ar).concat(Object.keys(SPAN)).map(unitArea).concat(THERMOS.map(function(t){ return t.area_id; }));
@@ -782,7 +757,6 @@ function slotHtml(label,s){
   if(s.k==='eout') return '<span class="warn">'+esc(txt)+' · Room empty</span>';
   return esc(txt)+(s.k==='in'?' <span class="tick" aria-label="inside limit">✓</span>':'')+(s.empty?' <span class="due">(empty)</span>':'');
 }
-/* "H1 · AM 18.1–21.0 ✓ · PM 17.2–19.5 ✓"; outside the limit, "What was done" follows on the day panel. */
 function roomLine(x,withNotes){
   var parts=[slotHtml('AM',x.am),slotHtml('PM',x.pm)].filter(Boolean);
   var notes='';
@@ -830,7 +804,6 @@ function areaStatusNow(isoDate){
 var REP={y:null,m:null,u:'all'};
 function repInit(){ if(REP.y!==null) return; var p=TODAY_STR; REP.y=+p.slice(0,4); REP.m=+p.slice(5,7)-1; }
 function repMonths(){
-  /* back to January of the earliest year button (yearButtons), so every year offered has its months */
   var t=TODAY_STR, y=+t.slice(0,4), m=+t.slice(5,7)-1, fy=firstYear(), fm=0, out=[];
   while(y>fy||(y===fy&&m>=fm)){ out.push({y:y,m:m}); m--; if(m<0){ m=11; y--; } }
   return out;
@@ -914,7 +887,6 @@ function repSet(month,unit){
   if(unit) REP.u=unit;
   el('view-r').innerHTML=buildReport();
 }
-/* Save as PDF: the browser's print, with only the report on the page and its name as the file name. */
 function repPrint(){
   var old=document.title;
   document.title='Room temperatures '+MONTHS[REP.m]+' '+REP.y+' '+(REP.u==='all'?'all rooms':unitName(REP.u));
@@ -942,7 +914,6 @@ function monthCal(y, classOf, kind){
     for(var i=0;i<firstDow;i++) h+='<span class="d empty"></span>';
     for(var d=1;d<=md[mi];d++){
       var date=ds(y,mi,d), cls=classOf(date), today=date===TODAY_STR, word=stateWord(cls);
-      /* a day with nothing to open (a later day, or no readings) is not offered as a button: it used to be one that did nothing */
       var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':' disabled';
       var extra=kind==='out'?' dout':'';
       var ist=date<=TODAY_STR?areaStatus(date):'';
@@ -987,7 +958,6 @@ function buildStrip(y){
 }
 function buildMonthCards(y){
   var mdn=mdays(y);
-  /* Newest first; a month that has not started is not shown; a card opens that month on the heat map (quality review 12 Nov). */
   var cards=[];
   MONTHS.forEach(function(mn,mi){
     if(ds(y,mi,1)>TODAY_STR) return;
@@ -1064,7 +1034,6 @@ function yearButtons(){
   for(var y=now;y>=first;y--) h+='<button class="btn yr-btn'+(y===YEAR?' on':'')+'" data-yr="'+y+'" onclick="setYear('+y+')">'+y+'</button>';
   return h;
 }
-/* The same day in another year, never after today (29 Feb becomes 28 Feb). */
 function sameDayIn(y,iso){
   var m=+iso.slice(5,7)-1, d=Math.min(+iso.slice(8,10),mdays(y)[m]), out=ds(y,m,d);
   return out>TODAY_STR?TODAY_STR:out;
@@ -1077,7 +1046,6 @@ function setYear(y){
   el('view-c').innerHTML=buildMonthCards(y);
   /* the owner 20 Nov 2026: pressing 2025 still showed today on The round. The round moves to the same day in that year. */
   if(ROUND_DATE&&+ROUND_DATE.slice(0,4)!==y){ ROUND_DATE=sameDayIn(y,ROUND_DATE); var v=el('view-d'); if(v) v.innerHTML=buildRound(ROUND_DATE); }
-  /* and the report to the same month in that year */
   if(REP.y!==null&&REP.y!==y){ var mm=ds(y,REP.m,1)>TODAY_STR?+TODAY_STR.slice(5,7)-1:REP.m; REP.y=y; REP.m=mm; var r=el('view-r'); if(r) r.innerHTML=buildReport(); }
   closeDrill();
 }
@@ -1127,9 +1095,9 @@ function renderPage(){
     +'<div id="view-b" class="view">'+buildStrip(YEAR)+'</div>'
     +'<div id="view-c" class="view">'+buildMonthCards(YEAR)+'</div>'
     +'<div id="view-r" class="view">'+buildReport()+'</div>';
-  /* #report (CD Hub's Temps report links, and the staff Temps address) opens the report straight away */
   if(/^#report\b/.test(location.hash||'')){ var t=el('tabReport'); if(t) setView('r',t); }
 }
 </script>
 <script src="temps-report.js"></script>
 </body></html>
+

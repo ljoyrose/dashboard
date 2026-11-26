@@ -19,12 +19,12 @@
   },
   "accounts": [
     {
-      "id": "acc-owner",
-      "name": "Sample owner",
-      "kind": "owner",
-      "role": "owner",
+      "id": "acc-user",
+      "name": "Sample user",
+      "kind": "user",
+      "role": "user",
       "emails": [
-        "owner@example.test"
+        "user@example.test"
       ],
       "protect": "no",
       "protectEffective": "no"
@@ -34,7 +34,7 @@
     {
       "id": "sp-course",
       "name": "Sample course",
-      "accountId": "acc-owner",
+      "accountId": "acc-user",
       "brandId": "sb-north",
       "protect": "no"
     }
@@ -43,7 +43,7 @@
     {
       "id": "sb-north",
       "name": "Sample Brand North",
-      "accountId": "acc-owner",
+      "accountId": "acc-user",
       "colour": 7,
       "stage": "Running",
       "setupChecklist": [
@@ -79,7 +79,7 @@
     {
       "id": "sa-rev1",
       "title": "Sample checklist PDF",
-      "accountId": "acc-owner",
+      "accountId": "acc-user",
       "brandIds": [
         "sb-north"
       ],
@@ -181,13 +181,13 @@
     {
       "id": "si-1",
       "title": "Sample ebook idea",
-      "accountId": "acc-owner",
+      "accountId": "acc-user",
       "brandIds": [
         "sb-north"
       ],
       "stage": 0,
       "type": "ebook",
-      "who": "lisa",
+      "who": "user",
       "fit": "HAND",
       "flags": [
         "needs-input"

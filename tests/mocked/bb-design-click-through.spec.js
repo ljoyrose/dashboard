@@ -1,7 +1,3 @@
-// Breed Better built to the owner's design (13 Nov 2026): every Breed Better button and tab, collapsed and expanded, at 360px
-// and on a desktop. Each click checks where it landed: no dead buttons, no silent loops, no sideways scroll at 360px.
-// Invented animals and rows only: the hub's own test dogs (sub-test-dog-1, sub-test-dog-2, sub-test-pup-1) and the rows below.
-// BB_SHOTS=<folder> also saves a picture of each screen (built screens only, invented data).
 const fs = require('fs');
 const path = require('path');
 const { test: base, expect } = require('../support/test');
@@ -13,7 +9,6 @@ const csv = (rows) => rows.join('\n') + '\n';
 const ROWS = {
   'BLD-score_scheme.csv': csv(['id,name,species_id,breed,version,effective_from,status,target_points,target_is,source',
     's-look,Invented look scheme,dog,,1,2026-01-01,active,70,percent,invented']),
-  // section icons from the optional icon cell (main reads it); colours as colour words
   'BLD-score_band.csv': csv(['id,scheme_id,key,label,colour,sort_order,kind,icon',
     'b-a,s-look,a,Section A,purple,1,points,target',
     'b-g,s-look,g,Must pass,red,2,gate,star',
@@ -22,7 +17,6 @@ const ROWS = {
     'b-t,s-look,t,Section D,green,5,points,smile',
     'b-r,s-look,r,Section E,blue,6,points,family',
     'b-s,s-look,s,Status,black,7,status,']),
-  // the species row names the Dogs tab (main: species words)
   'BLD-species.csv': csv(['id,code,common_name,plural_word', 'dog,dog,Dog,Dogs']),
   'BLD-score_criterion.csv': csv(['id,scheme_id,band_id,key,label,evidence_source,subject_field,evidence_match,answer_field,date_field,reads,applies_to,valid_months,due_soon_days,lapsed_affects_verdict,when_missing,guidance,proof_label,authority',
     'c-look,s-look,b-a,look,Looks answer,judged,,,,,latest,,,,,unknown,,,invented',
@@ -50,7 +44,7 @@ const ROWS = {
   'BLD-score_enrolment.csv': csv(['id,tenant_id,scheme_id,subject_id,valid_from,is_active,source',
     'e1,t-test,s-look,sub-test-dog-1,2026-01-01,TRUE,invented', 'e2,t-test,s-look,sub-test-dog-2,2026-01-01,TRUE,invented', 'e3,t-test,s-look,sub-test-pup-1,2026-01-01,TRUE,invented']),
   'BLD-score_judgement.csv': csv(['id,tenant_id,subject_id,criterion_id,answer,judged_on,judged_by,note',
-    'j1,t-test,sub-test-dog-1,look,Yes,2026-09-01,Owner,', 'j2,t-test,sub-test-dog-1,temp,Calm,2026-09-01,Owner,']),
+    'j1,t-test,sub-test-dog-1,look,Yes,2026-09-01,User,', 'j2,t-test,sub-test-dog-1,temp,Calm,2026-09-01,User,']),
   'BLD-health_screen.csv': csv(['id,subject_id,test,grade,tested_on',
     'h1,sub-test-dog-1,hips,Good,2025-06-01', 'h2,sub-test-dog-1,elbows,0,2025-06-01', 'h3,sub-test-dog-1,patella,0,2025-12-02', 'h4,sub-test-dog-1,eyes,Unaffected,2025-11-20',
     'h5,sub-test-dog-2,hips,Poor,2025-06-01', 'h6,sub-test-dog-2,eyes,Unaffected,2025-11-07', 'h7,sub-test-pup-1,elbows,0,2026-10-02']),
@@ -95,7 +89,7 @@ async function noSideways(page) {
 }
 
 for (const [w, h] of [[360, 800], [1280, 900]]) {
-  test.describe('Breed Better to the owner\'s design at ' + w + 'px', () => {
+  test.describe('Breed Better to the user\'s design at ' + w + 'px', () => {
     test.use({ viewport: { width: w, height: h } });
 
     test('five tabs at the bottom, above the house bar, in order; each lands and has its own address; they stay on a dog page', async ({ page }) => {
@@ -118,7 +112,6 @@ for (const [w, h] of [[360, 800], [1280, 900]]) {
         await expect(page.locator('#bbRoot nav.bb-tabs .bb-tab')).toHaveCount(5);
         await noSideways(page);
       }
-      // Back goes to the tab before; a reload keeps the tab
       await page.goBack();
       await expect(page).toHaveURL(/#\/breed\/score\.sub-test-dog-1$/);
       await tab(page, 'cal').click();
@@ -222,21 +215,19 @@ for (const [w, h] of [[360, 800], [1280, 900]]) {
         await s.locator(':scope > summary').click();
         await expect(s).toHaveAttribute('open', '');
       }
-      // the due line comes first; done lines sit under Show done
       await expect(must.locator('.bb-line').first()).toContainText('Patella check');
       await expect(must.locator('.bb-line').first()).toContainText('Due 2 Dec 2026');
       const done = must.locator('details.bb-showdone');
       await expect(done.locator('summary')).toContainText('Show done');
       await done.locator('summary').click();
       await expect(done.locator('.bb-line', { hasText: 'Hips X-ray' })).toBeVisible();
-      await expect(page.locator('#bbRoot details.bb-band[data-bb-band="b-a"]')).toContainText('judged by Owner');
+      await expect(page.locator('#bbRoot details.bb-band[data-bb-band="b-a"]')).toContainText('judged by User');
       await shot(page, 'score', w);
       // the DNA panel fold
       await page.locator('#bbRoot details.bb-dna summary').click();
       await expect(page.locator('#bbRoot details.bb-dna')).toContainText('DNA panel');
       await expect(page.locator('#bbRoot details.bb-dna')).toContainText('1 Carrier');
       await expect(page.locator('#bbRoot details.bb-dna .bb-gband[data-level="good"]')).toHaveText('Good');
-      // Open on a line is the add/edit screen, and Back returns to the dog
       await done.locator('.bb-line', { hasText: 'Hips X-ray' }).getByRole('button', { name: 'Open' }).click();
       await expect(page.locator('[data-bb-edit-screen]')).toBeVisible();
       await expect(page.locator('#bbRoot nav.bb-tabs .bb-tab')).toHaveCount(5);
@@ -272,7 +263,6 @@ for (const [w, h] of [[360, 800], [1280, 900]]) {
       await expect(page.locator('#bbRoot .bb-callist .bb-calrow').first()).toContainText('Overdue');
       await expect(page.locator('#bbRoot .bb-callist .bb-calrow').nth(1)).toContainText('20 Nov 2026');
       await shot(page, 'calendar', w);
-      // a day with nothing is not a button
       await expect(page.locator('#bbRoot button.bb-day', { hasText: /^8$/ })).toHaveCount(0);
       await page.locator('#bbRoot [data-bb-day="2026-11-07"]').click();
       await expect(root(page)).toContainText('Showing 7 Nov 2026');
@@ -394,3 +384,4 @@ for (const [w, h] of [[360, 800], [1280, 900]]) {
     });
   });
 }
+

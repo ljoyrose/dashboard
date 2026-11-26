@@ -1,6 +1,4 @@
-// Draws fake min/max thermometer screens as grey pixels, for testing the reader without any photo.
-// Layout like the kennel units: big current reading on the left, MAX top right, MIN bottom right.
-const SEG = { // segment boxes in a 10 x 18 digit cell: [x0, y0, x1, y1]
+const SEG = {
   a: [1.5, 0, 8.5, 1.6], b: [8.4, 1.2, 10, 8.6], c: [8.4, 9.4, 10, 16.8], d: [1.5, 16.4, 8.5, 18],
   e: [0, 9.4, 1.6, 16.8], f: [0, 1.2, 1.6, 8.6], g: [1.5, 8.2, 8.5, 9.8]
 };
@@ -22,7 +20,7 @@ export function screen({ max, min, now = '20.1', W = 480, H = 300, slant = 0.12,
     let cx = x;
     for (const ch of text) {
       if (ch === '.') { fill(cx - gap * 0.5 - 0.9 * k, yb - 1.8 * k, cx - gap * 0.5 + 0.9 * k, yb, ink, 0, yb); continue; }
-      if (ch === '1') { // the "1" sits on the right side of its cell
+      if (ch === '1') {
         for (const s of 'bc') { const [a0, b0, a1, b1] = SEG[s]; fill(cx + a0 * k, y + b0 * k, cx + a1 * k, y + b1 * k, ink, slant, yb); }
         cx += cellW + gap; continue;
       }
@@ -32,7 +30,7 @@ export function screen({ max, min, now = '20.1', W = 480, H = 300, slant = 0.12,
   };
   if (bezel) { fill(0, 0, W, 6, 20, 0, 0); fill(0, H - 6, W, H, 20, 0, 0); fill(0, 0, 6, H, 20, 0, 0); fill(W - 6, 0, W, H, 20, 0, 0); }
   number(now, W * 0.04, H * 0.32, H * 0.3);
-  if (labels) { // "MAX" / "MIN" as small marks to the left of each number
+  if (labels) {
     for (const yy of [H * 0.1, H * 0.58]) for (let i = 0; i < 3; i++) fill(W * 0.52 + i * 8, yy, W * 0.52 + i * 8 + 5, yy + 9, ink, 0, 0);
     fill(W * 0.93, H * 0.12, W * 0.95, H * 0.15, ink, 0, 0); // degree sign
   }
@@ -42,3 +40,4 @@ export function screen({ max, min, now = '20.1', W = 480, H = 300, slant = 0.12,
   for (let i = 0; i < g.length; i++) { let v = img[i] + (R() - 0.5) * 2 * noise; if (invert) v = 255 - v; g[i] = Math.max(0, Math.min(255, Math.round(v))); }
   return { g, W, H };
 }
+

@@ -60,17 +60,13 @@ for (const size of [{ name: 'desktop', vp: { width: 1280, height: 900 } }, { nam
       await expect(none.locator('[data-tr="none"]')).toContainText('stats not connected');
       await none.locator('details summary').click();
       await expect(none.locator('[data-tr-steps] li').first()).toBeVisible();
-      await expect(none.locator('.lisa')).toContainText('Lisa-only step');
+      await expect(none.locator('.user')).toContainText('User-only step');
 
-      // Every web property has a traffic line; DNS zones, email domains and ads accounts do not.
       await expect(page.locator('[data-traffic]')).toHaveCount(4);
       await expect(page.locator('.prop[data-key="email-domain:example.com"] [data-traffic]')).toHaveCount(0);
-      // Free plan stays free: no upgrade words or buttons anywhere.
       await expect(page.locator('#view')).not.toContainText(/upgrade|buy more|go pro/i);
-      // Read only.
       expect(seen.every((s) => s.method === 'GET')).toBe(true);
       expect(seen.map((s) => s.tab)).toContain('Traffic');
-      // No sideways scroll.
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     });
 
@@ -107,3 +103,4 @@ test('signed out: no traffic numbers on screen', async ({ page }) => {
   await expect(page.locator('#view [data-action="signin"]')).toBeVisible();
   await expect(page.locator('[data-traffic]')).toHaveCount(0);
 });
+

@@ -23,7 +23,6 @@ test.describe('Codes vault: sealing in the browser', () => {
     expect(r.json).not.toContain(PW);
     expect(r.row.kdf).toBe('PBKDF2-SHA256/AES-GCM-256');
     expect(+r.row.kdf_iter).toBeGreaterThanOrEqual(600000);
-    // every field passes the save's start-of-cell guard (no = + - @ first): hex, not base64
     for (const k of ['cipher', 'iv', 'salt']) expect(r.row[k]).toMatch(/^[0-9a-f]+$/);
   });
 
@@ -98,3 +97,4 @@ test.describe('Codes vault: sealing in the browser', () => {
     expect(sent.length).toBe(0);
   });
 });
+

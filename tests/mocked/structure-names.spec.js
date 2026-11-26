@@ -1,4 +1,3 @@
-// One name for the front page ("Dashboard"), one way back to it ("← Dashboard"), and no "Next:" cards.
 const { test, expect } = require('../support/test');
 const fs = require('fs');
 const path = require('path');
@@ -22,7 +21,6 @@ test.describe('Structure: one name and one way back', () => {
     await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
     await expect(page).toHaveTitle(/^(\(\d+\) )?Dashboard$/); // the top bar and title say "Dashboard" (the owner, 2 Nov)
     await expect(page.locator('nav.main a[data-nav="map"]')).toContainText('Main');
-    // No visible link to #/map is named "Map" or "Home".
     const names = await page.locator('a[href="#/map"]:visible').allInnerTexts();
     for (const n of names) expect(n.trim()).not.toMatch(/^(Map|Home)\b/);
     await expect(page.locator('#view a.btn.back[data-back-home]')).toHaveCount(0);
@@ -64,10 +62,11 @@ test.describe('Structure: one name and one way back', () => {
       const back = btns.filter((a) => /class="[^"]*\bbtn\b[^"]*\bback\b[^"]*"/.test(a));
       expect(back).toHaveLength(1);
       expect(back[0]).toMatch(/^<a id="backHome" class="btn back[^"]*\bhouse-ib\b[^"]*" href="\.\.\/" data-back-home aria-label="Dashboard" title="Dashboard">/);
-      expect(back[0]).toMatch(/><svg aria-hidden="true"><use href="#hi-home"\/><\/svg><\/a>$/);   // the icon only, no words on screen
+      expect(back[0]).toMatch(/><svg aria-hidden="true"><use href="#hi-home"\/><\/svg><\/a>$/);
       const head = s.slice(s.indexOf('<header'), s.indexOf('</header>'));
       expect(head.indexOf(back[0]), 'inside the top bar').toBeGreaterThan(-1);
       expect(head.replace(/<header[^>]*>\s*<div[^>]*>\s*/, '').indexOf('<a id="backHome"'), 'first in the bar').toBe(0);
     });
   }
 });
+

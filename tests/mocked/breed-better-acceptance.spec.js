@@ -18,7 +18,6 @@ const BB_FILES = fs.readdirSync(BB).filter((f) => f.endsWith('.csv'));
 const SCORE_FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv'];
 const MONTHS = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec';
 
-// Expected results for the invented rows (see tests/fixtures/breed-better/README.md). Best first.
 const EXPECT = [
   { id: 'sub-test-dog-1', name: 'Test Dog One', verdict: 'Pass', points: '15 of 20' },
   { id: 'sub-test-pup-1', name: 'Test Pup One', verdict: 'Unverified', points: '0 of 20, 15 unverified' },
@@ -26,7 +25,6 @@ const EXPECT = [
 ];
 const FILTERS = ['All', 'Pass', 'Below target', 'Unverified', 'Fail'];
 
-/** Plain CSV (the fixtures hold no quotes or commas inside values). */
 function csv(text) {
   const [head, ...rows] = text.trim().split(/\r?\n/);
   const keys = head.split(',');
@@ -34,16 +32,15 @@ function csv(text) {
 }
 const readBB = (f) => fs.readFileSync(path.join(BB, f), 'utf8');
 
-/** The Drive the hub reads: the usual sample world plus the Breed Better rows (owner) or without them (staff cannot read them). */
-function bbWorld({ owner = true, drop = [], swap = {} } = {}) {
+function bbWorld({ user = true, drop = [], swap = {} } = {}) {
   const d = buildWorld();
-  if (!owner) return d;
+  if (!user) return d;
   const bld = IDS.bld;
   BB_FILES.filter((f) => !drop.includes(f)).forEach((f, i) => d.file('bb-' + i, f, swap[f] || readBB(f), { parents: [bld], driveId: 'drv-alpha1' }));
   return d;
 }
-const asOwner = base.extend({ world: async ({}, use) => use(bbWorld()) });
-const asStaff = base.extend({ world: async ({}, use) => use(bbWorld({ owner: false })) });
+const asUser = base.extend({ world: async ({}, use) => use(bbWorld()) });
+const asStaff = base.extend({ world: async ({}, use) => use(bbWorld({ user: false })) });
 const notEnrolled = base.extend({ world: async ({}, use) => use(bbWorld({ swap: { 'BLD-score_enrolment.csv': readBB('BLD-score_enrolment.csv').replace(/\ne3,.*$/m, '') } })) });
 const noEnrolment = base.extend({ world: async ({}, use) => use(bbWorld({ swap: { 'BLD-score_enrolment.csv': readBB('BLD-score_enrolment.csv').split('\n')[0] + '\n' } })) });
 const draftScheme = base.extend({ world: async ({}, use) => use(bbWorld({ swap: { 'BLD-score_scheme.csv': readBB('BLD-score_scheme.csv').replace(',active,', ',draft,') } })) });
@@ -58,7 +55,7 @@ const openBreed = async (page) => {
   await signIn(page);
   await tabClick(page, '#nav button[data-go="breed"]');
   await expect(page.locator('#main h2')).toContainText('Breed Better');
-  await expect(page.locator('#bbRoot')).toBeVisible();   // Breed Better loads on first open (CD Hub lazy load, 15 Nov 2026)
+  await expect(page.locator('#bbRoot')).toBeVisible();
 };
 const openDogs = async (page) => {
   await page.goto('cdhub/');
@@ -69,7 +66,6 @@ const openDogs = async (page) => {
 const dogRows = (page) => page.locator('#bbRoot [data-bb-open]');
 const card = (page, name) => page.locator('article.dc', { hasText: name });
 
-// ---------------------------------------------------------------- runs now: fixtures and calculator
 
 base.describe('Breed Better acceptance: fixtures (run now)', () => {
   base('S9 privacy: the fixtures name only the hub\'s invented test animals and hold no real data', () => {
@@ -105,11 +101,10 @@ base.describe('Breed Better acceptance: fixtures (run now)', () => {
   });
 });
 
-// ---------------------------------------------------------------- hub page, owner
 
-asOwner.describe('Breed Better acceptance: owner page', () => {
+asUser.describe('Breed Better acceptance: user page', () => {
 
-  asOwner('S4.1 Breed Better sits under More, not as a bottom tab', async ({ page }) => {
+  asUser('S4.1 Breed Better sits under More, not as a bottom tab', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     await expect(page.locator('nav.house-tabs > button[data-go="breed"]')).toHaveCount(0);
@@ -117,12 +112,12 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     await expect(page.locator('#houseMore button', { hasText: 'Breed Better' })).toBeVisible();
   });
 
-  asOwner('S4.2 the heading says Breed Better and carries the Testing label', async ({ page }) => {
+  asUser('S4.2 the heading says Breed Better and carries the Testing label', async ({ page }) => {
     await openBreed(page);
     await expect(page.locator('#main h2')).toContainText('Testing');
   });
 
-  asOwner('S4.3 animals are listed best to worst, each with verdict and points', async ({ page }) => {
+  asUser('S4.3 animals are listed best to worst, each with verdict and points', async ({ page }) => {
     await openBreed(page);
     await expect(dogRows(page)).toHaveCount(EXPECT.length);
     for (let i = 0; i < EXPECT.length; i++) {
@@ -133,7 +128,7 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     }
   });
 
-  asOwner('S4.4 filters run All, Pass, Below target, Unverified, Fail, with All chosen first', async ({ page }) => {
+  asUser('S4.4 filters run All, Pass, Below target, Unverified, Fail, with All chosen first', async ({ page }) => {
     await openBreed(page);
     const f = page.locator('#bbRoot [data-bb-filter]');
     await expect(f).toHaveCount(FILTERS.length);
@@ -141,7 +136,7 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     await expect(f.first()).toHaveAttribute('aria-pressed', 'true');
   });
 
-  asOwner('S4.5 a filter shows only that verdict, and its count matches', async ({ page }) => {
+  asUser('S4.5 a filter shows only that verdict, and its count matches', async ({ page }) => {
     await openBreed(page);
     const fail = page.locator('#bbRoot [data-bb-filter="fail"]');
     await expect(fail).toContainText('1');
@@ -152,7 +147,7 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     await expect(dogRows(page)).toHaveCount(EXPECT.length);
   });
 
-  asOwner('S4.5b find a dog by name keeps focus; sort Name A to Z and Fail to Pass reorder the list', async ({ page }) => {
+  asUser('S4.5b find a dog by name keeps focus; sort Name A to Z and Fail to Pass reorder the list', async ({ page }) => {
     await openBreed(page);
     const box = page.locator('#bbSearch');
     await box.fill('two');
@@ -167,7 +162,7 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     await expect(dogRows(page).first()).toContainText('Test Dog Two');
   });
 
-  asOwner('S4.6 one animal: sections in order, each foldable with a count, each line says why', async ({ page }) => {
+  asUser('S4.6 one animal: sections in order, each foldable with a count, each line says why', async ({ page }) => {
     await openBreed(page);
     await dogRows(page).filter({ hasText: 'Test Pup One' }).click();
     await expect(page.locator('#bbRoot h3')).toContainText('Test Pup One');
@@ -184,7 +179,7 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     await expect(gates).not.toHaveAttribute('open', '');
   });
 
-  asOwner('S4.7 every figure is clickable to where it comes from', async ({ page }) => {
+  asUser('S4.7 every figure is clickable to where it comes from', async ({ page }) => {
     await openBreed(page);
     await dogRows(page).filter({ hasText: 'Test Dog One' }).click();
     const health = page.locator('#bbRoot details.bb-band', { hasText: 'Health' });
@@ -199,11 +194,10 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     await expect(page.locator('#main h2')).toContainText('Breed Better');
     await screen.getByRole('button', { name: 'Back' }).click();
     await expect(page.locator('#bbRoot h3')).toContainText('Test Dog One');
-    // each tab has its own address (owner's design, 13 Nov 2026): the dog's Score tab
     await expect(page).toHaveURL(/#\/breed\/score\.sub-test-dog-1$/);
   });
 
-  asOwner('S7 look: verdict pills and buttons are 1px lines with no fill; each section has a 3px colour line', async ({ page }) => {
+  asUser('S7 look: verdict pills and buttons are 1px lines with no fill; each section has a 3px colour line', async ({ page }) => {
     await openBreed(page);
     const pills = page.locator('#bbRoot .bb-v, #main h2 .bb-v');
     expect(await pills.count()).toBeGreaterThan(0);
@@ -223,7 +217,7 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     expect(thick, 'only the left colour line may be wider than 1px').toEqual([]);
   });
 
-  asOwner('S8 wording: Unverified, never Unproven; dates read like 2 Mar 2026', async ({ page }) => {
+  asUser('S8 wording: Unverified, never Unproven; dates read like 2 Mar 2026', async ({ page }) => {
     await openBreed(page);
     for (const r of await dogRows(page).all()) {
       await r.click();
@@ -233,21 +227,20 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
       expect(text, 'no 02/03/26 dates: they read differently by country').not.toMatch(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/);
       await page.locator('#bbRoot [data-bb-back]').click();
     }
-    // Test Dog One's hips X-ray is dated 2025-06-01 in the fixtures
     await dogRows(page).filter({ hasText: 'Test Dog One' }).click();
     await expect(page.locator('#bbRoot')).toContainText('1 Jun 2025');
   });
 
-  asOwner('S11 trial scope: no offspring or post-adoption check-up section', async ({ page }) => {
+  asUser('S11 trial scope: no offspring or post-adoption check-up section', async ({ page }) => {
     await openBreed(page);
     await dogRows(page).first().click();
     await expect(page.locator('#bbRoot')).not.toContainText(/offspring|check-?up/i);
   });
 });
 
-asOwner.describe('Breed Better acceptance: dog card chip', () => {
+asUser.describe('Breed Better acceptance: dog card chip', () => {
 
-  asOwner('S5.1 each enrolled dog card shows its verdict and points', async ({ page }) => {
+  asUser('S5.1 each enrolled dog card shows its verdict and points', async ({ page }) => {
     await openDogs(page);
     for (const e of EXPECT) {
       const chip = card(page, e.name).locator('.bb-chip');
@@ -257,7 +250,7 @@ asOwner.describe('Breed Better acceptance: dog card chip', () => {
     }
   });
 
-  asOwner('S5.2 the chip carries the Testing label until Lisa signs off', async ({ page }) => {
+  asUser('S5.2 the chip carries the Testing label until User signs off', async ({ page }) => {
     await openDogs(page);
     await expect(card(page, 'Test Dog One').locator('.bb-chip')).toContainText('Testing');
   });
@@ -275,7 +268,6 @@ asOwner.describe('Breed Better acceptance: dog card chip', () => {
   });
 });
 
-// ---------------------------------------------------------------- missing data
 
 notEnrolled.describe('Breed Better acceptance: animal not enrolled', () => {
   // the owner, 15 Nov 2026: a dog that is not enrolled shows a folded "Not in Breed Better" section with Enrol, never a score
@@ -308,9 +300,8 @@ draftScheme.describe('Breed Better acceptance: no active scheme', () => {
   });
 });
 
-// ---------------------------------------------------------------- staff
 
-asStaff.describe('Breed Better acceptance: staff see nothing (Lisa 11 Nov 2026)', () => {
+asStaff.describe('Breed Better acceptance: staff see nothing (User 11 Nov 2026)', () => {
 
   asStaff('S2 staff (who cannot read the score files) see no Breed Better entry under More', async ({ page }) => {
     await page.goto('cdhub/');
@@ -332,13 +323,11 @@ asStaff.describe('Breed Better acceptance: staff see nothing (Lisa 11 Nov 2026)'
   });
 });
 
-// ---------------------------------------------------------------- inspector (spec S10): the staff inspect page, script mocked
 
 const INS_ID = 'FAKE-TEST-ID-456';
 const INS_SCRIPT = 'https://script.google.com/macros/s/' + INS_ID + '/exec';
 const INS_LINK = 'cdhub/staff/inspect/#s=' + INS_ID + '&c=FAKEINSPECTCODEY';
 const INS_CORS = { 'access-control-allow-origin': '*' };
-// What the save script hands an inspector code: ticked dogs, ticked columns, chip already cut to its last 4 digits.
 const INS_DATA = {
   subject: { fields: ['id', 'name', 'sex', 'dob'], rows: [
     { id: 'z', name: 'Test Dog Zed', sex: 'male', dob: '2021-05-04' },
@@ -376,8 +365,6 @@ base.describe('Breed Better acceptance: inspector view', () => {
     await expect(page.locator('button, input, textarea, select, form, [contenteditable], [data-save], [data-edit]')).toHaveCount(0);
   });
 
-  // Owner, 18 Nov 2026: an inspector (level B) sees Pass / Unverified / Fail on the must-pass checks, when the save script sends
-  // its must-pass summary; never points, target or ranking. Invented rows only.
   base('S10.2 shows Pass / Unverified / Fail on the must-pass checks, never points, target or ranking, and never asks for a score list', async ({ page }) => {
     const asked = await inspectRoute(page, { must_pass: { fields: ['subject_id', 'label', 'outcome', 'answer', 'date', 'due_date'], rows: [
       { subject_id: 'a', label: 'Check One', outcome: 'pass', answer: '5', date: '2024-02-03', due_date: '' },
@@ -408,7 +395,6 @@ base.describe('Breed Better acceptance: inspector view', () => {
   base('S10.5 a microchip ticked as last 4 shows only those 4 digits, and the code leaves the address bar', async ({ page }) => {
     await openInspector(page);
     const able = page.locator('.ins-dog', { hasText: 'Test Dog Able' });
-    // the owner's inspector layout (approved): sex · DOB · chip last 4 on the dog's own line
     await expect(able).toContainText(/Chip \D*0042/);
     expect(await page.locator('#screen').innerText()).not.toMatch(/\d{5,}/);
     expect(page.url()).not.toContain('FAKEINSPECTCODEY');
@@ -422,3 +408,4 @@ base.describe('Breed Better acceptance: inspector view', () => {
     expect(wide).toBeLessThanOrEqual(0);
   });
 });
+

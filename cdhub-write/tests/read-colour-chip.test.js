@@ -1,5 +1,4 @@
 'use strict';
-/** 12 Nov 2026 (DOGCARD): coat_colour, coat_pattern, nose_pigment and microchip are readable, only through visibility rows. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { standardEnv } = require('./harness');
@@ -7,12 +6,12 @@ const fx = require('./fixtures');
 
 const fv = (table, field, aud) => `fv-x,${fx.TENANT},${table},${field},${aud},yes,,,t,2026-11-12,t`;
 function read(env, over) {
-  try { return { ok: true, result: env.ctx.sinkRead_(Object.assign({ v: 1, action: 'read', code: env.codes.owner, table: 'area' }, over)) }; }
+  try { return { ok: true, result: env.ctx.sinkRead_(Object.assign({ v: 1, action: 'read', code: env.codes.user, table: 'area' }, over)) }; }
   catch (e) { return env.ctx.errorBody_(e); }
 }
 function addVis(env, lines) { const f = env.file('BLD-field_visibility.csv')[0]; f.content = f.content.replace(/\r?\n?$/, '\r\n') + lines.join('\r\n') + '\r\n'; }
 
-test('microchip and the colour lists: nothing until Lisa adds rows; owner rows let the owner read, never staff', () => {
+test('microchip and the colour lists: nothing until User adds rows; user rows let the user read, never staff', () => {
   const env = standardEnv({ props: { READ_ENABLED: 'true' } });
   env.addFile('BLD-microchip.csv', ['id,tenant_id,subject_id,chip_number', `mc-1,${fx.TENANT},sub-test-a,000000000000001`].join('\r\n') + '\r\n');
   env.addFile('BLD-coat_colour.csv', ['id,name,base_family,swatch_hex,nose_pigment_applies', 'cc-1,Red,red,swatch-red,yes'].join('\r\n') + '\r\n');
@@ -31,3 +30,4 @@ test('microchip and the colour lists: nothing until Lisa adds rows; owner rows l
   assert.equal(read(env, { table: 'nose_pigment' }).ok, true);
   assert.equal(read(env, { table: 'microchip', code: env.codes.staff }).code, 'NOT_ALLOWED');
 });
+

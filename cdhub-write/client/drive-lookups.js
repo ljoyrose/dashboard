@@ -1,13 +1,3 @@
-/*!
- * BLDLookups - READ-ONLY loader for the lists the screens need (rooms, dogs, people, bands).
- *
- * This is a small stand-in for the Drive sign-in and CSV reading that the live CD Hub already has
- * (cdhub/index.html). A shell that already has that (the Bloodline redesign, The Board) should pass
- * its own loaded tables to BLDLookups.fromTables() instead and skip the sign-in here.
- *
- * Scope is drive.readonly only. No write scope is ever requested. The Google client id and folder id
- * come from window.BLD_CONFIG (see config.example.js), never from this file.
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./bands.js'), require('./occupancy.js'));
   else root.BLDLookups = factory(root.BLDBands, root.BLDOccupancy);
@@ -35,19 +25,12 @@
     return rows.slice(1).map(function (r) { var o = {}; h.forEach(function (k, j) { o[k] = r[j] === undefined ? '' : r[j]; }); return o; });
   }
 
-  /**
-   * Turn loaded tables ({'BLD-area.csv':[records]...}) into what the screens need.
-   * Honest about gaps: most occupancy rows have a blank area_id, so most rooms will have NO dogs
-   * recorded and bandForArea says "room unknown" rather than guessing.
-   */
   function fromTables(T, onIso) {
     var areas = (T['BLD-area.csv'] || []).map(function (a) {
       return { id: a.id, label: a.code || a.id, group: a.grouping || '', sort: parseFloat(a.group_sort) || 0 };
     });
     var subj = {};
     (T['BLD-subject.csv'] || []).forEach(function (s) { subj[s.id] = s; });
-    // Who is in each room NOW: a dog's current room is its LATEST occupancy row (moves append new rows and never
-    // close the old one), so an older row must not count the dog in two rooms.
     var dogsByArea = {}, seen = {};
     (T['BLD-occupancy.csv'] || []).forEach(function (o) {
       if (seen[o.subject_id]) return;
@@ -74,7 +57,6 @@
     };
   }
 
-  /** Sign in (readonly) and read the tables. Resolves {ok, lookups|message}. */
   function loadFromDrive(cfg, onIso) {
     return new Promise(function (resolve) {
       if (!cfg || !cfg.clientId || !cfg.folderId) { resolve({ ok: false, message: 'No Google client id or folder id is configured (config.js), so the room list cannot be read.' }); return; }
@@ -111,3 +93,4 @@
 
   return { fromTables: fromTables, loadFromDrive: loadFromDrive, parseCsv: parseCsv, NEED: NEED, SCOPE: SCOPE };
 }));
+

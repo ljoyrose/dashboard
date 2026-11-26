@@ -32,15 +32,14 @@ test('no weight: Add weight opens inside the card, no jump; the save ticks and t
   expect(Math.abs((await page.evaluate(() => window.scrollY)) - y0)).toBeLessThan(200);   // no jump to the top
 
   await form.locator('input[name=kg]').fill('2.35');
-  // The tap itself may scroll a little to clear the bottom bar (the card grew in PR 628); the save must keep that place.
   await page.evaluate(() => addEventListener('pointerdown', () => { window.__tapY = scrollY; }, { capture: true, once: true }));
   await form.getByRole('button', { name: 'Add weight' }).click();
-  const card = page.locator('.dc[data-dog="' + dogId + '"]');   // the card is redrawn after the save
+  const card = page.locator('.dc[data-dog="' + dogId + '"]');
   await expect(card.locator('details.wtc [data-weigh-msg] [data-saved="good"]')).toBeVisible();
   await expect(card.locator('details.wtc')).toHaveAttribute('open', '');
   await expect(card.locator('details.wtc [data-k="weight"] b')).toHaveText('2.35 kg');
-  expect(Math.abs((await page.evaluate(() => window.scrollY - window.__tapY)))).toBeLessThan(200);   // the save leaves the page where it was
-  await expect(card.locator('details.wtc form[data-weigh-form] h4')).toHaveCount(0);   // a label, not a heading, on the card
+  expect(Math.abs((await page.evaluate(() => window.scrollY - window.__tapY)))).toBeLessThan(200);
+  await expect(card.locator('details.wtc form[data-weigh-form] h4')).toHaveCount(0);
   expect(sent).toHaveLength(1);
   expect(sent[0]).toMatchObject({ action: 'weighing', fields: { subject_id: dogId, weight_kg: '2.35' } });
 });
@@ -53,3 +52,4 @@ test('no chip recorded opens Edit with the microchip box ready', async ({ page }
   await card.locator('[data-k="chip"] button').click();
   await expect(card.locator('[data-dog-edit-host] input[name="chip_number"]')).toBeFocused();
 });
+

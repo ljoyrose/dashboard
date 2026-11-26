@@ -1,6 +1,3 @@
-// Builds the pretend Drive contents the three pages read.
-// Folder ids and file names are NOT copied here: they are read out of config.js and the page code,
-// so if a folder id changes in the dashboard, the tests follow it automatically.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -21,8 +18,8 @@ const mainHtml = src('index.html');
 const cdHtml = src('cdhub/index.html');
 const ctx = { window: {} };
 vm.createContext(ctx);
-vm.runInContext(src('config.js'), ctx); // defines window.DASH_CONFIG
-vm.runInContext(src('money/core.js'), ctx); // defines window.MoneyCore.CFG etc.
+vm.runInContext(src('config.js'), ctx);
+vm.runInContext(src('money/core.js'), ctx);
 const CONF = ctx.window.DASH_CONFIG;
 const MC = ctx.window.MoneyCore;
 
@@ -33,16 +30,16 @@ const IDS = {
   dbxName: CONF.home.dbxTotalsName,
   bld: CONF.cdhub.folderId,
   moneyDrive: MC.CFG.driveId,
-  moneyOwner: MC.CFG.owner,
+  moneyUser: MC.CFG.user,
   moneyFolders: MC.CFG.folders,
   clientId: CONF.clientId,
   ledger: CONF.home.ledgerFileId,
   excludedDrive: (CONF.cleanup.excludedDrives.find((d) => d.name === 'Karen - SHARED') || {}).id, // hard rule 14, found by name
   moveSheet: CONF.urls.moveSheet,
-  projectsHub: (CONF.projectsHub || {}).webAppUrl || '', // the Projects Hub tile's /exec address ('' = no tile)
-  doQueue: 'test-do-queue', // invented ids; the page finds the queue by name (estate/donq.js)
+  projectsHub: (CONF.projectsHub || {}).webAppUrl || '',
+  doQueue: 'test-do-queue',
   doQueueFolder: 'test-changes-folder',
-  factoryLogs: CONF.factory.logsFolderId, // the folder the Factory page reads af-state.json from
+  factoryLogs: CONF.factory.logsFolderId,
 };
 const WANT_BLD = (() => {
   const m = /var WANT=\[([\s\S]*?)\];/.exec(cdHtml);
@@ -52,10 +49,8 @@ const WANT_BLD = (() => {
 const DAY = 86400000;
 const iso = (offsetMs) => new Date(Date.now() + offsetMs).toISOString();
 
-/** Main dashboard shared drives (invented names). */
 function addMainDashboard(d) {
   d.addDrive('drv-alpha1', 'Test Drive Alpha').addDrive('drv-bravo2', 'Test Drive Bravo');
-  // Standing approvals queue: header only (no open rows) unless a test fills it.
   d.file(IDS.doQueue, 'AA_CJ-DO-QUEUE-drive.csv', 'date,session,action,target,why blocked,status\n', { parents: [IDS.doQueueFolder], driveId: 'drv-alpha1', mimeType: 'text/csv' });
   // "Read first" folder
   d.folder(IDS.readFirst, 'Read first (sample)', { parents: ['drv-alpha1'], driveId: 'drv-alpha1' });
@@ -72,16 +67,13 @@ function addMainDashboard(d) {
   d.file('alpha-f2', 'sample-old.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain', modifiedTime: iso(-20 * DAY) });
   // Bravo drive
   d.file('bravo-f1', 'bravo-sample.txt', 'invented', { parents: ['drv-bravo2'], driveId: 'drv-bravo2', mimeType: 'text/plain', modifiedTime: iso(-5 * DAY) });
-  // Delete ledger (invented rows). The page reads this id from the code. Tests add fake file ids to the file_id column.
   d.file(IDS.ledger, 'RR_DELETE-LEDGER.csv', 'file_id\n', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/csv' });
-  // Bin candidates: two ZZ_ items that need renaming, one RR_ item that must never be touched, one binned already
   d.file('zz-1', 'ZZ_sample-old-copy.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
   d.file('zz-2', 'ZZ_sample-dupe.txt', 'invented', { parents: ['fld-alpha-docs'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
   d.file('rr-1', 'RR_sample-archive.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
   d.file('bin-1', 'sample-already-binned.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain', trashed: true, trashedTime: iso(-DAY) });
 }
 
-/** CD Hub BLD-* sample tables, found under the BLD folder by exact title. */
 function addCdHub(d, { skip = [], duplicate = [] } = {}) {
   d.folder(IDS.bld, 'BLD-app-tables (sample)', { parents: ['drv-alpha1'], driveId: 'drv-alpha1' });
   const dir = path.join(FIX, 'bld');
@@ -91,7 +83,6 @@ function addCdHub(d, { skip = [], duplicate = [] } = {}) {
   });
 }
 
-/** Money Hub index files + two entities' ledgers, on the Money shared drive. */
 function addMoneyHub(d) {
   const D = IDS.moneyDrive, F = IDS.moneyFolders;
   d.addDrive(D, 'Test Money Drive');
@@ -105,7 +96,6 @@ function addMoneyHub(d) {
   put('m-chk', 'CHECK-LOG.csv', 'CHECK-LOG.csv', F.ops);
   put('m-acc', 'QUESTIONS-FOR-ACCOUNTANT.csv', 'QUESTIONS-FOR-ACCOUNTANT.csv', F.accountant);
   d.file('m-trg', 'TRIGGERS.csv', read('mon/TRIGGERS.csv'), { parents: [F.factory], driveId: null });
-  // entity folders (ids come from MON-SUBJECTS.csv)
   d.folder('fx-folder-testco', 'TESTCO', { parents: [D], driveId: D });
   d.folder('fx-folder-testpers', 'TESTPERS', { parents: [D], driveId: D });
   const ledger = (ent, folder, names) => names.forEach((n) => put('l-' + ent + '-' + n, n, n === 'BALANCES.csv' && ent === 'pers' ? 'BALANCES-PERSONAL.csv' : n, folder));
@@ -123,3 +113,4 @@ function buildWorld({ email = IDS.moneyOwner, bld = {}, main = true, cd = true, 
 }
 
 module.exports = { IDS, WANT_BLD, buildWorld, addMainDashboard, addCdHub, addMoneyHub, FIX, read };
+

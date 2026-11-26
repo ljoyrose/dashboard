@@ -15,20 +15,20 @@ test('the buttons show before any read; Room cards reads only its lists, four at
     if (route.request().method() === 'GET') { gets.push(1); return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } }); }
     const body = JSON.parse(route.request().postData());
     reads.push(body.table); open++; most = Math.max(most, open);
-    await new Promise((r) => setTimeout(r, 150));   // a slow script: each read takes a while
+    await new Promise((r) => setTimeout(r, 150));
     open--;
-    return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[body.table] || [], role: 'OWNER' } } });
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[body.table] || [], role: 'USER' } } });
   });
   await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-CODE', SCRIPT]);
   await page.goto('cdhub/staff/print/');
   await expect(page.getByRole('button', { name: 'Dog cards' })).toBeVisible();
-  expect(reads).toEqual([]);                     // nothing read until a card type is chosen
+  expect(reads).toEqual([]);
   expect(gets).toEqual([]);                      // no status call holds the page
 
   await page.getByRole('button', { name: 'Room cards' }).click();
   await expect(page.locator('.sheet [data-room="ar-a"]')).toHaveCount(1);
   expect(reads.sort()).toEqual(['area', 'area_access', 'area_capacity', 'breeding_rule', 'check_type', 'qr_tag', 'requirement']);
-  expect(reads).not.toContain('links');          // dog-card lists are not read for room cards
+  expect(reads).not.toContain('links');
   expect(most).toBeGreaterThan(1);
   expect(most).toBeLessThanOrEqual(4);
   await expect(page.locator('[data-print-asof]')).toContainText(/Lists as of \d\d:\d\d/);
@@ -49,7 +49,7 @@ test('a list that cannot be read says why and draws nothing', async ({ page }) =
   await page.route(SCRIPT, (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
     if (body.table === 'area') return route.fulfill({ headers: CORS, json: { ok: false, code: 'BUSY', message: 'The records are busy. Try again in a moment.' } });
-    return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[body.table] || [], role: 'OWNER' } } });
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[body.table] || [], role: 'USER' } } });
   });
   await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-CODE', SCRIPT]);
   await page.goto('cdhub/staff/print/');
@@ -57,3 +57,4 @@ test('a list that cannot be read says why and draws nothing', async ({ page }) =
   await expect(page.locator('.msg')).toHaveText('The records are busy. Try again in a moment.');
   await expect(page.locator('.sheet > *')).toHaveCount(0);
 });
+

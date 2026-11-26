@@ -1,5 +1,3 @@
-// Web Estate Add box (30 Oct 2026): one request file per Add, "queued" shown, anything that is not http, https or a
-// bare domain refused with nothing sent. Pretend Google only; every address is invented.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -14,7 +12,7 @@ async function setUp(page, ids = true) {
     body: ids ? CONFIG.replace(/estate: \{\s*sheetId: '',\s*requestsFolderId: ''/, "estate: {\n      sheetId: 'SHEET_TEST',\n      requestsFolderId: 'REQ_FOLDER_TEST'") : CONFIG }));
   await page.route(/^https:\/\/sheets\.googleapis\.com\//, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: F.values() }) }));
   await page.route(UPLOAD, (route) => { uploads.push(route.request().postData()); return route.fulfill({ status: 200, contentType: 'application/json', body: '{"id":"NEWFILE"}' }); });
-  await page.goto('estate/#/all');   // Add sits on All since Hub Mains (2 Nov 2026)
+  await page.goto('estate/#/all');
   await page.locator('#view [data-action="signin"]').click();
   await page.locator('summary[data-action="addtoggle"]').click();
   return uploads;
@@ -69,3 +67,4 @@ test.describe('Web Estate Add', () => {
     expect(uploads).toEqual([]);
   });
 });
+

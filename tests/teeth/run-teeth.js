@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-// "TEETH" CHECK. Proves the tests can actually fail.
-// For each deliberate break below: copy the site to a temporary folder, break ONE thing in the copy, run the
-// matching tests there, and expect them to go RED. If a break goes unnoticed, this check fails loudly.
-// The real files in this repo are never touched. Weekly in GitHub (teeth.yml); locally: node tests/teeth/run-teeth.js
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -33,9 +29,6 @@ BREAKS.filter((b) => !only || b.id === only).forEach((b, i) => {
   results.push({ ...b, outcome: run.status === 0 ? 'SURVIVED' : 'caught', note: run.status === 0 ? 'the tests did NOT notice this break' : `${failures || 'some'} test(s) failed, as they should` });
 });
 
-// Clean up the temp copy. A browser process can still be writing into it for a moment, which made rmSync fail with
-// ENOTEMPTY (10 Nov 2026) and turned a clean run red ("a deliberate break was not caught"). Retry, and never let a
-// cleanup error hide the real results below.
 try { fs.rmSync(tmpRoot, { recursive: true, force: true, maxRetries: 6, retryDelay: 250 }); } catch (e) { console.warn('teeth: could not remove ' + tmpRoot + ' (' + e.code + '); the results below are unaffected'); }
 
 const lines = ['## Teeth check: can the tests still fail?', '', '| Result | Deliberate break | Detail |', '|---|---|---|'];
@@ -46,3 +39,4 @@ const text = lines.join('\n') + '\n';
 if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
 process.stdout.write(text);
 process.exit(bad.length ? 1 : 0);
+

@@ -1,13 +1,8 @@
-// JOB 34b (Marketplace): buttons and links not yet proved by marketplace.spec.js, job34-marketplace-states,
-// house-look or tests/phone. Home tiles and the Orders strip, Insights tiles, packing Skip / All packed, old section
-// links with Show all, the Vinted card (Copy text, Done with a link), Numbers before the first weekly review, and every
-// outside link opening in a new tab. Pretend Google and Sheets only; every row is invented.
 const { test, expect, HUBS, go, sheets, SHEETS } = require('../fixtures/job34/load');
 
 const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
 const today = () => new Date().toISOString();
 
-// Pretend Sheets answering from `rows`; returns the list of writes (range + values).
 async function book(page, rows) {
   const writes = [];
   page.on('request', (req) => {
@@ -28,17 +23,15 @@ async function lit(page, tab) {
 test.describe('Marketplace (JOB 34b): every button and link does what it says', () => {
   test('Main: Needs you opens Do now, a row opens its tab, To Reply opens Reply; the Orders tiles and the Latest link on Insights open Do now', async ({ page }) => {
     await HUBS.marketplace.open(page);
-    // The Do now / Decide / Reply tiles left Main (2 Nov): the Needs you head opens Do now, and a row opens the tab it is done in.
     for (const [key, name, link] of [['do', 'Do now', page.locator('#view [data-hm="needs"] h3 a')],
       ['decide', 'Decide', page.locator('#view [data-hm="needs"] .hm-row', { hasText: 'Sample treats' }).locator('.hm-t > a')],
-      ['reply', 'Reply', page.locator('#view a.hm-n[data-k="To Reply"]')]]) {   // the message is the 6th row, past the 5 shown
+      ['reply', 'Reply', page.locator('#view a.hm-n[data-k="To Reply"]')]]) {
       await go(page, 'me');
       await link.click();
       await expect(page).toHaveURL(new RegExp(`#/${key}$`));
       await lit(page, key);
       await expect(page.locator('#view .needs')).toContainText(name + ':');
     }
-    // The Orders strip moved from Main to Insights.
     for (const label of ['New today', 'Last 7 days', 'To post']) {
       await go(page, 'insights');
       await page.locator('#view a.tile', { hasText: label }).click();
@@ -106,7 +99,6 @@ test.describe('Marketplace (JOB 34b): every button and link does what it says', 
     await expect(page.locator('#view')).toContainText('The drop-off code shows here after the engine’s next run.');
   });
 
-  // J34b-F40 fixed: nextpack now wraps on the same packing list pagePack shows.
   test('J34b-F40 packing: Skip for now still wraps to the first parcel when an older parcel was already marked Posted', async ({ page }) => {
     await book(page, [
       ['PO|0', 'post', 'Clothes', 'Sample old parcel', JSON.stringify({ shelf: 'A0', courier: 'Evri' }), ago(60), 'Posted', '', ago(30), 'sample@example.test'],
@@ -119,7 +111,6 @@ test.describe('Marketplace (JOB 34b): every button and link does what it says', 
     await page.locator('#view [data-action="nextpack"]').click();
     await expect(page.locator('#view .packbar')).toContainText('Packing · 2 of 2');
     await page.locator('#view [data-action="nextpack"]').click();
-    // Today the button does nothing here: pack.i becomes 2 (< 3 posts), and pagePack clamps it back to the last parcel.
     await expect(page.locator('#view .packbar')).toContainText('Packing · 1 of 2');
   });
 
@@ -187,3 +178,4 @@ test.describe('Marketplace (JOB 34b): every button and link does what it says', 
     expect(bad).toEqual([]);
   });
 });
+

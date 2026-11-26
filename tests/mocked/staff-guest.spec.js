@@ -1,4 +1,3 @@
-// Guest (visitor) temperature page. Fake guest code and fake save address only.
 const { test, expect } = require('../support/test');
 
 test.use({ allowedConsole: [/404/] });
@@ -20,3 +19,4 @@ test('a guest code opens the room temperature form with the room list, and nothi
   await expect(page.getByText('R1').first()).toBeVisible();
   expect(sent).toHaveLength(0);
 });
+

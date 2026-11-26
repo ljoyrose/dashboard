@@ -1,7 +1,4 @@
 'use strict';
-// Breed Better built to the owner's design (13 Nov 2026): five bottom tabs, Calendar Due / Done / All, the subtle look, section
-// icons and colours from rows, the dog-page wording, judged answers, Evidence, History, viewer levels and the DNA panel bands.
-// Invented rows only.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -13,7 +10,6 @@ const Levels = require('../../cdhub/staff/lib/viewer-levels.js');
 const esc = (s) => String(s).replace(/[&<>"]/g, '');
 const ROOT = path.resolve(__dirname, '..', '..');
 
-/** An invented scheme: target 60% of points available, a must-pass band with a female-only line, a judged points line. */
 function T(extra) {
   return Object.assign({
     'BLD-score_scheme.csv': [{ id: 's1', name: 'Invented', species_id: 'dog', status: 'active', effective_from: '2026-01-01', target_points: '60', target_is: 'percent' }],
@@ -38,7 +34,7 @@ function T(extra) {
       { id: 'r1', subject_id: 'f1', r: 'ok', on: '2025-11-20' }, { id: 'r0', subject_id: 'f1', r: 'old', on: '2024-01-02' },
       { id: 'r2', subject_id: 'm1', r: 'ok', on: '2025-11-07' }],
     'BLD-exam2.csv': [{ id: 'q1', subject_id: 'f1', r: 'ok', on: '2026-02-03', document_id: 'FAKE-DOC' }],
-    'BLD-score_judgement.csv': [{ id: 'jd1', subject_id: 'f1', criterion_id: 'look', answer: 'Yes', judged_on: '2026-09-01', judged_by: 'Owner' }]
+    'BLD-score_judgement.csv': [{ id: 'jd1', subject_id: 'f1', criterion_id: 'look', answer: 'Yes', judged_on: '2026-09-01', judged_by: 'User' }]
   }, extra);
 }
 const TODAY = '2026-11-13';
@@ -50,7 +46,6 @@ test('judged answers (programme and looks) reach the score: a judgement row chan
   assert.equal(withJ.lines.find((l) => l.criterion_id === 'j1').points, 5);
   assert.equal(withJ.points_earned - without.points_earned, 5);
   assert.equal(without.lines.find((l) => l.criterion_id === 'j1').unknown_reason, 'not_judged');
-  // a judgement dated after the scoring day does not count yet
   const later = View.judgementsFor(T(), 'f1', T()['BLD-score_criterion.csv'], '2026-08-31');
   assert.deepEqual(later, {});
 });
@@ -85,12 +80,10 @@ test('the dog page shows the percent line, Scored on, n of m met, x of y and a T
   assert.match(html, /Section B<\/span>[\s\S]{0,800}?<span class="cnt wide bb-cnt">10 of 10/);
   assert.match(html, /To prove: a dated record of Check Two/);
   assert.doesNotMatch(html, /Unproven/i);
-  // a check's own proof_label names the evidence still needed
   const r = View.compute(v(T({ 'BLD-exam.csv': [] }))).byId.f1;
   assert.equal(View.toProve(r, r.lines.find((l) => l.criterion_id === 'c1')), 'To prove: a signed certificate');
 });
 
-/** The rows with Check One never due (no valid_months), so a passed Check One is done. */
 function notDue(extra) {
   const t = T(extra);
   t['BLD-score_criterion.csv'] = t['BLD-score_criterion.csv'].map((c) => c.id === 'c1' ? Object.assign({}, c, { valid_months: '', due_soon_days: '' }) : c);
@@ -113,7 +106,6 @@ test('Calendar: Due, Done and All counts (All = Due + Done); done = a valid date
   assert.deepEqual(kinds.filter((k) => k[1] === 'Check One'), [
     ['Test Dog B', 'Check One', 'done', '2025-11-07'], ['Test Dog B', 'Check One', 'overdue', '2026-11-07'],
     ['Test Dog A', 'Check One', 'done', '2025-11-20'], ['Test Dog A', 'Check One', 'due', '2026-11-20']].sort((a, b) => a[3].localeCompare(b[3]) || a[0].localeCompare(b[0])));
-  // a never-recorded judged line is "missing": due, but with no date
   const none = View.calItems(View.compute(v(T({ 'BLD-score_judgement.csv': [] }))), TODAY).filter((x) => x.kind === 'missing');
   assert.deepEqual(none.map((x) => [x.dog, x.check, x.date]), [['Test Dog A', 'Looks answer', ''], ['Test Dog B', 'Looks answer', '']]);
 });
@@ -225,7 +217,6 @@ test('look: only Lexend 400, 500 and 600; the name is 16px (a Breed Better size)
   assert.match(css, /\.bb-name\{[^}]*font-size:var\(--bb-fs-name\)/);
   assert.match(css, /\.bb-big\{[^}]*font-size:var\(--fs-figure\)/);
   for (const px of css.match(/font-size:\s*(\d+)px/g) || []) assert.ok(Number(px.replace(/\D/g, '')) >= 14, px);
-  // the house selected look (main, 15 Nov 2026) is a 1px outline in the hub; at rest there is no outline
   assert.doesNotMatch(css.replace(/[^{}]*:(hover|active)[^{}]*\{[^}]*\}/g, ''), /outline:\s*[1-9]/);
 });
 
@@ -247,7 +238,7 @@ test('mustPassFor gives an inspector the must-pass words, answer, date and due d
   for (const x of mp) assert.deepEqual(Object.keys(x).sort(), ['answer', 'date', 'due_date', 'evidence_id', 'evidence_table', 'label', 'outcome', 'subject_id']);
 });
 
-test('viewer levels: the owner\'s two levels (A records; B records and must-pass words); inspector B, vet and breeder A; points, target and ranking never', () => {
+test('viewer levels: the user\'s two levels (A records; B records and must-pass words); inspector B, vet and breeder A; points, target and ranking never', () => {
   const set = Levels.levels({}, TODAY);
   assert.equal(set.fromRows, false);
   assert.deepEqual(set.viewers.map((w) => [w.type, w.level]), [['inspector', 'level_b'], ['vet', 'level_a'], ['breeder', 'level_a']]);
@@ -255,7 +246,6 @@ test('viewer levels: the owner\'s two levels (A records; B records and must-pass
   const ins = Levels.showsFor({}, 'inspector', TODAY), vet = Levels.showsFor({}, 'vet', TODAY);
   assert.equal(ins.must_pass, true);
   assert.equal(!!vet.must_pass, false);
-  // rows can choose levels, but never widen past what an outside viewer may see
   const rows = { 'BLD-viewer_level.csv': [{ viewer_type: 'breeder', viewer_label: 'Another breeder', level_key: 'wide', level_label: 'Wide', shows: 'records;must_pass;points;target;ranking;notes' }] };
   const wide = Levels.showsFor(rows, 'breeder', TODAY);
   assert.deepEqual(Object.keys(wide).sort(), ['must_pass', 'records']);
@@ -317,12 +307,13 @@ test('History: with saved scores switched on, a score saved for a date replaces 
   assert.ok(!off.some((h) => h.date === '2026-01-05'));
   const on = View.historyRows(v(T(save), { saveScore: () => {} }), base);
   const nov = on.find((h) => h.date === '2025-11-20'), jan = on.find((h) => h.date === '2026-01-05');
-  assert.deepEqual([nov.saved, nov.verdict, nov.earned], [true, 'fail', 1]);   // the saved word wins over the worked-out one
-  assert.ok(nov.entries.length > 0);                                           // the records of that day still show
-  assert.deepEqual([jan.saved, jan.verdict, jan.entries.length], [true, 'pass', 0]);   // a save on a day with no record still shows
+  assert.deepEqual([nov.saved, nov.verdict, nov.earned], [true, 'fail', 1]);
+  assert.ok(nov.entries.length > 0);
+  assert.deepEqual([jan.saved, jan.verdict, jan.entries.length], [true, 'pass', 0]);
   assert.ok(!on.some((h) => h.date === '2026-01-06'));                         // another animal's save never shows
   View.open('history.f1');
   const html = View.page(v(T(save), { saveScore: () => {} }));
   View.open('');
   assert.match(html, /data-bb-hist="2026-01-05"[\s\S]*?7 of 15, saved/);
 });
+

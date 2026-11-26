@@ -1,4 +1,3 @@
-// One printed card per ticked item. Repeated passes and spare code rows must not multiply the sheet.
 const { test, expect } = require('../support/test');
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
@@ -15,7 +14,7 @@ async function ready(page, n) {
   await expect(page.locator('.msg')).toHaveText(n + ' cards ready. Use your browser’s Print.');
 }
 
-test('one card per ticked item for every kind and layout @regression', async ({ page }) => {
+test('t-cdhub-print-count-spec-1', async ({ page }) => {
   const tables = {
     area: [{ id: 'r01', code: 'R01' }, { id: 'r02', code: 'R02' }],
     subject: [{ id: 'd01', name: 'Dog A' }, { id: 'd02', name: 'Dog B' }],
@@ -41,10 +40,10 @@ test('one card per ticked item for every kind and layout @regression', async ({ 
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }], version: 'test' } });
     const b = JSON.parse(route.request().postData());
-    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'OWNER' } } });
+    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'USER' } } });
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'x' } } });
   });
-  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-USER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
 
   async function layouts(button, sel, n) {
@@ -99,3 +98,4 @@ test('one card per ticked item for every kind and layout @regression', async ({ 
     }
   }
 });
+

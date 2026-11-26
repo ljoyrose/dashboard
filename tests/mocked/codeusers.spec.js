@@ -1,11 +1,10 @@
-// Stage 1: every delete-code path has a code owner, so a change to it can be held for review.
 const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const OWNERS = fs.readFileSync(path.join(ROOT, '.github', 'CODEOWNERS'), 'utf8');
-const rules = OWNERS.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
+const USERS = fs.readFileSync(path.join(ROOT, '.github', 'CODEUSERS'), 'utf8');
+const rules = USERS.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
   .map((l) => l.split(/\s+/));
 
 const DELETE_CODE = [
@@ -16,20 +15,21 @@ const DELETE_CODE = [
   'tests/mocked/excluded-drive.spec.js',
   'tests/mocked/no-empty-trash.spec.js',
   'tests/mocked/personal-and-drive-check.spec.js',
-  'tests/mocked/codeowners.spec.js',
-  '.github/CODEOWNERS',
+  'tests/mocked/codeusers.spec.js',
+  '.github/CODEUSERS',
 ];
 
-test('each delete-code path exists and has an owner', () => {
+test('each delete-code path exists and has an user', () => {
   for (const f of DELETE_CODE) {
     expect(fs.existsSync(path.join(ROOT, f)), f + ' exists').toBe(true);
     const rule = rules.find((r) => r[0] === '/' + f);
-    expect(rule, f + ' has a CODEOWNERS rule').toBeTruthy();
-    expect(rule.length, f + ' names an owner').toBeGreaterThan(1);
-    expect(rule.slice(1).every((o) => /^@[\w-]+(\/[\w-]+)?$/.test(o)), f + ' owner is a GitHub handle').toBe(true);
+    expect(rule, f + ' has a CODEUSERS rule').toBeTruthy();
+    expect(rule.length, f + ' names an user').toBeGreaterThan(1);
+    expect(rule.slice(1).every((o) => /^@[\w-]+(\/[\w-]+)?$/.test(o)), f + ' user is a GitHub handle').toBe(true);
   }
 });
 
 test('no catch-all rule hides the delete-code rules', () => {
   expect(rules.some((r) => r[0] === '*' || r[0] === '/')).toBe(false);
 });
+

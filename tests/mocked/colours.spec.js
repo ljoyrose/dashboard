@@ -1,4 +1,3 @@
-// One shared colour file (tokens.css) for all three pages, LJR7 palette A "Clear". Pretend Google and Drive.
 const { test, expect } = require('../support/test');
 const { tabClick, tabTo } = require('../support/tabs');
 const fs = require('fs');
@@ -42,7 +41,6 @@ test('the colour carries meaning on the dashboard menu: Bin is slot 8, Money slo
   await expect(page.locator('#mainNav')).toBeVisible();
   await page.locator('#mainNav [data-house-more]').click();
   await page.locator('#mainNav a[data-nav="bin"]').hover();
-  // The icon colour eases in on hover; wait for it to settle.
   await expect.poll(() => page.locator('#mainNav a[data-nav="bin"] svg').first().evaluate((e) => getComputedStyle(e).color)).toBe('rgb(58, 54, 50)');
   await page.keyboard.press('Escape');
   const slot = (sel) => page.locator(sel).first().evaluate((e) => { const d = document.createElement('i'); d.style.color = getComputedStyle(e).getPropertyValue('--slot').trim(); document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; });
@@ -53,3 +51,4 @@ test('the colour carries meaning on the dashboard menu: Bin is slot 8, Money slo
   await page.locator('#view nav.subnav a', { hasText: /^Work My Drive$/ }).click();
   expect(await slot('#view section.card.slot4')).toBe('rgb(243, 216, 78)');
 });
+

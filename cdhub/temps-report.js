@@ -21,7 +21,6 @@
   function e(s) { return window.esc ? window.esc(s) : String(s || ''); }
   function days(y, m) { var n = window.mdays(y)[m], out = []; for (var d = 1; d <= n; d++) out.push(window.ds(y, m, d)); return out; }
 
-  /** One month: {rooms:[{aid, name, days:{iso:{am,pm}}}], totals, outside:[...]}, all from the page's day rules. */
   function monthData(y, m) {
     var rooms = {}, order = [], t = { read: 0, miss: 0, out: 0, empty: 0 }, outside = [];
     days(y, m).forEach(function (iso) {
@@ -41,7 +40,6 @@
     return { y: y, m: m, rooms: order.map(function (a) { return rooms[a]; }), totals: t, outside: outside };
   }
 
-  /* a day for one room, for the summary: done (all read inside), out, miss, part (some read, rest due), none */
   function dayState(dd) {
     if (!dd) return 'none';
     var k = [dd.am.k, dd.pm.k];
@@ -59,18 +57,16 @@
     return '<div class="rp-foot"><span>Printed ' + e(when) + '</span><span>Checked by ______________________ &nbsp; Signed ______________________</span></div>';
   }
 
-  /** B: one small calendar per room for the month. */
   function summaryPage(md) {
     var y = md.y, m = md.m, lead = (new Date(y, m, 1).getDay() + 6) % 7;
     var h = '<section class="rp-page" data-rp="summary" data-month="' + y + '-' + (m < 9 ? '0' : '') + (m + 1) + '">'
       + head('Room temperatures: summary', MON[m] + ' ' + y);
     if (!md.rooms.length) return h + '<p>No room readings were needed or taken this month.</p>' + foot() + '</section>';
-    /* The biggest day square that lets every room's calendar fit across and down the sheet (mm). */
     var weeks = Math.ceil((lead + days(y, m).length) / 7), n = md.rooms.length, cols = 1, cell = 0;
     for (var c = 1; c <= Math.min(n, 14); c++) {
       var rows = Math.ceil(n / c);
       var byW = ((PAGE_W - (c - 1) * 4) / c - 1.8) / 7;                            // 7 squares and their gaps across
-      var byH = ((BODY_H - 4) / rows - 3 - 4 - 0.3 * weeks) / (0.6 + weeks);         // name, M T W..., the weeks down
+      var byH = ((BODY_H - 4) / rows - 3 - 4 - 0.3 * weeks) / (0.6 + weeks);
       var sq = Math.min(byW, byH, 12);
       if (sq > cell) { cell = sq; cols = c; }
     }
@@ -97,15 +93,14 @@
     return '<td class="' + (bad ? 'out' : 'in') + '">' + e(s.lo || '–') + '–' + e(s.hi || '–') + (bad ? '!' : '') + '</td>';
   }
 
-  /** A: rooms down the side, days across, AM and PM rows. */
   function tablePage(md) {
     var y = md.y, m = md.m, ds = days(y, m);
     var h = '<section class="rp-page" data-rp="table" data-month="' + y + '-' + (m < 9 ? '0' : '') + (m + 1) + '">'
       + head('Room temperatures °C: lowest–highest', MON[m] + ' ' + y);
     if (!md.rooms.length) return h + '<p>No room readings were needed or taken this month.</p>' + foot() + '</section>';
     var colW = (PAGE_W - 30) / ds.length, rowH = (BODY_H - 4) / (md.rooms.length * 2 + 1);
-    var fs = Math.max(4.5, Math.min(9, colW * 3.78 / 5.2, rowH * 3.78 / 1.25));   // px: 9 characters across a day, one line high
-    var rh = Math.min(6, rowH - 0.1);                                              // rows grow to fill the sheet, up to 6 mm
+    var fs = Math.max(4.5, Math.min(9, colW * 3.78 / 5.2, rowH * 3.78 / 1.25));
+    var rh = Math.min(6, rowH - 0.1);
     h += '<table class="rp-t" style="--fs:' + fs.toFixed(2) + 'px;--rh:' + rh.toFixed(2) + 'mm"><thead><tr><th>Room</th><th></th>' + ds.map(function (iso) { return '<th>' + (+iso.slice(8)) + '</th>'; }).join('') + '</tr></thead><tbody>';
     md.rooms.forEach(function (r) {
       ['am', 'pm'].forEach(function (slot, i) {
@@ -129,12 +124,11 @@
       + (t.empty ? ' · room empty: <b>' + t.empty + '</b>' : '') + '</p>';
   }
 
-  /** The report for the choice: {period:'month'|'year', year, month (0-11), summary:bool, table:bool}. */
   function build(o) {
     var months = o.period === 'year' ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] : [o.month];
     var h = '';
     months.forEach(function (m) {
-      if (window.ds(o.year, m, 1) > window.TODAY_STR) return;   // a month that has not started yet: no empty pages
+      if (window.ds(o.year, m, 1) > window.TODAY_STR) return;
       var md = monthData(o.year, m);
       if (o.summary) h += summaryPage(md);
       if (o.table) h += tablePage(md);
@@ -193,7 +187,6 @@
     window.addEventListener('afterprint', function () { document.body.classList.remove('rp-printing'); });
     return p;
   }
-  /* Any page still taller than the sheet is shrunk to fit it (long "outside the limit" lists, very many rooms). */
   function fit(rep) {
     rep.classList.add('rp-measure');
     var max = PAGE_H * 96 / 25.4;
@@ -212,3 +205,4 @@
 
   window.TempsReport = { open: function () { var p = panel(); p.hidden = false; p.querySelector('#rpGo').focus(); }, build: build, monthData: monthData, fit: fit };
 }());
+

@@ -1,6 +1,3 @@
-// Dog gallery: Remove and Make main .
-// Nothing is deleted: Remove ends the photo's gallery link. The card does not list ended photos .
-// Make main adds a main link. Invented rows only; pretend save script.
 const { test, expect } = require('../support/test');
 const { HUBS } = require('../support/hubs');
 
@@ -26,14 +23,14 @@ async function setUp(page, guard, today) {
     'sub-g1,t,Pretend Gallery,Female,2021-03-02,Breeding,entire,', 'sub-g2,t,Pretend Plain,Male,2022-01-01,Stud,entire,']));
   put(w, 'BLD-subject_status.csv', csv('id,tenant_id,subject_id,state', ['s1,t,sub-g1,Active', 's2,t,sub-g2,Active']));
   put(w, 'BLD-files.csv', csv('id,tenant_id,kind,drive_file_id,url,mime,name,size_bytes,taken_on,sha256,source,set_by,set_on', [
-    'fil-1,t,photo,DRIVEmainPhoto01,,image/jpeg,,,2026-06-01,,camera,owner,2026-06-01T10:00:00Z',
-    'fil-2,t,photo,DRIVEbadPhoto002,,image/jpeg,,,2025-01-01,,camera,owner,2025-01-01T10:00:00Z',
-    `fil-3,t,photo,DRIVEnewPhoto003,,image/jpeg,,,${today},,camera,owner,${today}T10:00:00Z`]));
+    'fil-1,t,photo,DRIVEmainPhoto01,,image/jpeg,,,2026-06-01,,camera,user,2026-06-01T10:00:00Z',
+    'fil-2,t,photo,DRIVEbadPhoto002,,image/jpeg,,,2025-01-01,,camera,user,2025-01-01T10:00:00Z',
+    `fil-3,t,photo,DRIVEnewPhoto003,,image/jpeg,,,${today},,camera,user,${today}T10:00:00Z`]));
   put(w, 'BLD-links.csv', csv('id,tenant_id,from_table,from_id,to_table,to_id,role,sort,note,from_date,to_date,source,set_by,set_on,end_reason', [
-    'l1,t,subjects,sub-g1,files,fil-1,gallery,,,2026-06-01,,dog card,owner,2026-06-01T10:00:00Z,',
-    'l2,t,subjects,sub-g1,files,fil-2,gallery,,,2025-01-01,,dog card,owner,2025-01-01T10:00:00Z,',
-    `l3,t,subjects,sub-g1,files,fil-3,gallery,,,${today},,dog card,owner,${today}T10:00:00Z,`,
-    'm1,t,subjects,sub-g1,files,fil-1,main,,,2026-06-01,,dog card,owner,2026-06-01T11:00:00Z,']));
+    'l1,t,subjects,sub-g1,files,fil-1,gallery,,,2026-06-01,,dog card,user,2026-06-01T10:00:00Z,',
+    'l2,t,subjects,sub-g1,files,fil-2,gallery,,,2025-01-01,,dog card,user,2025-01-01T10:00:00Z,',
+    `l3,t,subjects,sub-g1,files,fil-3,gallery,,,${today},,dog card,user,${today}T10:00:00Z,`,
+    'm1,t,subjects,sub-g1,files,fil-1,main,,,2026-06-01,,dog card,user,2026-06-01T11:00:00Z,']));
   put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date', [
     'k1,t,link_kind.gallery,Photos,2026-01-01,Pretend,,,,', 'k2,t,link_kind.main,Main photo,2026-01-01,Pretend,,,,']));
   for (const id of ['DRIVEmainPhoto01', 'DRIVEbadPhoto002', 'DRIVEnewPhoto003', 'DRIVEeditedNew9']) { w.file(id, id + '.png', '', { mimeType: 'image/png' }); w.byId(id).thumbnailLink = 'https://example.com/pretend-' + id + '.png'; }
@@ -52,7 +49,7 @@ test('Remove takes a bad photo out of the gallery at once; the card does not lis
   await expect(gal.locator('[data-gal-msg]')).toHaveText('✓ Saved');
   expect(sent).toHaveLength(1);
   expect(sent[0]).toMatchObject({ action: 'link_end', fields: { id: 'l2', reason: 'Removed from gallery' } });
-  expect(sent[0].fields.to_date < today).toBe(true);   // an older photo ends yesterday, so it is gone from today
+  expect(sent[0].fields.to_date < today).toBe(true);
   const g2 = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
   await expect(g2.locator('> summary')).toHaveText('Photos (2)');
   await expect(g2.locator('details[data-k="ended"]')).toHaveCount(0);
@@ -79,8 +76,6 @@ test('Make main sets another photo as the card photo; the main photo has no Make
   await expect(page.locator('.dc[data-dog="sub-g1"] .gi[data-file="fil-2"] [data-k="main"]')).toHaveText('Main');
 });
 
-// ✎ Crop or adjust (Lisa 17 Nov 2026): the saved picture opens in the same crop tool; the edited picture is saved as a
-// new file and takes the old one's place; the original is kept (its link ends, so it is in Ended).
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGP8z8DAwMDAxMDAwMAAACYABTxrpVkAAAAASUVORK5CYII=';
 async function driveBytes(page) {
   await page.route(/^https:\/\/www\.googleapis\.com\/drive\/v3\/files\/DRIVE[A-Za-z0-9]+\?alt=media/, (r) => r.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from(PNG, 'base64') }));
@@ -99,7 +94,6 @@ test('gallery: × and ✎ sit on each photo; ✎ saves an edited copy in the old
   await expect.poll(() => sent.length).toBe(3);
   expect(sent[0]).toMatchObject({ action: 'file_add', fields: { kind: 'photo', mime: 'image/jpeg', taken_on: '2025-01-01' } });
   expect(sent[0].fields.data_base64.length).toBeGreaterThan(50);
-  // the copy joins the gallery before the old photo is ended, so a refused add never loses a photo (17 Nov 2026)
   expect(sent[1]).toMatchObject({ action: 'link_add', fields: { role: 'gallery', to_id: 'fil-new', from_id: 'sub-g1', from_date: today } });
   expect(sent[2]).toMatchObject({ action: 'link_end', fields: { id: 'l2', reason: 'Replaced by edited copy' } });
   const g2 = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
@@ -138,3 +132,4 @@ test('a refused gallery add leaves the old photo in the gallery (17 Nov 2026: 5 
   await expect(gal.locator('[data-gal-msg]')).toContainText('not shown yet');
   await expect(page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"] .gi[data-file="fil-2"]')).toHaveCount(1);
 });
+

@@ -1,5 +1,3 @@
-// Stage 10: access roles, the client view and the reseller report. Run: node --test tests/estate/views.test.js
-// Rows are invented (tests/fixtures/estate/rows.js). Today is pinned so days never drift.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const E = require('../../estate/core.js');
@@ -10,12 +8,12 @@ const rows = () => E.rowsFromValues(F.values()).rows;
 
 test('accessRows gives role names only and never an email, password or token', () => {
   const out = V.accessRows([
-    { key: 'a.example', access_note: 'owner: Sam; manager: agency' },
+    { key: 'a.example', access_note: 'user: Sam; manager: agency' },
     { key: 'b.example', access_note: 'admin: someone@example.com; editor: Pat; password: hunter2; token: abcd1234efgh5678ijkl' },
     { key: 'c.example', access_note: 'manager role' },
     { key: 'd.example', access_note: '' },
   ]);
-  assert.deepEqual(out[0], { key: 'a.example', roles: ['owner', 'manager'], hidden: 0 });
+  assert.deepEqual(out[0], { key: 'a.example', roles: ['user', 'manager'], hidden: 0 });
   assert.deepEqual(out[1], { key: 'b.example', roles: ['editor'], hidden: 3 });
   assert.deepEqual(out[2].roles, ['manager role']);
   assert.deepEqual(out[3], { key: 'd.example', roles: [], hidden: 0 });
@@ -26,7 +24,7 @@ test('accessRows gives role names only and never an email, password or token', (
 
 test('client view of Client A shows no Client B row, no blank-client row and no internal field', () => {
   const extra = rows().concat([
-    { key: 'a2.example.test', kind: 'site', company: 'Second Ltd', client: 'Client A', access_note: 'owner: someone@example.com', flag: 'watch', source: 'manual', keywords_tracked: '3', internal_cost: '9', notes: 'private', note_x: 'x', reseller: 'Resell Co', reseller_fee_monthly: '10' },
+    { key: 'a2.example.test', kind: 'site', company: 'Second Ltd', client: 'Client A', access_note: 'user: someone@example.com', flag: 'watch', source: 'manual', keywords_tracked: '3', internal_cost: '9', notes: 'private', note_x: 'x', reseller: 'Resell Co', reseller_fee_monthly: '10' },
     { key: 'a3.example.test', kind: 'site', company: 'Second Ltd', client: 'client a' },
   ]);
   const before = JSON.stringify(extra);
@@ -58,3 +56,4 @@ test('reseller report: £ with 2 decimals, UK renewal date, days to go; no resel
   assert.equal(out[2].days_to_go, null);
   assert.deepEqual(V.resellerReport(rows(), TODAY), [], 'the fixture has no reseller columns');
 });
+

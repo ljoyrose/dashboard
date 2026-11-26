@@ -1,5 +1,3 @@
-// Invented allocation and sale-sheet shapes for Stage 10. Nobody and no dog here is real: example.com, Ofcom fiction
-// numbers (07700 900xxx), made-up pup refs (xx26-*) and dog names.
 'use strict';
 const H = ['section', 'ref', 'name', 'status', 'deposit_date', 'whatsapp', 'email', 'ppf (colour/gender)', 'notes', 'provisional_pup'];
 const current = [H,
@@ -23,7 +21,6 @@ const current = [H,
   ['WAITING', 'w3', 'Buyer W3', 'waiting', '', '07700 900613', 'w3@example.com', 'red boy', '', ''],
   ['CLOSED', 'c1', 'Buyer C1', 'refunded', '2026-01-01', '07700 900621', 'c1@example.com', 'chocolate girl', '', '']
 ];
-// The sale sheet has a Price column and other columns the hub must never read.
 const sale = [['Sale group', 'Name', 'Sex', 'Price', 'COI', 'Colour', 'Status'],
   ['1', 'Dog Alpha', 'F', '9999', '5.1%', 'Apricot', 'For sale'],
   ['1', 'Dog Bravo', 'F', '9999', '4.0%', 'Black', 'For sale'],
@@ -32,3 +29,4 @@ const sale = [['Sale group', 'Name', 'Sex', 'Price', 'COI', 'Colour', 'Status'],
   ['Individual (neutered)', 'Dog Foxtrot', 'M', '7777', '2.0%', 'Black', 'Agreed']
 ];
 module.exports = { current, sale };
+

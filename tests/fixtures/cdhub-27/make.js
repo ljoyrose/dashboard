@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-// SCRIPT. Writes the invented CD Hub sample set for 27 animals into this folder (BLD-*.csv).
-// Everything here is made up: Dog A01..A20, Pup P01..P07, Room 1..8. No real name, id, date or chip.
-// "Today" for this set is 10 Mar 2026 (tests pin the clock to it: tests/support/cdhub27.js).
-//
-//   node tests/fixtures/cdhub-27/make.js          rewrite the files
-//   node tests/fixtures/cdhub-27/make.js --check  exit 1 if the files on disk differ (used by the crawl test)
 const fs = require('fs');
 const path = require('path');
 
@@ -69,7 +63,6 @@ table('temperature_band', 'id,tenant_id,band,age_from_days,age_to_days,min_temp,
 table('temperature_action', 'id,direction,threshold_c,action,source', [
   ['ta-1', 'below', 10, 'Add bedding and switch the heater on', SRC], ['ta-2', 'above', 26, 'Open the vents and add a fan', SRC],
 ]);
-// readings: Jan to Mar, plus this morning for three rooms (one over its limit)
 const rd = [];
 let rn = 0;
 const reading = (area, thm, start, taken, min, max, extra) => rd.push(['rdg-' + pad(++rn), T, area, thm, 'temperature', min, max, start, taken, 'sample staff', (extra && extra.empty) || '', '', (extra && extra.method) || 'typed', '']);
@@ -87,7 +80,6 @@ table('outdoor_temp', 'on_date,reading_kind,min_temp,max_temp,phrase,captured_at
   [0, 1, 2, 3, 4, 5].map((i) => [day(TODAY, i), i ? 'forecast' : 'observed', 3 + i, 11 + i, i === 2 ? 'Cold and wet' : 'Mild', TODAY + 'T06:00:00Z', SRC, i === 2 ? 6 : 0, i === 3 ? 45 : 12]));
 
 // ---------- animals ----------
-// [n, sex, dob, kind, neuter, size, colour, pattern, room, classification, state, off]
 const ADULTS = [
   [1, 'Female', '2021-04-12', 'Breeding Female', 'entire', 'medium', 'col-1', 'pat-1', 'ar-5', 'Breeding Bitch', 'Active', ''],
   [2, 'Female', '2020-09-03', 'Breeding Female', 'entire', 'medium', 'col-2', 'pat-1', 'ar-6', 'Breeding Bitch', 'Active', ''],
@@ -127,21 +119,18 @@ PUPS.forEach(([n, sex, lit]) => {
   status.push(['st-p' + pad(n), T, P(n), 'Active']);
   occ.push(['occ-p' + pad(n), T, P(n), LITTER_ROOM[lit], '', LITTER_DOB[lit], '', 'Litters', '']);
 });
-// one move this year: Dog A12 moved from Room 3 to Room 2 (the newer row wins, wherever it sits in the file)
 occ.push(['occ-a12-old', T, A(12), 'ar-3', '', '2025-06-01', '2025-09-30', '', '']);
 table('subject', 'id,tenant_id,name,sex,dob,size_band,coat_type,kind,neuter_status,source,species,breed,coat_colour_id,coat_pattern_id,nose_pigment_id,birth_litter_id,rx_moxi_date,rx_moxi_expiry,rx_moxi_file_url,photo', subj);
 table('subject_status', 'id,tenant_id,subject_id,state', status);
 table('occupancy', 'id,tenant_id,subject_id,area_id,off_site_kind,moved_in,moved_out,classification,classification_note', occ);
 table('status_label', 'code,label,match,source', []);
 
-// chips: every animal except Dog A15 and the youngest litter (they show as "no chip recorded")
 const chip = [];
 ADULTS.forEach(([n]) => { if (n !== 15) chip.push(['mc-a' + pad(n), T, A(n), '9000000000001' + pad(n)]); });
 [1, 2, 3, 4].forEach((n) => chip.push(['mc-p' + pad(n), T, P(n), '9000000000002' + pad(n)]));
 table('microchip', 'id,tenant_id,subject_id,chip_number', chip);
 table('microchip_registration', 'id,tenant_id,microchip_id,registry,registered_on', [['mr-1', T, 'mc-a01', 'Sample registry', '2021-06-12']]);
 
-// weights: adults once a month Jan to Mar (Dog A15 has none), pups weekly
 const wt = [];
 ADULTS.forEach(([n, , , , , size]) => {
   if (n === 15 || n >= 18) return;
@@ -154,7 +143,6 @@ PUPS.forEach(([n, , lit]) => {
 });
 table('weight', 'subject_id,performed_on,weight_kg,unit,body_condition_score,bcs_scale,source', wt);
 
-// medicine: Jan, Feb and Mar. Two February rows have no product name (the "which medicine" question).
 const med = [];
 let mn = 0;
 const give = (sub, on, product, dose, route, need) => med.push(['dsp-' + pad(++mn), T, sub, on, product, '', dose, '', '', '', route, 'routine', SRC, need || '', '']);
@@ -181,7 +169,6 @@ table('health_screen', 'id,subject_id,test,grade,tested_on,certainty,attributed_
   ['hs-3', A(7), 'elbows', '', '2024-06-01', 'possible', 'sample vet', 'sample elbow note'],
 ]);
 
-// litters and matings. Dog A03 is in whelp: mated 12 Jan 2026 (day 57 on 10 Mar), no litter yet.
 table('litter', 'id,tenant_id,dam_subject_id,sire_subject_id,born_on,dob,pairing,status,raw_name,notes', [
   ['lit-0', T, A(7), A(9), '2024-07-03', '2024-07-03', 'Dog A07 x Dog A09', 'homed', 'Sample litter 0', SRC],
   ['lit-1', T, A(1), A(9), '2026-01-20', '2026-01-20', 'Dog A01 x Dog A09', 'on site', 'Sample litter 1', SRC],
@@ -236,15 +223,14 @@ table('finding', 'id,tenant_id,inspection_id,declaration_id,outcome_id,authority
 table('declaration', 'id,tenant_id,declaration_key,text,source', [['dec-1', T, 'sample.declaration', 'Sample declaration', SRC]]);
 
 // ---------- work list ----------
-table('WORK', 'id,area,item,status,owner,blocked_on,evidence,note', [
-  ['W001', 'medicine', 'Identify the medicine given in February', 'BLOCKED', 'Lisa', 'the name on the packet', '', ''],
-  ['W002', 'medicine', 'Check the medicine given to Dog A09 in March', 'BLOCKED', 'Lisa', '', '', ''],
-  ['W003', 'rooms', 'Confirm the floor area of Room 4', 'BLOCKED', 'Lisa', 'a tape measure reading', '', 'sample note'],
+table('WORK', 'id,area,item,status,user,blocked_on,evidence,note', [
+  ['W001', 'medicine', 'Identify the medicine given in February', 'BLOCKED', 'User', 'the name on the packet', '', ''],
+  ['W002', 'medicine', 'Check the medicine given to Dog A09 in March', 'BLOCKED', 'User', '', '', ''],
+  ['W003', 'rooms', 'Confirm the floor area of Room 4', 'BLOCKED', 'User', 'a tape measure reading', '', 'sample note'],
   ['W004', 'records', 'Sample item waiting on the helper', 'OPEN', 'Claude', '', '', ''],
   ['W005', 'records', 'Sample finished item', 'DONE', 'Claude', '', 'sample evidence', ''],
 ]);
 
-// ---------- Assocs (hidden by a later change; a few rows so the page has something if it shows) ----------
 table('association', 'id,name,acronym,country,country_iso,is_registry,recognises_cobberdog,status,listed_breeders,directory_url,note', [
   ['as-1', 'Sample Breed Club', 'SBC', 'Sampleland', 'ZZ', 'yes', 'yes', 'active', 3, '', SRC],
 ]);
@@ -255,19 +241,16 @@ table('export_route', 'id,country,country_iso,difficulty,lead_time,requirement,c
 table('breeder_category', 'id,code,name', [['bc-1', 'CAT-A', 'Sample category']]);
 table('prospect_set', 'id,name', [['ps-1', 'Sample set']]);
 
-// ---------- QR tags (staff page only: what a scanned card means) ----------
 table('qr_tag', 'tag,kind,ref_id,active', [
   ['ROOMAAAA', 'area', 'ar-1', 'true'], ['ROOMAAAB', 'area', 'ar-2', 'true'], ['ROOMAAAF', 'area', 'ar-6', 'true'],
   ['DOGAAAAD', 'subject', A(4), 'true'], ['DOGAAAAF', 'subject', A(6), 'true'], ['DOGAAAAK', 'subject', A(10), 'true'],
   ['LITAAAAB', 'litter', 'lit-2', 'true'], ['THMAAAAE', 'thermometer', 'thm-5', 'true'], ['SITEAAAA', 'site', 'site', 'true'],
 ]);
 
-// ---------- tables the hub only counts ----------
 const plain = (name, n) => table(name, 'id,tenant_id,name,note', Array.from({ length: n || 1 }, (_, i) => [name.slice(0, 3) + '-' + (i + 1), T, 'Sample ' + name.replace(/_/g, ' ') + ' ' + (i + 1), SRC]));
 ['doc_type', 'jurisdiction', 'authority', 'unit', 'locale', 'species', 'frequency', 'checklist_template', 'checklist_template_item', 'checklist_instance',
   'deviation', 'verification', 'governed_by', 'sop', 'sop_version', 'role', 'visit', 'reminder', 'clinical_note'].forEach((n) => plain(n, 2));
 
-// ---------- Breed Better (the scoring itself is another job; a small scheme so its chip and its More entry show) ----------
 const BB = path.join(__dirname, '..', 'breed-better');
 ['score_scheme', 'score_band', 'score_criterion', 'score_point', 'fit_to_breed', 'score_judgement'].forEach((n) => {
   const lines = fs.readFileSync(path.join(BB, 'BLD-' + n + '.csv'), 'utf8').trim().split(/\r?\n/);
@@ -275,7 +258,6 @@ const BB = path.join(__dirname, '..', 'breed-better');
 });
 table('score_enrolment', 'id,tenant_id,scheme_id,subject_id,valid_from,is_active,source', [1, 3, 9].map((n, i) => ['en-' + (i + 1), T, 's-test', A(n), '2026-01-01', 'TRUE', SRC]));
 
-// ---------- manifest (row counts, written last) ----------
 table('_MANIFEST', 'file,table,rows,note', Object.keys(files).sort().map((f) => [f, f.replace(/^BLD-|\.csv$/g, ''), files[f].rows.length, 'invented sample']));
 
 const cell = (v) => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
@@ -293,3 +275,4 @@ if (require.main === module) {
   process.exit(diff ? 1 : 0);
 }
 module.exports = { TODAY, files: Object.keys(files).sort(), text, animals: ADULTS.length + PUPS.length };
+

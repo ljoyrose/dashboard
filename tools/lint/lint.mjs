@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-// lint.mjs - house lint for the static dashboard (JOB 38 stage 3). Node 22, ESM, no packages: node: built-ins only.
-//
-//   node tools/lint/lint.mjs                 lint tracked files; exit 1 only when a rule|file count goes above known.json
-//   node tools/lint/lint.mjs --all           also print every finding (known ones too)
-//   node tools/lint/lint.mjs --update-known  rewrite known.json from today's findings
-//   node tools/lint/lint.mjs --selftest      planted-fault control cases; exit 1 if any rule fails to fire (or fires on clean input)
-//
-// Every rule is a pure function (text, file, ctx) -> [{rule, file, line, msg}], so the selftest feeds it in-memory strings.
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -30,10 +22,8 @@ function lineIndex(text) {
   };
 }
 
-// Replace a span with spaces but keep newlines, so offsets and line numbers stay true.
 const blank = (s) => s.replace(/[^\n]/g, ' ');
 
-// HTML with comments and <script>/<style> contents blanked: what the tag-level rules see.
 export function htmlMarkup(text) {
   return text
     .replace(/<!--[\s\S]*?(-->|$)/g, blank)
@@ -53,7 +43,6 @@ function attrs(src) {
   return out;
 }
 
-// ---------- 1. DUP-ID ----------
 export function ruleDupId(text, file) {
   if (ext(file) !== 'html') return [];
   const md = htmlMarkup(text), at = lineIndex(text), seen = new Map(), out = [];
@@ -69,7 +58,6 @@ export function ruleDupId(text, file) {
   return out;
 }
 
-// ---------- 2. IMG-ALT ----------
 export function ruleImgAlt(text, file) {
   if (ext(file) !== 'html') return [];
   const md = htmlMarkup(text), at = lineIndex(text), out = [];
@@ -80,10 +68,8 @@ export function ruleImgAlt(text, file) {
   return out;
 }
 
-// ---------- 3. UNCLOSED ----------
 const VOID = new Set('area base br col embed hr img input link meta source track wbr'.split(' '));
 const OPTIONAL_END = new Set('p li td th tr option optgroup thead tbody tfoot dt dd html head body colgroup caption rt rp'.split(' '));
-// Opening one of these implicitly closes an open sibling of the listed kinds.
 const AUTO_CLOSE = { li: ['li'], dt: ['dt', 'dd'], dd: ['dt', 'dd'], tr: ['tr', 'td', 'th'], td: ['td', 'th'], th: ['td', 'th'],
   option: ['option'], thead: ['tbody', 'tfoot', 'tr', 'td', 'th'], tbody: ['thead', 'tbody', 'tr', 'td', 'th'], tfoot: ['thead', 'tbody', 'tr', 'td', 'th'] };
 export function ruleUnclosed(text, file) {
@@ -112,7 +98,6 @@ export function ruleUnclosed(text, file) {
   return out;
 }
 
-// ---------- 4. COLOUR ----------
 const HEX_RE = /(?<![\w&#])#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![\w-])/g;
 const FN_RE = /\b(rgba?|hsla?)\(\s*([^()]*)\)/gi;
 export function normColour(c) {
@@ -121,7 +106,6 @@ export function normColour(c) {
   if (m && (m[1].length === 3 || m[1].length === 4)) return '#' + [...m[1]].map((x) => x + x).join('');
   return c;
 }
-// Colour literals in a string, as [{value, offset}] relative to the string.
 export function colourLiterals(s) {
   const out = [];
   for (const m of s.matchAll(HEX_RE)) out.push({ value: m[0], offset: m.index });
@@ -131,7 +115,6 @@ export function colourLiterals(s) {
 export function tokenColours(tokensText) {
   return new Set(colourLiterals(tokensText.replace(/\/\*[\s\S]*?\*\//g, blank)).map((c) => normColour(c.value)));
 }
-// String-literal spans of JS source (comments skipped). Regex literals are not understood; ' and " strings end at a newline.
 export function jsStrings(src) {
   const spans = [];
   let i = 0;
@@ -186,7 +169,6 @@ export function ruleColour(text, file, ctx) {
   return out;
 }
 
-// ---------- 5. CONSOLE-LOG ----------
 export function consoleLogApplies(file) {
   if (!['html', 'js', 'mjs'].includes(ext(file))) return false;
   if (/^(tests|tools|\.github)\//.test(file)) return false;
@@ -202,7 +184,6 @@ export function ruleConsoleLog(text, file) {
   return out;
 }
 
-// ---------- 6. TRAILING-WS ----------
 export function ruleTrailingWs(text, file) {
   const out = [];
   text.split('\n').forEach((l, i) => {
@@ -211,7 +192,6 @@ export function ruleTrailingWs(text, file) {
   return out;
 }
 
-// ---------- 7-10. workflows ----------
 const isWorkflow = (file) => /^\.github\/workflows\/[^/]+\.ya?ml$/.test(file);
 const stripComment = (l) => l.replace(/(^|\s)#.*$/, '').replace(/\s+$/, '');
 function topLevel(lines) {
@@ -263,7 +243,7 @@ export function ruleWfTimeout(text, file) {
   jobs.forEach((j, n) => {
     const end = n + 1 < jobs.length ? jobs[n + 1].line : (body.length ? body[body.length - 1].line + 1 : j.line + 1);
     const own = body.filter((b) => b.line > j.line && b.line < end).map((b) => b.text);
-    if (own.some((l) => /^    uses\s*:/.test(l))) return; // reusable-workflow call: timeout-minutes is not allowed there
+    if (own.some((l) => /^    uses\s*:/.test(l))) return;
     if (!own.some((l) => /^    timeout-minutes\s*:/.test(l))) {
       out.push(finding('WF-TIMEOUT', file, j.line + 1, `job ${j.text.trim().replace(/:.*$/, '')} has no timeout-minutes`));
     }
@@ -383,3 +363,4 @@ function main(argv) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) process.exitCode = main(process.argv.slice(2));
+

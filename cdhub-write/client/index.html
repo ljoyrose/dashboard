@@ -29,7 +29,7 @@
 </nav>
 
 <div class="box" id="setup">
-  <b>Turn saving on</b> (Lisa only). Paste the Script URL from the Apps Script deployment. It is kept on this device only.
+  <b>Turn saving on</b> (User only). Paste the Script URL from the Apps Script deployment. It is kept on this device only.
   <input id="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" aria-label="Script URL">
   <button id="urlBtn" type="button">Use this address</button>
   <button id="urlOff" type="button" style="background:transparent;color:var(--mut);border:1px solid var(--line)">Switch off on this device</button>
@@ -101,7 +101,6 @@
     });
   };
   document.getElementById('loadDemo').onclick = function(){
-    // FAKE sample rooms for trying the screens. Not real data.
     var T = {
       'BLD-area.csv': [{id:'area-demo-1',code:'Demo 1',grouping:'Demo house',group_sort:'1'},{id:'area-demo-2',code:'Demo 2',grouping:'Demo cabins',group_sort:'2'}],
       'BLD-subject.csv': [{id:'sub-demo-pup',name:'Demo pup',dob:new Date(Date.now()-14*864e5).toISOString().slice(0,10)},{id:'sub-demo-adult',name:'Demo adult',dob:'2020-01-01'}],
@@ -120,3 +119,4 @@
 </script>
 </body>
 </html>
+

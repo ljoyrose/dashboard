@@ -1,5 +1,3 @@
-// Stage 14: two-source certificate check. Run: node --test tests/estate/certcheck.test.js
-// Hosts, issuers and log ids are invented (example.com style). Now is pinned so days never drift.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const C = require('../../estate/certcheck.js');
@@ -27,7 +25,6 @@ test('VERSION is exported', () => {
 });
 
 test('fromCrtSh: latest currently-valid not_after for a covered host', () => {
-  // shop.example.com is covered by 1002/1003 and by the wildcard 1004; 1004 ends later.
   assert.equal(C.fromCrtSh(LOG, 'shop.example.com', NOW), '2027-01-13');
   assert.equal(C.fromCrtSh(LOG, 'example.com', NOW), '2027-01-13');
   assert.equal(C.fromCrtSh(LOG, 'www.shop.example.com', NOW), '2026-12-30');
@@ -160,3 +157,4 @@ test('checkRows: per-row results keyed by row.key', () => {
   assert.equal(out['none.example.net'].chip.level, 'grey');
   assert.deepEqual(C.checkRows(null, null, NOW), {});
 });
+

@@ -5,7 +5,7 @@ order,type_key,label,target,asks_item,item_label,asks_amount,amount_unit,note_la
 4,incident,Incident or near miss,optional,false,,false,,What happened?,true,false,
 5,water_toileting,Water and toileting,area,false,,false,,,false,true,
 6,health_observation,Health observation,dog,false,,false,,What did you see?,true,true,
-7,exercise_enrichment,"Exercise, socialisation and enrichment",either,true,Activity,false,,,false,true,
+7,exercise_enrichment,"Exercise, socialization and enrichment",either,true,Activity,false,,,false,true,
 8,puppy_weight,Puppy weight,dog,false,,true,g,,false,true,
 9,whelping_log,Whelping log,dog,false,,false,,What happened?,true,false,
 10,fridge,Medicine fridge temperature,none,false,,true,C,,false,true,

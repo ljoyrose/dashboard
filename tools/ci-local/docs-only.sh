@@ -1,15 +1,4 @@
 #!/usr/bin/env bash
-# Prints browser=true or browser=false (and appends it to $GITHUB_OUTPUT when set).
-# browser=false only when EVERY file this branch changes against main is documentation:
-# under docs/, or a .md file that is not TESTS.md and not under .github/ or tests/ (the suite reads those).
-# The whole branch is compared, not just the last push, so a docs-only commit on top of a red code commit still runs everything.
-# main and hand-started runs always say browser=true. No network, no secrets.
-# Pull requests are judged the same way as branch pushes (the whole pull request against main).
-# Nightly run (schedule) with NIGHTLY_SKIP_IDLE=true: browser=false when the newest commit is more than 26 hours old,
-# so a quiet day costs no browser minutes. Without that switch a schedule always says browser=true.
-# PRIVATE repo (REPO_PRIVATE=true): pushes say browser=false, so the browser suite costs Actions minutes only on
-# the weekly schedule or a hand-started run. Before a PR, run the suite on the Mac and paste the result (Lisa, 2 Nov 2026).
-# Usage: bash tools/ci-local/docs-only.sh [event] [ref]   (defaults: GITHUB_EVENT_NAME, GITHUB_REF)
 set -u
 event="${1:-${GITHUB_EVENT_NAME:-push}}"
 ref="${2:-${GITHUB_REF:-}}"
@@ -31,3 +20,4 @@ elif { [ "$event" = push ] && [ "$ref" != refs/heads/main ]; } || [ "$event" = p
 fi
 echo "browser=$browser"
 if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "browser=$browser" >> "$GITHUB_OUTPUT"; fi
+

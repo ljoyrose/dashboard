@@ -16,7 +16,6 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  /* name, known type_keys, extra tables besides BLD-check_log, yearly-print source ids (PR 788), display-only. */
   var SPEC = [
     { name: 'Microchip Audit', keys: ['microchip_check', 'pup_microchip'], files: ['BLD-microchip.csv', 'BLD-microchip_registration.csv'], yearlyIds: ['microchip', 'microchip_registration'] },
     { name: 'Sign-Off', keys: ['sign_off'], files: ['BLD-declaration.csv', 'BLD-verification.csv'], yearlyIds: ['declaration', 'verification'] },
@@ -63,7 +62,7 @@
     { name: 'Induction', keys: ['induction'], files: [], yearlyIds: [] },
     { name: 'Puppy Handover', keys: ['puppy_handover', 'handover'], files: ['BLD-sale.csv'], yearlyIds: ['sale'] },
     { name: 'Puppy Packs', keys: ['puppy_pack', 'puppy_packs'], files: [], yearlyIds: [] },
-    { name: 'Socialisation', keys: ['socialisation', 'social', 'exercise_all', 'exercise_enrichment'], files: [], yearlyIds: [] },
+    { name: 'Socialization', keys: ['socialization', 'social', 'exercise_all', 'exercise_enrichment'], files: [], yearlyIds: [] },
     { name: 'Collections', keys: ['collections'], files: ['BLD-sale.csv'], yearlyIds: ['sale'] },
     { name: 'Signs/Posters Index', keys: ['signs_posters'], files: [], yearlyIds: [], display: true },
     { name: 'Medicines', keys: ['medicine'], files: ['BLD-dispense.csv', 'BLD-stock_level.csv'], yearlyIds: ['medicines', 'stock_level'], meds: true }
@@ -92,7 +91,6 @@
   function isOff(v) { return str(v).toLowerCase() === 'false'; }
   function specOf(name) { return BY[name] || { name: name, keys: [], files: [], yearlyIds: [], display: false }; }
 
-  /** type_key for the Checked today row. Lower case, and short enough for the save. */
   function slug(name) {
     var s = 'sop_' + str(name).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
     return s.slice(0, 40);
@@ -105,8 +103,6 @@
     return '1';
   }
 
-  /** Same rule as BLDDue.jobsInForce: the latest row on or before today, still on, not an item test, not the round.
-   *  A later copy of the same check is one job, and new saves use the original. */
   function jobsInForce(types, today) {
     if (typeof BLDDue !== 'undefined' && BLDDue.jobsInForce) return BLDDue.jobsInForce(types, today);
     var best = {};
@@ -119,7 +115,6 @@
     });
   }
 
-  /** A blank sop is filled from the known type_key, so Feeding still opens when the sheet left the SOP column empty. */
   function withSop(types) {
     return (types || []).map(function (t) {
       if (!t || str(t.sop)) return t;
@@ -134,7 +129,6 @@
   function shownOn(types, today, name) {
     return jobsInForce(withSop(types), today).filter(function (t) { return str(t.sop) === name; });
   }
-  /** Every version of a check that belongs to this SOP, including ones no longer in force, so the print keeps the old rows. */
   function typesFor(types, name) {
     var spec = specOf(name), keys = {};
     (spec.keys || []).forEach(function (k) { keys[k] = 1; });
@@ -152,10 +146,6 @@
     return best && !isOff(best.active) ? best : null;
   }
 
-  /**
-   * The saves for Checked today. The check_type row is added only when this SOP has no sop_<name> check yet.
-   * Then one check_log, outcome recorded, how_recorded tapped, at the real time.
-   */
   function checkedPlan(ctx, sop, now) {
     var name = str(sop && (sop.short_name || sop.name));
     if (!name) return { error: 'That SOP was not found.' };
@@ -245,7 +235,6 @@
     return line;
   }
 
-  /** This month's lines for the Checks register print: the SOP's check_log rows, then the other tables it is stored in. */
   function printPack(ctx, name, opts) {
     ctx = ctx || {}; opts = opts || {};
     var ym = str(opts.month || str(ctx.today).slice(0, 7));
@@ -268,8 +257,6 @@
     return { head: { kennel: str(ctx.kennel), month: ym, which: name, printed: str(opts.printed) }, lines: lines };
   }
 
-  /** Yearly-print source ids for this SOP (check:<type_key> plus the fixed tables). Empty until that catalogue is passed in. */
-  /** Yearly-print source ids for this SOP: its known checks, its fixed tables, and any check whose SOP name matches. */
   function yearlyIds(name, catalogue) {
     var spec = specOf(name), want = {};
     (spec.keys || []).forEach(function (k) { want['check:' + k] = 1; });
@@ -301,7 +288,6 @@
     return ['BLD-check_log.csv'].concat(spec.files || []).join('; ');
   }
 
-  /** One row per SOP in the index: record control, where it is stored, and how it prints. */
   function audit(sops) {
     var list = (sops && sops.length) ? sops : SPEC.map(function (s) { return { short_name: s.name }; });
     return list.map(function (sop) {
@@ -315,3 +301,4 @@
     checkedPlan: checkedPlan, extraHtml: extraHtml, printPack: printPack, yearlyIds: yearlyIds, audit: audit
   };
 }));
+

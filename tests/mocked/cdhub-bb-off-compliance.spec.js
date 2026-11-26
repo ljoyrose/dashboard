@@ -1,6 +1,3 @@
-// Breed Better grading stays in Breed Better (Lisa 22 Nov 2026: "anything from breed better grading is BB only not
-// compliance"). A check type whose row says it is Breed Better's (group "Breed Better", or a note starting "Breed Better:")
-// never shows on Compliance, nor do its records; other jobs still do, and the rows themselves stay. Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
 
@@ -37,7 +34,6 @@ test('a Breed Better grading check never appears on Compliance; an ordinary job 
   await expect(main).not.toContainText('Pretend fits the programme');
   await expect(main).not.toContainText('Pretend grading');
   await expect(main.locator('[data-jcal="pretend_programme"], [data-jcal="pretend_grade"]')).toHaveCount(0);
-  // the rows themselves stay: everything outside Compliance still reads them
   const kept = await page.evaluate(() => ({ types: jobsV().types.map((t) => t.id), logs: jobsV().logs.map((l) => l.id) }));
   expect(kept.types).toEqual(['j1', 'bb1', 'bb2', 'bb3']);
   expect(kept.logs).toEqual(['l1', 'l2', 'l3']);
@@ -50,3 +46,4 @@ test('the outside viewer list says "Programme answers", no "looks"', async () =>
   expect(src.toLowerCase()).not.toMatch(/programme and looks/);
   expect(L).toBeTruthy();
 });
+

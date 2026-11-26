@@ -1,5 +1,3 @@
-// Email sending and verification words from DNS-over-HTTPS answers. Run: node --test tests/estate/mail.test.js
-// Every name is invented (example.com, example.org, example.net).
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const M = require('../../estate/mail.js');
@@ -201,3 +199,4 @@ test('fix suggestions: plain text, placeholder address, never a real value', () 
   assert.match(t2, /p=quarantine/);
   assert.equal(M.fixSuggestion('example.net', { spf: 'pass', dmarc: 'reject' }), 'No DNS change needed for example.net.');
 });
+

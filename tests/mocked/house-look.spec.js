@@ -19,7 +19,6 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const PAGES = { home: 'index.html', money: 'money/index.html', cdhub: 'cdhub/index.html', food: 'food/index.html', marketplace: 'marketplace/index.html', factory: 'factory/index.html', studio: 'studio/index.html' };
 
-// Hover the first few controls of each kind on the view and check the hover rule. Returns problems like audit().
 async function hoverRule(page, phone) {
   if (phone) return []; // a phone has no hover
   const picks = await page.evaluate(() => {
@@ -31,7 +30,6 @@ async function hoverRule(page, phone) {
     const head = document.querySelector('header');
     const all = [...document.querySelectorAll('main button, main a.btn, main a.pill, main a.chip, main summary, #view button, #view a.btn, #view a.pill, #view a.chip, #view summary')]
       .filter((e, i, a) => a.indexOf(e) === i && seen(e) && !(nav && nav.contains(e)) && !(head && head.contains(e)) && !e.disabled && !e.matches('.phbtn') && !(e.matches('summary') && e.querySelector('h1, h2, h3, h4, h5')) && !e.matches('.ttl, [data-house="text"], .on, .sel, [aria-pressed="true"], [aria-current="page"], [aria-selected="true"], [aria-expanded="true"], details[open] > summary'));
-    // A meaning-coloured control carries its colour in --mc (house.css) or is a yes / no / delete / AI button.
     const isMeaning = (e) => e.matches('.btn.yes, .btn.no, .btn.danger, .btn.ai') || !!getComputedStyle(e).getPropertyValue('--hmc').trim() || chroma(rgb(getComputedStyle(e).borderTopColor)) > 45;
     const neutral = all.filter((e) => !isMeaning(e)).slice(0, 3);
     const meaning = all.filter(isMeaning).slice(0, 2);
@@ -56,7 +54,6 @@ async function hoverRule(page, phone) {
     const what = p.kind + ' ' + p.sel + ' ' + (await loc.evaluate((e) => e.tagName.toLowerCase() + '.' + [...e.classList].join('.') + ' "' + e.textContent.trim().slice(0, 20) + '"'));
     const add = (rule, got) => out.push({ rule, what, got });
     if (!after) continue;
-    // Moved = the box changes on hover and comes back when the pointer leaves (a scroll that brought it into view is not a move).
     const differs = (a, b) => Math.abs(a.x - b.x) > 0.5 || Math.abs(a.y - b.y) > 0.5 || Math.abs(a.w - b.w) > 0.5 || Math.abs(a.h - b.h) > 0.5 || a.transform !== b.transform;
     if (differs(after, before)) {
       await page.mouse.move(0, 0); await settle(loc);
@@ -82,7 +79,6 @@ async function hoverRule(page, phone) {
   return out;
 }
 
-// HOUSE_SHOTS=<folder> (audit mode only): also save each hub's first view as house-<hub>-<width>-<look>.png.
 const SHOTS = process.env.HOUSE_SHOTS;
 async function runAll(page, guard, hub, look, phone) {
   const H = HUBS[hub], found = [];
@@ -109,7 +105,6 @@ test.describe('House look: one set of rules, every hub', () => {
       expect(a, hub + ' loads tokens.css').toBeGreaterThan(-1);
       expect(b, hub + ' loads house.css after tokens.css').toBeGreaterThan(a);
       expect(t.indexOf('<style'), hub + ': house.css comes before the page style').toBeGreaterThan(b);
-      // The dark spine is written once, in tokens.css: no page repeats it.
       expect(t, hub + ' repeats the dark LJR7 spine').not.toMatch(/\[data-theme="dark"\][^{]*\{[^}]*--ljr-0-tint:/);
     }
     const house = read('house.css').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -117,7 +112,6 @@ test.describe('House look: one set of rules, every hub', () => {
   });
 
   if (AUDIT) {
-    // Audit mode: every hub x light/dark x warm/cool x 1280/390, plus Look > Dark; writes the table, never fails.
     const all = [];
     for (const hub of Object.keys(HUBS)) {
       for (const [bg, scheme, mode] of [['warm', 'light', 'device'], ['cool', 'light', 'device'], ['warm', 'dark', 'device'], ['cool', 'dark', 'device'], ['warm', 'light', 'dark']]) {
@@ -138,7 +132,6 @@ test.describe('House look: one set of rules, every hub', () => {
     return;
   }
 
-  // The suite: every view of every hub, desktop warm light and phone cool dark (the two ends), plus Look > Dark on desktop.
   for (const hub of Object.keys(HUBS)) {
     for (const [bg, scheme, mode, phone] of [['warm', 'light', 'device', false], ['cool', 'dark', 'device', true], ['cool', 'light', 'dark', false]]) {
       test(`${hub}: ${bg} ${mode === 'dark' ? 'Look › Dark' : scheme} at ${phone ? '390' : '1280'}px follows every house rule on every view`, async ({ page, guard }) => {
@@ -151,3 +144,4 @@ test.describe('House look: one set of rules, every hub', () => {
     }
   }
 });
+

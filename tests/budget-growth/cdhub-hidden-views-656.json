@@ -1,1 +1,1 @@
-{"cdhub": 1500, "why": "PR 656: five views start off for a new kennel (nav.view rows); the switch-off check in hub-nav.js and go() adds about 900 bytes."}
+{"cdhub": 1500, "why": "size"}

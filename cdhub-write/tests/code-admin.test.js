@@ -1,5 +1,4 @@
 'use strict';
-// Code admin on the owner page (13 Nov 2026, draft for V8): make, rename, new code; no-secrets BLD-code_register mirror.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { standardEnv, req, save } = require('./harness');
@@ -8,17 +7,17 @@ const REG_H = 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by';
 function env(on) {
   const e = standardEnv({ props: on === false ? {} : { TABLE_ON_code_register: 'true' } });
   e.addFile('BLD-code_register.csv', REG_H + '\r\n');
-  e.email = 'owner@example.test';
+  e.email = 'user@example.test';
   return e;
 }
 const rows = (e) => e.file('BLD-code_register.csv')[0].content.trim().split(/\r?\n/).slice(1);
 const saves = (e, code) => save(e, req(e, { code })).ok;
 
-test('make a code: owner only; the code works at once, is returned once, and only its name/role/dates reach the register', () => {
+test('make a code: user only; the code works at once, is returned once, and only its name/role/dates reach the register', () => {
   const e = env();
   e.email = 'sam@example.test';
-  assert.equal(e.ctx.ui_issueCode('New Person', 'STAFF').code, 'NOT_OWNER');
-  e.email = 'owner@example.test';
+  assert.equal(e.ctx.ui_issueCode('New Person', 'STAFF').code, 'NOT_USER');
+  e.email = 'user@example.test';
   const r = e.ctx.ui_issueCode('New Person', 'staff');
   assert.equal(r.ok, true, JSON.stringify(r));
   const code = r.result.code;
@@ -57,14 +56,14 @@ test('new code for the same person: old code refused at once, new one works, the
   assert.equal(saves(e, r.result.code), true);
   const mine = rows(e).filter((l) => l.includes(',' + e.ids.staff + ','));
   assert.equal(mine.length, 2);
-  assert.match(mine[0], /,\d{4}-\d{2}-\d{2},new code by owner$/);
+  assert.match(mine[0], /,\d{4}-\d{2}-\d{2},new code by user$/);
   assert.match(mine[1], /,Sam Staff,STAFF,\d{4}-\d{2}-\d{2},,$/);
   const list = e.ctx.ui_staffList().result.staff;
   assert.equal(list.filter((p) => p.replaced).length, 1);
   assert.equal(list.filter((p) => p.id === e.ids.staff && p.active).length, 1);
   // switching off ends the open row
   assert.equal(e.ctx.ui_revokeCode(e.ids.staff).result.mirrored, true);
-  assert.match(rows(e).filter((l) => l.includes(',' + e.ids.staff + ','))[1], /,switched off by owner$/);
+  assert.match(rows(e).filter((l) => l.includes(',' + e.ids.staff + ','))[1], /,switched off by user$/);
 });
 
 test('sync fills the register once; with the register off, codes still work and the reply says mirrored:false', () => {
@@ -79,7 +78,7 @@ test('sync fills the register once; with the register off, codes still work and 
   assert.equal(off.ctx.ui_codeRegisterSync().code, 'TABLE_OFF');
 });
 
-test('owner page: Make their code shows it once; the copied-it button clears it; New code and Change name work from the list', async () => {
+test('user page: Make their code shows it once; the copied-it button clears it; New code and Change name work from the list', async () => {
   const { JSDOM } = require('jsdom');
   const fs = require('node:fs'), path = require('node:path');
   const e = env();
@@ -129,3 +128,4 @@ test('owner page: Make their code shows it once; the copied-it button clears it;
   assert.equal(names().length >= 1 && names().every((t) => /Page Person/.test(t)), true);
   assert.match(names()[0], /Name tag \(not the code\)/);
 });
+

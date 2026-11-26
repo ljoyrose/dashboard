@@ -12,12 +12,12 @@ async function open(page, tables, path) {
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }], version: 'test' } });
     const b = JSON.parse(route.request().postData());
-    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'OWNER' } } });
+    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'USER' } } });
     sent.push(b);
-    if (b.table === 'qr_tag') tables.qr_tag.push({ ...b.fields, active: 'true' });   // the pretend sheet keeps the saved row
+    if (b.table === 'qr_tag') tables.qr_tag.push({ ...b.fields, active: 'true' });
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'qrt-' + sent.length } } });
   });
-  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-USER', SCRIPT]);
   await page.goto(path);
   return sent;
 }
@@ -47,7 +47,6 @@ test('dog cards: all ticked to start; untick one dog prints only the other; Unse
   await expect(page.locator('.pick-n')).toHaveText('1 of 2 cards ticked');
   await ready(page, 1);
 
-  // nothing ticked: nothing drawn, nothing to print, and the page says so
   await page.getByRole('button', { name: 'Unselect all', exact: true }).click();
   await expect(page.locator('.sheet > *')).toHaveCount(0);
   await expect(page.locator('.msg')).toHaveText('Nothing ticked, so nothing will print. Tick a card, or press Select all.');
@@ -58,7 +57,6 @@ test('dog cards: all ticked to start; untick one dog prints only the other; Unse
   await ready(page, 2);
   expect(sent.length, 'Select all reuses the saved codes').toBe(1);
 
-  // the list never prints; the cards do
   await page.emulateMedia({ media: 'print' });
   await expect(page.locator('.pick')).toBeHidden();
   await expect(page.locator('.dcard').first()).toBeVisible();
@@ -85,7 +83,7 @@ test('room cards: ?sign= ticks only that room; ticking a second room makes its c
   expect(sent.map((b) => [b.fields.kind, b.fields.ref_id]), 'a code only for the room just ticked').toEqual([['area', 'ar-b']]);
   await expect(page.locator('.rcard[data-room="ar-c"]')).toHaveCount(0);
 
-  // another kind of card swaps the list for its own
   await page.getByRole('button', { name: 'Whole-site code' }).click();
   await expect(picks(page)).toHaveCount(0);
 });
+

@@ -1,5 +1,4 @@
 'use strict';
-/** 14 Nov 2026, ITEMS: the Items page maths (cdhub/items-view.js) on the 2025 PAT and extinguisher records. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const V = require('../../cdhub/items-view.js');
@@ -160,3 +159,4 @@ test('numbers: a decimal comma is read as a point; junk is not a number', () => 
   assert.equal(V.inLimit({ high: '0.1' }, '0,2'), false);
   assert.equal(V.inLimit({ high: '0.1' }, '1e5'), null);
 });
+

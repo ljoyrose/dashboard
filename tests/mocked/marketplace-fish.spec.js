@@ -1,6 +1,3 @@
-// G7 (30 Oct 2026): Fish Treats postage to-dos from the GA Hub's Cards tab show in the Marketplace hub's Do now > Post,
-// Posted writes only that Cards row's 4 answer cells, and the GA Hub's home no longer shows them. Pretend Google only;
-// every order, store and row here is invented. No address, name or contact is on a card.
 const { test, expect } = require('../support/test');
 const SHEETS = /^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\//;
 const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
@@ -80,8 +77,9 @@ test.describe('Marketplace hub: Fish Treats postage to-dos (G7)', () => {
     await sheets(page);
     await page.goto('food/#/home');
     await page.locator('#view [data-action="signin"]').click();
-    await expect(page.locator('#view [data-hub-main="food"] [data-hm="nums"]')).toBeVisible();   // the house Main has read the sheet
+    await expect(page.locator('#view [data-hub-main="food"] [data-hm="nums"]')).toBeVisible();
     await expect(page.locator('#view [data-hm="fail"]')).toHaveCount(0);
     await expect(page.locator('#view')).not.toContainText('Fish Treat unit');
   });
 });
+

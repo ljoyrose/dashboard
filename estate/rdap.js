@@ -1,7 +1,3 @@
-// Web Estate Hub, Stage 13: registration expiry via RDAP (I3), no registrar login. Pure: no network, no Drive, no DOM.
-// The engine fetches rdapUrl(domain); this file only routes a domain to its registry, reads the JSON reply
-// and fills an empty renewal date on a RR_DOMAINS-AND-HOSTING row. It never overwrites a value already there.
-// The server map is a small static copy of IANA bootstrap knowledge; the bootstrap file is never fetched.
 (function (root, factory) {
   'use strict';
   var api = factory();
@@ -26,7 +22,6 @@
   };
 
   // ---- domains ----
-  // Second-level suffixes where the registrable name keeps three labels (example.co.uk).
   var TWO_LEVEL = /\.(co|org|me|ltd|plc|net|sch|ac|gov|nhs|police)\.uk$/;
 
   function clean(v) {
@@ -35,7 +30,6 @@
     return h;
   }
 
-  // 'https://www.shop.example.co.uk/x' -> 'example.co.uk'; '' when nothing usable.
   function registrable(domain) {
     var h = clean(domain);
     if (!h || !/^[a-z0-9.-]+$/.test(h)) return '';
@@ -51,13 +45,11 @@
     return d ? d.slice(d.lastIndexOf('.') + 1) : '';
   }
 
-  // RDAP base URL (ends with '/') for the domain's TLD; null when the TLD is not in the map.
   function serverFor(domain) {
     var t = tldOf(domain);
     return (t && Object.prototype.hasOwnProperty.call(SERVERS, t)) ? SERVERS[t] : null;
   }
 
-  // Full lookup URL for the registrable domain; null when no server is known.
   function rdapUrl(domain) {
     var base = serverFor(domain);
     return base ? base + 'domain/' + registrable(domain) : null;
@@ -108,7 +100,6 @@
     return '';
   }
 
-  // RDAP domain JSON (object or JSON text) -> { expires, registered, registrar, status }. Never throws.
   function parse(json) {
     var out = { expires: null, registered: null, registrar: null, status: [] };
     var doc = json;
@@ -134,7 +125,6 @@
   }
 
   // ---- filling rows ----
-  // Same names as estate/status.js EXPIRY_COLS / DOMAIN_COLS (matched trimmed, lower case).
   var EXPIRY_COLS = ['expiry', 'expires', 'expiry_date', 'expiry date', 'expiration', 'expiration_date', 'expiration date', 'expires_on', 'renewal_date', 'renewal date', 'renewal', 'renews', 'domain_expires'];
   var DOMAIN_COLS = ['domain', 'domain_name', 'domain name', 'name', 'host', 'url', 'url_or_domain'];
 
@@ -151,7 +141,6 @@
 
   function hasExpiry(row) { return pick(row, EXPIRY_COLS) !== ''; }
 
-  // New row; domain_expires (+ domain_expires_source 'rdap') only when the row has no expiry anywhere.
   function fill(row, parsed) {
     var out = {};
     Object.keys(row || {}).forEach(function (k) { out[k] = row[k]; });
@@ -162,7 +151,6 @@
     return out;
   }
 
-  // resultsByDomain: { 'example.com': parsed result or raw RDAP JSON }. Keys are matched by registrable domain.
   function fillRows(domainRows, resultsByDomain) {
     var byDomain = {};
     var src = (resultsByDomain && typeof resultsByDomain === 'object') ? resultsByDomain : {};
@@ -192,3 +180,4 @@
     fillRows: fillRows
   };
 });
+

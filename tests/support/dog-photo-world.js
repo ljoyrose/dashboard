@@ -1,4 +1,3 @@
-// Shared by the dog-photo crop specs (mocked and phone). Invented dogs only; the save script is pretend.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -15,7 +14,6 @@ function put(world, name, content) {
   world.file('fx-' + name, name, content, { parents: like.parents, driveId: like.driveId, mimeType: like.mimeType });
 }
 
-/** One invented dog with no photo, the Dogs page open on it, and the pretend save script switched on. */
 async function openOneDog(page, guard) {
   const w = guard.world;
   put(w, 'BLD-subject.csv', csv('id,tenant_id,name,sex,dob,kind,neuter_status,photo', ['sub-x2,t,Pretend Two,Male,2022-01-01,Stud,entire,']));
@@ -28,7 +26,6 @@ async function openOneDog(page, guard) {
   await expect(page.locator('#rows article.dc')).toHaveCount(1);
 }
 
-/** Pretend save script: records every request body, answers "saved". */
 async function recordSaves(page) {
   const bodies = [];
   await page.route(SINK, async (route) => {
@@ -38,7 +35,6 @@ async function recordSaves(page) {
   return bodies;
 }
 
-/** A big, busy, landscape JPEG made in the browser (gradient + noise), written to a temp file. Several MB on purpose. */
 async function bigPhoto(page, w = 3000, h = 2000) {
   const b64 = await page.evaluate(([w, h]) => {
     const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -55,9 +51,9 @@ async function bigPhoto(page, w = 3000, h = 2000) {
   return { file, b64len: b64.length };
 }
 
-/** Width and height of a base64 JPEG, read in the page. */
 async function jpegSize(page, b64) {
   return page.evaluate((b) => new Promise((res) => { const i = new Image(); i.onload = () => res([i.naturalWidth, i.naturalHeight]); i.onerror = () => res([0, 0]); i.src = 'data:image/jpeg;base64,' + b; }), b64);
 }
 
 module.exports = { SINK, csv, put, openOneDog, recordSaves, bigPhoto, jpegSize };
+

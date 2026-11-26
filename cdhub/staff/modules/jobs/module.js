@@ -1,8 +1,3 @@
-/*!
- * Jobs: the buttons after a scan, and today's whole-site list. Every job is a BLD-check_type row the owner entered:
- * nothing here names a job or a place. A scan only opens this screen; it says nothing about who was there.
- * Until the rows, the list or the saving are switched on, a scan goes on to Move dogs exactly as before.
- */
 (function () {
   'use strict';
   var RANK = { late: 0, never: 1, today: 2, as_needed: 3, ok: 4 }, REPORT_KEY = 'report', ctx0 = StaffPage.ctx;
@@ -30,9 +25,7 @@
   }
   function worst(list) { return list.slice().sort(byRank)[0]; }
   function isOn(r) { return String(r.active).toLowerCase() !== 'false'; }
-  /* how a late entry came in: one at a time (paper) or several days at once (bulk). Owner-only; staff never see it */
   var PAPER_HOW = 'paper', BULK_HOW = 'bulk';
-  /* the photo helper the temperature round uses (one file + evidence links, through the save script), loaded when needed */
   var EV_SRC = (document.currentScript && document.currentScript.src || '').replace(/jobs\/[^/]*$/, 'temperature/evidence.js'), evP = null;
   function loadEvidence() {
     if (window.BLDTempEvidence) return Promise.resolve(window.BLDTempEvidence);
@@ -40,11 +33,9 @@
       sc.onload = function () { ok(window.BLDTempEvidence || null); }; sc.onerror = function () { evP = null; ok(null); }; document.head.appendChild(sc); });
     return evP;
   }
-  /* starting default for a new app only: the owner's rule row job.paper_default_time (or .<type_key>) wins */
   var START_TIME = '12:00';
   var PLUS = '<svg class="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
   function addDays(day, n) { return new Date(Date.parse(day + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10); }
-  /** A London wall-clock date and time (YYYY-MM-DD, HH:MM) as a UTC ISO time, summer time included. */
   function londonIso(date, time) {
     var p = date.split('-').map(Number), q = (time || '12:00').split(':').map(Number), guess = Date.UTC(p[0], p[1] - 1, p[2], q[0], q[1]);
     var f = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(guess));
@@ -59,7 +50,6 @@
     BLDChecks.register(c.save);
     Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field'), c.readOptional('breeding_rule'), c.readOptional('check_setting'),
       tag ? c.readOptional('area_capacity') : { ok: true, rows: [] }, tag ? c.readOptional('area_access') : { ok: true, rows: [] }, tag ? c.readOptional('weight') : { ok: false, rows: [] }]).then(function (v) {
-      /* a visitor's records count here only when stamped counts_due true: this screen does not read the visit's grant */
       var d = v[0], typesRead = v[1], logs = (v[2].rows || []).filter(function (l) { return !BLDDue.visitOf(l) || String(l.counts_due).toLowerCase() === 'true'; }), tags = v[3], off = !typesRead.ok || !c.save.banner('check_log').canSave || !d.ok;
       if (off && tag) { moves(); return; }
       host.textContent = '';
@@ -82,14 +72,12 @@
       ctx0.reportFor = target.litter_id ? {} : { subject_id: target.subject_id, area_id: target.area_id };
       var roomDogs = target.area_id ? d.dogs.filter(function (x) { return x.areaId === target.area_id && !x.away; }) : [];
       if (target.area_id && !target.subject_id) target.roomDogIds = roomDogs.map(function (x) { return x.id; });
-      /* the dogs here, for a whole-site job about dogs (health check): each dog as they go, or all at once */
       var labelOf = {};
       if (!target.litter_id) {
         target.dogs = d.dogs.filter(function (x) { return !x.away && x.areaId && (site || x.areaId === target.area_id || x.id === target.subject_id); })
           .map(function (x) { labelOf[x.id] = x.label; return { id: x.id, area_id: x.areaId, dob: dobOf[x.id] || '' }; });
       }
 
-      /* owner rule rows (the shared rule list): key.<type_key> beats key; the row in force on that day; none = the starting default */
       var rules = (v[6] && v[6].rows) || [], settings = (v[7] && v[7].rows) || [];
       var today0 = c.today();
       function rule(key, typeKey, day) {
@@ -101,8 +89,6 @@
         return pick(key + '.' + typeKey) || pick(key);
       }
       function paperTime(typeKey, day) { var t = rule('job.paper_default_time', typeKey, day); return /^\d{1,2}:\d{2}$/.test(t) ? t : START_TIME; }
-      /* Earlier, how the time is given (owner rows): job.paper_time_options = a pipe list of exact|part|none|now, the first preselected;
-         job.day_part.<code>.label/.at/.sort = the parts of the day. No options row = the optional time box, as before. */
       function timeOptions(typeKey, day) {
         var ok = { exact: 1, part: 1, none: 1, now: 1 }, seen = {};
         var list = rule('job.paper_time_options', typeKey, day).split('|').map(function (x) { return x.trim().toLowerCase(); })
@@ -124,31 +110,27 @@
       var nameOf = {};
       (d.dogs || []).forEach(function (x) { nameOf[x.id] = x.label; });
 
-      /* type_keys starting "round." are rows The round writes for itself: never a job on this screen */
       var today = c.today(), types = (typesRead.rows || []).filter(function (t) { return String(t.type_key || '').indexOf('round.') !== 0 && t.target !== 'item'; }), inForce = BLDDue.jobsInForce(types, today), byKey = {}, keyOf = BLDDue.familyKeyOf ? BLDDue.familyKeyOf(types, today) : {};
       inForce.forEach(function (t) { byKey[t.type_key] = t; });
       types.forEach(function (t) { if (!keyOf[t.id]) keyOf[t.id] = t.type_key; });
-      /* today's lines for a job, newest first; a corrected line gives way to its correction */
       function todays(key) {
         var replaced = {};
         logs.forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = true; });
         return logs.filter(function (l) { return !replaced[l.id] && keyOf[l.check_type_id] === key && BLDDue.londonDate(l.happened_at || l.taken_at) === today; })
           .sort(function (a, b) { return String(b.taken_at).localeCompare(String(a.taken_at)); });
       }
-      /* each dog's newest line today (not "not done"): the dog starts unticked and shows a tick */
       function doneToday(key) {
         var m = {};
         todays(key).forEach(function (l) { if (l.subject_id && l.outcome !== 'not_done' && l.outcome !== 'note' && l.outcome !== 'part_done' && !m[l.subject_id]) m[l.subject_id] = l; });
         return m;
       }
-      var kept = {}, paperDone = {};   // paperDone: type_key -> the last row saved from paper on this screen (an earlier day still gets its tick)
+      var kept = {}, paperDone = {};
       function here(l) {
         if (target.litter_id) return l.litter_id === target.litter_id;
         if (target.subject_id) return l.subject_id === target.subject_id;
         if (target.area_id) return l.area_id === target.area_id;
         return !l.subject_id && !l.area_id && !l.litter_id;
       }
-      /* the card's tick: from today's lines, so it shows after a save and when the screen opens again */
       function showDone(card, key, dogIds) {
         var all = todays(key).filter(function (x) { return dogIds ? dogIds.indexOf(x.subject_id) >= 0 : here(x); });
         var l = all.filter(function (x) { return x.outcome !== 'note'; })[0];
@@ -159,7 +141,6 @@
         var notes = [l.note].concat(all.filter(function (x) { return x.outcome === 'note' && x.note_for_id === l.id; }).reverse().map(function (x) { return x.note; }));
         BLDDone.mark(card, { outcome: l.outcome, at: l.taken_at, who: l.taken_by, note: notes.filter(Boolean).join('\n'), extra: dogIds && dogIds.length > 1 ? n + ' of ' + dogIds.length + ' dogs' : '' });
       }
-      /* a job's form: the owner's check_field rows in force today, in their sort order */
       var formOf = {}, latestField = {};
       (v[5].rows || []).forEach(function (r) {
         if (!r.type_key || !r.field_key || !r.effective_from || r.effective_from > today) return;
@@ -171,7 +152,6 @@
       if (tag && !BLDDue.forTarget(types, logs, target, today, null, { rules: rules, settings: settings }).length) { moves(); return; }
 
       host.appendChild(h('h2', { text: title }));
-      /* a room's jobs show its capacity too (LD-SC audit, 15 Nov 2026): the rows in force today, the same check as Move dogs */
       if (target.area_id && window.BLDCapacity && v[8] && v[8].ok && (v[8].rows || []).some(function (r) { return r.area_id === target.area_id; })) {
         var fact = BLDCapacity.facts({ subjects: d.raw.subject, litters: (v[4] && v[4].rows) || [], weights: (v[10] && v[10].rows) || [], weightsRead: !!(v[10] && v[10].ok), rules: rules, today: today0 });
         var capR = BLDCapacity.check({ areaId: target.area_id, access: BLDCapacity.accessOn((v[9] && v[9].rows) || [], target.area_id, today0), capacity: v[8].rows, dogs: roomDogs.map(function (x) { return fact(x.id); }), date: today0 });
@@ -194,15 +174,14 @@
         var slow = v[2].code === 'NETWORK' || v[2].code === 'BUSY' || v[2].code === 'TIMEOUT' || !v[2].code;
         host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', text: slow
           ? 'The past records did not load in time, so "Due" may already be done. Try again in a minute.'
-          : 'This code cannot read past records' + (v[2].message ? ' (' + v[2].message + ')' : '') + ', so "Due" may already be done. Ask Lisa.' }));
+          : 'This code cannot read past records' + (v[2].message ? ' (' + v[2].message + ')' : '') + ', so "Due" may already be done. Ask User.' }));
         if (slow) host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));
       }
       var status = h('p', { class: 'msg', role: 'status' }), list = h('div', { class: 'cards' }), group = '', more = false;
-      var photoBox = h('div', { 'data-diary-photo': '1' });   // 22 Nov 2026: "Add the diary page" after an Earlier save; outside the list, so a redraw keeps it
+      var photoBox = h('div', { 'data-diary-photo': '1' });
       host.appendChild(status); host.appendChild(photoBox); host.appendChild(list);
       if (tag && !site) host.appendChild(h('button', { class: 'btn quiet job-move', type: 'button', text: 'Move dogs', onclick: moves }));
 
-      /* a room job restarted by a bigger job, such as the whole-site clean, says which */
       function byLine(job) { var b = job.reset_by && byKey[job.reset_by]; return b && job.status === 'ok' ? ' · ' + b.label : ''; }
       function say(text, kind) { status.className = 'msg ' + (kind || ''); status.textContent = text; }
 
@@ -212,7 +191,7 @@
         catch (e) { BLDDone.fail(state.card, 'Not saved. Something went wrong on this screen; try again.'); if (window.console) console.error(e); }
       }
       function sendNow(job, t, outcome, inputs, panelMsg, state, noteFor) {
-        function stop(text) { panelMsg.textContent = ''; BLDDone.fail(state.card, text); }   // on the card, so it shows even with the panel shut
+        function stop(text) { panelMsg.textContent = ''; BLDDone.fail(state.card, text); }
         var entry = { check_type_id: t.id, outcome: outcome, how_recorded: how };
         if (target.subject_id) entry.subject_id = target.subject_id;
         if (target.area_id) entry.area_id = target.area_id;
@@ -220,12 +199,12 @@
         if (inputs.item) entry.item = inputs.item.value.trim();
         if (inputs.amount) entry.amount = inputs.amount.value.trim();
         if (inputs.note) entry.note = inputs.note.value.trim();
-        if (noteFor) {   // a note added to a job already done: its own row, same room, dog or litter as the done row, pointing at it
+        if (noteFor) {
           ['subject_id', 'area_id', 'litter_id'].forEach(function (k) { if (noteFor[k]) entry[k] = noteFor[k]; else delete entry[k]; });
           entry.note_for_id = noteFor.id;
         }
         var paper = state.paper && state.paper.date.value ? state.paper : null;
-        if (paper) {   // Earlier: the real day, judged by the job as it was set up on that day
+        if (paper) {
           var day = paper.date.value;
           if (day > today) { stop('Pick today or an earlier day.'); return; }
           var oldest = oldestDay(t.type_key, today);
@@ -241,18 +220,18 @@
             var pt = dayParts(t.type_key, day).filter(function (x) { return x.code === paper.part.value; })[0];
             if (!pt) { stop('Pick a part of the day.'); return; }
             entry.happened_at = londonIso(day, pt.at); entry.time_given = 'part:' + pt.code; partLabel = pt.label;
-            if (Date.parse(entry.happened_at) > Date.now()) entry.happened_at = new Date().toISOString();   // today, a part not yet at its usual time: now
+            if (Date.parse(entry.happened_at) > Date.now()) entry.happened_at = new Date().toISOString();
           } else if (mode === 'exact') {
             if (!paper.time.value) { stop('Type the time.'); return; }
             entry.happened_at = londonIso(day, paper.time.value);
           } else {
             entry.happened_at = londonIso(day, paper.time.value || paperTime(t.type_key, day));
-            if (!paper.time.value) entry.time_given = 'false';   // the owner's default time was used: the owner sees "time not given"
+            if (!paper.time.value) entry.time_given = 'false';
           }
           if (Date.parse(entry.happened_at) > Date.now() + 60000) { stop('That time is still to come.'); return; }
           entry.how_recorded = PAPER_HOW;
-          entry.confirm_unusual = 'yes';   // the day was picked on purpose, so an older day is not a slip
-          if (noteFor) { noteFor = null; delete entry.note_for_id; }   // a note on today's done row does not belong to an earlier day
+          entry.confirm_unusual = 'yes';
+          if (noteFor) { noteFor = null; delete entry.note_for_id; }
         }
         var check = Object.assign({}, entry);
         delete check.confirm_unusual;
@@ -275,13 +254,11 @@
         } else if (BLDDue.perDogSite(t) && target.subject_id) { opts.action = 'add_site'; entry.dog_ids = target.subject_id; }
         if (site && !noteFor) { opts.action = 'add_site'; entry.how_recorded = paper ? PAPER_HOW : 'site_tap'; }
         panelMsg.className = 'msg'; panelMsg.textContent = ''; BLDDone.saving(state.card);
-        /* 20 Nov 2026 (OV12): saves on this phone go one at a time, so a waiting save says "Waiting, 2 ahead" */
         opts.onTurn = function (n) { BLDDone.saving(state.card, BLDDone.turn(n)); };
         c.save.submit('check_log', entry, opts).then(function (r) {
           if (!r.ok) {
             var fe = r.fields && Object.keys(r.fields)[0], q = fe && (state.form || []).filter(function (x) { return 'values.' + x.field.field_key === fe; })[0];
             panelMsg.textContent = '';   // said once, on the card
-            /* Overseer 22 Nov 2026: a repeat means the first save landed (a slow reply, or a second tap), so show the tick, not only a red line */
             if (r.code === 'DUPLICATE' && !paper) { state.rid = null; repeatTick(job, t, entry); return; }
             BLDDone.fail(state.card, r.code === 'DUPLICATE' ? (paper ? 'Not saved: this job was saved in the last 30 minutes. Try again later.' : 'Already saved a moment ago, so not saved twice. To add to it, use Note.')
               : 'Not saved: ' + (fe ? (q ? q.field.label + ': ' : '') + r.fields[fe] : (r.message || 'try again.')));
@@ -290,7 +267,7 @@
           (state.form || []).forEach(function (x) { x.input.value = ''; });
           if (paper) { paperDone[job.type_key] = Object.assign({}, entry, { taken_by: r.who || '', _part: partLabel }); paper.date.value = ''; paper.time.value = ''; paper.refresh(); }
           var at = r.at || new Date().toISOString(), mine = { taken_at: at, taken_by: r.who || '', _queued: r.status === 'queued' ? (r.message || 'Waiting for signal') : '' };
-          var dogs = entry.dog_ids ? entry.dog_ids.split('|') : [], real = r.ids && r.ids.length === dogs.length;   // a row id we can point a note at only when the reply gives one per dog
+          var dogs = entry.dog_ids ? entry.dog_ids.split('|') : [], real = r.ids && r.ids.length === dogs.length;
           logs = logs.concat(r.session ? [Object.assign({}, entry, mine, { id: r.id, covered_ids: entry.dog_ids || '', subject_id: '', exceptions: entry.exceptions || '' })]
             : (dogs.length ? dogs.map(function (dog, i) { return Object.assign({}, entry, mine, { id: real ? r.ids[i] : r.id + '-' + i, _noId: !real, subject_id: dog }); })
             : [Object.assign({}, entry, mine, { id: r.id })]));
@@ -299,7 +276,7 @@
           var recIds = dogs.length ? (real ? r.ids.slice() : []) : (r.id ? [r.id] : []);
           if (paper && recIds.length && r.status !== 'queued') diaryPhoto(job, recIds, BLDDue.londonDate(entry.happened_at) || today);
           var left = r.left_out ? r.left_out.isolation + r.left_out.no_room + r.left_out.off_site + r.left_out.repeat : 0;
-          kept[job.type_key] = true;   // stays on today's list with its tick, not gone without a trace
+          kept[job.type_key] = true;
           say(left ? 'Left out: ' + left + '.' : '', 'warn');
           draw();
         });
@@ -314,7 +291,6 @@
             fileName: 'diary-page.jpg', source: 'Diary page, ' + job.label, what: ids.length === 1 ? 'the record' : 'the ' + ids.length + ' records' });
         });
       }
-      /* a save refused as a repeat: the card ticks from today's line (or, with none read yet, from this tap) and says why nothing new was saved */
       function repeatTick(job, t, entry) {
         var dogs = entry.dog_ids ? entry.dog_ids.split('|') : [];
         var has = todays(job.type_key).some(function (l) { return l.outcome !== 'not_done' && l.outcome !== 'note' && l.outcome !== 'part_done' && (dogs.length ? dogs.indexOf(l.subject_id) >= 0 : here(l)); });
@@ -329,7 +305,6 @@
         if (card) { var n = document.createElement('span'); n.className = 'done-note'; n.textContent = 'Already saved a moment ago, so not saved twice. To add to it, use Note.'; card.appendChild(n); }
       }
 
-      /* one form question from a check_field row: text, number, date, yes or no, or a choice */
       function question(f, changed) {
         var label = f.label + (String(f.required).toLowerCase() === 'true' ? '' : ' (optional)'), el;
         if (f.kind === 'yesno' || f.kind === 'choice') {
@@ -345,7 +320,7 @@
 
       function jobCard(job) {
         var t = byKey[job.type_key], a = BLDChecks.askedFields(t), dogJob = BLDDue.perDogSite(t), many = site || dogJob || BLDDue.perDogRoom(t), form = many ? [] : (formOf[t.type_key] || []);
-        var needs = a.item || a.amount || a.noteRequired || form.length > 0 || (dogJob && site);   // a whole-site or per-dog tap has no form: the save script refuses one
+        var needs = a.item || a.amount || a.noteRequired || form.length > 0 || (dogJob && site);
         var panel = h('div', { class: 'job-panel', hidden: true }), panelMsg = h('p', { class: 'msg', role: 'status' }), inputs = {}, state = { rid: null, panel: panel };
         state.form = form.map(function (f) { var q = { field: f, input: question(f, function () { state.rid = null; }) }; panel.appendChild(q.input); return q; });
         function input(key, label) { inputs[key] = h('input', { class: 'inp', 'aria-label': label, placeholder: label, oninput: function () { state.rid = null; } }); panel.appendChild(inputs[key]); }
@@ -353,7 +328,7 @@
         if (a.amount) input('amount', t.amount_unit ? 'Amount (' + t.amount_unit + ')' : 'Amount');
         input('note', t.note_label || 'Note');
         var done = a.outcome ? 'ok' : 'recorded', roomList = null;
-        if (BLDDue.perDogRoom(t) && target.area_id) {   // all ticked: untick only a dog that missed out
+        if (BLDDue.perDogRoom(t) && target.area_id) {
           var roomDid = doneToday(t.type_key);
           state.ticks = roomDogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, checked: !roomDid[x.id], onchange: function () { state.rid = null; } }); });
           roomList = h('div', { class: 'job-dogs' }, roomDogs.length ? roomDogs.map(function (x, i) { return dogRow(state.ticks[i], x.label, roomDid[x.id]); }) : [h('p', { class: 'sub', text: 'No dogs here.' })]);
@@ -384,13 +359,13 @@
         var problems = h('div', { class: 'job-btns', hidden: true }, [
           h('button', { class: 'btn quiet', type: 'button', text: 'Note', onclick: function () {
             if (!inputs.note.value.trim()) { BLDDone.fail(state.card, 'Write the note.'); return; }
-            if (doneLine) send(job, t, 'note', inputs, panelMsg, state, doneLine);   // already done today: add the note, not a second done
+            if (doneLine) send(job, t, 'note', inputs, panelMsg, state, doneLine);
             else send(job, t, done, inputs, panelMsg, state);
           } })
         ].concat([
           h('button', { class: 'btn quiet', type: 'button', text: 'Concern', onclick: function () { send(job, t, 'concern', inputs, panelMsg, state); } }),
           h('button', { class: 'btn quiet', type: 'button', text: 'Not done', onclick: function () { send(job, t, 'not_done', inputs, panelMsg, state); } }),
-          h('button', { class: 'btn quiet', type: 'button', text: 'Part done', onclick: function () { send(job, t, 'part_done', inputs, panelMsg, state); } })   // needs a note; not counted as done
+          h('button', { class: 'btn quiet', type: 'button', text: 'Part done', onclick: function () { send(job, t, 'part_done', inputs, panelMsg, state); } })
         ]));
         /* Earlier (the owner 13 Nov, option B): the day and time it was really done, then any button saves for that day */
         var WHEN = { exact: 'Time', part: 'Part of day', none: 'Not known', now: 'Now' };
@@ -403,7 +378,6 @@
           pTime.hidden = !!m && m !== 'exact'; pPart.hidden = m !== 'part';
           pTime.setAttribute('aria-label', m === 'exact' ? 'Time done' : 'Time done (optional)');
         }
-        /* the choices in force on the picked day (today until a day is picked); a choice still offered stays picked */
         function refresh() {
           var day = pDate.value || today, opts = timeOptions(t.type_key, day), was = pMode.value, wasPart = pPart.value;
           pMode.textContent = ''; opts.forEach(function (o) { pMode.appendChild(h('option', { value: o, text: WHEN[o] })); });
@@ -434,7 +408,6 @@
         showDone(card, t.type_key, dogIds);
         return card;
       }
-      /* one dog in a tick list: a dog with a line today shows a tick and the time */
       function dogRow(box, label, line) {
         var kids = [box, h('span', { text: label || '' })];
         if (line) kids.push(h('span', { class: 'dog-done', html: line._queued ? '' : BLDDone.TICK }), h('span', { class: 'dog-at', text: line._queued ? 'Waiting' : BLDDone.hhmm(line.taken_at) }));
@@ -458,7 +431,6 @@
           return ['subject_id', 'area_id', 'litter_id'].every(function (k) { return !tg.fields[k] || l[k] === tg.fields[k]; });
         })[0];
       }
-      /* the dogs and rooms as they were on that day, from the occupancy rows (not today's list) */
       var onDayMemo = {};
       function onDay(day) {
         if (!onDayMemo[day]) onDayMemo[day] = d.raw && typeof BLDOccupancy !== 'undefined' ? BLDOccupancy.dailyList(d.raw, day) : { dogs: d.dogs, areas: d.areas };
@@ -524,13 +496,11 @@
         return row;
       }
       function catchUp() {
-        /* on the whole-site screen every job (rooms and dogs too, a row each); on a dog, room or litter screen that one's jobs */
         var jobs = (site ? inForce.filter(function (t) { return t.target !== 'litter'; }) : BLDDue.forTarget(types, logs, target, today, null, { rules: rules, settings: settings })).slice();
         jobs.sort(byFrequency(jobs));
         list.textContent = ''; say('');
         list.appendChild(h('button', { class: 'back', type: 'button', text: '← All jobs', onclick: function () { draw(); } }));
         list.appendChild(h('h3', { text: 'Earlier' }));
-        /* a job group (the owner's group on the job rows) enters every job in it, day by day */
         var groups = [];
         jobs.forEach(function (j) { if (j.group && groups.indexOf(j.group) < 0) groups.push(j.group); });
         var pick = h('select', { class: 'inp', 'aria-label': 'Job' }, groups.sort().map(function (g) { return h('option', { value: 'group:' + g, text: g + ' (all)' }); })
@@ -573,9 +543,6 @@
         ]);
       }
 
-      /* Owner's order for today's list (rule row job.order, dated, with a source): a pipe list of type_keys, group:<name>,
-         or screen:<module id>=<label> for another staff screen (e.g. temperatures). Listed ones come first in that order;
-         the rest follow by frequency. No row = by frequency only. */
       var order = rule('job.order', '', today).split('|').map(function (x) { return x.trim(); }).filter(Boolean);
       function pos(j) { var i = order.indexOf(j.type_key); if (i < 0 && j.group) i = order.indexOf('group:' + j.group); return i < 0 ? 1e6 : i; }
       function screenCard(entry) {
@@ -614,13 +581,11 @@
     });
   }
 
-  /* Report anything: the owner's row with type_key "report" says it is switched on and how the note is labelled. */
   function openReport(host, c) {
     var h = c.h, was = ctx0.reportFor || {};
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
     Promise.all([c.data(), c.readOptional('check_type')]).then(function (v) {
-      /* the kinds of report are the owner's job rows with target "optional" (incident, accident, lost dog...): no fixed key */
       var d = v[0], kinds = v[1].ok ? BLDDue.jobsInForce(v[1].rows, c.today()).filter(function (t) { return t.target === 'optional' && isOn(t); })
         .sort(function (a, b) { return (a.type_key === REPORT_KEY ? -1 : b.type_key === REPORT_KEY ? 1 : 0) || String(a.label).localeCompare(String(b.label)); }) : [], type = kinds[0];
       host.textContent = '';
@@ -662,3 +627,4 @@
   StaffPage.register({ id: 'jobs', title: 'Jobs', icon: ctx0.icons.dogs, order: 5, open: open });
   StaffPage.register({ id: 'report', title: 'Problem', hidden: true, open: openReport });
 }());
+

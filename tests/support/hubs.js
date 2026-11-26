@@ -1,5 +1,3 @@
-// One way to open every hub signed in with invented sample data, for checks that run the same rules across all hubs
-// (tests/mocked/house-look.spec.js). Pretend Google, Drive and Sheets only; every row below is invented.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -11,7 +9,6 @@ const SHEETS = /^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\//;
 const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
 const day = (d) => new Date(Date.now() + d * 864e5).toISOString().slice(0, 10);
 
-// Pretend Sheets for the two sheet-backed hubs (GA Hub, Marketplace): reads answer from the rows, writes answer {}.
 async function sheets(page, answer) {
   await page.route(/googleapis\.com\/drive\/v3\/files\/[\w-]+\?alt=media/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: 'listing_id,image_url\n' }));
   await page.route(/i\.ebayimg\.com/, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>' }));
@@ -24,7 +21,7 @@ async function sheets(page, answer) {
 
 function marketRows() {
   return [
-    ['RM|1', 'remove', 'Clothes', 'Sample jacket with a long title', JSON.stringify({ platform: 'Vinted', price: '£18.00', url: 'https://www.vinted.co.uk/items/1', sold: 'Sold on eBay 14:02', owner: 'CY' }), ago(5)],
+    ['RM|1', 'remove', 'Clothes', 'Sample jacket with a long title', JSON.stringify({ platform: 'Vinted', price: '£18.00', url: 'https://www.vinted.co.uk/items/1', sold: 'Sold on eBay 14:02', user: 'CY' }), ago(5)],
     ['PO|1', 'post', 'Clothes', 'Sample jumper', JSON.stringify({ platform: 'ebay', parcel_id: 'L-07', courier: 'Evri', shelf: 'B2', post_by: day(-1), price: '£22.00' }), ago(5)],
     ['PO|2', 'post', 'Collars & accessories', 'Sample lead', JSON.stringify({ platform: 'vinted', parcel_id: 'L-08', courier: 'InPost', shelf: 'A1', post_by: day(0), price: '£9.00' }), ago(5)],
     ['PO|3', 'post', 'Blades & grooming', 'Sample blade', JSON.stringify({ platform: 'ebay', parcel_id: 'L-09', courier: 'Royal Mail', shelf: 'C3', post_by: day(5), price: '£14.00' }), ago(5)],
@@ -33,8 +30,6 @@ function marketRows() {
     ['MSG|1', 'message', 'Clothes', 'Question about: sample jumper', JSON.stringify({ platform: 'eBay', url: 'https://www.ebay.co.uk/cnt/ViewMessage' }), ago(12)],
   ];
 }
-// Order dates are relative to today: one order in the last 30 days and one in the 30 days before, so the growth
-// tile reads "same as" on any date (fixed dates aged out on 21 Nov 2026 and turned 0 red on the review view).
 function foodBook() {
   return {
     cards: [
@@ -62,7 +57,6 @@ function studioConfig() {
   return ctx.window.DASH_CONFIG.studio;
 }
 
-// Each hub: where it lives, how to sign in with sample data, and every view to look at (all reachable by address).
 const HUBS = {
   home: {
     url: './', views: ['map', 'drive', 'bin', 'changes', 'more', 'personal', 'usb', 'readfirst'],
@@ -140,7 +134,6 @@ const HUBS = {
       await page.goto('studio/#/me');
       await expect(page.locator('#signInBtn')).toBeEnabled();
       await page.locator('#signInBtn').click();
-      // Studio has read its state when the engine pill is drawn (the pill shows on a desktop only; the phone's 56px bar has no room).
       await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/);
       await expect(page.locator('#enginePill')).not.toBeEmpty();
       if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
@@ -148,13 +141,11 @@ const HUBS = {
   },
 };
 
-// Look as Studio's Look menu saves it (one JSON in localStorage 'dash-look', read by every hub), set before the page loads.
 async function setLook(page, { bg = 'warm', mode = 'device', scheme = 'light' } = {}) {
   await page.emulateMedia({ colorScheme: scheme });
   await page.addInitScript((o) => { try { localStorage.setItem('dash-look', JSON.stringify(o)); } catch (e) {} }, { bg, mode, sel: 'line' });
 }
 
-// Move to a view by its address and wait until the page has drawn it.
 async function go(page, view) {
   await page.evaluate((v) => { location.hash = '#/' + v; }, view);
   await page.waitForTimeout(50);
@@ -164,3 +155,4 @@ async function go(page, view) {
 
 
 module.exports = { HUBS, setLook, go, settle, sheets, foodBook, marketRows };
+

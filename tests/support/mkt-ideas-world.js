@@ -1,4 +1,3 @@
-// Shared pretend Google for the Product ideas specs (mocked and phone). Every row is invented (SAMPLE).
 const fs = require('fs');
 const path = require('path');
 const { expect } = require('./test');
@@ -13,7 +12,6 @@ const rowsFor = () => [
   row('IDEA-SAMPLE-2', 'SAMPLE digital guide', { kind: 'idea', v: 1, status: 'new', gate: 0, verdict: '', intake: { note: 'SAMPLE' } }),
   row('IDEA-SAMPLE-3', 'SAMPLE dropped thing', { kind: 'idea', v: 1, status: 'dropped', gate: 0, verdict: 'no', dropped_reason: 'SAMPLE too thin', intake: {} }),
 ];
-// Pretend Sheets + pretend Drive. Records every sheet write and every file upload. Config gets the invented idea folder.
 async function world(page, rows, opts = {}) {
   const out = { writes: [], uploads: [] };
   await page.route('**/config.js', async (route) => {
@@ -45,3 +43,4 @@ async function open(page, hash) {
 
 
 module.exports = { DETAIL, FOLDER, row, rowsFor, world, open };
+

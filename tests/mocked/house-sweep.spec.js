@@ -43,7 +43,6 @@ const report = (list, where) => {
 
 for (const [hub, P] of Object.entries(PAGES)) {
   test.describe(hub, () => {
-    // 1 and 4, from the style sheets: no state rule fills or moves anything (typing boxes aside).
     test('no style rule fills or moves anything on hover, focus, press or selected', async ({ page, guard }) => {
       await page.setViewportSize({ width: 1280, height: 900 });
       await P.open(page, guard);
@@ -54,7 +53,7 @@ for (const [hub, P] of Object.entries(PAGES)) {
     for (const look of LOOKS) {
       for (const W of [1280, 390]) {
         test(`${look.bg} ${look.scheme} ${W}: no selected fill, one size per number group, no explainer lines, rose = late, black = broken`, async ({ page, guard }) => {
-          test.setTimeout(300_000);   // every view of the page; the shared Mac is slow under a full run
+          test.setTimeout(300_000);
           await page.setViewportSize({ width: W, height: W > 600 ? 900 : 844 });
           await setLook(page, { bg: look.bg, mode: 'device', scheme: look.scheme });
           await P.open(page, guard);
@@ -69,9 +68,7 @@ for (const [hub, P] of Object.entries(PAGES)) {
       }
     }
 
-    // 4 and 1, by the pointer and the keyboard: hover and press show only the pale grey fill (--hov), focus no fill, and nothing
     // moves (warm light, 1280;
-    // up to 8 kinds of control per view: the style-rule test above reads every rule).
     test('hover, focus and press: only the pale grey fill, nothing moves (every view)', async ({ page, guard }) => {
       test.setTimeout(480_000);
       await page.setViewportSize({ width: 1280, height: 900 });
@@ -93,7 +90,6 @@ for (const [hub, P] of Object.entries(PAGES)) {
         for (const p of picks) {
           const el = page.locator(p.sel);
           if (!(await el.count())) continue;
-          // Its box against its parent's, so a row that scrolls sideways into view (a board) is not a move.
           const read = () => el.evaluate((e) => { const s = getComputedStyle(e), r = e.getBoundingClientRect(), p = (e.parentElement || e).getBoundingClientRect();
             const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; (e.parentElement || document.body).appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
             return { hov, bg: s.backgroundColor, img: s.backgroundImage, box: [r.x - p.x, r.y - p.y, r.width, r.height].map((n) => Math.round(n * 2) / 2).join(',') }; });
@@ -109,7 +105,6 @@ for (const [hub, P] of Object.entries(PAGES)) {
           await settle(el); await check('hover');
           await page.mouse.move(2, 2);
           await el.focus(); await settle(el); await check('focus');
-          // Press: the pointer goes down on it and comes up somewhere else, so nothing is clicked.
           const b = await el.boundingBox();
           if (b) { await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await settle(el); await check('press'); await page.mouse.move(2, 2); await page.mouse.up(); }
           await el.evaluate((e) => e.blur());
@@ -118,8 +113,6 @@ for (const [hub, P] of Object.entries(PAGES)) {
       report([...new Set(bad)], hub + ' hover / focus / press');
     });
 
-    // 5 A bottom tab whose count is rose (read out as "N late") opens on something late; a black one (broken) on something
-    // down, expired, stuck or failed, and its name says that word, never "late".
     test('a rose tab count opens on something late; a black one on something broken', async ({ page, guard }) => {
       test.setTimeout(120_000);
       await page.setViewportSize({ width: 1280, height: 900 });
@@ -136,3 +129,4 @@ for (const [hub, P] of Object.entries(PAGES)) {
     });
   });
 }
+

@@ -1,17 +1,3 @@
-/*!
- * CDItems (More -> Items), owner page. ITEMS, 14 Nov 2026 (decision 13 Nov option A).
- * The owner's numbered list of things that get tested (plug-in appliances, fire extinguishers, smoke alarms,
- * thermometers...): add, move room, archive (dead or failed), record a test with readings and evidence, and export
- * a report (CSV, or a print page saved as PDF). Nothing here names a kind, a test, a limit or an interval: kinds are
- * BLD-item_kinds rows, tests are BLD-check_type rows (target item, item_kind), measured values are BLD-readings rows
- * (kind from BLD-reading_kinds, linked to the test by a links row reading_for_job; judged by the BLD-reading_limits row in
- * force on the day: TEMPS, OV11 14 Nov), other answers are BLD-check_field / BLD-check_value rows, the room is a shared
- * BLD-links row (role placed_in, set by rule rows link_kind.<role>; STAFF owns links and its link_add / link_end saves), proof photos and
- * certificates are BLD-files rows joined by links (evidence, certificate, main; DOGCARD's file_add), in use / archived is
- * a BLD-requirement row (need_type item.in_use), "due soon" is the rule row items.due_soon_days. Status is worked out on
- * read, never stored.
- * Works in a browser (window.CDItems) and in Node (module.exports) so the maths can be tested.
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.CDItems = factory();
@@ -35,14 +21,12 @@
     return d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + d.getUTCDate()).slice(-2);
   }
   function day(x) { return t(x).slice(0, 10); }
-  /** A typed number as stored: a decimal comma (0,09: much of Europe) becomes a point; spaces go. '' if not a number. */
   function num(x) {
     var s0 = t(x).replace(/\s/g, '');
     if (/^-?\d+,\d+$/.test(s0)) s0 = s0.replace(',', '.');
     return /^-?(\d+\.?\d*|\.\d+)$/.test(s0) ? s0 : '';
   }
 
-  /** Items as the owner sees them now: one per first row id, showing its latest change. */
   function current(T) {
     var first = {}, out = [];
     rows(T, 'BLD-items.csv').forEach(function (r) {
@@ -55,7 +39,6 @@
     return out.map(function (x) { return Object.assign({}, x.row, { id: x.id, first_at: x.firstAt }); });
   }
 
-  /** In use on a day: no item.in_use rows = always (S4.15); else a row must cover the day. */
   function inUse(T, id, on) {
     var rs = rows(T, 'BLD-requirement.csv').filter(function (r) { return r.need_type === NEED && (r.target_table === 'items' || r.target_table === 'item') && r.target_id === id; });
     if (!rs.length) return { yes: true, row: null };
@@ -65,8 +48,6 @@
     return { yes: false, row: last };
   }
 
-  /* Shared links (STAFF, PR 563): from_table/from_id -> to_table/to_id, role, from_date/to_date. Table words are
-     compared without a plural s, so check_log and check_logs are the same table until the rename sitting. */
   function tbl(x) { return t(x).replace(/s$/, ''); }
   function lk(l) { return t(l.role); }
   function live(l, on) { return t(l.from_date) <= on && (!t(l.to_date) || t(l.to_date) >= on); }
@@ -75,13 +56,11 @@
       return tbl(l.from_table) === tbl(fromTable) && l.from_id === fromId && kinds.indexOf(lk(l)) >= 0 && (!on || live(l, on));
     }).sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0) || t(a.from_date).localeCompare(t(b.from_date)); });
   }
-  /** The room on a day: the latest placed_in link starting on or before it; a to_date ends it. */
   function placeOn(T, id, on) {
     var r = linksFrom(T, 'items', id, PLACES).filter(function (l) { return t(l.from_date) <= on; })
       .sort(function (a, b) { return t(b.from_date).localeCompare(t(a.from_date)); })[0];
     return r && live(r, on) ? r : null;
   }
-  /** Files joined to a record by the given link kinds (newest last), as {href, label}. */
   function filesFor(T, fromTable, fromId, kinds) {
     var byId = {};
     rows(T, 'BLD-files.csv').forEach(function (f) { byId[f.id] = f; });
@@ -89,7 +68,6 @@
       .map(function (l) { var f = byId[l.to_id]; return { id: t(f.drive_file_id), on: day(f.taken_on || f.set_on), href: fileHref(f.drive_file_id || f.url), label: lk(l) === 'certificate' ? 'Certificate' : f.mime === 'application/pdf' ? 'PDF' : 'Photo' }; });
   }
 
-  /** Test rows in force on a day for an item kind: latest effective_from per type_key, active, target item. */
   function testsFor(T, kindKey, on) {
     var latest = {};
     rows(T, 'BLD-check_type.csv').forEach(function (r) {
@@ -100,13 +78,11 @@
       return r.target === 'item' && r.active !== 'false' && (!t(r.item_kind) || r.item_kind === kindKey);
     }).sort(function (a, b) { return t(a.label).localeCompare(t(b.label)); });
   }
-  /** The version of a test (by type_key) in force on a day. */
   function typeOn(T, key, on) {
     var best = null;
     rows(T, 'BLD-check_type.csv').forEach(function (r) { if (r.type_key === key && t(r.effective_from) && r.effective_from <= on && (!best || r.effective_from > best.effective_from)) best = r; });
     return best;
   }
-  /** Questions (readings) of a test in force on a day, in order. */
   function fieldsOn(T, key, on) {
     var now = {};
     rows(T, 'BLD-check_field.csv').forEach(function (r) {
@@ -116,7 +92,6 @@
     return Object.keys(now).map(function (k) { return now[k]; }).filter(function (r) { return r.active !== 'false'; })
       .sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0) || t(a.label).localeCompare(t(b.label)); });
   }
-  /** Reading kinds a test measures: reading_kinds rows linked to it (reading_for_job, to the type_key or any of its row ids). */
   function readingKindsFor(T, key, on) {
     var ids = {}, kinds = {};
     rows(T, 'BLD-check_type.csv').forEach(function (r) { if (r.type_key === key) ids[r.id] = 1; });
@@ -126,7 +101,6 @@
       return tbl(l.from_table) === 'reading_kind' && lk(l) === 'reading_for_job' && tbl(l.to_table) === 'check_type' && ids[l.to_id] && live(l, on) && kinds[l.from_id];
     }).sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0); }).map(function (l) { return kinds[l.from_id]; });
   }
-  /** The reading_limits row in force on a day for a kind: the item's own row beats its kind's, which beats an unscoped one. */
   function limitOn(T, kindId, it, on) {
     var best = null, bestRank = -1;
     rows(T, 'BLD-reading_limits.csv').forEach(function (r) {
@@ -137,7 +111,6 @@
     });
     return best;
   }
-  /** Is a number inside a limit row (low / high, either blank)? null = no limit or not a number. */
   function inLimit(f, v) {
     f = f || {};
     var n = num(v) === '' ? NaN : parseFloat(num(v)), lo = t(f.low), hi = t(f.high);
@@ -145,8 +118,6 @@
     return (lo === '' || n >= parseFloat(lo)) && (hi === '' || n <= parseFloat(hi));
   }
 
-  /** Records for one item, newest first; a corrected record gives way to its correction. Each record's values are its
-      check_value answers and its readings rows, as {key, label, value, unit, inr} (inr false = outside the limit). */
   function records(T, id, kindKey) {
     var byType = {}, replaced = {}, vals = {}, rds = {}, rkind = {}, it = { id: id, kind_key: kindKey || '' };
     rows(T, 'BLD-check_type.csv').forEach(function (r) { byType[r.id] = r; });
@@ -182,10 +153,9 @@
       if (!best || f > t(best.effective_from || best.from_date)) best = r;
     });
     var n = best ? parseInt(best.value, 10) : NaN;
-    return isNaN(n) ? null : n;   // no row = no amber (nothing invented)
+    return isNaN(n) ? null : n;
   }
 
-  /** Status of one item on a day: worst of each test and the expiry date. */
   function status(T, it, on) {
     var soon = dueSoonDays(T, on), recs = records(T, it.id, it.kind_key), lines = [];
     testsFor(T, it.kind_key, on).forEach(function (ty) {
@@ -206,13 +176,11 @@
     if (exp) est = exp < on ? 'expired' : (soon !== null && addDays(on, soon) >= exp ? 'soon' : 'ok');
     var worst = lines.map(function (l) { return l.st; }).concat(est ? [est] : []).reduce(function (a, b) { return RANK[b] > RANK[a] ? b : a; }, lines.length || est ? 'ok' : 'none');
     var nexts = lines.map(function (l) { return l.next; }).concat(exp ? [exp] : []).filter(Boolean).sort();
-    // which tests were never done (16 Nov 2026: an extinguisher with a service but no monthly look said "never tested")
     var never = lines.filter(function (l) { return !l.last && l.st === 'due'; }).map(function (l) { return l.label; });
     var all = never.length && never.length === lines.length;
     return { st: worst, lines: lines, next: nexts[0] || '', never: all ? true : never.length ? never : false, expiry: est };
   }
 
-  /** Every item with its kind, room, use and status on a day, best to worst. */
   function list(T, on) {
     var kinds = {};
     rows(T, 'BLD-item_kinds.csv').forEach(function (k) { if (!kinds[k.kind_key] || t(k.set_on) >= t(kinds[k.kind_key].set_on)) kinds[k.kind_key] = k; });
@@ -240,7 +208,6 @@
     });
   }
 
-  /** CSV (owner export): one line per item and test, the same layout the import reads. */
   function csv(T, on) {
     var q = function (x) { x = String(x == null ? '' : x); return /[",\n]/.test(x) || /^[=+\-@]/.test(x) ? '"' + (/^[=+\-@]/.test(x) ? "'" : '') + x.replace(/"/g, '""') + '"' : x; };
     var out = [['item_no', 'name', 'kind', 'room', 'size', 'made_on', 'expires_on', 'status', 'archived', 'test', 'last', 'next', 'test_status', 'readings'].join(',')];
@@ -256,7 +223,6 @@
     return out.join('\r\n') + '\r\n';
   }
 
-  /* ------------------------------------------------------------------ drawing */
   var I = {   // Tabler outline paths
     item: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5',
     plus: 'M12 5v14M5 12h14', archive: 'M3 4h18v4H3zM5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4',
@@ -325,9 +291,6 @@
     return rows(v.T, 'BLD-item_kinds.csv').filter(function (k) { if (seen[k.kind_key]) return false; seen[k.kind_key] = 1; return true; })
       .map(function (k) { return '<option value="' + v.esc(k.kind_key) + '"' + (k.kind_key === sel ? ' selected' : '') + '>' + v.esc(k.label) + '</option>'; }).join('');
   }
-  // every room (cabins, corridors, site rooms) in its group, sorted by the group's order then code, so a moved item finds its new room fast
-  // A room is offered while it is in use today (room.in_use rows; a room with none is in use) or while a room.items row
-  // says it holds items only (site rooms kept off dog rounds). Retired rooms (in use ended) drop out; the item's own room stays.
   function roomOpen(T, id, on) {
     var req = rows(T, 'BLD-requirement.csv');
     var cover = function (need, absent) {
@@ -428,7 +391,6 @@
       + '<div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
   }
 
-  /* ------------------------------------------------------------------ saving */
   function remember(v, file, fields, res) {
     if (!res || !res.ok || !res.result || !res.result.id) return;
     var row = Object.assign({ id: res.result.id, created_at: new Date().toISOString(), set_on: new Date().toISOString() }, fields);
@@ -441,7 +403,6 @@
       return r;
     });
   }
-  /** A photo is shrunk to 1600px JPEG on the device; a PDF goes as it is. Resolves {mime, b64} or null. */
   function readFile(file) {
     if (!file) return Promise.resolve(null);
     var asB64 = function (blob) { return new Promise(function (ok, no) { var fr = new FileReader(); fr.onload = function () { ok(String(fr.result).split(',')[1] || ''); }; fr.onerror = no; fr.readAsDataURL(blob); }); };
@@ -470,9 +431,6 @@
     });
   }
   function linkAdd(v, f) { return act(v, 'link_add', f, LINKS, function () { return f; }); }
-  /** Send the chosen photo or PDF (or the typed link), then join it to a record: file_add (DOGCARD, PR 567) stores the
-      file and returns its files id; link_add (STAFF) joins it. Two calls: if the link fails the file waits unlinked and
-      sending again re-uses it (same bytes = same id). Resolves null when there is nothing to send. */
   function fileAdd(v, form, d, fromTable, fromId, kindKey) {
     var el = form.querySelector('input[type=file][name=file]'), file = el && el.files && el.files[0];
     if (!file && !d.link) return Promise.resolve(null);
@@ -491,7 +449,6 @@
     }).then(join);
   }
   function why(r) { if (!r) return 'Not saved.'; if (r instanceof Error) return r.message; if (r.fields) return Object.keys(r.fields).map(function (k) { return r.fields[k]; }).join(' '); return r.message || 'Not saved.'; }
-  /** After the main row saved: run the follow-on saves; the item still gets its tick, any that failed are named. */
   function after(steps, id, done) {
     return Promise.all(steps.map(function (p) { return p.then(function (r) { return r; }, function (x) { return x; }); })).then(function (rs) {
       var bad = rs.filter(function (x) { return x && (x instanceof Error || x.ok === false); }).map(why);
@@ -499,11 +456,9 @@
     });
   }
 
-  /** Send readings rows for a saved test; each has its own request id (<test>-r<n>) so a resend is safe. Rows that
-      fail wait in S.retry for the Retry button, which resends only them, never the test row. Resolves the count left. */
   function sendReads(v, logId, reads) {
     return Promise.all(reads.map(function (x) {
-      return post(v, 'readings', x.fields, { request_id: x.rid }).then(function (r) { return r && (r.ok || r.code === 'DUPLICATE') ? null : x; }, function () { return x; });   // DUPLICATE = already saved (STAFF readings save)
+      return post(v, 'readings', x.fields, { request_id: x.rid }).then(function (r) { return r && (r.ok || r.code === 'DUPLICATE') ? null : x; }, function () { return x; });
     })).then(function (rs) {
       var left = rs.filter(Boolean);
       if (left.length) S.retry[logId] = left; else delete S.retry[logId];
@@ -516,8 +471,6 @@
     Array.prototype.forEach.call(form.elements, function (el) { if (el.name) d[el.name] = t(el.value); });
     var done = function (id, msg) { S.busy = false; S.form = ''; S.msg = msg; if (id) S.ticks[id] = true; v.redraw(); };
     var hadFile = !!(form.querySelector('input[type=file]') && form.querySelector('input[type=file]').files && form.querySelector('input[type=file]').files.length);
-    // a refused save keeps what was typed (the page redraws from rows, so the answers are put back); a chosen file
-    // cannot be put back by a page, so it says so
     var fail = function (r) {
       S.busy = false; S.msg = why(r) + (hadFile ? ' Choose the file again.' : ''); v.redraw();
       var nf = typeof document !== 'undefined' && document.querySelector('form[data-itm-save="' + kind + '"]');
@@ -543,7 +496,6 @@
     } else if (kind === 'move') {
       var old = placeOn(v.T, S.open, v.today);
       if (old && d.from_date <= t(old.from_date)) return fail({ message: 'Pick a day after ' + v.dmy(old.from_date) + ', when it went to its current room.' });
-      // one link_add: placed_in allows one at a time, so the save ends the old room the day before (STAFF, PR 563)
       place(S.open, d.area_id, d.from_date, 'Moved on the Items page').then(function (r2) {
         if (!r2 || !r2.ok) return fail(r2);
         var ended = (r2.result && r2.result.ended) || (old ? [old.id] : []);
@@ -554,7 +506,7 @@
       fileAdd(v, form, d, 'items', S.open, 'main').then(function (r) { if (!r || !r.ok) return fail(r); done(S.open, 'Saved.'); }, fail);
     } else if (kind === 'archive') {
       var y = list(v.T, v.today).filter(function (z) { return z.it.id === S.open; })[0];
-      var toDate = addDays(d.out_on, -1);   // the last day in use is the day before (dates are inclusive), so it leaves the list now
+      var toDate = addDays(d.out_on, -1);
       var from = (y && y.useRow && y.useRow.from_date) || day(y && y.it.first_at) || toDate;
       if (from > toDate) from = toDate;
       post(v, 'requirement', { need_type: NEED, target_table: 'items', target_id: S.open, from_date: from, to_date: toDate, source: d.why + (d.note ? ': ' + d.note : '') })
@@ -574,7 +526,7 @@
       var at = d.on === v.today ? new Date().toISOString() : d.on + 'T12:00:00Z';
       var lf = { check_type_id: ty.id, item_id: S.open, outcome: d.outcome, happened_at: at, how_recorded: 'typed' };
       if (d.note || d.by) lf.note = [d.by ? 'by ' + d.by : '', d.note].filter(Boolean).join('. ');
-      if (d.on < addDays(v.today, -7)) lf.confirm_unusual = 'yes';   // an Earlier entry: the owner chose the date
+      if (d.on < addDays(v.today, -7)) lf.confirm_unusual = 'yes';
       if (d.outcome === 'concern' && !d.note) return fail({ message: 'Say briefly what failed.' });
       var rid = 'itm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       post(v, 'check_log', lf, { values: values, request_id: rid }).then(function (r) {
@@ -637,7 +589,7 @@
   function bind(main, getV) {
     if (!main) return;
     var cur = typeof getV === 'function' ? getV : function () { return getV; }, v = cur();
-    ['click', 'submit', 'input', 'change'].forEach(function (k) { main.addEventListener(k, function () { v = cur(); }, true); });   // fresh rows each time (the hub swaps its tables on refresh)
+    ['click', 'submit', 'input', 'change'].forEach(function (k) { main.addEventListener(k, function () { v = cur(); }, true); });
     main.addEventListener('click', function (ev) {
       var b = ev.target.closest && ev.target.closest('[data-itm-open],[data-itm-filter],[data-itm-form],[data-itm-report],[data-itm-retry]');
       if (!b || !main.contains(b)) return;
@@ -673,14 +625,12 @@
         var f0 = el.form, keep = {};
         if (f0) Array.prototype.forEach.call(f0.elements, function (x) { if (x.name && x.type !== 'file') keep[x.name] = x.value; });
         S.testOn = el.value; v.redraw();
-        var nf = document.querySelector('form[data-itm-save="test"]');   // answers typed before the date change stay
+        var nf = document.querySelector('form[data-itm-save="test"]');
         if (nf) Array.prototype.forEach.call(nf.elements, function (x) { if (x.name && x.type !== 'file' && Object.prototype.hasOwnProperty.call(keep, x.name)) x.value = keep[x.name]; });
-      }   // Earlier: the questions and limits of that day
+      }
     });
   }
 
-  /** Compliance fold: per kind, how many items are in date, due soon, overdue (failed and expired count as overdue), as at a day.
-   *  Each number opens the Items page on that filter; each kind names the SOP its tests follow. */
   function complianceHtml(v, fold, on) {
     var e = v.esc, all = list(v.T, on).filter(function (x) { return !x.archived; }), m = {}, bad = 0;
     if (!rows(v.T, 'BLD-items.csv').length) return '';
@@ -704,3 +654,4 @@
 
   return { FILES: FILES, complianceHtml: complianceHtml, current: current, inUse: inUse, placeOn: placeOn, filesFor: filesFor, testsFor: testsFor, fieldsOn: fieldsOn, readingKindsFor: readingKindsFor, limitOn: limitOn, inLimit: inLimit, _sendReads: sendReads, num: num, _fileAdd: fileAdd, records: records, status: status, list: list, csv: csv, page: page, bind: bind, open: function (id) { S.open = id || ''; S.form = ''; }, _state: S };
 }));
+

@@ -1,9 +1,4 @@
 'use strict';
-/**
- * FAKE sample data for tests. None of this is real: the tenant, rooms, dogs and people are made up.
- * Built in code (not stored as .csv in the repo). `node tests/write-fixtures.js` writes copies
- * to tests/fixtures/ so a person can open them.
- */
 const TENANT = 'ten-test';
 
 const crlf = (lines) => lines.join('\r\n') + '\r\n';
@@ -17,13 +12,10 @@ const VISIBILITY_ROWS = [VIS_HEADER]
   .concat(['id', 'name', 'dob'].map((f) => vis('subject', f, 'aud-staff', 'yes')), [vis('subject', '*', 'aud-staff', 'yes')])
   .concat(['subject_id', 'state'].map((f) => vis('subject_status', f, 'aud-staff', 'yes')), [vis('subject_status', '*', 'aud-staff', 'yes')])
   .concat(['subject_id', 'area_id', 'off_site_kind', 'moved_in', 'classification'].map((f) => vis('occupancy', f, 'aud-staff', 'yes')), [vis('occupancy', '*', 'aud-staff', 'yes')])
-  // earlier temperature entries: a member of staff sees only their OWN, from the last 14 days, and never the mitigation note
   .concat(['id', 'area_id', 'min_c', 'max_c', 'taken_at', 'taken_by', 'mitigation_note'].map((f) => vis('area_reading', f, 'aud-staff', 'yes')),
     [vis('area_reading', 'mitigation_note', 'aud-staff', 'no'), vis('area_reading', '*', 'aud-staff', 'yes', 'own_rows_days<=14')])
-  // the owner (aud-admin) sees every row and column of the temperature log
   .concat(['id', 'area_id', 'min_c', 'max_c', 'taken_at', 'taken_by', 'mitigation_note'].map((f) => vis('area_reading', f, 'aud-admin', 'yes')), [vis('area_reading', '*', 'aud-admin', 'yes')])
-  // a staff column whose condition we cannot apply stays hidden; a redaction too
-  .concat([vis('subject', 'chip_number', 'aud-staff', 'yes', 'person is the recorded owner of THIS subject'), vis('subject', 'sex', 'aud-staff', 'yes', '', 'first letter only')]);
+  .concat([vis('subject', 'chip_number', 'aud-staff', 'yes', 'person is the recorded user of THIS subject'), vis('subject', 'sex', 'aud-staff', 'yes', '', 'first letter only')]);
 
 function csvFiles() {
   return {
@@ -41,8 +33,6 @@ function csvFiles() {
       `sub-test-d,${TENANT},Test D,2021-03-03,Male,999000000000004`,
       `sub-test-e,${TENANT},Test E,2019-04-04,Female,999000000000005`
     ]),
-    // same header as the live BLD-occupancy.csv. Dog A moved room once; B has only an old undated row;
-    // C is sold; D is owned by a family; E has no row at all.
     'BLD-occupancy.csv': crlf([
       OCCUPANCY_HEADER.join(','),
       `occ-a1,${TENANT},sub-test-a,area-t1,,2026-10-01,,,`,
@@ -57,16 +47,14 @@ function csvFiles() {
       `sst-b,${TENANT},sub-test-b,In Training,,,`,
       `sst-c,${TENANT},sub-test-c,Sold,,,`
     ]),
-    // same columns as the live BLD-field_visibility.csv. These FAKE rows are the PROPOSED staff rows
-    // (docs: AA_2026-10-16_JOB4-PROPOSED-field_visibility-rows). Row rules use field_name *.
     'BLD-field_visibility.csv': crlf(VISIBILITY_ROWS),
     'BLD-person.csv': crlf([
-      'id,tenant_id,full_name,party_kind,title,first_name,last_name,pronouns,known_as,email,phone,phone_alt,email_alt,preferred_contact,best_time_to_call,address_line,address_line_2,address_locality,address_region,address_postal_code,address_country_code,is_vet,is_supplier_contact,marketing_consent,consent_basis,consent_recorded_on,source,effective_from,effective_to,date_of_birth,id_checked_on,do_not_contact,gdpr_erasure_requested_on,retention_review_on,notes,external_ref,external_ref_system,visibility,visible_from,visible_to,visibility_set_by',   // the live header (15 Nov 2026)
+      'id,tenant_id,full_name,party_kind,title,first_name,last_name,pronouns,known_as,email,phone,phone_alt,email_alt,preferred_contact,best_time_to_call,address_line,address_line_2,address_locality,address_region,address_postal_code,address_country_code,is_vet,is_supplier_contact,marketing_consent,consent_basis,consent_recorded_on,source,effective_from,effective_to,date_of_birth,id_checked_on,do_not_contact,gdpr_erasure_requested_on,retention_review_on,notes,external_ref,external_ref_system,visibility,visible_from,visible_to,visibility_set_by',
       `per-test-1,${TENANT},Pat Tester,`
     ]),
     'BLD-role.csv': crlf([
       'id,tenant_id,code,name,can_sign_off,notes',
-      `rol-owner,${TENANT},OWNER,Licence holder,yes,`,
+      `rol-user,${TENANT},USER,Licence holder,yes,`,
       `rol-staff,${TENANT},STAFF,Kennel staff,no,`
     ])
   };
@@ -90,3 +78,4 @@ const OCCUPANCY_CHECK_HEADER = ['id', 'tenant_id', 'confirmed_at', 'confirmed_by
 const BREEDING_RULE_HEADER = ['id', 'tenant_id', 'rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'to_date'];
 
 module.exports = { TENANT, csvFiles, AREA_READING_HEADER, PENDING_HEADER, STAFF_HEADER, OCCUPANCY_HEADER, OCCUPANCY_CHECK_HEADER, BREEDING_RULE_HEADER, VIS_HEADER, headerOnly };
+

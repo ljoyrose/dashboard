@@ -1,7 +1,3 @@
-// JOB 34b: Home (the root dashboard) gap tests. Only checks no other spec already proves:
-// keyboard use of the Bin jump buttons, the shared-drive finder at phone width, the Drives pager, the "All shared drives" picker option,
-// keyboard use of those controls, empty / error / slow / signed-out states per view, and phone width with many drives.
-// Pretend Google and Drive only (tests/support). Every name below is invented (APP-A style, example.test).
 const { test, expect, sideScroll, slow, DRIVE } = require('../fixtures/job34/load');
 
 const signIn = async (page) => {
@@ -11,7 +7,6 @@ const signIn = async (page) => {
 };
 const iso = (ms) => new Date(Date.now() + ms).toISOString();
 
-/** Add `n` invented shared drives, each with one file in its bin. */
 function manyBins(world, n, long = false) {
   for (let i = 1; i <= n; i++) {
     const id = 'drv-app' + i;
@@ -22,8 +17,6 @@ function manyBins(world, n, long = false) {
 }
 
 test.describe('Home (job34b): Bin controls', () => {
-  // The index-strip, drive-button and drive-finder clicks are proven by tests/mocked/job34-bin-index.spec.js on main.
-  // What no spec proves is keyboard-only use of the Bin's jump buttons.
   test('keyboard: Tab reaches a "Needs you now" button and a drive button, Enter opens each section with focus on its title', async ({ page, guard }) => {
     manyBins(guard.world, 2);
     await page.goto('./#/bin');
@@ -41,7 +34,6 @@ test.describe('Home (job34b): Bin controls', () => {
     await page.keyboard.press('Enter');
     await expect(page.locator('details[data-fold="check"]')).toHaveAttribute('open', '');
     await expect(page.locator('details[data-fold="check"] > summary')).toBeFocused();
-    // Already in the bin is folded shut by design: open it from the keyboard, then Tab to a drive button.
     await page.locator('#binCard > summary').focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('#binCard')).toHaveAttribute('open', '');
@@ -93,7 +85,6 @@ test.describe('Home (job34b): Drives controls', () => {
 });
 
 test.describe('Home (job34b): empty, error, slow and signed-out states', () => {
-  // "No shared drives" on Drives and Bin is proven by tests/mocked/job34-drives-pages.spec.js on main.
   test('no file in any bin: the Bin says "Every shared drive has an empty bin."', async ({ page, guard }) => {
     guard.world.files = guard.world.files.filter((f) => !f.trashed);
     await page.goto('./#/bin');
@@ -101,7 +92,6 @@ test.describe('Home (job34b): empty, error, slow and signed-out states', () => {
     await expect(page.locator('#binCard')).toContainText('Every shared drive has an empty bin.');
   });
 
-  // J34b-F01 fixed: a failed shared-drive list read now marks the Bin card "Read failed" with a plain note.
   test('J34b-F01 Drive answers 500 on the Bin: the Bin cards say "Read failed", not "Not read yet"', async ({ page, guard, allowedConsole }) => {
     test.setTimeout(60_000);
     allowedConsole.push(/Failed to load resource: the server responded with a status of 500/);
@@ -109,7 +99,6 @@ test.describe('Home (job34b): empty, error, slow and signed-out states', () => {
     await page.goto('./#/bin');
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
-    // A 500 is retried (about 1 s, 2 s, then 4 s) before the page gives up, so allow for the retries.
     await expect(page.locator('#readStamp')).toHaveText('A read failed', { timeout: 30_000 });
     await expect(page.locator('#binCard > summary .state')).toHaveText('Read failed');
     await expect(page.locator('#binCard .note.fail')).toContainText(/^Read failed: /);
@@ -135,13 +124,10 @@ test.describe('Home (job34b): empty, error, slow and signed-out states', () => {
     await page.goto('./#/bin');
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
-    // While Drive is slow nothing claims to be read: the header says Reading… and the bin card is not yet marked read.
     await expect(page.locator('#readStamp')).toHaveText('Reading…');
     await expect(page.locator('#binCard > summary .state')).toHaveText(/^(Reading…|Not read yet)$/);
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/, { timeout: 100_000 });
-    // The Bin is read after the main reads land, so it is still slow here; it must still finish.
     await expect(page.locator('#binCard > summary .state')).toHaveText(/^Read \d/, { timeout: 100_000 });
-    // Ready to bin (the sweep) must land too, not stay on Reading… or turn to Read failed.
     await expect(page.locator('#sweepCard > summary .state')).toHaveText(/^(Read \d|Empty)/, { timeout: 100_000 });
     await expect(page.locator('#view .note.fail')).toHaveCount(0);
   });
@@ -164,7 +150,6 @@ test.describe('Home (job34b): phone 390px with many shared drives', () => {
     manyBins(guard.world, 8, true);
     await page.goto('./#/bin');
     await signIn(page);
-    // Already in the bin is folded shut by design; the finder lives inside it.
     await page.locator('#binCard > summary').click();
     await expect(page.getByRole('searchbox', { name: 'Find a shared drive' })).toBeVisible();
     expect(await sideScroll(page), 'Bin scrolls sideways at 390px').toBe(false);
@@ -182,3 +167,4 @@ test.describe('Home (job34b): phone 390px with many shared drives', () => {
     expect(await sideScroll(page), 'Drives scrolls sideways at 390px').toBe(false);
   });
 });
+

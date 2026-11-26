@@ -35,7 +35,6 @@
 
   function ymd(v) { var s = String(v == null ? '' : v).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
 
-  /** Is keeping photos on for `day` (YYYY-MM-DD)? The rule row in force that day (latest effective_from) must say yes. */
   function on(rules, day) {
     var best = null;
     (rules || []).forEach(function (r) {
@@ -47,12 +46,10 @@
     return !!best && String(best.value || '').trim().toLowerCase() === 'yes';
   }
 
-  /** Any row for the setting at all (cheap check before loading this file in the page). */
   function mentioned(rules) {
     return (rules || []).some(function (r) { return r && String(r.rule_key || '').trim() === KEY; });
   }
 
-  /* ------------------------------------------------------------------ browser only below */
   function h(tag, attrs, kids) {
     var e = document.createElement(tag);
     Object.keys(attrs || {}).forEach(function (k) {
@@ -67,7 +64,6 @@
   }
   function setMsg(el, text, kind) { el.className = 'msg ' + (kind || ''); el.textContent = text || ''; }
 
-  /** Draw a video frame or image onto a canvas no bigger than MAX_SIDE, return base64 JPEG (no data: prefix). */
   function toJpeg(src, w, hgt) {
     var s = Math.min(1, MAX_SIDE / Math.max(w, hgt)), c = document.createElement('canvas');
     c.width = Math.round(w * s); c.height = Math.round(hgt * s);
@@ -77,12 +73,6 @@
     return url.slice(url.indexOf(',') + 1);
   }
 
-  /**
-   * Offer to keep a photo for one saved reading.
-   * o: save (BLDSave instance: act, linkAdd), readingId, day (YYYY-MM-DD), areaLabel, past (an earlier reading:
-   *    no live thermometer, so only Choose photo)
-   * Returns stop(): turns the camera off if it is open.
-   */
   function offer(host, o) {
     var stream = null, busy = false;
     var msg = h('p', { class: 'msg', role: 'status' });
@@ -135,8 +125,6 @@
       busy = true; setMsg(msg, 'Keeping photo...');
       [takeBtn, chooseBtn, skipBtn].forEach(function (b) { b.disabled = true; });
       var fileReq = o.save.newRequestId(), linkReq = o.save.newRequestId();
-      // 22 Nov 2026: also a diary page for job records entered Earlier (o.fromTable check_log, o.fromIds = every record
-      // that save made, e.g. one per dog): one stored photo, one evidence link per record, one at a time.
       var table = o.fromTable || 'area_reading', ids = o.fromIds || [o.readingId], what = o.what || 'the reading';
       o.save.act('file_add', { kind: 'photo', mime: 'image/jpeg', data_base64: b64, name: o.fileName || 'thermometer.jpg', taken_on: o.day,
         source: o.source || ('Temperature reading' + (o.areaLabel ? ', ' + o.areaLabel : '')) }, fileReq).then(function (r) {
@@ -161,3 +149,4 @@
 
   return { KEY: KEY, on: on, mentioned: mentioned, offer: offer };
 }));
+

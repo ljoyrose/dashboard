@@ -1,18 +1,5 @@
-// Click-crawler: walks a page the way a person taps it and says what every control did.
-// SCRIPT (no AI at run time). Used by tests/mocked/cdhub-crawl.spec.js on invented data only.
-//
-// From each starting screen it taps every visible, enabled control, breadth-first. A screen is known by its
-// address (#...), its main heading and the panels that are open. Each tap is filed as one of:
-//   LOOP     the tap went round and came back to the same screen with nothing changed, or following one item for
-//            2 to 4 taps came back to a screen already seen on the way
-//   DEAD     nothing changed and nothing was said
-//   ERROR    the browser logged an error, or the page threw
-//   ESCAPE   the page called, or went to, an address that is not ours and not pretend
-//   WORDING  empty heading, "undefined", "null", "NaN", "TODO", a raw key, a bare code as a label, a doubled word,
 //            or a control with no name
-// Everything else is fine and is written to the click map (screen, control, target, result).
 
-/** Runs inside the page (added before any page script). Everything hangs off window.__cc. */
 function inPage() {
   if (window.__cc) return;
   const norm = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
@@ -39,7 +26,7 @@ function inPage() {
     if (cs.visibility === 'hidden' || cs.display === 'none' || cs.pointerEvents === 'none') return false;
     if (el.closest('[hidden], .hidden, [inert], [aria-hidden="true"]')) return false;
     const modal = document.querySelector('dialog:modal');
-    if (modal && !modal.contains(el)) return false;   // behind an open box: not reachable until it is shut
+    if (modal && !modal.contains(el)) return false;
     for (let d = el.parentElement; d; d = d.parentElement) {   // inside a shut fold
       if (d.tagName === 'DETAILS' && !d.open && !(el.tagName === 'SUMMARY' && el.parentElement === d) && !d.querySelector(':scope > summary')?.contains(el)) return false;
     }
@@ -65,9 +52,8 @@ function inPage() {
     if (role === 'tab') return 'tab';
     if (role === 'link') return 'link';
     if (role === 'checkbox' || role === 'switch') return 'input:checkbox';
-    return 'row';   // a row, card or other block a person would tap
+    return 'row';
   }
-  /** The item a control belongs to (the row or card title), so one item can be followed from screen to screen. */
   function subjectOf(el) {
     const row = el.closest('[data-open-row], .mrow, .hm-row, tr, li, article');
     const t = row && row.querySelector('.t, .hm-t a, .nm, td b, h3, h4');
@@ -77,11 +63,9 @@ function inPage() {
     const m = /^(?:open|show[^:]*|see|view|go to)[^:]{0,24}:\s*(.{8,})$/i.exec(el.getAttribute('aria-label') || '');
     return m ? norm(m[1]) : '';
   }
-  /** Tags every control on screen (data-cc="n") and describes each. */
   function controls() {
     document.querySelectorAll('[data-cc]').forEach((e) => e.removeAttribute('data-cc'));
     const set = new Set(Array.from(document.querySelectorAll(CONTROL)));
-    // anything else that looks tappable: the top-most element showing the hand cursor
     document.querySelectorAll('body *').forEach((el) => {
       if (set.has(el) || el.closest('svg')) return;
       if (getComputedStyle(el).cursor !== 'pointer') return;
@@ -94,9 +78,9 @@ function inPage() {
       if (!shown(el)) return;
       const kind = kindOf(el);
       if (kind === 'row' && el.matches('[tabindex]') && !el.matches('[data-open-row], [onclick]') && getComputedStyle(el).cursor !== 'pointer') {
-        if (el.matches('[role="group"], [role="region"], [role="status"], [role="img"], [role="note"], h1, h2, h3, h4, main, section, table, dialog, .scroll')) return;   // a focus stop for reading or scrolling, not a control
+        if (el.matches('[role="group"], [role="region"], [role="status"], [role="img"], [role="note"], h1, h2, h3, h4, main, section, table, dialog, .scroll')) return;
       }
-      if (kind === 'row' && el.querySelector('input, select, textarea') && !el.matches('[data-open-row], [onclick]')) return;   // a label wrapping a box: the box is the control
+      if (kind === 'row' && el.querySelector('input, select, textarea') && !el.matches('[data-open-row], [onclick]')) return;
       if (kind === 'input:file') return;                                                         // opened by its own button
       const label = labelOf(el);
       const disabled = !!el.disabled || el.getAttribute('aria-disabled') === 'true';
@@ -116,14 +100,12 @@ function inPage() {
     return out;
   }
   const tmpl = (s) => norm(s).replace(/\d+/g, '#');
-  /** Panels that are open: folds, dialogs, things marked expanded or selected. Each as its pattern, not its copy. */
   function panels() {
     const p = new Set();
     document.querySelectorAll('dialog[open]').forEach((d) => p.add('dialog' + (d.id ? '#' + d.id : '')));
     document.querySelectorAll('details[open]').forEach((d) => { if (shown(d)) p.add('fold.' + tmpl(Array.from(d.classList).join('.') || labelOf(d.querySelector('summary') || d))); });
     document.querySelectorAll('[aria-expanded="true"]').forEach((e) => { if (shown(e) && !e.matches(window.__ccFoldSkip || 'button.house-fold')) p.add('open:' + (typeof e.className === 'string' && e.className.trim() ? e.tagName.toLowerCase() + '.' + e.className.trim().split(/\s+/).join('.') : cut(tmpl(labelOf(e)), 40))); });
     document.querySelectorAll('[role="tab"][aria-selected="true"]').forEach((e) => { if (shown(e)) p.add('tab:' + cut(tmpl(labelOf(e)), 40)); });
-    // a tab or chip that is lit by its class only (no aria state): the view it shows is a screen of its own
     document.querySelectorAll('button.on, button.active, button.selected, button.current').forEach((e) => { if (shown(e) && !e.closest('header, nav')) p.add('lit:' + cut(tmpl(labelOf(e)), 40)); });
     return Array.from(p).sort();
   }
@@ -134,8 +116,7 @@ function inPage() {
   }
   function state() {
     let hash = location.hash || '';
-    if (/^#[\w-]+$/.test(hash) && document.getElementById(hash.slice(1))) hash = '';   // a jump to a place on the same screen is not another screen
-    // one screen per kind of address: #/dogs/sub-a01 and #/dogs/sub-a02 are the same screen with a different dog in it
+    if (/^#[\w-]+$/.test(hash) && document.getElementById(hash.slice(1))) hash = '';
     return { path: location.pathname, hash, heading: heading(), panels: panels(), key: [location.pathname.replace(/index\.html$/, ''), tmpl(hash), tmpl(heading()), panels().join(',')].join(' | ') };
   }
   function textHash() {
@@ -148,14 +129,12 @@ function inPage() {
     return h;
   }
   let before = null;
-  /** Called just before a tap. */
   function arm(i) {
     const el = document.querySelector('[data-cc="' + i + '"]');
     muts = 0; nav.n = 0;
     before = { st: state(), hash: textHash(), y: Math.round(scrollY), x: Math.round(scrollX), focus: document.activeElement, el, title: document.title };
     return !!el;
   }
-  /** Called after the page has gone quiet. Says what the tap changed. */
   function after() {
     const st = state(), b = before || { st, hash: 0, y: 0, x: 0 };
     const f = document.activeElement, el = b.el;
@@ -163,7 +142,6 @@ function inPage() {
     return { st, same: st.key === b.st.key, textSame: textHash() === b.hash, muts, nav: nav.n, scrolled: Math.abs(scrollY - b.y) > 4 || Math.abs(scrollX - b.x) > 4,
       focusMoved, focus: f && f !== document.body ? (f.id ? '#' + f.id : f.tagName.toLowerCase()) : '', gone: !!el && !el.isConnected };
   }
-  /** Resolves when nothing has changed for `q` ms (or after `max`). */
   function quiet(q, max) {
     const t0 = performance.now();
     return new Promise((res) => { (function tick() {
@@ -172,7 +150,6 @@ function inPage() {
       setTimeout(tick, 25);
     })(); });
   }
-  /** Wording faults in what is on screen now. */
   function wording() {
     const out = [], add = (type, text) => out.push({ type, text: cut(norm(text), 120) });
     const roots = [document.querySelector('main') || document.body].concat(Array.from(document.querySelectorAll('header, nav, dialog[open], #next')));
@@ -200,7 +177,6 @@ function inPage() {
     if (de.scrollWidth > de.clientWidth + 1) add('the page scrolls sideways', (de.scrollWidth - de.clientWidth) + 'px wider than the screen');
     return out;
   }
-  /** Finds a control again after the screen was redrawn, brings it into view and gets ready for the tap. */
   function prep(sig, k) {
     const c = controls().find((x) => x.sig === sig && x.k === k) || null;
     if (c) { const el = document.querySelector('[data-cc="' + c.i + '"]'); if (!c.off) el.scrollIntoView({ block: 'center', inline: 'nearest' }); arm(c.i); }
@@ -210,39 +186,19 @@ function inPage() {
 }
 
 const FLAGS = ['LOOP', 'DEAD', 'ERROR', 'ESCAPE', 'WORDING'];
-const TAP_MS = 6000;   // how long a tap may wait for its control to be ready (a busy test machine is slow, not broken)
-const ASK_MS = 10000;  // how long the page may take to answer one question from the walk
-const SETTLE_MS = 15000;   // the longest one wait for the page to go quiet
-const OPEN_MS = 45000;     // the longest one cold load of a screen
-/** A promise that gives up: nothing in the walk may wait for ever. */
+const TAP_MS = 6000;
+const ASK_MS = 10000;
+const SETTLE_MS = 15000;
+const OPEN_MS = 45000;
 const capped = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error('no answer in ' + ms + 'ms: ' + what)), ms); })]).finally(() => clearTimeout(t)); };
 const short = (s, n = 70) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 
-/**
- * One crawl of one site.
- * site = {
- *   name, page, guard (from tests/support/test.js),
- *   roots: [route...]                      the screens to start from
- *   open(route)                            go to that screen from cold (reload) and wait until it is ready
- *   addr(state) -> route | ''              optional: the route that opens this screen by its own address ('' = it has none).
- *                                          A screen found one tap deep is then opened by address, not by replaying the taps
- *   redraw(route)                          optional, quick way back to that screen with no reload; return false if it cannot
- *   busy()                                 optional, true while the page is still loading its data
- *   inSite(url) -> name | ''               other pages of ours a tap may open ('' = not ours)
- *   hidden(state) -> bool                  a screen that is switched off for now: reaching it is noted, not judged
- *   elsewhere(state) -> bool               optional: a screen another walk starts from; the tap is recorded, the screen is not walked here
- *   skip(control) -> reason | ''           controls left for their own check (sign out)
- *   wordingOk(w, state), deadOk(control)   optional, known and explained exceptions
- *   maxDepth, maxStates, typeText, typeDate
- * }
- * Returns { name, rows, findings, reachable, tapped, sameAddress, states, skipped, slow, missed }.
- */
 async function crawl(site) {
   const { page, guard } = site;
   const maxDepth = site.maxDepth == null ? 2 : site.maxDepth, maxStates = site.maxStates || 14;
   const rows = [], findings = [], reach = new Map(), done = new Set(), skipped = [], slow = [];
-  const visited = new Map();           // screen key -> how it was reached
-  const sampled = new Map();           // kind of control on a screen -> how many copies were left untapped
+  const visited = new Map();
+  const sampled = new Map();
   const wordSeen = new Set();
   let sameAddress = 0, retried = 0;
   const ev = { dialog: 0, popup: [], chooser: 0, download: 0 };
@@ -251,7 +207,6 @@ async function crawl(site) {
   const onChooser = () => { ev.chooser++; };
   const onDownload = () => { ev.download++; };
   page.on('dialog', onDialog); page.on('popup', onPopup); page.on('filechooser', onChooser); page.on('download', onDownload);
-  // CRAWL_LOG=<file> writes one line per tap as it happens (for working on the crawler itself); CRAWL_MAX=<n> stops after n taps.
   const fsLog = process.env.CRAWL_LOG ? require('fs') : null;
   const log = (t) => { if (fsLog) fsLog.appendFileSync(process.env.CRAWL_LOG, new Date().toISOString().slice(11, 19) + ' [' + site.name + '] ' + t + '\n'); };
   const cap = Number(process.env.CRAWL_MAX || 0);
@@ -263,7 +218,6 @@ async function crawl(site) {
     return out.filter((t) => !/Service Worker registration blocked/.test(t) && !(site.allowConsole || []).some((re) => re.test(t)));
   };
   const newOutside = () => { const o = guard.outside.slice(outAt); outAt = guard.outside.length; return o; };
-  /** Wait until the page has stopped changing (and has finished loading its data). */
   const ask = (fn, arg, what) => capped(page.evaluate(fn, arg), ASK_MS, what || 'the page');
   let waits = 0;
   const settle = async (q = 70) => {
@@ -289,30 +243,26 @@ async function crawl(site) {
   const act = (c) => capped(act0(c), TAP_MS + 4000, 'the tap');
   async function act0(c) {
     const loc = page.locator('[data-cc="' + c.i + '"]');
-    if (c.off) { await loc.focus(); return page.keyboard.press('Enter'); }   // off the side of the screen until focused (skip link): keyboard only
+    if (c.off) { await loc.focus(); return page.keyboard.press('Enter'); }
     if (c.kind === 'row') return loc.evaluate((e) => e.click());
     if (c.kind === 'select') return loc.evaluate((e) => { const o = Array.from(e.options).filter((x) => !x.disabled); const next = o.find((x) => x.value !== e.value && x.value !== '') || o.find((x) => x.value !== e.value); if (next) { e.value = next.value; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } });
     if (/^input:(checkbox|radio|button|submit|image|reset)$/.test(c.kind)) return loc.click({ timeout: TAP_MS });
     if (/^input:/.test(c.kind)) {
       const type = c.kind.slice(6);
       const v = type === 'date' ? (site.typeDate || '2026-03-09') : type === 'number' || type === 'range' ? '18.5' : type === 'time' ? '09:30' : type === 'password' ? 'sample-code' : type === 'url' ? 'https://example.test/sample' : (site.typeText || 'a');
-      await loc.fill(v, { timeout: TAP_MS });   // fill sends input and change; the page may redraw and the box may be gone
+      await loc.fill(v, { timeout: TAP_MS });
       return page.evaluate((i) => { const e = document.querySelector('[data-cc="' + i + '"]'); if (e) e.blur(); }, c.i);
     }
     return loc.click({ timeout: TAP_MS });
   }
-  /** Back to a screen: its route, then the taps that opened this panel. force = reload the page first. */
   async function goto(node, force) {
     const away = pathOf(page.url()) !== home;
     let ok = false;
-    // a screen with its own address is opened by that address; only a panel with no address is rebuilt by its taps
     const route = node.addr || node.route, steps = node.addr ? [] : node.path;
     if (!force && !away && !cold && site.redraw) { try { ok = (await capped(Promise.resolve(site.redraw(route)), ASK_MS, 'redraw')) !== false; } catch (e) { ok = false; } }
     if (!ok) { await capped(site.open(route), OPEN_MS, 'opening ' + route); await settle(); } else await settle(30);
     cold = false;
     for (const step of steps) {
-      // A fresh page may draw the screen once more after it has gone quiet (late photos, late tables), and the marks the walk
-      // put on the controls go with the old drawing. So: find the control, tap it, and if it has gone, find it again.
       let ok2 = false, why = '';
       for (let tries = 0; tries < 4 && !ok2; tries++) {
         const got = await ask(([sig, k]) => window.__cc.prep(sig, k), [step.sig, step.k], 'finding a control');
@@ -337,17 +287,16 @@ async function crawl(site) {
   }
   const subset = (a, b) => a.every((x) => b.includes(x));
 
-  const only = (process.env.CRAWL_ROOTS || '').split(',').filter(Boolean);   // for working on the crawler: start screens to keep
+  const only = (process.env.CRAWL_ROOTS || '').split(',').filter(Boolean);
   const queue = site.roots.filter((r) => !only.length || only.includes(r)).map((r) => ({ route: r, path: [], depth: 0 }));
   const perRoot = {}, rootHad = new Map();
-  let chromeDone = !!site.noChrome;   // the top bar and bottom tabs are walked once: a second part of the same walk leaves them out
+  let chromeDone = !!site.noChrome;
   while (queue.length) {
     const node = queue.shift();
     let cur = null;
     try {
       if (!(await goto(node, true))) { log('LOST screen · ' + (node.addr || node.route) + ' · its taps could not be replayed'); continue; }
       cur = await here();
-      // opened by address but it is not the screen the tap showed (the address is not enough): rebuild it by its taps
       if (node.addr && node.expect && cur.st.key !== node.expect && !(cur.st.hash === node.expectSt.hash && cur.st.heading === node.expectSt.heading)) {
         log('ADDR ' + node.addr + ' opens ' + cur.st.key + ' · the tap showed ' + node.expect + ' · replaying the taps');
         node.addr = '';
@@ -364,7 +313,6 @@ async function crawl(site) {
     await wordingCheck(cur.st);
     newErrors().forEach((e) => flag('ERROR', screen, '(on opening)', e));
     newOutside().forEach((u) => flag('ESCAPE', screen, '(on opening)', 'called ' + u.replace(/[?#].*$/, '')));
-    // A panel opened on a screen already walked: only what the panel added is new. The rest are the same controls.
     const seg = cur.st.hash.split('/').slice(0, 2).join('/');
     const had = node.had || (node.depth ? rootHad.get(seg) : null);
     const list = cur.controls.filter((c) => !c.disabled && !(had && had.has(c.sig + ' ¦ ' + c.k)));
@@ -377,7 +325,7 @@ async function crawl(site) {
     const tapOne = async (c0) => {
       if (cap && taps >= cap) return;
       const id = (c0.chrome ? 'chrome' : key) + ' ¦ ' + c0.sig + ' ¦ ' + c0.k;
-      if (c0.chrome && site.noChrome && !node.chromePanel) return;   // the top bar and tabs belong to the first part of this walk
+      if (c0.chrome && site.noChrome && !node.chromePanel) return;
       if (!reach.has(id)) reach.set(id, { screen, label: c0.label, kind: c0.kind });
       if (done.has(id)) return;
       if (c0.chrome && !withChrome && !node.chromePanel) return;
@@ -390,13 +338,11 @@ async function crawl(site) {
         rows.push({ screen, control: c0.label, kind: c0.kind, target: c0.special ? c0.href.split(':')[0] + ' link' : 'outside link (new tab)', result: 'checked, not followed' });
         return;
       }
-      // Many copies of one kind (the days of a year calendar): the first two and the last of each kind are tapped, the rest are counted apart.
       const grp = site.sample && site.sample(c0);
       if (grp) {
         const all = list.filter((x) => site.sample(x) === grp), at = all.indexOf(c0);
         if (at > 1 && at !== all.length - 1) { reach.delete(id); sampled.set(grp + ' ¦ ' + key, (sampled.get(grp + ' ¦ ' + key) || 0) + 1); return; }
       }
-      // A plain link to an address already tapped on this screen goes to the same place: checked for its name, not tapped again.
       const plain = c0.kind === 'link' && /^#/.test(c0.href) && !c0.sig.split('|')[3];
       if (plain && hrefDone.has(c0.href)) {
         done.add(id); sameAddress++;
@@ -408,7 +354,6 @@ async function crawl(site) {
       for (const force of [false, true]) {
         if (!(await goto(node, force))) continue;
         got = await ask(([sig, k]) => window.__cc.prep(sig, k), [c0.sig, c0.k], 'finding a control');
-        // the same address and heading is the same screen, even when the page remembers a fold from an earlier tap
         if (got.c && (got.st.key === key || (got.st.hash === cur.st.hash && got.st.heading === cur.st.heading))) break;
         got = null;
       }
@@ -459,14 +404,13 @@ async function crawl(site) {
         const hid = site.hidden && site.hidden(aft.st);
         const closing = aft.st.hash === got.st.hash && aft.st.heading === got.st.heading && subset(aft.st.panels, got.st.panels);
         result = hid ? 'opens a screen that is switched off for now' : closing ? 'closes it' : 'opens it';
-        const theirs = !!(site.elsewhere && site.elsewhere(aft.st));   // another start screen: walked by its own walk
+        const theirs = !!(site.elsewhere && site.elsewhere(aft.st));
         if (!hid && !closing && !theirs && !visited.has(aft.st.key) && node.depth < maxDepth && !queue.some((q) => q.expect === aft.st.key)
           && (perRoot[node.route] || 0) + queue.filter((q) => q.route === node.route && q.depth > 0).length < maxStates) {
           queue.push({ route: node.route, path: (node.addr ? [] : node.path).concat([{ sig: c.sig, k: c.k }]), depth: node.depth + 1, expect: aft.st.key, expectSt: aft.st,
             addr: (aft.st.hash !== got.st.hash && site.addr && site.addr(aft.st)) || '', from: node.addr || '',
             had: aft.st.hash === got.st.hash ? mine : null, chromePanel: c.chrome });
         }
-        // follow the same item for up to 4 taps: it must not come back to a screen already seen on the way
         if (!hid && !closing && c.subject && !c.chrome) {
           const trail = [key, aft.st.key], subj = c.subject.toLowerCase(), used = new Set([c.label]);
           for (let hop = 0; hop < 3; hop++) {
@@ -493,21 +437,18 @@ async function crawl(site) {
       else if (c.chosen) { target = 'same screen'; result = 'already chosen'; }
       else if (site.deadOk && site.deadOk(c, aft)) { target = 'same screen'; result = site.deadOk(c, aft); }
       else if (!twice.has(id)) {
-        // "Nothing happened" is only believed the second time, from a fresh load: a tap that landed while the page was
-        // still drawing is the walk's doing, not a dead control. A control that is really dead stays dead and is reported.
         twice.add(id); done.delete(id); taps--; cold = true;
         log('AGAIN ' + c.kind + ' · ' + short(c.label, 60) + ' · nothing changed: tapping once more from a fresh load');
         return tapOne(c0);
       }
       else { flag('DEAD', screen, c.label || c.sig, 'nothing changed and nothing was said (' + c.kind + ' ' + c.tag + ')'); result = 'nothing happens'; target = 'same screen'; }
       if (plain && !hrefDone.has(c.href)) hrefDone.set(c.href, { label: c.label, target });
-      if (site.dirty && site.dirty(c)) cold = true;   // this tap changed something the page remembers: start the next one from a fresh load
+      if (site.dirty && site.dirty(c)) cold = true;
       rows.push({ screen, control: c.label || '(no name)', kind: c.kind, target, result, ms });
       log((Date.now() - t0) + 'ms settle ' + ms + ' · ' + c.kind + ' · ' + short(c.label, 50) + ' -> ' + short(target, 50) + ' · ' + result);
       if (ev.popup.length > 20) ev.popup.length = 0;
     };
     for (const c0 of list) {
-      // one control that the page never answers costs seconds and is reported; it does not stop the walk
       try { await tapOne(c0); } catch (e) {
         const msg = String(e.message || e).split('\n')[0].slice(0, 140);
         log('HUNG ' + c0.kind + ' · ' + short(c0.label, 60) + ' · ' + msg);
@@ -519,13 +460,11 @@ async function crawl(site) {
   page.off('dialog', onDialog); page.off('popup', onPopup); page.off('filechooser', onChooser); page.off('download', onDownload);
   const reachable = reach.size, tapped = Array.from(reach.keys()).filter((k) => done.has(k)).length;
   const left = Array.from(sampled.values()).reduce((a, b) => a + b, 0);
-  // per screen, so walks that met the same screen from two start screens can be added without counting it twice
   const per = new Map();
   reach.forEach((v, k) => { const o = per.get(v.screen) || { screen: v.screen, reachable: 0, tapped: 0 }; o.reachable++; if (done.has(k)) o.tapped++; per.set(v.screen, o); });
   return { name: site.name, screens: Array.from(per.values()), waits, rows, findings, reachable, tapped, sameAddress, retried, sampledLeft: left, sampledKinds: sampled.size, states: visited.size, skipped, slow, missed: Array.from(reach.entries()).filter(([k]) => !done.has(k)).map(([, v]) => v) };
 }
 
-/** One line a person can read in the test output. */
 function summary(r) {
   const n = (t) => r.findings.filter((f) => f.type === t).length;
   const pct = r.reachable ? (100 * r.tapped / r.reachable) : 100;
@@ -536,3 +475,4 @@ function summary(r) {
 function findingLines(r) { return r.findings.map((f) => `${f.type} · ${f.screen} · ${short(f.control, 60)} · ${f.detail}`); }
 
 module.exports = { inPage, crawl, summary, findingLines, FLAGS, short };
+

@@ -1,6 +1,3 @@
-// Hard rule: trash only, never empty the bin.
-// Moving a file into the bin is allowed. Permanently deleting a shared-drive bin is not.
-// That old action was a DELETE to Drive's /trash endpoint (files.emptyTrash).
 const { test, expect } = require('../support/test');
 const { openView } = require('../support/tabs');
 const { test: fileTest } = require('@playwright/test');
@@ -9,8 +6,6 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
-// Words that must not come back in a page. Matched exactly, so "an empty bin"
-// (a bin with nothing in it) and the Dropbox "open Deleted files" link are left alone.
 const PHRASES = ['emptyTrash', 'Empty bin'];
 
 function pageSources() {
@@ -25,7 +20,6 @@ function pageSources() {
   return out.sort();
 }
 
-// The removed call looked like: apiCall('DELETE', API + '/trash?driveId=' + ...)
 function deleteTrashSnippets(text) {
   return text.match(/DELETE[\s\S]{0,180}\/trash\b|\/trash\b[\s\S]{0,180}DELETE/g) || [];
 }
@@ -76,7 +70,6 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
     await assertClean(label + ' (rendered)');
   }
 
-  // Main dashboard. Sections stay on this page, so they are opened without a reload.
   await open('./', 'Main dashboard');
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
@@ -87,16 +80,14 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
     await expect(page.locator('#view')).toHaveAttribute('data-route', hash);
     await assertClean('Main dashboard ' + hash);
   }
-  // The bin list is where the old button lived. Open one shared drive's bin.
   await page.evaluate(() => { location.hash = '#/bin'; });
-  await page.locator('#binCard > summary').click(); // Already in the bin is folded closed by default (stage 5)
+  await page.locator('#binCard > summary').click();
   const binJump = page.locator('[data-action="foldjump"][data-key="bin-drv-alpha1"]');
   await expect(binJump).toBeVisible();
   await binJump.click();
   await expect(page.locator('[data-fold="bin-drv-alpha1"]')).toHaveJSProperty('open', true);
   await assertClean('Main dashboard bin list');
 
-  // CD Hub, all ten sections. The home-page sign-in is already valid here.
   await open('cdhub/', 'CD Hub');
   const cdSignIn = page.locator('#signinbtn');
   if (await cdSignIn.count()) {
@@ -110,8 +101,6 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
     await assertClean('CD Hub ' + id);
   }
 
-  // Money Hub, all six sections, plus an entity page and a to-do page.
-  // The same sign-in is still valid, so the button is not shown again.
   await open('money/', 'Money Hub');
   const moneySignIn = page.locator('#signInBtn');
   if (await moneySignIn.isVisible()) {
@@ -125,9 +114,9 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
     await assertClean('Money Hub ' + hash);
   }
 
-  // Shared money code, loaded by the dashboard tile and by Money Hub.
   const core = await page.goto('money/core.js');
   expect(core.status()).toBe(200);
   await assertClean('money/core.js', await core.text());
   expect(deletes).toEqual([]);
 });
+

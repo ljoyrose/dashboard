@@ -1,7 +1,3 @@
-// TidyUp stage 7 done-test (dashboard half): the Bin page Log reads RUN-LOG.csv.
-// Last 7 days of runs, newest first, in UK time; lessons listed; "No runs logged yet" when the file is
-// absent, unreadable or not set up; a failed read never breaks or blocks the Bin page.
-// Pretend Drive only; every id below is made up. config.js ships the folder id empty, so the tests set one.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
 
@@ -15,7 +11,6 @@ const signIn = async (page) => {
   await page.locator('#signInBtn').click();
   await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
 };
-// Point the page at a pretend RUN-LOG folder (the real config.js keeps a placeholder).
 const withFolder = (page) => page.route('**/config.js', async (route) => {
   const res = await route.fetch();
   const body = (await res.text()) + "\nwindow.DASH_CONFIG.home.runLogFolderId = '" + FOLDER + "';\n";
@@ -34,9 +29,8 @@ const openLog = async (page) => {
   await expect(page.locator('#logCard')).toHaveJSProperty('open', true);
   return page.locator('#runLog');
 };
-// UK wall-clock HH:MM for a moment, worked out here (not by the page).
 const ukHm = (ms) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms));
-const ukNaive = (ms) => { // "YYYY-MM-DD HH:MM" as a UK clock shows it (no offset in the cell)
+const ukNaive = (ms) => {
   const p = {}; new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(ms)).forEach((x) => { p[x.type] = x.value; });
   return p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute;
 };
@@ -68,7 +62,7 @@ test.describe('Bin page Log reads RUN-LOG (stage 7)', () => {
     await expect(rows.nth(0)).toContainText(/\b(GMT|BST)\b/);
     await expect(rows.nth(1)).toContainText('drive-sweep');
     await expect(rows.nth(1)).toContainText('Live (mark)');
-    await expect(rows.nth(1)).toContainText(ukHm(t2)); // no offset in the cell: read as UK time
+    await expect(rows.nth(1)).toContainText(ukHm(t2));
     await expect(rows.nth(1).locator('.mtag')).toHaveText('Work My Drive');
     await expect(rows.nth(2)).toContainText('bin-guard');
     await expect(rows.nth(2)).toContainText('Live (trash)');
@@ -123,13 +117,11 @@ test.describe('Bin page Log reads RUN-LOG (stage 7)', () => {
     guard.world.failWith = { status: 500, reason: 'backendError' };
     await withFolder(page);
     const log = await openLog(page);
-    // A 500 is retried 3 times with back-off (toolkit.js WAITS 1+2+4 s plus jitter) before the read counts as failed.
     await expect(log.locator('[data-runlog-none]')).toHaveText('No runs logged yet.', { timeout: 20000 });
     await expect(page.locator('#logCard .fail, #logCard .res.bad')).toHaveCount(0);
     await expect(page.locator('#needsNow')).toContainText('1 file ready for you to approve');
     await expect(page.locator('#needsNow')).toContainText('0 problems');
     expect(guard.world.calls.some((c) => c.path.includes(LOG_ID))).toBe(true); // it did try
-    // The rest of the page still bins.
     page.on('dialog', (d) => d.accept());
     await page.locator('#sweepCard li:has([title="ZZ_DELETE_ready.txt"]) input').check();
     const btn = page.locator('#sweepCard [data-action="sweep"]');
@@ -139,3 +131,4 @@ test.describe('Bin page Log reads RUN-LOG (stage 7)', () => {
     await expect.poll(() => guard.world.byId('zz-ready').trashed).toBe(true);
   });
 });
+

@@ -15,7 +15,6 @@
       + (tabs || TABS).map(function (t) { return 'ranges=' + encodeURIComponent(rangeOf(t)); }).join('&');
   }
 
-  // Plain words for a Google error, the same style as the other hubs.
   function why(status, msg) {
     msg = String(msg || '');
     if (status === 401) return 'Sign-in expired. Sign in again.';
@@ -26,8 +25,6 @@
     return 'Google said ' + status + (msg ? ': ' + msg : '');
   }
 
-  // load({ sheetId, token, fetch }) -> Promise<{ ok, tabs: { Enquiries: { ok, problems, rows }, ... }, problems }>
-  // fetch defaults to DashKit.googleFetch (retries busy answers), then window.fetch.
   function load(o) {
     o = o || {};
     if (!o.sheetId) return Promise.resolve({ ok: false, problems: ['Not set up yet: no enquiries sheet id in config.js.'], tabs: {} });
@@ -53,3 +50,4 @@
   root.EnquiriesReader = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+

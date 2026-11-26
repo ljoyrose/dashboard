@@ -1,5 +1,3 @@
-// Stage 11: deposits and balances report. Run: node --test tests/enquiries/deposits.test.js
-// Invented ledger and Xero export only (tests/fixtures/enquiries/deposits.js). Report only: nothing is sent or paid.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -67,3 +65,4 @@ test('"deposit paid" request: known key shape only, never an amount', () => {
   assert.equal(C.depositPaidRequest('nope').ok, false);
   assert.equal(C.depositPaidRequest('K-00000000000000ab', 'D-bad').ok, false);
 });
+

@@ -1,5 +1,4 @@
 'use strict';
-/** Breed Better calculator. All animals, tests and grades here are invented. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { score, pickScheme, validateScheme, parseMatch, addMonths } = require('../../breed-better/score');
@@ -8,7 +7,6 @@ const band = (id, kind) => ({ id, kind });
 const crit = (id, band_id, extra) => Object.assign({ id, band_id, label: id, evidence_source: 'exam', evidence_match: 'kind=' + id, answer_field: 'result', date_field: 'on' }, extra);
 const pt = (id, criterion_id, answer_match, points, gate_outcome) => ({ id, criterion_id, answer_match, points, gate_outcome });
 
-/** One rule shape, three unlike species: only the rows differ. */
 function ruleset(gateKey, passWord, scoreKey, topWord) {
   return {
     scheme: { id: 's' + gateKey },
@@ -72,10 +70,8 @@ test('a record saved with a time counts on its day; a time is never read as no d
     assert.equal(score(dogInput(rows, { asOf: '2026-06-02' })).gate_result, 'unverified', when);   // lasts 12 months from its day
     assert.equal(score(dogInput(rows, { asOf: '2025-05-31' })).gate_result, 'unverified', when);   // not yet recorded
   }
-  // the newest by day wins, whatever the time
   const two = [exam('e1', 'a1', 'hip', 'odd', '2025-01-01T23:59:00Z'), exam('e2', 'a1', 'hip', 'sound', '2025-06-01T00:01:00Z')];
   assert.equal(score(dogInput(two, { asOf: '2026-01-01' })).lines[0].evidence_id, 'e2');
-  // not a date at all stays undated
   assert.equal(score(dogInput([exam('e1', 'a1', 'hip', 'sound', '13/08/2026')])).lines[0].unknown_reason, 'undated');
 });
 
@@ -198,7 +194,6 @@ test('a recorded answer that cannot be scored is unverified, never 0', () => {
 });
 
 
-/* Due level (document Stage 3, three axes): Due sits beside the verdict and changes it only when the row says so. */
 const dueSet = (flag, soon) => Object.assign({}, DOG, { criteria: [crit('hip', 'g', { valid_months: '12', lapsed_affects_verdict: flag, due_soon_days: soon || '' }), crit('eye', 'p')] });
 const dueInput = (flag, asOf, soon) => Object.assign({}, dueSet(flag, soon), { subject: { id: 'a1' }, asOf,
   evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', '2025-03-02'), exam('e2', 'a1', 'eye', 'clear', '2025-03-02')] } });
@@ -237,7 +232,6 @@ test('due: bad row values are refused', () => {
   assert.match(errs, /eye: due_soon_days needs valid_months/);
 });
 
-/* Target: a number, or a percent of the points this animal could earn. */
 const tInput = (target_points, target_is, eyeWord, rows) => Object.assign({}, DOG, { scheme: { id: 's', target_points, target_is }, subject: { id: 'a1' }, asOf: '2026-06-01',
   evidence: { exam: rows || [exam('e1', 'a1', 'hip', 'sound', '2026-01-01'), exam('e2', 'a1', 'eye', eyeWord, '2026-01-01')] } });
 
@@ -386,7 +380,7 @@ test('final only (Design Doc: "latest final result"): a preliminary record shows
   const hip = pre.lines.find((l) => l.criterion_id === 'hip'), eye = pre.lines.find((l) => l.criterion_id === 'eye');
   assert.deepEqual([hip.gate_outcome, hip.unknown_reason, hip.held_then, hip.answer_then, hip.evidence_id], ['unverified', 'not_accepted', 'preliminary', 'sound', 'e1']);
   assert.deepEqual([eye.points, eye.unknown_reason, eye.held_then], ['', 'not_accepted', 'preliminary']);   // latest held record
-  assert.equal(pre.gate_result, 'unverified');   // never Pass on a preliminary, never Fail either
+  assert.equal(pre.gate_result, 'unverified');
   const fin = run([ex('e1', 'hip', 'sound', '2026-01-01', 'preliminary'), ex('e4', 'hip', 'sound', '2026-03-01', 'final')]);
   assert.equal(fin.gate_result, 'pass');
   assert.equal(run([ex('e5', 'eye', 'clear', '2026-01-01', 'final')]).lines.find((l) => l.criterion_id === 'hip').unknown_reason, 'no_record');
@@ -401,6 +395,7 @@ test('star lines, both kinds from rows alone (9 Nov 2026): "must reach a standar
   assert.equal(run([exam('e1', 'a1', 'hip', 'sound', '2026-01-01'), exam('e2', 'a1', 'check', 'poor', '2026-01-01')]).gate_result, 'pass');
   assert.equal(run([exam('e1', 'a1', 'hip', 'poor', '2026-01-01'), exam('e2', 'a1', 'check', 'poor', '2026-01-01')]).gate_result, 'fail');
   const missing = run([exam('e1', 'a1', 'hip', 'sound', '2026-01-01')]);
-  assert.equal(missing.gate_result, 'unverified');   // a star missing is Unverified, never Fail
+  assert.equal(missing.gate_result, 'unverified');
   assert.equal(missing.lines.find((l) => l.criterion_id === 'check').gate_outcome, 'unverified');
 });
+

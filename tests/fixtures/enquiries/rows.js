@@ -1,5 +1,3 @@
-// Invented RR_ENQUIRIES rows for the enquiries tests. Nobody here is real: "Buyer A" style names, example.com addresses,
-// Ofcom fiction numbers (+44 7700 900xxx) and made-up refs. Shaped exactly like the Sheets API values (header row first).
 'use strict';
 const C = require('../../../enquiries/core.js');
 
@@ -28,3 +26,4 @@ module.exports = {
   peopleValues: () => values('People', people),
   values
 };
+

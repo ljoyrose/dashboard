@@ -1,5 +1,4 @@
 'use strict';
-// Dog photo upload. Invented dogs and a one-pixel picture only. The folder id here is a stand-in, not a real Drive id.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { standardEnv } = require('./harness');
@@ -32,7 +31,6 @@ function post(env, body) {
 
 function ready(props) {
   const env = standardEnv({ props: Object.assign({ DOG_PHOTOS_FOLDER_ID: 'FOLDER-PHOTOS' }, props || {}) });
-  // photo is not the last column, so a writer that used a column letter would hit `note` instead.
   withSubjects(env, 'id,tenant_id,name,photo,note', [
     'sub-test-a,ten-test,Test A,,keep',
     'sub-test-b,ten-test,Test B,,keep'
@@ -129,7 +127,7 @@ test('a Sheet is the first tab, and the photo header is used even when it is not
     ['sub-test-a', 'ten-test', 'Test A', '', 'keep'],
     ['sub-test-b', 'ten-test', 'Test B', 'old-id', 'keep']
   ]);
-  const r = post(env, photoBody(env, { code: env.codes.owner, fields: { subject_id: 'sub-test-b', mime: 'image/png', image_base64: PNG } }));
+  const r = post(env, photoBody(env, { code: env.codes.user, fields: { subject_id: 'sub-test-b', mime: 'image/png', image_base64: PNG } }));
   assert.equal(r.ok, true, r.message);
   const rows = env.rows('BLD-subject.csv');
   const photo = rows[0].indexOf('photo'), note = rows[0].indexOf('note');
@@ -161,3 +159,4 @@ test('saving switched off refuses the picture and writes nothing', () => {
   assert.equal(r.code, 'SAVE_OFF');
   assert.equal(env.photos, undefined);
 });
+

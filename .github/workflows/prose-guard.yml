@@ -1,0 +1,23 @@
+name: Prose guard
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  guard:
+    name: Prose guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Self-test
+        run: python3 tools/prose-guard/test_prose_guard.py
+        working-directory: tools/prose-guard
+      - name: Scan
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python3 tools/prose-guard/prose_guard.py --range "$BASE..$HEAD"

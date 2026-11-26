@@ -1,13 +1,4 @@
-/**
- * The save logic. Order of checks (cheapest and least revealing first):
- *   switch on? -> request shape -> who are you? -> which table? (allow-list) -> table switched on?
- *   -> may your role do this? -> repeat request? -> lock -> file + header -> lookups -> field checks
- *   -> duplicate guard -> route: appended now (direct) or queued for Lisa (pending).
- * Corrections are ALWAYS queued, never written straight in.
- */
 
-/* Save timings (17 Nov 2026: live saves took 17-127 s). Numbers only (milliseconds per step), never data or names.
- * Logged, returned with the save's answer, and the last one kept for ?status=1, so a slow save can be traced. */
 var SAVE_TIMING_ = null;
 function timing_(name, ms) {
   console.log('save timing: ' + name + ' ' + ms + ' ms');
@@ -22,7 +13,6 @@ function withLock_(fn) {
 }
 
 function tableOn_(spec) { return prop_(BLD.PROP.TABLE_ON_PREFIX + spec.key) === 'true'; }
-/** A YYYY-MM-DD date plus n whole days (calendar arithmetic, so a clock change cannot shift it). */
 function addDays_(ymd, n) {
   var p = ymd.split('-'), t = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n));
   return t.getUTCFullYear() + '-' + ('0' + (t.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + t.getUTCDate()).slice(-2);
@@ -30,13 +20,7 @@ function addDays_(ymd, n) {
 
 function todayLondon_(d) { return Utilities.formatDate(d || new Date(), BLD.TZ, 'yyyy-MM-dd'); }
 
-/**
- * Where does a new row go? Order: an explicit MODE_<key> wins. Otherwise, for dog moves (spec.movesQueue) the date
- * decides: up to and including MOVES_QUEUE_UNTIL (London) a move goes to the approvals queue, after it straight in.
- * A missing or unreadable date means "queue" (the safe side). Everything else uses the table's own default.
- */
 function modeFor_(spec, now) {
-  // Lisa 12 Nov 2026: occupancy moves go straight in for every staff code. MOVES_QUEUE_UNTIL and MODE_occupancy are ignored for moves.
   if (spec && spec.key === 'occupancy') return 'direct';
   var m = prop_(BLD.PROP.MODE_PREFIX + spec.key);
   if (m === 'direct' || m === 'pending') return m;
@@ -45,11 +29,10 @@ function modeFor_(spec, now) {
     if (!isRealDate_(until)) return 'pending';
     return todayLondon_(now) > until ? 'direct' : 'pending';
   }
-  return spec.defaultMode === 'direct' ? 'direct' : 'pending';   // nothing set = the table's own default
+  return spec.defaultMode === 'direct' ? 'direct' : 'pending';
 }
 function saveEnabled_() { return prop_(BLD.PROP.SAVE_ENABLED) === 'true'; }
 
-/** State of every pending item, folded from the append-only event log. */
 function pendingState_(records) {
   var byId = {};
   records.forEach(function (r) {
@@ -80,7 +63,6 @@ function appendPendingEvent_(ev) {
   store_append_(BLD.PENDING_FILE, BLD.PENDING_COLUMNS, rowValues_(BLD.PENDING_COLUMNS, full), p);
 }
 
-/** If the read-back check failed, record it in the approvals queue (append-only) so Lisa can see it. */
 function logWriteFailure_(e, spec, rowId, by, now, pendingId) {
   if (!e || e.code !== 'VERIFY_FAILED') return;
   try {
@@ -102,14 +84,11 @@ function waitingRows_(pendState, spec) {
   return out;
 }
 
-/** The local day of a datetime, or '' when blank or unreadable. */
 function dupDay_(v) {
   var t = Date.parse(String(v || ''));
   return isNaN(t) ? '' : todayLondon_(new Date(t));
 }
 
-/** Is key k the same on both rows? Text compared exactly; a column the table writes as a real date (sheetTypes datetime,
- *  area_reading only) compared as the same instant, so 08:00:00+00:00 read back from a date cell equals what was sent. */
 function dupSame_(spec, k, a, b) {
   var x = a[k] || '', y = b[k] || '';
   if (x === y) return true;
@@ -119,7 +98,7 @@ function dupSame_(spec, k, a, b) {
 }
 
 function findDuplicate_(spec, clean, rows, nowMs, today) {
-  if (spec.dupSkip && spec.dupSkip(clean)) return null;          // e.g. a note added to a check already done
+  if (spec.dupSkip && spec.dupSkip(clean)) return null;
   if (spec.dupNewestBy) return newestDuplicate_(spec, clean, rows, nowMs);
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i], same = true;
@@ -127,8 +106,6 @@ function findDuplicate_(spec, clean, rows, nowMs, today) {
     for (var k = 0; k < spec.dupKey.length; k++) {
       if (!dupSame_(spec, spec.dupKey[k], r, clean)) { same = false; break; }
     }
-    // dupDateCols: these datetimes must fall on the same local day to be a repeat (paper catch-up: a week of one job
-    // for one room, typed in one go, is seven records, not one record and six duplicates; SOPJOBS S2, 14 Nov 2026)
     for (k = 0; same && spec.dupDateCols && k < spec.dupDateCols.length; k++) {
       if (dupDay_(r[spec.dupDateCols[k]]) !== dupDay_(clean[spec.dupDateCols[k]])) same = false;
     }
@@ -141,11 +118,6 @@ function findDuplicate_(spec, clean, rows, nowMs, today) {
   return null;
 }
 
-/**
- * dupNewestBy (15 Nov 2026, TEMPS round toggle): a tap is a repeat only of the NEWEST record for the same thing
- * (the dupNewestBy columns, same dupDateCols day) inside the window, and only when that newest record matches the
- * whole dupKey. So present, not here, present saves three records; present, present is one record and a repeat.
- */
 function newestDuplicate_(spec, clean, rows, nowMs) {
   var best = null, bestT = -Infinity, k;
   for (var i = 0; i < rows.length; i++) {
@@ -160,7 +132,7 @@ function newestDuplicate_(spec, clean, rows, nowMs) {
     if (!same) continue;
     var t = Date.parse(r[spec.dupTimeCol]);
     if (isNaN(t) || Math.abs(nowMs - t) >= BLD.LIMITS.DUP_WINDOW_MIN * 60000) continue;
-    if (t >= bestT) { best = r; bestT = t; }                     // ties: the later row in the file is newer
+    if (t >= bestT) { best = r; bestT = t; }
   }
   if (!best) return null;
   for (k = 0; k < spec.dupKey.length; k++) {
@@ -169,27 +141,16 @@ function newestDuplicate_(spec, clean, rows, nowMs) {
   return best;
 }
 
-/**
- * Readings (Lisa 11 Nov 2026): no 7-day limit for any role. A table with ageCap takes a period_start back as far as
- * its section's records are kept. Returns { oldestMs, keepYears, field } for those tables, else null (the 7-day rule).
- * The kept years are the retention row in force on the record's own date (Lisa 12 Nov 2026), else today's.
- */
 function ageCap_(spec, tenant, nowMs, fields) {
   var cap = spec.ageCap;
   if (!cap) return null;
   var own = String((fields && fields[cap.field]) || '').slice(0, 10);
   var day = /^\d{4}-\d{2}-\d{2}$/.test(own) ? own : Utilities.formatDate(new Date(nowMs), BLD.TZ, 'yyyy-MM-dd');
   var years = retentionYears_(cap.retentionSection, tenant, day), oldest = new Date(nowMs);
-  oldest.setUTCFullYear(oldest.getUTCFullYear() - years);   // the same date and time, that many years ago
+  oldest.setUTCFullYear(oldest.getUTCFullYear() - years);
   return { oldestMs: oldest.getTime(), keepYears: years, field: cap.field };
 }
 
-/**
- * Rows in force on a day (Lisa 12 Nov 2026: every limit is a dated, editable row; a past record is judged by the row
- * in force on its own date). The start is fromKey (default from_date); a blank or missing start = in force from
- * always, a blank or missing to_date = no end. Both ends count (inclusive), compared as YYYY-MM-DD, so a missing
- * column is safe before the header has it. The same reading as BLDCapacity.inForce in cdhub/staff/lib/capacity.js.
- */
 function rowsInForce_(rows, ymd, fromKey) {
   var day = String(ymd || '').slice(0, 10), fk = fromKey || 'from_date';
   function d(v) { v = String(v || '').trim().slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ''; }
@@ -199,7 +160,6 @@ function rowsInForce_(rows, ymd, fromKey) {
   });
 }
 
-/** Of the rows in force, the one that started last (a row with no start ranks lowest; a tie goes to the later row). */
 function latestInForce_(rows, ymd, fromKey) {
   var fk = fromKey || 'from_date', best = null;
   rowsInForce_(rows, ymd, fk).forEach(function (r) {
@@ -208,7 +168,6 @@ function latestInForce_(rows, ymd, fromKey) {
   return best;
 }
 
-/** Years a section's records are kept: its BLD-retention_setting row in force on the day, else the Config.gs default. */
 function retentionYears_(section, tenant, ymd) {
   var r = store_readSmall_(BLD.RETENTION_FILE);
   if (!r) return BLD.LIMITS.RETENTION_DEFAULT_YEARS;
@@ -220,10 +179,8 @@ function retentionYears_(section, tenant, ymd) {
   return row ? parseInt(row.keep_years, 10) : BLD.LIMITS.RETENTION_DEFAULT_YEARS;
 }
 
-/** A reading typed in more than 7 days late may never fill a slot already filled: the same room, thermometer (blank = none named) and period_start at any time is a repeat. */
 function sameSlot_(late, clean, rows, nowMs) {
   if (!clean[late.field] || Date.parse(clean[late.field]) >= nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000) return null;
-  // the slot is compared as the same instant (16 Nov 2026): 07:00Z and 08:00+01:00 are one slot
   var want = Date.parse(clean[late.field]);
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
@@ -233,7 +190,6 @@ function sameSlot_(late, clean, rows, nowMs) {
   return null;
 }
 
-/** Main entry for a save. Returns a result object or throws err_. */
 function sinkHandle_(req) {
   var now = new Date(), nowMs = now.getTime();
   if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off.');
@@ -253,12 +209,9 @@ function sinkHandle_(req) {
   var cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
 
-  // 17 Nov 2026: live saves took 17-127 s. Each save logs where its time went (no data, no names): before the lock,
-  // waiting for the lock, and the work inside it, so a slow save can be traced in Executions.
   var tLock = Date.now(), tIn = 0;
   var result = withLock_(function () {
     tIn = Date.now();
-    // 20 Nov 2026: a resend that arrived while the first try was still saving waited here; it gets the first answer.
     var inLock = cache.get('rid:' + rid);
     if (inLock) { var dup = JSON.parse(inLock); dup.repeat = true; return dup; }
     var r = (req.action === 'add_site' || req.action === 'add_session') ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs);
@@ -270,7 +223,6 @@ function sinkHandle_(req) {
   return result;
 }
 
-/** The table a save asks for, checked: allowed, switched on, and this role may do this action. */
 function sinkSpecFor_(req, who) {
   var asked = String(req.table || req.file || '');
   var spec = specFor_(asked);
@@ -283,17 +235,10 @@ function sinkSpecFor_(req, who) {
   }
   if ((req.action === 'add_site' || req.action === 'add_session') && spec.key !== 'check_log') throw err_('BAD_REQUEST', 'A whole-site tap only applies to staff checks.');
   var permAction = (req.action === 'add_site' || req.action === 'add_session') ? 'add' : req.action;
-  if (!spec.perms[permAction] || spec.perms[permAction].indexOf(who.role) < 0) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
+  if (!spec.perms[permAction] || spec.perms[permAction].indexOf(who.role) < 0) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask User.');
   return spec;
 }
 
-/**
- * MANY ADDS IN ONE REQUEST (OV12 20 Nov 2026: a round of 36 readings was 36 requests, each paying sign-in, the room-moves
- * pass and its own wait for the lock). {action:'add_many', code, items:[{request_id, table, fields}]}: signed in once,
- * one lock, each item checked and saved exactly as a single add (its own repeat checks, its own request id, remembered
- * for 6 hours like a single save, so any later resend of one item gets its first answer). One item refused does not stop
- * the rest. Returns {items:[{request_id, ok, result} or {request_id, ok:false, code, message, fields}]} in the order sent.
- */
 function sinkHandleMany_(req, now, nowMs) {
   var items = req.items;
   if (!Array.isArray(items) || !items.length || items.length > BLD.LIMITS.MAX_BATCH_ITEMS) {
@@ -314,9 +259,6 @@ function sinkHandleMany_(req, now, nowMs) {
   var tLock = Date.now(), tIn = 0;
   if (todo.length) withLock_(function () {
     tIn = Date.now();
-    // One read for the whole list (25 Nov 2026: 16 Present taps each read all 4,972 job-log rows). Plain adds to the
-    // same table are checked against the rows already accepted in this list, then written in one append. A form, a
-    // QR or a different table is written on its own, after any staged rows, so a later check still sees them.
     var held = { read: null, defer: [], extra: [] };
     function flushStaged_() {
       if (!held.defer.length) return;
@@ -353,7 +295,7 @@ function sinkHandleMany_(req, now, nowMs) {
         var known = cache.get('rid:' + rid);
         if (known) { var a = JSON.parse(known); a.repeat = true; out[i] = { request_id: rid, ok: true, result: a }; return; }
         var one = { v: 1, request_id: rid, action: 'add', table: it.table, fields: it.fields && typeof it.fields === 'object' ? it.fields : {} };
-        if (it.values && typeof it.values === 'object') one.values = it.values;   // a check's form answers go with their item (22 Nov 2026)
+        if (it.values && typeof it.values === 'object') one.values = it.values;
         var spec = sinkSpecFor_(one, who);
         var stage = one.action === 'add' && !one.values && !spec.qrKind;
         if (held.defer.length && (!stage || !sameRead_(spec, one))) flushStaged_();
@@ -363,8 +305,6 @@ function sinkHandleMany_(req, now, nowMs) {
         else {
           cache.put('rid:' + rid, JSON.stringify(r), BLD.LIMITS.REQUEST_CACHE_SEC);
           out[i] = { request_id: rid, ok: true, result: r };
-          // This item was not staged. Write any rows already accepted, then drop the read: the sheet moved,
-          // or this item was queued and the next one must not trust a read from before that decision.
           if (n0) flushStaged_(); else { held.read = null; held.extra = []; }
         }
       } catch (e) {
@@ -378,18 +318,8 @@ function sinkHandleMany_(req, now, nowMs) {
   return { status: 'many', items: out };
 }
 
-/**
- * One whole-site tap on a staff check. A job about a place (bowls) stays one line. A job about dogs (site_scope per_dog)
- * writes one line per dog named in fields.dog_ids, in one append: all of them or none. A dog is left out, and counted in
- * the answer, if it is in a room the check's not_in_areas lists, has no known room (so it cannot be shown not to be in
- * isolation), is off site, or already has this check inside the repeat-tap window.
- * A room job about dogs (target area, site_scope per_dog) works the same way for the dogs ticked in that room; a dog
- * whose latest room is another room is left out, so a tap can only cover dogs the records place there.
- */
-/** The three checks that may be stored as one session row. Anything else stays one line per dog. */
 var SESSION_TYPE_ = { 'round.presence': 1, 'round_presence': 1, 'health_check_all': 1, 'exercise_all': 1 };
 
-/** The owner's check_setting row in force on a day, or null when none has been set (today's behaviour). */
 function checkSettingFor_(typeKey, day) {
   var read = store_read_('BLD-check_setting.csv', false);
   if (!read || !read.records) return null;
@@ -397,7 +327,6 @@ function checkSettingFor_(typeKey, day) {
   return latestInForce_(rows, day, 'from_date');
 }
 
-/** Print sheet only means the paper is the record. Logged and Both still write a check_log row. No setting = logged. */
 function assertCheckMayLog_(type, day) {
   if (!type) return;
   var s = checkSettingFor_(type.type_key, day);
@@ -406,7 +335,6 @@ function assertCheckMayLog_(type, day) {
   }
 }
 
-/** One session row for Present, Health check all, and Exercise all, unless Settings says off. add_session while off is refused. */
 function sessionWanted_(type, day, action) {
   var on = !!(type && SESSION_TYPE_[type.type_key]);
   if (on) {
@@ -431,13 +359,13 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   assertCheckMayLog_(type, today0);
   var session = sessionWanted_(type, today0, req.action);
   var scopeSet = checkSettingFor_(type.type_key, today0);
-  var scope = (scopeSet && String(scopeSet.site_scope || '').trim()) || type.site_scope;   // no setting: the check's own site_scope, which is today's behaviour
+  var scope = (scopeSet && String(scopeSet.site_scope || '').trim()) || type.site_scope;
   var room = type.target === 'area' && scope === 'per_dog';
   if (type.target !== 'none' && !room && !session) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check is not a whole-site check.' } });
   if (room && !f.area_id) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { area_id: 'Say which room.' } });
 
   var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: f.how_recorded || ((room && !session) ? '' : 'site_tap') };
-  if (f.confirm_unusual) fields.confirm_unusual = f.confirm_unusual;   // Import (PR #770) sends this for a date 7 days or older; it is not a column
+  if (f.confirm_unusual) fields.confirm_unusual = f.confirm_unusual;
   if (room || (session && f.area_id)) fields.area_id = f.area_id;
   if (!session && scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
 
@@ -453,12 +381,11 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   var occ = store_read_(TABLES.occupancy.file, true).records.filter(function (r) { return r.tenant_id === tenant; });
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
   var ids = {}, rows = [], made = [], kept = [], left = { isolation: 0, no_room: 0, off_site: 0, repeat: 0 };
-  // A session row is one ordinary add (it reads the log itself). A per-dog tap reads the tail, not every column.
   var read = null, pool = null;
   if (!session) {
     read = appendRead_(spec, { action: 'add', fields: fields }, nowMs);
     if (!sameHeader_(read.target.header, spec.columns)) {
-      throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+      throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. User needs to check the file header.');
     }
     pool = dupRows_(read);
     fillIds_(read, ids);
@@ -496,7 +423,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
     return one;
   }
   if (!rows.length) {
-    if (left.repeat) throw err_('DUPLICATE', 'This looks like the same entry as one already saved. If that one is wrong, tell the owner.', { duplicate_of: '' });
+    if (left.repeat) throw err_('DUPLICATE', 'This looks like the same entry as one already saved. If that one is wrong, tell the user.', { duplicate_of: '' });
     throw err_('INVALID', room ? 'None of those dogs are shown in this room.' : 'None of those dogs can be covered by a whole-site tap.', { fields: { dog_ids: 'Record these dogs one at a time.' } });
   }
   try { store_appendMany_(spec.file, spec.columns, rows, read.target); }
@@ -504,14 +431,6 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   return { status: 'saved', table: spec.key, file: spec.file, id: made[0].id, ids: made.map(function (r) { return r.id; }), saved: made.length, left_out: left, at: made[0].taken_at, who: who.who };
 }
 
-/**
- * Read a table before an append. fastAppend tables (room temperatures, and the job log) do not read every column of
- * every row. The last SAVE_TAIL_ROWS rows are read in full. Every other row contributes only its id and its time,
- * and only when every row inside the repeat window sits in that tail (rows are appended, so a normal save does).
- * If a row inside the window sits higher up, the columns the repeat check compares are read for every row: still
- * not the whole sheet. A correction, or a table without fastAppend, reads every row as before.
- * Returns {target, tailOnly, fast, tailWanted, file}. Nothing is written.
- */
 function appendRead_(spec, req, nowMs) {
   var fast = !!spec.fastAppend && req && req.action === 'add' && !spec.checkAgainst;
   var fields = req && req.fields;
@@ -524,17 +443,14 @@ function appendRead_(spec, req, nowMs) {
   }
   return { target: target, tailOnly: tailOnly, fast: fast, tailWanted: tailWanted, file: spec.file };
 }
-/** Rows a duplicate check must see: the last rows in full, or every row's checked columns when the window sits higher up. */
 function dupRows_(read) {
   return read.target.tail && !read.tailOnly ? fastRecords_(read.target) : read.target.records;
 }
-/** Ids already used. A tail read still carries every id, so a new id cannot collide with an old row. */
 function fillIds_(read, ids) {
   dupRows_(read).forEach(function (r) { if (r && r.id) ids[r.id] = true; });
   if (read.tailOnly && read.target.full && read.target.full.id) read.target.full.id.forEach(function (id) { if (id) ids[id] = true; });
 }
 
-/** The columns a fast append reads for every row: id and whatever the repeat checks compare (sameSlot_ included). */
 function fastCols_(spec) {
   var c = ['id'].concat(spec.dupKey || [], spec.dupNewestBy || [], spec.dupDateCols || []);
   if (spec.dupTimeCol) c.push(spec.dupTimeCol);
@@ -543,17 +459,14 @@ function fastCols_(spec) {
   return c.filter(function (x, i) { return c.indexOf(x) === i; });
 }
 
-/** A reading for a slot more than PERIOD_MAX_AGE_HOURS old (or one that cannot be read as a time): sameSlot_ then
- *  checks every row, so the save reads every row. One hour of margin keeps this on the safe side of sameSlot_. */
 function lateSlot_(spec, fields, nowMs) {
   if (!spec.ageCap) return false;
   var v = String((fields && fields[spec.ageCap.field]) || '').trim();
-  if (!v) return false;   // no slot sent: the server stamps now
+  if (!v) return false;
   var t = Date.parse(v);
   return isNaN(t) || t < nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000 + 3600000;
 }
 
-/** Is any row ABOVE the last rows inside the repeat window (as findDuplicate_ measures it)? Then the full check runs. */
 function windowAboveTail_(spec, read, nowMs) {
   var times = read.full[spec.dupTimeCol] || [], above = read.tailFrom - 2, win = BLD.LIMITS.DUP_WINDOW_MIN * 60000;
   for (var i = 0; i < above && i < times.length; i++) {
@@ -563,7 +476,6 @@ function windowAboveTail_(spec, read, nowMs) {
   return false;
 }
 
-/** Every row of a fast read, as records holding only the columns read for every row. */
 function fastRecords_(read) {
   var cols = Object.keys(read.full), n = cols.length ? read.full[cols[0]].length : 0, out = [];
   for (var i = 0; i < n; i++) {
@@ -578,10 +490,6 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
   var tenant = prop_(BLD.PROP.TENANT_ID);
   if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
 
-  // fastAppend (16 Nov 2026, saves took ~25 s on ~31,000 rows): an add reads the last rows in full and, for the rest,
-  // only id and time when the repeat window is inside that tail. The job log uses the same read (25 Nov 2026): a
-  // Present tap was reading every column of every row. A correction still reads the whole row it points at.
-  // A list save passes `held` so the next item in the same lock reuses this read instead of reading the sheet again.
   var tRead = Date.now();
   var fast = !!spec.fastAppend && req.action === 'add' && !spec.checkAgainst;
   var tailWanted = fast && !!spec.dupTimeCol && !lateSlot_(spec, req.fields, nowMs);
@@ -595,9 +503,9 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
   }
   timing_(fast ? (tailOnly ? 'read_tail' : 'read_fast') : 'read', Date.now() - tRead);
   if (!sameHeader_(target.header, spec.columns)) {
-    throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+    throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. User needs to check the file header.');
   }
-  var all = target.tail && !tailOnly ? fastRecords_(target) : target.records;   // every row (only the checked columns after a fast read), or the last rows in full
+  var all = target.tail && !tailOnly ? fastRecords_(target) : target.records;
   var tLook = Date.now();
   var lookups = store_lookups_(spec, tenant, req.fields);
   var late = ageCap_(spec, tenant, nowMs, req.fields);
@@ -647,12 +555,12 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
     var dup = findDuplicate_(spec, v.clean, all.concat(waiting, extra), nowMs, today) || (late ? sameSlot_(late, v.clean, all.concat(waiting, extra), nowMs) : null);
     if (dup) {
       throw err_('DUPLICATE', 'This looks like the same entry as one already saved' + (dup.id ? ' (' + dup.id + ')' : '') +
-        '. If that one is wrong, tell the owner.', { duplicate_of: dup.id || '' });
+        '. If that one is wrong, tell the user.', { duplicate_of: dup.id || '' });
     }
   }
 
   var ids = {};
-  fillIds_(read, ids);   // a new id is still checked against every row, including rows above the tail
+  fillIds_(read, ids);
   extra.forEach(function (r) { if (r && r.id) ids[r.id] = true; });
   var rowId = newId_(spec.idPrefix, now);
   while (ids[rowId]) rowId = newId_(spec.idPrefix, now);
@@ -662,8 +570,6 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
   });
 
   if (!needPending) {
-    // a form's answers go in first: if the check_log row then fails, the answers point at no record and are never
-    // shown; a record is never saved with half its answers
     if (form && form.answers.length) {
       var vSpec = TABLES.check_value, vIds = {};
       form.read.records.forEach(function (r) { vIds[r.id] = true; });
@@ -677,8 +583,6 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
       catch (e) { logWriteFailure_(e, vSpec, rowId, who.who, now); throw e; }
     }
     var written = rowValues_(spec.columns, row);
-    // A list of plain adds is written once, after every item in the list has been checked. The rows accepted
-    // earlier in this list are already in `extra`, so a second tap of the same dog is still a repeat.
     if (held && held.defer && !(form && form.answers.length) && !spec.qrKind) {
       held.extra.push(row);
       var staged = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '', who: who.who };
@@ -690,10 +594,8 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
       store_append_(spec.file, spec.columns, written, target);
     } catch (e) { logWriteFailure_(e, spec, rowId, who.who, now); throw e; }
     timing_('write', Date.now() - tWrite);
-    // 15 Nov 2026 (print job, Addendum 2): a new item's QR code in the same save, when the owner's qr.on_add rule says yes.
-    // Only a first row: a correction row (corrects_id) is the same item and keeps its code.
     var qr = spec.qrKind && req.action === 'add' && !row.corrects_id ? qrOnAdd_(spec.qrKind, rowId, spec.qrSub ? String(row[spec.qrSub] || '') : '', who, now) : null;
-    var out = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '', who: who.who };  // who: the tick on the item says who did it (Lisa: every save shows a tick)
+    var out = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '', who: who.who };
     if (form) out.answers = form.answers.length;
     if (qr) out.qr = qr.qr;
     return out;
@@ -709,13 +611,6 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
   return { status: 'queued', table: spec.key, file: spec.file, id: rowId, pending_id: pid, who: who.who };
 }
 
-/**
- * A check's form answers (SOP jobs, 12 Nov 2026), sent as req.values {field_key: value} with a check_log add.
- * Checked against the check's questions in force today (BLD-check_field: the latest row per field_key with
- * effective_from on or before today, and active). Any problem goes into errors, so the whole save is refused.
- * Returns null when there is nothing to save, else {read, answers: [{field, value}]} (blank answers are not saved).
- * While check_value is switched off, answers are refused and no question is required.
- */
 function formAnswers_(req, clean, tenant, today, needPending, errors) {
   var given = req.values !== undefined && req.values !== null;
   if (given && (typeof req.values !== 'object' || Array.isArray(req.values))) { errors.values = 'The answers were not understood.'; return null; }
@@ -726,7 +621,6 @@ function formAnswers_(req, clean, tenant, today, needPending, errors) {
   if (errors.check_type_id) return null;
   var type = store_read_(TABLES.check_type.file, true).records.filter(function (r) { return r.id === clean.check_type_id && r.tenant_id === tenant; })[0];
   var fRead = store_read_(TABLES.check_field.file, false);
-  // the questions in force on the record's own day (an Earlier entry is judged by the form and limits of its day, 14 Nov 2026)
   var happened = String(clean.happened_at || '').slice(0, 10);
   if (/^\d{4}-\d{2}-\d{2}$/.test(happened) && happened < today) today = happened;
   var now = {};
@@ -754,18 +648,16 @@ function formAnswers_(req, clean, tenant, today, needPending, errors) {
     if (bad) ferr['values.' + f.field_key] = bad; else answers.push({ field: f, value: v });
   });
   if (!answers.length && !Object.keys(ferr).length) return null;
-  // the approval queue holds one row, so a form is only saved straight in, with a new record
   if (req.action !== 'add' || needPending) { errors.values = 'Form answers can only be saved straight in, with a new record.'; return null; }
   for (var k in ferr) if (Object.prototype.hasOwnProperty.call(ferr, k)) errors[k] = ferr[k];
   if (!answers.length) return null;
   var read = store_read_(TABLES.check_value.file, true);
   if (!sameHeader_(read.header, TABLES.check_value.columns)) {
-    throw err_('HEADER_MISMATCH', TABLES.check_value.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+    throw err_('HEADER_MISMATCH', TABLES.check_value.file + ' does not have the columns the save system expects, so nothing was saved. User needs to check the file header.');
   }
   return { read: read, answers: answers };
 }
 
-/** Queued items, newest last, for the approval page. */
 function sinkPendingList_() {
   var p = loadPending_(), st = pendingState_(p.records), out = [];
   Object.keys(st).forEach(function (id) {
@@ -783,8 +675,6 @@ function sinkPendingList_() {
 }
 
 
-/** Apply waiting occupancy moves (not corrections, not occupancy_out) so queued room changes land without an approval step.
- *  Safe to call often: already-applied items are skipped; a row already in the table is marked applied. */
 function applyWaitingOccupancyMoves_() {
   if (!saveEnabled_()) return { applied: 0 };
   var spec = TABLES.occupancy;
@@ -798,8 +688,6 @@ function applyWaitingOccupancyMoves_() {
     if (!s.waiting || !s.queued) continue;
     if (s.queued.kind === 'correction' || s.queued.corrects_id) continue;
     if (s.queued.target_file !== spec.file) continue;
-    // 15 Nov 2026 (J2 R2): occupancy_out shares the file. A move out (sold, deceased, off site) has no room and an
-    // off_site_kind; it always waits for the owner's approval and is never applied here.
     var row = null;
     try { row = JSON.parse(s.queued.payload_json || '{}'); } catch (e) { row = null; }
     if (!row || String(row.off_site_kind || '') || !String(row.area_id || '')) continue;
@@ -812,7 +700,6 @@ function applyWaitingOccupancyMoves_() {
   return { applied: n };
 }
 
-/** Approve or reject one queued item. Approval writes the row to the real table. */
 function sinkDecide_(pendingId, decision, note, adminEmail) {
   return withLock_(function () {
     var now = new Date();
@@ -825,7 +712,7 @@ function sinkDecide_(pendingId, decision, note, adminEmail) {
     if (decision === 'reject') {
       appendPendingEvent_({
         event_id: newId_('evt', now), pending_id: pendingId, event: 'rejected', at: londonIso_(now),
-        by: adminEmail, role: 'OWNER', target_file: q.target_file, kind: q.kind, row_id: q.row_id,
+        by: adminEmail, role: 'USER', target_file: q.target_file, kind: q.kind, row_id: q.row_id,
         corrects_id: q.corrects_id, note: note, result: 'not written'
       });
       return { status: 'rejected', pending_id: pendingId };
@@ -834,7 +721,6 @@ function sinkDecide_(pendingId, decision, note, adminEmail) {
 
     var spec = specFor_(q.target_file);
     if (!spec) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
-    // 15 Nov 2026 (J2 R5): an approval writes, so the same switches apply as to a save
     if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off, so nothing was written.');
     var fileOn = Object.keys(TABLES).some(function (key) { return TABLES[key].file === q.target_file && tableOn_(TABLES[key]); });
     if (!fileOn) throw err_('TABLE_OFF', 'Saving to ' + q.target_file + ' is switched off, so nothing was written.');
@@ -863,16 +749,16 @@ function sinkDecide_(pendingId, decision, note, adminEmail) {
     var base = { pending_id: pendingId, target_file: q.target_file, kind: q.kind, row_id: q.row_id, corrects_id: q.corrects_id };
     var alreadyThere = target.records.some(function (r) { return r.id === row.id; });
     if (!alreadyThere) {
-      appendPendingEvent_(merge_(base, { event_id: newId_('evt', now), event: 'approved', at: londonIso_(now), by: adminEmail, role: 'OWNER', note: note }));
+      appendPendingEvent_(merge_(base, { event_id: newId_('evt', now), event: 'approved', at: londonIso_(now), by: adminEmail, role: 'USER', note: note }));
       try {
         store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
       } catch (e) {
-        appendPendingEvent_(merge_(base, { event_id: newId_('evt', now), event: 'apply_failed', at: londonIso_(now), by: adminEmail, role: 'OWNER', note: e.userMessage || String(e),
+        appendPendingEvent_(merge_(base, { event_id: newId_('evt', now), event: 'apply_failed', at: londonIso_(now), by: adminEmail, role: 'USER', note: e.userMessage || String(e),
           result: e.code === 'VERIFY_FAILED' ? (e.restored ? 'old text restored' : 'RESTORE NOT CONFIRMED') : 'not written' }));
         throw e;
       }
     }
-    appendPendingEvent_(merge_(base, { event_id: newId_('evt', now), event: 'applied', at: londonIso_(now), by: adminEmail, role: 'OWNER', note: note, result: alreadyThere ? 'already present' : 'written' }));
+    appendPendingEvent_(merge_(base, { event_id: newId_('evt', now), event: 'applied', at: londonIso_(now), by: adminEmail, role: 'USER', note: note, result: alreadyThere ? 'already present' : 'written' }));
     return { status: 'applied', pending_id: pendingId, id: row.id, file: spec.file };
   });
 }
@@ -884,48 +770,34 @@ function merge_(a, b) {
   return o;
 }
 
-/* ------------------------------------------------------------------------------------------------
- * OWNER EDIT. Lisa only, from the owner-only approval page (her own signed-in Google account).
- * It overwrites a wrong entry IN PLACE. No copy of the old value and no log of the change is kept by
- * this script (Drive's own file history is the only trace, and the optional daily backup if it is on).
- * Staff can NEVER edit or delete: a staff code has no way to reach this, sinkHandle_ only knows add and
- * correct. Everything else about the write is as careful as an append: the lock, an exact header,
- * the whole-file hash check before writing, a read-back by hash, exact restore on failure.
- * ---------------------------------------------------------------------------------------------- */
 
-function ownerEditEnabled_() { return prop_(BLD.PROP.OWNER_EDIT_ENABLED) === 'true'; }
+function userEditEnabled_() { return prop_(BLD.PROP.USER_EDIT_ENABLED) === 'true'; }
 
-function ownerEditDefs_(spec) {
+function userEditDefs_(spec) {
   var d = {}, k;
   for (k in spec.input) if (Object.prototype.hasOwnProperty.call(spec.input, k)) d[k] = spec.input[k];
-  if (spec.ownerEdit) for (k in spec.ownerEdit) if (Object.prototype.hasOwnProperty.call(spec.ownerEdit, k)) d[k] = spec.ownerEdit[k];
+  if (spec.userEdit) for (k in spec.userEdit) if (Object.prototype.hasOwnProperty.call(spec.userEdit, k)) d[k] = spec.userEdit[k];
   return d;
 }
 
-function ownerEditSpec_(tableKey) {
-  if (!ownerEditEnabled_()) throw err_('EDIT_OFF', 'Editing an entry in place is switched off.');
+function userEditSpec_(tableKey) {
+  if (!userEditEnabled_()) throw err_('EDIT_OFF', 'Editing an entry in place is switched off.');
   var spec = specFor_(String(tableKey || ''));
-  // only the lists the owner edit is built for: never the approvals queue, the daily check log or anything else
-  if (!spec || spec.file === BLD.PENDING_FILE || spec.ownerEditable !== true) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
+  if (!spec || spec.file === BLD.PENDING_FILE || spec.userEditable !== true) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   return spec;
 }
 
-/** The newest entries of one table, for the owner to pick from. */
-function sinkOwnerEditList_(tableKey) {
-  var spec = ownerEditSpec_(tableKey), tenant = prop_(BLD.PROP.TENANT_ID);
+function sinkUserEditList_(tableKey) {
+  var spec = userEditSpec_(tableKey), tenant = prop_(BLD.PROP.TENANT_ID);
   var t = store_read_(spec.file, true);
   if (!sameHeader_(t.header, spec.columns)) throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects.');
-  var defs = ownerEditDefs_(spec);
+  var defs = userEditDefs_(spec);
   var rows = t.records.filter(function (r) { return r.tenant_id === tenant; }).slice(-60).reverse();
   return { table: spec.key, file: spec.file, editable: Object.keys(defs), rows: rows };
 }
 
-/**
- * Replace the editable fields of ONE row. `fields` holds the values wanted; a field equal to what is already
- * there is left alone (and not re-checked), so an old row can be fixed without tripping "more than 7 days ago".
- */
-function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
-  var spec = ownerEditSpec_(tableKey);
+function sinkUserEdit_(tableKey, rowId, fields, adminEmail) {
+  var spec = userEditSpec_(tableKey);
   return withLock_(function () {
     var now = new Date(), nowMs = now.getTime(), tenant = prop_(BLD.PROP.TENANT_ID);
     if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
@@ -937,11 +809,11 @@ function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
     var idx = -1;
     for (var i = 0; i < t.records.length; i++) if (t.records[i].id === rowId && t.records[i].tenant_id === tenant) { idx = i; break; }
     if (idx < 0) throw err_('NOT_FOUND', 'That entry was not found in ' + spec.file + '.');
-    var cur = t.records[idx], defs = ownerEditDefs_(spec), errors = {}, changedDefs = {}, changedVals = {}, name;
+    var cur = t.records[idx], defs = userEditDefs_(spec), errors = {}, changedDefs = {}, changedVals = {}, name;
     fields = fields || {};
     for (name in fields) {
       if (!Object.prototype.hasOwnProperty.call(fields, name)) continue;
-      if (!Object.prototype.hasOwnProperty.call(defs, name)) { errors[name] = 'This is not a field the owner edit can change.'; continue; }
+      if (!Object.prototype.hasOwnProperty.call(defs, name)) { errors[name] = 'This is not a field the user edit can change.'; continue; }
       var want = fields[name] === null || fields[name] === undefined ? '' : String(fields[name]).trim();
       if (want === String(cur[name] || '')) continue;
       changedDefs[name] = defs[name]; changedVals[name] = want;
@@ -954,7 +826,7 @@ function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
     var changed = [];
     for (name in v.clean) {
       if (!Object.prototype.hasOwnProperty.call(v.clean, name) || !changedDefs[name]) continue;
-      if (v.clean[name] === String(cur[name] || '')) continue;       // "22" typed over "22.00" is not a change
+      if (v.clean[name] === String(cur[name] || '')) continue;
       next[name] = v.clean[name]; changed.push(name);
     }
     if (spec.checkRow) spec.checkRow(next, errors, editLookups);
@@ -966,3 +838,4 @@ function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
     return { status: 'edited', table: spec.key, file: spec.file, id: rowId, changed: changed };
   });
 }
+

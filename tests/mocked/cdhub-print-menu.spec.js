@@ -49,3 +49,4 @@ asOn('print link uses the menu markup and opens the print page', async ({ page }
   await expect(page).toHaveURL(href);
   await expect(page.locator('h1')).toHaveText('Print QR cards');
 });
+

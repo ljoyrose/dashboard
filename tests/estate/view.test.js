@@ -1,5 +1,3 @@
-// What the estate page shows: status words, counts, order and filters. Run: node --test tests/estate/view.test.js
-// Rows are invented (tests/fixtures/estate/rows.js). Today is pinned so expiry days never drift.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const E = require('../../estate/core.js');
@@ -61,3 +59,4 @@ test('filters round-trip through the URL hash and narrow the rows', () => {
   assert.equal(E.applyFilters(rows(), { flag: 'none' }).length, 6);
   assert.deepEqual(E.choices(rows(), 'platform'), ['ClickFunnels', 'Sample builder', 'Shopify', 'Webwave']);
 });
+

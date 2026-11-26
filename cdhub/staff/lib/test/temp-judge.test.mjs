@@ -31,3 +31,4 @@ test('no rows at all is unknown; a room-specific row with different numbers is n
   assert.equal(J.judge({ min: '12', max: '15' }, null, null, false), 'unknown');
   assert.equal(J.judge({ min: '24.1', max: '25.3' }, { min: 10, max: 30 }, adult, false), 'ok');
 });
+

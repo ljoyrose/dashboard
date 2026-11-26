@@ -20,12 +20,11 @@ const PRESS = '#view .btn, #view button.pill, #view a.pill, #view .fbtn, #view .
 // Meaning buttons (Yes / No / Off) and status pills that are links rest on their own colour line (the owner's approved picture, 28 Oct).
 const MEANING = '.btn.yes, .btn.no, .lk.off, a.need, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat';
 
-// A comment newer than "seen" (the unread dot), a due date tomorrow (amber) and one overdue (rose) are added to the sample data.
 async function open(page, guard, hash, { scheme, change } = {}) {
   const st = build(Date.now());
   st.lists.decisions[0].cm = [{ by: 'Claude', at: Date.now(), text: 'A sample note' }];
   st.lists.work[1].due = Date.now() + 864e5;
-  st.lists.apps[1].updated = Date.now() - 20 * 864e5;   // one stuck app, so the black (broken) Stuck count is on screen
+  st.lists.apps[1].updated = Date.now() - 20 * 864e5;
   if (change) change(st);
   guard.world.folder(LOGS, 'AF logs (sample)');
   guard.world.file('af-state-sample', 'af-state.json', JSON.stringify(st), { parents: [LOGS], mimeType: 'application/json' });
@@ -39,7 +38,6 @@ async function go(page, v) {
   await page.evaluate((h) => { location.hash = '#/' + h; }, v);
   await expect(page.locator('#view > *').first()).toBeVisible();
 }
-// Shared helpers, run in the page.
 const HELP = () => {
   window.__fx = {
     norm: (c) => { const d = document.createElement('i'); d.style.color = c; document.body.appendChild(d); const v = getComputedStyle(d).color; d.remove(); return v; },
@@ -83,7 +81,7 @@ test.describe('Factory look: rules by computed style on every view', () => {
             const cs = getComputedStyle(e);
             if (![14, 15, 18].includes(parseFloat(cs.fontSize))) out.push('size ' + cs.fontSize + ': ' + F.what(e));
             if (!['400', '500', '600'].includes(cs.fontWeight)) out.push('weight ' + cs.fontWeight + ': ' + F.what(e));
-            const badge = e.matches('.cnt.broken') && cs.color === F.tok('--house-broken-ink');   // the black badge's number (light ink's opposite)
+            const badge = e.matches('.cnt.broken') && cs.color === F.tok('--house-broken-ink');
             if (![ink, muted, frameInk].includes(cs.color) && !badge) out.push('coloured words ' + cs.color + ': ' + F.what(e));
             if (cs.textTransform === 'uppercase') out.push('uppercase: ' + F.what(e));
           });
@@ -96,7 +94,6 @@ test.describe('Factory look: rules by computed style on every view', () => {
             const ok = r === '12px' || (r === '50%' && e.matches('.dot, .info, .new, .stage .n, .sw > i, .req, nav.house-tabs .hic')) || (r === '2px' && e.matches('.bar'));
             if (!ok) out.push('radius ' + r + ': ' + F.what(e));
           });
-          // 3 + 12: pressables rest on ONE clear 1px line (the control line, or their own meaning colour), 12px, 36px.
           document.querySelectorAll(PRESS).forEach((e) => {
             if (!F.seen(e)) return;
             const cs = getComputedStyle(e), b = e.getBoundingClientRect();
@@ -128,7 +125,6 @@ test.describe('Factory look: rules by computed style on every view', () => {
             const cs = getComputedStyle(e), want = e.classList.contains('need') ? F.tok('--house-late') : F.tok('--house-ring');
             if (cs.borderTopColor !== want || cs.backgroundColor !== 'rgba(0, 0, 0, 0)') out.push('tab count not a ring only (' + want + '): ' + cs.borderTopColor + ' / ' + cs.backgroundColor);
           });
-          // 9: every date pill wears a 1px ring: rose late, amber soon, the grey control line otherwise (grey words).
           document.querySelectorAll('label.date').forEach((e) => {
             if (!F.seen(e)) return;
             const cs = getComputedStyle(e), want = e.classList.contains('over') ? F.tok('--r-risk') : e.classList.contains('soon') ? F.tok('--r-warn') : ctl;
@@ -162,7 +158,7 @@ test.describe('Factory look: rules by computed style on every view', () => {
         document.querySelectorAll('.cnt, nav.tabs .n, span.pill, .gate, .codes .cd, .age, .strip i, .stage .n, .room, label.date, .card, .sw, .banner, .empty').forEach((e) => {
           const bg = getComputedStyle(e).backgroundColor;
           if (/, 0\)$/.test(bg) || bg === 'transparent') return;
-          if (e.matches('.cnt.broken') && bg === F.tok('--house-broken-fill')) return;   // broken: the one count that is a solid badge
+          if (e.matches('.cnt.broken') && bg === F.tok('--house-broken-fill')) return;
           if (fills.includes(bg) || F.L(bg) < 0.6) out.push(e.className + ' "' + e.textContent.trim().slice(0, 20) + '" ' + bg);
         });
         return out;
@@ -193,13 +189,12 @@ test.describe('Factory look: rules by computed style on every view', () => {
 test.describe('Factory look: frame', () => {
   const close = (got, hex) => { const want = hex.match(/../g).map((x) => parseInt(x, 16)); const g0 = got.match(/[\d.]+/g).map(Number), g = /^color\(/.test(got) ? g0.map((x) => x * 255) : g0; return want.every((v, i) => Math.abs(v - g[i]) <= 4); };
   test('dark top and bottom frame (Deep 3A3632 / 46413B), light tab buttons with no ring, bar widens on hover and when selected', async ({ page, guard }) => {
-    await open(page, guard, '#/me'); // Main selected, so every link in the bar and its More menu is at rest
+    await open(page, guard, '#/me');
     const bg = (sel) => page.locator(sel).first().evaluate((e) => getComputedStyle(e).backgroundColor);
     const top = await bg('header'), foot = await bg('nav.tabs');
     expect(close(top, '3A3632'), 'top frame ' + top).toBe(true);
     expect(close(foot, '46413B'), 'bottom frame ' + foot).toBe(true);
     const tabs = page.locator('nav.tabs a');
-    // Main, Decide, Do, Rooms, then under More: Today, Docs and Mine (the old Main list, 2 Nov).
     await expect(tabs).toHaveCount(7);
     for (let i = 0; i < 7; i++) {
       const t = tabs.nth(i);
@@ -214,9 +209,8 @@ test.describe('Factory look: frame', () => {
     const b0 = await docs.boundingBox();
     await docs.hover();
     await expect(docs.locator('.bar')).toHaveCSS('width', '40px');
-    await expect(docs).toHaveCSS('outline-style', 'none'); // tabs are exempt from the hover line
+    await expect(docs).toHaveCSS('outline-style', 'none');
     expect(await docs.boundingBox()).toEqual(b0);
-    // Every word on the frame reads clearly.
     await page.evaluate(HELP);
     const worst = await page.evaluate(() => {
       const F = window.__fx;
@@ -251,7 +245,7 @@ test.describe('Factory look: frame', () => {
     const home = await page.locator('#backHome').boundingBox();
     expect(home.x + home.width, '#backHome').toBeLessThan(vw / 4);
     const shown = await page.locator('header').evaluate((h) => [...h.querySelectorAll('button, a')].filter((e) => !e.closest('h1') && e.getBoundingClientRect().width > 0 && getComputedStyle(e).visibility === 'visible').map((e) => e.id));
-    expect(shown.sort()).toEqual(['backHome', 'signInBtn']);   // (the title stays for screen readers only, 1px, as on every hub)
+    expect(shown.sort()).toEqual(['backHome', 'signInBtn']);
     await expect(page.locator('nav.tabs')).not.toBeVisible();
   });
 });
@@ -414,3 +408,4 @@ test('find bar: Search, Factory on/off and Filter in one row; Filter is open by 
   await tabClick(page, 'nav.tabs a[data-nav="do"]');
   await expect(page.locator('details.fdet')).not.toHaveAttribute('open', ''); // your choice is kept
 });
+

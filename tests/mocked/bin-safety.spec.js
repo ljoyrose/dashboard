@@ -1,8 +1,3 @@
-// Bin safety, against the pretend Drive only. Fake ids, never a real file.
-// A row can be ticked and moved only when its name starts ZZ_DELETE_, its id is in the
-// delete ledger (or a pending AA_DELETE-LEDGER-ROWS_ slip), and nothing about it is RR_.
-// Select all and Move act only on rows that are both on screen and allowed.
-// E02 money rollback files are held even when ticked, visible, or on a ledger row.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
 
@@ -14,9 +9,7 @@ const signIn = async (page) => {
 };
 const A = { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' };
 const ledger = (world, ids) => { world.byId(IDS.ledger).content = 'file_id\n' + ids.join('\n') + '\n'; };
-// Stage 5: a Ready row shows the name without its ZZ_DELETE_ prefix; the full name is its tooltip.
 const readyRow = (page, name) => page.locator('#view li:has([title="' + name + '"])');
-// Stage 5: a protected row in Not ready yet has no tick box at all; its reason is the row's tooltip.
 const keptRow = (view, name) => view.locator('li', { hasText: name });
 const patched = (world) => world.calls.filter((c) => c.method === 'PATCH').map((c) => c.path.replace('/files/', '')).sort();
 
@@ -54,7 +47,7 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     }
   });
 
-  test('an RR_ item deep inside a ZZ_DELETE_ folder keeps the whole folder out of the bin, even with Select all @regression', async ({ page, guard }) => {
+  test('t-bin-safety-spec-1', async ({ page, guard }) => {
     const w = guard.world;
     w.folder('zzd-outer', 'ZZ_DELETE_outer-folder', A);
     w.folder('zzd-mid', 'middle', { parents: ['zzd-outer'], driveId: 'drv-alpha1' });
@@ -83,7 +76,7 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     for (const id of ['zzd-outer', 'zzd-outer2', 'rr-deep', 'rr-mid-name']) expect(w.byId(id).trashed, id).toBeFalsy();
   });
 
-  test('a ZZ_DELETE_ item anywhere below an RR_ folder is left alone, even with a ledger row @regression', async ({ page, guard }) => {
+  test('t-bin-safety-spec-2', async ({ page, guard }) => {
     const w = guard.world;
     w.folder('rr-top', 'RR_top-archive', A);
     w.folder('rr-top-sub', 'plain-sub', { parents: ['rr-top'], driveId: 'drv-alpha1' });
@@ -195,7 +188,7 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     expect(w.byId('zz-ready').trashed).toBeFalsy();
   });
 
-  test('a ledger that starts with a COUNT note line above the header is still read @regression', async ({ page, guard }) => {
+  test('t-bin-safety-spec-3', async ({ page, guard }) => {
     const w = guard.world;
     w.file('zz-ready', 'ZZ_DELETE_ready.txt', 'invented', A);
     w.byId(IDS.ledger).content = '"COUNT: 1 rows. 2026-10-18-1228 sample note, with a comma"\ndate,old_name,file_id,merged_into,agent\n2026-10-18-1200,ready.txt,zz-ready,,sample\n';
@@ -215,7 +208,7 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     await expect(page.locator('[data-action="sweep"]')).toBeDisabled();
   });
 
-  test('Select all on a list of 52 with 50 shown moves only those 50 @regression', async ({ page, guard }) => {
+  test('t-bin-safety-spec-4', async ({ page, guard }) => {
     const w = guard.world;
     const ids = [];
     for (let i = 1; i <= 52; i++) {
@@ -277,7 +270,6 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
   test('money rollback files (E02) are held by folder id, and a same-named folder is still binned', async ({ page, guard }) => {
     const w = guard.world;
     const LABEL = 'Held: money rollback (E02), do not touch until FIX 6 is confirmed';
-    // The other folder that is also titled "4 - Ops". This id is not excluded.
     const OTHER_OPS = '1SAMPLEotherOpsFolder000000000000'; // made-up id (this repo is public)
     const ops = { parents: [IDS.moneyFolders.ops], driveId: IDS.moneyDrive, mimeType: 'text/plain' };
     const index = { parents: [IDS.moneyFolders.index], driveId: IDS.moneyDrive, mimeType: 'text/plain' };
@@ -365,3 +357,4 @@ test.describe('PC-Personal bin uses the same ledger gate', () => {
     expect(guard.world.byId('me-rr').trashed).toBeFalsy();
   });
 });
+

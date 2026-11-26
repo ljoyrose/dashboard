@@ -1,4 +1,3 @@
-// Enquiries under More. Invented BLD rows and the example enquiry list. Nothing is sent.
 const { test: base, expect } = require('../support/test');
 const { buildWorld, IDS } = require('../support/world');
 const { tabClick } = require('../support/tabs');
@@ -23,7 +22,7 @@ function world() {
   };
   put('BLD-person.csv', 'id,tenant_id,full_name,known_as\nper-1,ten-1,Sample Buyer A,\n');
   put('BLD-household.csv', 'id,tenant_id,name,primary_person_id,stage\nhhd-1,ten-1,Sample Home A,per-1,after collection\n');
-  put('BLD-subject_owner.csv', 'id,tenant_id,subject_id,person_id,household_id,role\nsow-1,ten-1,sub-test-dog-1,per-1,hhd-1,owner\n');
+  put('BLD-subject_user.csv', 'id,tenant_id,subject_id,person_id,household_id,role\nsow-1,ten-1,sub-test-dog-1,per-1,hhd-1,user\n');
   d.file('bld-species-x', 'BLD-species.csv', 'id,young_word,adult_female_word,adult_male_word,birth_event_word\nsp-dog,young,female,male,birth\n', { parents: [IDS.bld], driveId: 'drv-alpha1' });
   return d;
 }
@@ -67,7 +66,7 @@ test.describe('CD Hub enquiries', () => {
     await page.locator('a[href="#/dogs/sub-01"]').click();
     await expect(page.locator('#main')).toContainText('Pup One');
     await tabClick(page, '#nav button[data-go="dogs"]');
-    await expect(page.locator('article.dc', { hasText: 'Test Dog One' })).toContainText('Owner');
+    await expect(page.locator('article.dc', { hasText: 'Test Dog One' })).toContainText('User');
     await expect(page.locator('article.dc', { hasText: 'Test Dog One' })).toContainText('Sample Home A');
     expect(errors, errors.join('\n')).toEqual([]);
   });
@@ -90,3 +89,4 @@ test.describe('CD Hub enquiries', () => {
     expect(small).toEqual([]);
   });
 });
+

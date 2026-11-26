@@ -1,5 +1,3 @@
-// Tests for tools/gate/gate.mjs. Run: node --test tests/gate/gate.test.mjs
-// Invented fixtures only. No real cards, apps, people or data.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -13,14 +11,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const GATE = join(HERE, '..', '..', 'tools', 'gate', 'gate.mjs');
 const data = () => loadData();
 const clean = (gates) => ({ card_id: 'TEST-CARD-1', ck45_pending: 0, ck50_open_obligations: 0, gates });
-const lisa = (verdict, extra = {}) => ({ verdict, stamped_by: 'lisa', ...extra });
-// Every conflict was ruled on 16 Oct 2026, so the shipped data has none open. These cards pass every gate they need.
+const user = (verdict, extra = {}) => ({ verdict, stamped_by: 'user', ...extra });
 const resolved = () => data();
 const ok = (verdict) => ({ verdict, stamped_by: 'claude' });
 const LEAK_7_8 = { Leak_monitor: ok('CLEAR'), Leak_post: ok('PASS'), Live: ok('PASS') };
-const GOOD_5_6 = { Invest: lisa('GO'), Slot: ok('OPEN'), Leak_design: ok('READY') };
+const GOOD_5_6 = { Invest: user('GO'), Slot: ok('OPEN'), Leak_design: ok('READY') };
 
-// ---- data integrity -------------------------------------------------------------------------------------------
 
 test('data: 13 gate rows (the 12 plus BASE), 12 transitions, ids unique', () => {
   const d = data();
@@ -32,12 +28,12 @@ test('data: 13 gate rows (the 12 plus BASE), 12 transitions, ids unique', () => 
 
 test('data: every row has the required fields and a valid confidence', () => {
   for (const g of data().gates) {
-    for (const f of ['id', 'framework_name', 'aliases', 'transition', 'guard_type', 'owner', g.phases ? 'phases' : 'verdict_set', 'source_citation', 'confidence', 'conflict_ids']) {
+    for (const f of ['id', 'framework_name', 'aliases', 'transition', 'guard_type', 'user', g.phases ? 'phases' : 'verdict_set', 'source_citation', 'confidence', 'conflict_ids']) {
       assert.ok(f in g, `${g.id} lacks ${f}`);
     }
     assert.ok(['HIGH', 'MED', 'LOW'].includes(g.confidence), `${g.id} confidence`);
     if (g.required === false) { assert.match(g.guard_type, /^not a gate/, `${g.id} guard_type`); continue; }
-    assert.ok(['Lisa stamp', 'test', 'Claude lens', 'auto'].includes(g.guard_type), `${g.id} guard_type`);
+    assert.ok(['User stamp', 'test', 'Claude lens', 'auto'].includes(g.guard_type), `${g.id} guard_type`);
     const sets = g.phases ? g.phases : [g];
     for (const x of sets) {
       assert.ok(x.verdict_set.length > 0, `${g.id}/${x.id ?? ''} verdict_set`);
@@ -70,9 +66,9 @@ test('data: C1-C10 are all RESOLVED with a ruling line; RETIRE keeps STAMPED mar
   assert.match(r.source_citation, /UNCHECKED/);
 });
 
-test('data: guard split among the 12 is 5 Lisa stamps, 1 Claude lens, 5 tests/auto, and Return (not a gate yet)', () => {
+test('data: guard split among the 12 is 5 User stamps, 1 Claude lens, 5 tests/auto, and Return (not a gate yet)', () => {
   const twelve = data().gates.filter((g) => g.id !== 'BASE');
-  assert.equal(twelve.filter((g) => g.guard_type === 'Lisa stamp').length, 5);
+  assert.equal(twelve.filter((g) => g.guard_type === 'User stamp').length, 5);
   assert.equal(twelve.filter((g) => g.guard_type === 'Claude lens').length, 1);
   assert.equal(twelve.filter((g) => g.guard_type === 'test' || g.guard_type === 'auto').length, 5);
   assert.deepEqual(twelve.filter((g) => g.required === false).map((g) => g.id), ['RETURN']);
@@ -94,7 +90,6 @@ test('data: conflict ids are consistent between gates and conflicts', () => {
   }
 });
 
-// ---- alias mapping --------------------------------------------------------------------------------------------
 
 test('alias: GATES.csv and GATE-LOG names map to the framework gate', () => {
   const m = aliasMap(data());
@@ -114,24 +109,23 @@ test('alias: a card keyed by an old name is read as the canonical gate', () => {
 
 test('transition: arrows and spacing are normalised', () => {
   assert.equal(normTransition('3 → 4'), '3->4');
-  assert.equal(evalCard(clean({ Lock: lisa('GO') }), '3→4', data()).transition, '3->4');
+  assert.equal(evalCard(clean({ Lock: user('GO') }), '3→4', data()).transition, '3->4');
 });
 
-// ---- each gate passes when its conflicts are resolved -----------------------------------------------------------
 
 const PASS_CASES = [
   ['0->1', { Screen: { verdict: 'PASS', stamped_by: 'claude' } }],
-  ['1->2', { Merit: lisa('GO') }],
+  ['1->2', { Merit: user('GO') }],
   ['2->3', { Base: { verdict: 'GO', stamped_by: 'claude' } }],
-  ['3->4', { Lock: lisa('GO') }],
+  ['3->4', { Lock: user('GO') }],
   ['4->5', { Schema: { verdict: 'PASS', stamped_by: 'claude' } }],
   ['5->6', GOOD_5_6],
-  ['6->7', { Launch: lisa('GO') }],
+  ['6->7', { Launch: user('GO') }],
   ['7->8', LEAK_7_8],
   ['8->rescue', { Trouble: { verdict: 'DETECTED', stamped_by: 'claude' } }],
   ['rescue->slot', { Slot: { verdict: 'OPEN', stamped_by: 'claude' } }],
-  ['8->lock', { Lock: lisa('GO') }],
-  ['8->recycle', { Retire: lisa('STAMPED') }],
+  ['8->lock', { Lock: user('GO') }],
+  ['8->recycle', { Retire: user('STAMPED') }],
 ];
 for (const [to, gates] of PASS_CASES) {
   test(`transition ${to}: passes with the correct verdicts`, () => {
@@ -140,7 +134,6 @@ for (const [to, gates] of PASS_CASES) {
   });
 }
 
-// ---- rulings of 16 Oct 2026 (DE62) ------------------------------------------------------------------------------
 
 test('leak DESIGN: 5->6 FAILs with Leak_design MISSING, passes with READY, FAILs when absent', () => {
   assert.equal(evalCard(clean({ ...GOOD_5_6, Leak_design: ok('MISSING') }), '5->6', data()).result, 'FAIL');
@@ -169,17 +162,17 @@ test('leak: the old single "Leak" entry no longer satisfies 7->8', () => {
   assert.equal(evalCard(clean({ Leak: ok('PASS'), Live: ok('PASS') }), '7->8', data()).result, 'FAIL');
 });
 test('leak: spaced names fold onto the phase card keys', () => {
-  const five = evalCard(clean({ Invest: lisa('GO'), Slot: ok('OPEN'), 'Leak design': ok('READY') }), '5->6', data());
+  const five = evalCard(clean({ Invest: user('GO'), Slot: ok('OPEN'), 'Leak design': ok('READY') }), '5->6', data());
   assert.equal(five.result, 'PASS');
   assert.equal(five.rows.find((x) => x.gate === 'LEAK:DESIGN').status, 'PASS');
-  assert.equal(evalCard(clean({ Invest: lisa('GO'), Slot: ok('OPEN'), 'Leak design': ok('MISSING') }), '5->6', data()).result, 'FAIL');
+  assert.equal(evalCard(clean({ Invest: user('GO'), Slot: ok('OPEN'), 'Leak design': ok('MISSING') }), '5->6', data()).result, 'FAIL');
   const seven = evalCard(clean({ 'Leak monitor': ok('CLEAR'), 'Leak post': ok('PASS'), Live: ok('PASS') }), '7->8', data());
   assert.equal(seven.result, 'PASS');
   assert.equal(seven.rows.find((x) => x.gate === 'LEAK:MONITOR').status, 'PASS');
   assert.equal(seven.rows.find((x) => x.gate === 'LEAK:POST').status, 'PASS');
 });
 test('leak: 6->7 requires LAUNCH only (no leak phase)', () => {
-  const r = evalCard(clean({ Launch: lisa('GO') }), '6->7', data());
+  const r = evalCard(clean({ Launch: user('GO') }), '6->7', data());
   assert.equal(r.result, 'PASS');
   assert.deepEqual(r.rows.map((x) => x.gate), ['LAUNCH']);
 });
@@ -189,39 +182,39 @@ test('Slot: FULL FAILs at 5->6 and at rescue->slot; OPEN passes', () => {
   assert.equal(evalCard(clean({ Slot: ok('FULL') }), 'rescue->slot', data()).result, 'FAIL');
   assert.equal(evalCard(clean({ Slot: ok('OPEN') }), 'rescue->slot', data()).result, 'PASS');
 });
-test('Base (ruled C2): passes at 2->3 for Lisa or Claude, no longer waits', () => {
-  assert.equal(evalCard(clean({ Base: lisa('GO') }), '2->3', data()).result, 'PASS');
+test('Base (ruled C2): passes at 2->3 for User or Claude, no longer waits', () => {
+  assert.equal(evalCard(clean({ Base: user('GO') }), '2->3', data()).result, 'PASS');
   assert.equal(evalCard(clean({ Base: ok('GO') }), '2->3', data()).result, 'PASS');
 });
-test('verdict words (ruled C3): RECYCLE at Merit FAILs, not WAITS-LISA; GO still passes', () => {
-  const r = evalCard(clean({ Merit: lisa('RECYCLE') }), '1->2', data());
+test('verdict words (ruled C3): RECYCLE at Merit FAILs, not WAITS-USER; GO still passes', () => {
+  const r = evalCard(clean({ Merit: user('RECYCLE') }), '1->2', data());
   assert.equal(r.result, 'FAIL');
   assert.match(r.rows[0].reasons.join(), /not allowed at MERIT/);
-  assert.equal(evalCard(clean({ 'Gate 1': lisa('GO') }), '1->2', data()).result, 'PASS');
+  assert.equal(evalCard(clean({ 'Gate 1': user('GO') }), '1->2', data()).result, 'PASS');
 });
 test('verdict words: REFINE at Merit FAILs as outside the set', () => {
-  const r = evalCard(clean({ Merit: lisa('REFINE') }), '1->2', data());
+  const r = evalCard(clean({ Merit: user('REFINE') }), '1->2', data());
   assert.equal(r.result, 'FAIL');
   assert.match(r.rows[0].reasons.join(), /not in this gate's set/);
 });
 test('verdict words: RESHAPE at Lock FAILs as outside the set; RESHAPE at Merit is a valid verdict that does not pass', () => {
-  const r = evalCard(clean({ Lock: lisa('RESHAPE') }), '3->4', data());
+  const r = evalCard(clean({ Lock: user('RESHAPE') }), '3->4', data());
   assert.equal(r.result, 'FAIL');
   assert.match(r.rows[0].reasons.join(), /not in this gate's set/);
-  const m = evalCard(clean({ Merit: lisa('RESHAPE') }), '1->2', data());
+  const m = evalCard(clean({ Merit: user('RESHAPE') }), '1->2', data());
   assert.equal(m.result, 'FAIL');
   assert.doesNotMatch(m.rows[0].reasons.join(), /not in this gate's set/);
 });
 test('verdict words: REFINE at Lock is accepted as a valid verdict but does not pass (same as HOLD)', () => {
-  const refine = evalCard(clean({ Lock: lisa('REFINE') }), '3->4', data());
-  const hold = evalCard(clean({ Lock: lisa('HOLD') }), '3->4', data());
+  const refine = evalCard(clean({ Lock: user('REFINE') }), '3->4', data());
+  const hold = evalCard(clean({ Lock: user('HOLD') }), '3->4', data());
   assert.equal(refine.result, 'FAIL');
   assert.doesNotMatch(refine.rows[0].reasons.join(), /not in this gate's set/);
   assert.match(refine.rows[0].reasons.join(), /does not let the card move/);
   assert.deepEqual(refine.rows[0].reasons.map((x) => x.replace('REFINE', 'X')), hold.rows[0].reasons.map((x) => x.replace('HOLD', 'X')));
 });
 test('verdict words (ruled C7): the old GL008 literal verdict now FAILs at Lock; REFINE carries the TEN4 note in the data', () => {
-  const r = evalCard(clean({ Lock: lisa('REFINED TO TEN4 - GO WITH CONDITIONS', { conditions: ['x'] }) }), '3->4', data());
+  const r = evalCard(clean({ Lock: user('REFINED TO TEN4 - GO WITH CONDITIONS', { conditions: ['x'] }) }), '3->4', data());
   assert.equal(r.result, 'FAIL');
   assert.match(data().gates.find((g) => g.id === 'LOCK').notes, /REFINE with note TEN4/);
 });
@@ -231,90 +224,85 @@ test('Return (ruled C9): never required at any transition, and a card without it
     const r = evalCard(clean({}), t.id, d);
     assert.ok(!r.rows.some((x) => x.gate === 'RETURN'), `${t.id} evaluates RETURN`);
   }
-  // even a transition that (wrongly) listed RETURN would skip it
   const d2 = structuredClone(d);
   d2.transitions.find((t) => t.id === '3->4').requires.push('RETURN');
-  assert.equal(evalCard(clean({ Lock: lisa('GO') }), '3->4', d2).result, 'PASS');
+  assert.equal(evalCard(clean({ Lock: user('GO') }), '3->4', d2).result, 'PASS');
 });
 test('Retire keeps the STAMPED verdict', () => {
-  assert.equal(evalCard(clean({ Retire: lisa('STAMPED') }), '8->recycle', data()).result, 'PASS');
-  assert.equal(evalCard(clean({ Retire: lisa('GO') }), '8->recycle', data()).result, 'FAIL');
+  assert.equal(evalCard(clean({ Retire: user('STAMPED') }), '8->recycle', data()).result, 'PASS');
+  assert.equal(evalCard(clean({ Retire: user('GO') }), '8->recycle', data()).result, 'FAIL');
 });
 
-// ---- WAITS-LISA path, kept for any conflict still OPEN (synthetic conflict) ---------------------------------------------
 
-test('open conflict: a synthetic OPEN conflict on BASE reports WAITS-LISA, never PASS', () => {
-  const r = evalCard(clean({ Base: lisa('GO') }), '2->3', withOpenConflict(data()));
-  assert.equal(r.result, 'WAITS-LISA');
-  assert.ok(r.rows.some((x) => x.status === 'WAITS-LISA'));
+test('open conflict: a synthetic OPEN conflict on BASE reports WAITS-USER, never PASS', () => {
+  const r = evalCard(clean({ Base: user('GO') }), '2->3', withOpenConflict(data()));
+  assert.equal(r.result, 'WAITS-USER');
+  assert.ok(r.rows.some((x) => x.status === 'WAITS-USER'));
 });
 test('open conflict: resolving it is data only and lets BASE pass', () => {
   const d = withOpenConflict(data());
   d.conflicts.find((c) => c.id === 'CX').status = 'RESOLVED';
-  assert.equal(evalCard(clean({ Base: lisa('GO') }), '2->3', d).result, 'PASS');
+  assert.equal(evalCard(clean({ Base: user('GO') }), '2->3', d).result, 'PASS');
 });
 test('open conflict: a waits_verdicts entry waits only while its conflict is open', () => {
   const d = withOpenConflict(data());
   d.gates.find((g) => g.id === 'LOCK').waits_verdicts = { 'REFINED TO TEN4': ['CX'] };
-  assert.equal(evalCard(clean({ Lock: lisa('REFINED TO TEN4') }), '3->4', d).result, 'WAITS-LISA');
+  assert.equal(evalCard(clean({ Lock: user('REFINED TO TEN4') }), '3->4', d).result, 'WAITS-USER');
   d.conflicts.find((c) => c.id === 'CX').status = 'RESOLVED';
-  assert.equal(evalCard(clean({ Lock: lisa('REFINED TO TEN4') }), '3->4', d).result, 'FAIL');
+  assert.equal(evalCard(clean({ Lock: user('REFINED TO TEN4') }), '3->4', d).result, 'FAIL');
 });
 
-test('a FAIL outranks a WAITS-LISA in the overall result', () => {
+test('a FAIL outranks a WAITS-USER in the overall result', () => {
   const d = withOpenConflict(data());
   d.gates.find((g) => g.id === 'SLOT').conflict_ids = ['CX'];
-  const r = evalCard(clean({ Invest: lisa('KILL'), Slot: ok('OPEN'), Leak_design: ok('READY') }), '5->6', d);
-  assert.equal(r.rows.find((x) => x.gate === 'SLOT').status, 'WAITS-LISA');
+  const r = evalCard(clean({ Invest: user('KILL'), Slot: ok('OPEN'), Leak_design: ok('READY') }), '5->6', d);
+  assert.equal(r.rows.find((x) => x.gate === 'SLOT').status, 'WAITS-USER');
   assert.equal(r.result, 'FAIL');
 });
 
-// ---- failure paths ----------------------------------------------------------------------------------------------
 
 test('missing verdict fails', () => assert.equal(evalCard(clean({}), '3->4', data()).result, 'FAIL'));
-test('empty verdict fails', () => assert.equal(evalCard(clean({ Lock: lisa('') }), '3->4', data()).result, 'FAIL'));
+test('empty verdict fails', () => assert.equal(evalCard(clean({ Lock: user('') }), '3->4', data()).result, 'FAIL'));
 test('KILL and HOLD never pass', () => {
-  for (const v of ['KILL', 'HOLD']) assert.equal(evalCard(clean({ Lock: lisa(v) }), '3->4', data()).result, 'FAIL', v);
+  for (const v of ['KILL', 'HOLD']) assert.equal(evalCard(clean({ Lock: user(v) }), '3->4', data()).result, 'FAIL', v);
 });
-test('a Lisa-stamp gate stamped by Claude fails', () => assert.equal(evalCard(clean({ Lock: { verdict: 'GO', stamped_by: 'claude' } }), '3->4', data()).result, 'FAIL'));
-test('a Lisa-stamp gate with no stamper fails', () => assert.equal(evalCard(clean({ Lock: { verdict: 'GO' } }), '3->4', data()).result, 'FAIL'));
+test('a User-stamp gate stamped by Claude fails', () => assert.equal(evalCard(clean({ Lock: { verdict: 'GO', stamped_by: 'claude' } }), '3->4', data()).result, 'FAIL'));
+test('a User-stamp gate with no stamper fails', () => assert.equal(evalCard(clean({ Lock: { verdict: 'GO' } }), '3->4', data()).result, 'FAIL'));
 test('BASE may be stamped by Claude, but not by a stranger', () => {
   assert.equal(evalCard(clean({ Base: { verdict: 'GO', stamped_by: 'claude' } }), '2->3', resolved()).result, 'PASS');
   assert.equal(evalCard(clean({ Base: { verdict: 'GO', stamped_by: 'someone' } }), '2->3', resolved()).result, 'FAIL');
 });
 test('GO WITH CONDITIONS needs conditions recorded', () => {
-  assert.equal(evalCard(clean({ Lock: lisa('GO WITH CONDITIONS') }), '3->4', data()).result, 'FAIL');
-  assert.equal(evalCard(clean({ Lock: lisa('GO WITH CONDITIONS', { conditions: ['named payer confirmed'] }) }), '3->4', data()).result, 'PASS');
+  assert.equal(evalCard(clean({ Lock: user('GO WITH CONDITIONS') }), '3->4', data()).result, 'FAIL');
+  assert.equal(evalCard(clean({ Lock: user('GO WITH CONDITIONS', { conditions: ['named payer confirmed'] }) }), '3->4', data()).result, 'PASS');
 });
 test('SCREEN accepts FAIL:CODE verdicts as a fail', () => {
   const r = evalCard(clean({ Screen: { verdict: 'FAIL:FRAGILE,ONESHOT', stamped_by: 'claude' } }), '0->1', data());
   assert.equal(r.result, 'FAIL');
 });
-test('verdict matching ignores case', () => assert.equal(evalCard(clean({ Lock: lisa('go') }), '3->4', data()).result, 'PASS'));
+test('verdict matching ignores case', () => assert.equal(evalCard(clean({ Lock: user('go') }), '3->4', data()).result, 'PASS'));
 
 test('CK45 outstanding fails; CK50 outstanding fails', () => {
-  assert.equal(evalCard({ ...clean({ Lock: lisa('GO') }), ck45_pending: 1 }, '3->4', data()).result, 'FAIL');
-  assert.equal(evalCard({ ...clean({ Lock: lisa('GO') }), ck50_open_obligations: 3 }, '3->4', data()).result, 'FAIL');
+  assert.equal(evalCard({ ...clean({ Lock: user('GO') }), ck45_pending: 1 }, '3->4', data()).result, 'FAIL');
+  assert.equal(evalCard({ ...clean({ Lock: user('GO') }), ck50_open_obligations: 3 }, '3->4', data()).result, 'FAIL');
 });
 test('CK45/CK50 fields missing or not whole numbers fail', () => {
-  const base = clean({ Lock: lisa('GO') });
+  const base = clean({ Lock: user('GO') });
   delete base.ck45_pending;
   assert.equal(evalCard(base, '3->4', data()).result, 'FAIL');
-  assert.equal(evalCard({ ...clean({ Lock: lisa('GO') }), ck50_open_obligations: '0' }, '3->4', data()).result, 'FAIL');
-  assert.equal(evalCard({ ...clean({ Lock: lisa('GO') }), ck50_open_obligations: -1 }, '3->4', data()).result, 'FAIL');
+  assert.equal(evalCard({ ...clean({ Lock: user('GO') }), ck50_open_obligations: '0' }, '3->4', data()).result, 'FAIL');
+  assert.equal(evalCard({ ...clean({ Lock: user('GO') }), ck50_open_obligations: -1 }, '3->4', data()).result, 'FAIL');
 });
 
-// ---- bad input --------------------------------------------------------------------------------------------------
 
 test('unknown transition throws BAD_TRANSITION', () => assert.throws(() => evalCard(clean({}), '9->10', data()), { code: 'BAD_TRANSITION' }));
 test('non-object card throws BAD_CARD', () => {
   for (const bad of [null, 'x', 5, []]) assert.throws(() => evalCard(bad, '3->4', data()), { code: 'BAD_CARD' });
 });
 test('unknown gate names on the card are ignored, not trusted', () => {
-  assert.equal(evalCard(clean({ 'Totally Made Up': lisa('GO') }), '3->4', data()).result, 'FAIL');
+  assert.equal(evalCard(clean({ 'Totally Made Up': user('GO') }), '3->4', data()).result, 'FAIL');
 });
 
-// ---- control + CLI ----------------------------------------------------------------------------------------------
 
 test('selftest: every built-in control behaves', () => {
   const res = selftest(data());
@@ -346,7 +334,7 @@ function cli(args, card) {
 }
 
 test('cli: PASS card exits 0 and prints RESULT: PASS', () => {
-  const r = cli(['--to', '3->4'], clean({ Lock: lisa('GO') }));
+  const r = cli(['--to', '3->4'], clean({ Lock: user('GO') }));
   assert.equal(r.code, 0);
   assert.match(r.out, /RESULT: PASS/);
 });
@@ -355,18 +343,18 @@ test('cli: FAIL card exits 1', () => {
   assert.equal(r.code, 1);
   assert.match(r.out, /RESULT: FAIL/);
 });
-test('cli: a gate with a synthetic OPEN conflict exits 1 with RESULT: WAITS-LISA', () => {
+test('cli: a gate with a synthetic OPEN conflict exits 1 with RESULT: WAITS-USER', () => {
   const dir = mkdtempSync(join(tmpdir(), 'gate-data-'));
   try {
     const f = join(dir, 'data.json');
     writeFileSync(f, JSON.stringify(withOpenConflict(data())));
-    const r = cli(['--to', '2->3', '--data', f], clean({ Base: lisa('GO') }));
+    const r = cli(['--to', '2->3', '--data', f], clean({ Base: user('GO') }));
     assert.equal(r.code, 1);
-    assert.match(r.out, /RESULT: WAITS-LISA/);
+    assert.match(r.out, /RESULT: WAITS-USER/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 test('cli: the real data has no open conflict, so Base GO exits 0', () => {
-  const r = cli(['--to', '2->3'], clean({ Base: lisa('GO') }));
+  const r = cli(['--to', '2->3'], clean({ Base: user('GO') }));
   assert.equal(r.code, 0);
 });
 test('cli: 7->8 with Leak_post FAIL exits 1 and names LEAK:POST', () => {
@@ -381,7 +369,7 @@ test('cli: --dry-run forces exit 0 but still reports the real result', () => {
   assert.match(r.out, /DRY-RUN/);
 });
 test('cli: --json prints parseable JSON', () => {
-  const r = cli(['--to', '3->4', '--json'], clean({ Lock: lisa('GO') }));
+  const r = cli(['--to', '3->4', '--json'], clean({ Lock: user('GO') }));
   assert.equal(JSON.parse(r.out).result, 'PASS');
 });
 test('cli: unreadable or invalid card JSON exits 1 with ERROR', () => {
@@ -398,3 +386,4 @@ test('cli: --list and --selftest exit 0', () => {
   assert.equal(cli(['--list']).code, 0);
   assert.equal(cli(['--selftest']).code, 0);
 });
+

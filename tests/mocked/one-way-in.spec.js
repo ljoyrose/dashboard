@@ -1,11 +1,9 @@
-// Stage 2c: one way into each area. The front page keeps the Needs you row and the Next card; nothing else on it
-// points at a tab. Main = one tile per hub (MOVE moved to More, 2 Nov). Main, Decide, Do and More. The Bin has one entry (section 9).
 const { test, expect } = require('../support/test');
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const PH = require('../support/world').IDS.projectsHub; // Projects Hub tile only when config.js holds its address
+const PH = require('../support/world').IDS.projectsHub;
 const MOVE = require('../support/world').IDS.moveSheet;
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
@@ -78,3 +76,4 @@ test.describe('Bin has a single entry (job file section 9)', () => {
     expect(bins.filter((b) => b === 'other')).toEqual([]);
   });
 });
+

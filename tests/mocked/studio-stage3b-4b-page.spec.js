@@ -1,5 +1,3 @@
-// Studio page, engine v0.2.24 fields (stages 3b + 4b): parked tools, playbook codes, and who does each playbook step and how.
-// Pretend Google and Drive only; the data is tests/fixtures/studio/state.js (invented). Old state without the fields renders as before.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -23,7 +21,7 @@ async function open(page, guard, hash, change) {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
-  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
 }
 async function uploads(page, guard) {
   const got = [];
@@ -45,11 +43,10 @@ test.describe('Studio: engine v0.2.24 page side', () => {
     await expect(pb.locator('.pbh b')).toHaveText('P1 Example app launch pack');
     await expect(pb.locator('li')).toHaveCount(8);
     await expect(pb.locator('li [data-chip="step-who"]')).toHaveText([
-      'Lisa · by hand', 'Claude · AUTO', 'Claude · AUTO', 'Grok · AUTO', 'Lisa · by hand', 'Studio helper · AUTO', 'Lisa · by hand'
+      'User · by hand', 'Claude · AUTO', 'Claude · AUTO', 'Grok · AUTO', 'User · by hand', 'Studio helper · AUTO', 'User · by hand'
     ]);
-    await expect(pb.locator('li').last().locator('[data-chip]')).toHaveCount(0); // who and fit both empty: no chip
+    await expect(pb.locator('li').last().locator('[data-chip]')).toHaveCount(0);
     await expect(pb.locator('li').nth(2).locator('a')).toHaveText('Example pet card');
-    // Old playbooks (no code, no who) look as before.
     const old = page.locator('[data-playbook="pb-launch"]');
     await expect(old.locator('[data-chip]')).toHaveCount(0);
     await expect(old.locator('li')).toHaveText(['Sample webclass funnel', 'Sample email kit', 'Post the replay link']);
@@ -88,16 +85,16 @@ test.describe('Studio: engine v0.2.24 page side', () => {
     await page.locator('[data-playbook="pb-app-launch"] [data-libedit]').click();
     const ef = page.locator('[data-libform="playbooks"]');
     const v = await ef.locator('[data-lf="steps"]').inputValue();
-    expect(v.split('\n').slice(0, 3)).toEqual(['Agree the brief @lisa/HAND', 'Write the store listing @claude/AUTO', 'kit:kit-pet-card @claude/AUTO']);
+    expect(v.split('\n').slice(0, 3)).toEqual(['Agree the brief @user/HAND', 'Write the store listing @claude/AUTO', 'kit:kit-pet-card @claude/AUTO']);
     expect(v.split('\n')[7]).toBe('Say thank you');
     await ef.locator('[data-lf="steps"]').fill('kit:no-such-kit @claude/AUTO');
     await ef.locator('[data-action="libsend"]').click();
     await expect(ef.locator('[data-lfq="steps"] .ferr')).toHaveText('No kit called no-such-kit');
-    await ef.locator('[data-lf="steps"]').fill('Write the copy @claude/AUTO\nkit:kit-pet-card @engine/AUTO\nPost it @lisa/HAND');
+    await ef.locator('[data-lf="steps"]').fill('Write the copy @claude/AUTO\nkit:kit-pet-card @engine/AUTO\nPost it @user/HAND');
     await ef.locator('[data-action="libsend"]').click();
     await expect.poll(() => got.length).toBe(1);
     expect(got[0].body).toMatchObject({ kind: 'library', table: 'playbooks', op: 'edit', id: 'pb-app-launch',
-      fields: { steps: ['Write the copy @claude/AUTO', 'kit:kit-pet-card @engine/AUTO', 'Post it @lisa/HAND'] } });
+      fields: { steps: ['Write the copy @claude/AUTO', 'kit:kit-pet-card @engine/AUTO', 'Post it @user/HAND'] } });
   });
 
   test('390px phone: the P1 playbook and the Tools page fit with no sideways scroll', async ({ page, guard }) => {
@@ -111,3 +108,4 @@ test.describe('Studio: engine v0.2.24 page side', () => {
     await fits();
   });
 });
+

@@ -64,3 +64,4 @@ test('evidence.js sends only through the save script (file_add, then link_add) a
   assert.match(src, /linkAdd\(\{ from_table: 'area_reading'/);
   assert.match(src, /role: 'evidence'/);
 });
+

@@ -1,9 +1,6 @@
-// Puppy Enquiries Hub page (JOB 13 Stage 13). Example mode (no sheet id in config.js): the invented rows from
-// enquiries/examples.js, nothing sent. Pretend Google only.
 const { test, expect } = require('../support/test');
 
 test.describe('Enquiries page @enquiries', () => {
-  // Signed in with the pretend Google (the house gate locks every hub until then); the sign-in is kept for later page loads.
   test.beforeEach(async ({ page }) => {
     await page.goto('enquiries/');
     await page.locator('#view [data-action="signin"]').click();
@@ -98,7 +95,6 @@ test.describe('Enquiries page @enquiries', () => {
     await expect(card).toContainText('enquiries');
     await card.locator('a[href="#/results"]').click();
     await expect(page.locator('[data-card="results-all"]')).toBeVisible();
-    // The invented HubSpot history month: 10 enquiries, 6 calls booked = 60%, 4 held of 6 = 67%.
     const mar = page.locator('[data-results-month="2026-03"]');
     await expect(mar.locator('tr[data-step="calls_booked"] [data-rate]')).toHaveText('60%');
     await expect(mar.locator('tr[data-step="calls_held"] [data-rate]')).toHaveText('67%');
@@ -131,3 +127,4 @@ test.describe('Enquiries page @enquiries', () => {
     await expect(page.locator('#draftText')).toHaveCount(0);
   });
 });
+

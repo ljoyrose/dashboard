@@ -45,7 +45,7 @@ test('find: any case, anywhere in the name, each dog keeps its room; nothing is 
   await expect(visible(page)).toHaveText(['Pretend Bramble', 'Fake Ramsey']);
   await expect(page.locator('[data-dog="dog-1"] .bs-dog-was')).toHaveText('Last recorded: P1');
   await expect(page.locator('[data-dog="dog-3"] .bs-dog-was')).toHaveText('Last recorded: P2');
-  await expect(page.locator('.bs-sticky')).toBeHidden();   // "All the rest unmoved" would confirm the hidden dogs too
+  await expect(page.locator('.bs-sticky')).toBeHidden();
   await find.fill('pepper');
   await expect(visible(page)).toHaveText(['Pretend Pepper']);
   expect(posts).toEqual([]);
@@ -76,3 +76,4 @@ test('find: no match says so; deleting the text shows every dog again', async ({
   await expect(visible(page)).toHaveCount(3);
   await expect(page.locator('#where-none')).toBeHidden();
 });
+

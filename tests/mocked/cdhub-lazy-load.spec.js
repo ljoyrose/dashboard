@@ -1,5 +1,3 @@
-// CD Hub lazy load (menu PR 4, OV11 15 Nov 2026): Breed Better and Enquiries load the first time a page that uses them
-// opens, not on first open. First load must be lighter; each page still works; a failed part says so and tries again.
 const { test, expect } = require('../support/test');
 
 const signIn = async (page) => {
@@ -24,7 +22,7 @@ test.describe('CD Hub lazy load', () => {
     expect(got.filter((x) => LAZY_JS.test(x.path)).map((x) => x.path)).toEqual([]);
     const first = await total(got);
     await page.evaluate(() => go('dogs'));
-    await expect(page.locator('#main #q')).toBeVisible();   // the Dogs page, after its parts have run
+    await expect(page.locator('#main #q')).toBeVisible();
     const parts = got.filter((x) => LAZY_JS.test(x.path));
     expect(parts.length).toBe(8);
     const lazyBytes = await total(parts);
@@ -71,3 +69,4 @@ test.describe('CD Hub lazy load', () => {
     await expect(page.locator('#main h2').first()).toContainText('Enquiries');
   });
 });
+

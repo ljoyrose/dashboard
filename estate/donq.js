@@ -26,7 +26,6 @@
       st = 'ok';
     }).catch(function () { st = 'failed'; }).then(X.render);
   }
-  // Open = no status yet, or "open". Anything else (approved, done, rejected) is not asked again.
   function open() { return st === 'ok' ? rows.filter(function (r) { return r.status === '' || r.status === 'open'; }) : []; }
   function picked() { var bag = X.pick().dq || {}; return open().filter(function (r) { return bag[r.n] && !sent[r.n]; }); }
 
@@ -53,10 +52,10 @@
   Q.approve = function () {
     var p = picked();
     if (!p.length) return;
-    if (!X.write()) { Q.afterWrite = true; X.askWrite(); return; } // Google asks once; the approval then goes on by itself
+    if (!X.write()) { Q.afterWrite = true; X.askWrite(); return; }
     X.setBusy(true); X.render();
     var meta = { name: 'AA_CJ-DO-APPROVE-' + Date.now() + '.json', parents: [qFile.parents[0]], mimeType: 'application/json' };
-    var body = { approved_by: 'Lisa (dashboard Approve ticked)', at: new Date().toISOString(), queue_file_id: qFile.id,
+    var body = { approved_by: 'User (dashboard Approve ticked)', at: new Date().toISOString(), queue_file_id: qFile.id,
       rows: p.map(function (r) { return { row: r.n, date: r.date, session: r.session, action: r.action, target: r.target }; }) };
     var b = 'dq' + Date.now();
     var payload = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(body) + '\r\n--' + b + '--';
@@ -68,3 +67,4 @@
       .then(function () { X.setBusy(false); X.render(); });
   };
 })(window);
+

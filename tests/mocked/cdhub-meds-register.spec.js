@@ -1,5 +1,3 @@
-// Medicines register (priority 2, 21 Nov 2026): Compliance prints or downloads one month of medicines for an inspector.
-// Read only. A detail the record does not hold says "not recorded", never a guess. Invented rows only; nothing is posted.
 const fs = require('fs');
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
@@ -30,7 +28,6 @@ const ROWS = DISPENSE.trim().split('\n').slice(1).map((l) => {
   h.forEach((k, i) => { o[k] = v[i] || ''; });
   return o;
 });
-// The months the fold offers: this month (London) back to the first record, newest first.
 const offered = (first) => {
   const now = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }).slice(0, 7), out = [];
   let [y, m] = now.split('-').map(Number), k = now;
@@ -59,13 +56,10 @@ test.describe('Medicines register: the rules', () => {
     expect(R.cell(one, 'dose')).toBe('1 tablet');
     expect(R.cell(one, 'reason')).toBe('routine');
     expect(R.cell(one, 'note')).toBe('with food');
-    // Dose is required. A blank name shows Lisa Carson. Time, batch, expiry and the vet note are left blank.
-    expect(R.cell(one, 'given_by')).toBe('Lisa Carson');
+    expect(R.cell(one, 'given_by')).toBe('User');
     ['time', 'batch', 'expiry', 'vet'].forEach((k) => expect(R.cell(one, k)).toBe(''));
-    // "NOT STATED" is not a medicine's name
     expect(R.cell(lines[0], 'product')).toBe(R.NR);
     expect(R.cell(lines[0], 'dose')).toBe(R.NR);
-    // a dog no longer on the list keeps its id, and no chip is guessed
     expect(R.cell(lines[2], 'dog')).toBe('Dog not on the current list');   // no id on paper
     expect(R.cell(lines[2], 'chip')).toBe('');
   });
@@ -74,7 +68,7 @@ test.describe('Medicines register: the rules', () => {
     const [l] = R.build([{ id: 'x', subject_id: 'sub-test-dog-1', given_at: '2026-04-02T08:15:00Z', product: 'Sample Tablet',
       batch: 'B-123', expires_on: '2027-01-31', amount: '5 ml', route: 'Oral', reason: 'skin', instructions: 'twice a day for 5 days', given_by: 'Sample Staff' }],
     { month: '2026-04', dog });
-    expect(R.cell(l, 'time')).toBe('09:15');   // 08:15 UTC is 09:15 UK summer time
+    expect(R.cell(l, 'time')).toBe('09:15');
     expect(R.cell(l, 'batch')).toBe('B-123');
     expect(R.cell(l, 'expiry')).toBe('2027-01-31');
     expect(R.cell(l, 'dose')).toBe('5 ml');
@@ -90,7 +84,6 @@ test.describe('Medicines register: the rules', () => {
     const cells = csv.replace(/^\ufeff/, '').split('\r\n').slice(6, 12).map((r) => r.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map((c) => c.replace(/,$/, '').replace(/^"|"$/g, '').replace(/""/g, '"')));
     cells.forEach((r, i) => {
       [4, 9, 12].forEach((col) => {   // Medicine, Reason, Note
-        // = + - @ get a leading '; a leading tab or return is trimmed off with the other spaces
         expect(r[col]).toBe(/^[\t\r]/.test(bad[i]) ? bad[i].trim() : "'" + bad[i]);
         expect(r[col]).not.toMatch(/^[=+\-@\t\r]/);
       });
@@ -115,7 +108,7 @@ test.describe('Medicines register: the rules', () => {
     expect(rows[1]).toBe('Month,February 2026');
     expect(rows[2]).toBe('Printed,21 Nov 2026 10:00');
     expect(rows[5]).toBe(R.COLUMNS.map((c) => c[1]).join(','));
-    expect(rows.length).toBe(6 + 4 + 1);   // 6 header rows, 4 lines, final blank
+    expect(rows.length).toBe(6 + 4 + 1);
     expect(csv).toContain(`"'=HYPERLINK(""x"")"`);
     expect(csv).not.toMatch(/,=HYPERLINK/);
     expect(R.fileName('2026-02')).toBe('medicines-register-2026-02.csv');
@@ -130,7 +123,7 @@ test.describe('Medicines register: the rules', () => {
     expect(html).not.toContain('Batch 3 of 3');
     expect(html).not.toContain('Recorded in');
     expect(html).not.toContain('dog card');
-    expect(html).toContain('Lisa Carson');
+    expect(html).toContain('User');
     expect(R.toHtml({ kennel: 'K', month: '2026-05', printed: '' }, [])).toContain('No records this month.');
   });
 });
@@ -218,7 +211,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await expect(pop.locator('.meta').first()).toContainText('Sample Kennel (invented)');
     await expect(pop.locator('.gaps')).not.toContainText('Batch');
     await expect(pop.locator('.gaps')).not.toContainText('Given by');
-    await expect(pop.locator('tbody')).toContainText('Lisa Carson');
+    await expect(pop.locator('tbody')).toContainText('User');
     await expect(pop.locator('table')).not.toContainText('Recorded in');
     await expect(card.locator('#medsMsg')).toHaveText('Opened 4 entries to print.');
     await pop.close();
@@ -230,7 +223,6 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await signIn(page);
     await tabClick(page, '#nav button[data-go="compliance"]');
     const card = page.locator('#compMeds');
-    // April 2026 had no medicine: it is offered all the same
     await expect(card.locator('#medsMonth option[value="2026-04"]')).toHaveText('Apr 2026 (none)');
     await card.locator('#medsMonth').selectOption('2026-04');
     await page.waitForFunction(() => !!window.BLDMedsRegister);   // fetched when Compliance opens
@@ -269,13 +261,13 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
 
 // the owner 23 Nov 2026: no internal codes on paper. A record id looks like clg-20261118-042020-vf20.
 const ID_PATTERN = /\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/i;
-test('a parasite dose joins the medicines register once, and a vet procedure drug does not @regression', () => {
+test('t-cdhub-meds-register-spec-1', () => {
   const types = [
     { id: 'ct-med', type_key: 'medicine', label: 'Medicine given', amount_unit: 'dose' },
     { id: 'cty-parasites-1', type_key: 'parasites', label: 'Flea, worm and tapeworm treatment', amount_unit: '' }
   ];
   const logs = [
-    { id: 'clg-par-1', check_type_id: 'cty-parasites-1', subject_id: 'sub-test-dog-1', item: 'Moxiclear', amount: '1 pipette', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill Lisa 25 Nov', taken_by: 'Lisa Carson' },
+    { id: 'clg-par-1', check_type_id: 'cty-parasites-1', subject_id: 'sub-test-dog-1', item: 'Moxiclear', amount: '1 pipette', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill User 25 Nov', taken_by: 'User' },
     { id: 'clg-par-2', check_type_id: 'cty-parasites-1', subject_id: 'sub-test-dog-1', item: 'Moxiclear', amount: '1 pipette', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'same dose again' },
     { id: 'clg-op', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Propofol', amount: '2 ml', outcome: 'ok', happened_at: '2026-11-09T12:00:00Z', note: 'vet procedure' }
   ];
@@ -287,21 +279,21 @@ test('a parasite dose joins the medicines register once, and a vet procedure dru
   expect(R.toHtml({ kennel: 'Sample Kennel', month: '2026-11', printed: '25 Nov 2026' }, lines)).not.toMatch(/Propofol|backfill/i);
 });
 
-test('the medicines register does not show where it was recorded, and a blank name is Lisa Carson @regression', () => {
+test('t-cdhub-meds-register-spec-2', () => {
   const [blank, named] = R.build([
     { id: 'a', subject_id: 'sub-test-dog-1', given_on: '2026-02-03', product: 'Sample Wormer', dose_volume: '1 tablet' },
     { id: 'b', subject_id: 'sub-test-dog-1', given_on: '2026-02-04', product: 'Sample Wormer', dose_volume: '1 tablet', given_by: 'Sample Staff' }
   ], { month: '2026-02', dog });
-  expect(R.cell(blank, 'given_by')).toBe('Lisa Carson');
+  expect(R.cell(blank, 'given_by')).toBe('User');
   expect(R.cell(named, 'given_by')).toBe('Sample Staff');
   expect(R.COLUMNS.some((c) => c[0] === 'source')).toBe(false);
   const html = R.toHtml({ kennel: 'Sample Kennel', month: '2026-02', printed: '25 Nov 2026' }, [blank, named]);
   const csv = R.toCsv({ kennel: 'Sample Kennel', month: '2026-02', printed: '25 Nov 2026' }, [blank, named]);
   expect(html).not.toContain('Recorded in');
   expect(html).not.toContain('dog card');
-  expect(html).toContain('Lisa Carson');
+  expect(html).toContain('User');
   expect(csv).not.toContain('dog card');
-  expect(csv).toContain('Lisa Carson');
+  expect(csv).toContain('User');
   expect(csv).toContain('Sample Staff');
 });
 
@@ -318,7 +310,7 @@ test.describe('Medicines register: no internal codes, nothing counted twice', ()
 
   test('"from <id>" is dropped, real note text stays; a dose copied to the dog card is printed once', () => {
     const lines = R.build(R.combine(disp, logs, types), { month: '2026-02', dog });
-    expect(lines.map((l) => l.id)).toEqual(['dsp-a1', 'dsp-a2', 'clg-20261120-090000-ab12']);   // the copied job row is not repeated
+    expect(lines.map((l) => l.id)).toEqual(['dsp-a1', 'dsp-a2', 'clg-20261120-090000-ab12']);
     expect(R.cell(lines[0], 'note')).toBe('');
     expect(R.cell(lines[0], 'source')).toBe('dog card');
     expect(R.cell(lines[1], 'note')).toBe('with food');
@@ -334,3 +326,4 @@ test.describe('Medicines register: no internal codes, nothing counted twice', ()
     expect(R.toHtml(head, lines).replace(/<[^>]+>/g, ' ')).not.toMatch(ID_PATTERN);
   });
 });
+

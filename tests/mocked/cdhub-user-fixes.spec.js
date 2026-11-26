@@ -1,4 +1,3 @@
-// Owner hub small fixes (13 Nov 2026): dates as "2 Mar 2026" on Compliance and Data checks; hover is a grey fill only.
 const { test, expect } = require('../support/test');
 
 const signIn = async (page) => {
@@ -44,3 +43,4 @@ test('hover is the grey fill only: a tile or check-item keeps its border colour,
     expect(r, r).not.toMatch(/border-color|(^|[^-])color:|outline:\s*(?!none)/);
   }
 });
+

@@ -1,7 +1,3 @@
-// Web Estate Hub, Stage 14: two-source certificate check (I4). Pure: no network, no Drive, no DOM.
-// Source (a) is the engine's live TLS read (row.ssl_expires); source (b) is the certificate transparency log
-// (crt.sh JSON, fetched elsewhere and handed in). A TLS read taken from a cloud session is never trusted:
-// its egress gateway re-signs every certificate, so that read is treated as absent, with the reason given.
 (function (root, factory) {
   'use strict';
   var api = factory();
@@ -11,15 +7,13 @@
   'use strict';
 
   var VERSION = '1.0.0';
-  var TOLERANCE = 1; // days; live and log dates this close still agree (time zones, renewal at midnight)
-  var GATEWAY_MAX_LIFE = 31; // days; a re-signed gateway certificate lives about 30 days
-  var GATEWAY_FRESH = 2; // days; and it is issued at (or just before) the moment of the request
+  var TOLERANCE = 1;
+  var GATEWAY_MAX_LIFE = 31;
+  var GATEWAY_FRESH = 2;
   var DAY = 864e5;
   var MONTHS = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i;
 
   // ---- dates ----
-  // 2027-01-15, 2027-01-15T10:00:00, 15/01/2027, a Date, or the TLS form "Jan 15 10:00:00 2027 GMT".
-  // Anything else is "no date", never a guess.
   function toMs(v) {
     if (v instanceof Date) return isNaN(v.getTime()) ? null : v.getTime();
     var s = String(v == null ? '' : v).trim(), m;
@@ -46,7 +40,6 @@
     return String(h == null ? '' : h).trim().toLowerCase()
       .replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/[\/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '');
   }
-  // One certificate name (exact, or a *.example.com wildcard covering exactly one label) against a host.
   function nameCovers(name, host) {
     var n = cleanHost(name), h = cleanHost(host);
     if (!n || !h) return false;
@@ -55,12 +48,10 @@
     var rest = n.slice(2), dot = h.indexOf('.');
     return dot > 0 && h.slice(dot + 1) === rest;
   }
-  // crt.sh name_value holds one name per line.
   function namesCover(nameValue, host) {
     return String(nameValue == null ? '' : nameValue).split(/[\r\n]+/).some(function (n) { return nameCovers(n, host); });
   }
 
-  // ---- source (b): the certificate transparency log ----
   function parseLog(input) {
     if (Array.isArray(input)) return input;
     if (input && typeof input === 'object') return [input];
@@ -70,8 +61,6 @@
       return Array.isArray(v) ? v : (v && typeof v === 'object' ? [v] : []);
     } catch (e) { return []; }
   }
-  // Certificates in the log that cover host and are valid at now; a precertificate and its final certificate
-  // (same issuer, same validity) count once.
   function logCerts(input, host, now) {
     var t = nowMs(now), seen = {}, out = [];
     parseLog(input).forEach(function (c) {
@@ -87,7 +76,6 @@
     });
     return out.sort(function (a, b) { return b.ms - a.ms; });
   }
-  // crt.sh JSON (array or text) -> latest currently-valid not_after as YYYY-MM-DD, or null. Never throws.
   function fromCrtSh(input, host, now) {
     try {
       var list = logCerts(input, host, now);
@@ -95,9 +83,6 @@
     } catch (e) { return null; }
   }
 
-  // ---- source (a): the live TLS read ----
-  // The egress gateway of a cloud session re-signs certificates: an issuer naming an egress gateway, or a
-  // certificate issued at the moment of the request with a life of about 30 days.
   function isGatewayCert(cert, now) {
     if (!cert || typeof cert !== 'object') return false;
     var issuer = String(cert.issuer || cert.issuer_name || cert.ssl_issuer || '');
@@ -109,7 +94,6 @@
     var life = (to - from) / DAY;
     return life > 0 && life <= GATEWAY_MAX_LIFE && Math.abs(seen - from) <= GATEWAY_FRESH * DAY;
   }
-  // A row -> { date, reason }. date null means no live read to trust; reason says why.
   function liveFromRow(row, now) {
     var r = row || {};
     var date = day(r.ssl_expires);
@@ -125,7 +109,6 @@
   }
 
   // ---- compare ----
-  // liveDate, logDate (any date form, or empty) -> { result, live, log, text }.
   function compare(liveDate, logDate, opts) {
     var o = opts || {};
     var tol = typeof o.toleranceDays === 'number' && o.toleranceDays >= 0 ? o.toleranceDays : TOLERANCE;
@@ -148,14 +131,12 @@
     'log only': { label: 'Certificate log only', level: 'info' },
     'none': { label: 'No certificate date', level: 'grey' }
   };
-  // A result word, or a compare() result -> { label, level }.
   function chip(result) {
     var k = result && typeof result === 'object' ? result.result : result;
     var c = CHIPS[k] || CHIPS.none;
     return { label: c.label, level: c.level };
   }
 
-  // rows, crtByHost ({ host: crt.sh JSON or text }), now -> { [row.key]: compare result + chip + liveReason }.
   function checkRows(rows, crtByHost, now) {
     var out = {}, crt = crtByHost || {};
     (rows || []).forEach(function (r) {
@@ -187,3 +168,4 @@
     checkRows: checkRows
   };
 });
+

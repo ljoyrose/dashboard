@@ -1,5 +1,3 @@
-// Dog photo crop on a phone : the crop fits the screen, a finger drag moves the picture, the
-// buttons are phone-sized, and Save photo sends a square JPEG within the limit. Invented dog, pretend save script.
 const { test, expect } = require('../support/test');
 const { openOneDog, recordSaves, bigPhoto, jpegSize } = require('../support/dog-photo-world');
 
@@ -29,13 +27,11 @@ test.describe('Phone: dog photo crop', () => {
     await dlg.locator('[data-crop-use]').tap();
     await expect.poll(() => bodies.length).toBe(1);
 
-    // second: the same picture dragged sideways by a finger gives a different crop
     await expect(input).toBeEnabled();
     await input.setInputFiles(big.file);
     await expect(dlg).toBeVisible();
     const v2 = await dlg.locator('[data-crop-view]').boundingBox();
     await touchDrag(page, v2.x + v2.width / 2, v2.y + v2.height / 2, -100);
-    // click, not tap: the raw touch drag above uses its own DevTools session, which leaves Playwright's tap state behind
     await dlg.locator('[data-crop-use]').click();
     await expect.poll(() => bodies.length).toBe(2);
 
@@ -57,6 +53,7 @@ test.describe('Phone: dog photo crop', () => {
     await page.locator('#rows article.dc label[data-photo-take]').tap();
     const opened = await chooser;
     expect(await opened.element().getAttribute('capture')).toBe('environment');
-    await expect(page.locator('.pcam')).toHaveCount(0);   // no page camera on a phone: the phone's own camera opens
+    await expect(page.locator('.pcam')).toHaveCount(0);
   });
 });
+

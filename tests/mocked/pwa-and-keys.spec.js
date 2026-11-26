@@ -1,5 +1,3 @@
-// Phone install (manifest, icon, service worker) and keyboard keys.
-// The service worker may keep ONLY the site's own page files: never Drive data, never the sign-in token.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -18,7 +16,6 @@ test.describe('Install on your phone', () => {
     for (const [url, pre] of [['./', ''], ['money/', '../'], ['cdhub/', '../']]) {
       await page.goto(url);
       await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', pre + 'manifest.webmanifest');
-      // Behind Cloudflare Access the manifest must be fetched with the sign-in cookie, or Android only makes a shortcut (15 Nov 2026).
       await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('crossorigin', 'use-credentials');
       await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', pre + 'icons/icon.svg');
     }
@@ -39,12 +36,12 @@ test.describe('Install on your phone', () => {
 
   test.describe('with the service worker running', () => {
     test.use({ serviceWorkers: 'allow' });
-    test('after signing in and reading, the kept copy holds only the page files @regression', async ({ page }) => {
+    test('t-pwa-and-keys-spec-1', async ({ page }) => {
       await page.goto('./');
       await page.evaluate(() => navigator.serviceWorker.ready);
       await page.reload();
       await signIn(page);
-      await page.goto('money/'); // already signed in: the sign-in is shared between the pages
+      await page.goto('money/');
       await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
       const kept = await page.evaluate(async () => {
         const out = [];
@@ -82,7 +79,7 @@ test.describe('Keyboard keys', () => {
     await page.keyboard.press('r');
     await expect.poll(() => guard.world.calls.filter((c) => c.path === '/drives').length).toBeGreaterThan(before);
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
-    await page.goto('cdhub/'); // already signed in: the sign-in is shared between the pages
+    await page.goto('cdhub/');
     await tabClick(page, '#nav button[data-go="dogs"]');
     const box = page.locator('#main .srch input').first();
     await box.click();
@@ -99,11 +96,10 @@ test.describe('Keyboard keys', () => {
   });
 });
 
-// JOB 35 (30 Oct 2026) @regression: Factory, Food and Marketplace were left out of the phone's kept copy, so they did
-// not open offline while Money, CD Hub and Studio did. Every hub page the site publishes must be on the list.
-test('@regression every published hub page is on the service worker list', () => {
+test('t-pwa-and-keys-spec-2', () => {
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   for (const hub of ['money', 'cdhub', 'studio', 'factory', 'food', 'marketplace']) {
     expect(sw, hub).toContain(`'${hub}/', '${hub}/index.html'`);
   }
 });
+

@@ -1,5 +1,4 @@
 'use strict';
-// Saved dated scores (15 Nov 2026, BB; draft Stage 4 names). Invented records only.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { standardEnv } = require('./harness');
@@ -21,7 +20,7 @@ function env(props, heads) {
 }
 function post(e, fields, code) {
   n += 1;
-  const body = { v: 1, request_id: 'req-score-' + String(n).padStart(4, '0'), code: code || e.codes.owner, action: 'score_save', fields };
+  const body = { v: 1, request_id: 'req-score-' + String(n).padStart(4, '0'), code: code || e.codes.user, action: 'score_save', fields };
   return JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify(body) } }).getContent());
 }
 const rows = (e, f) => e.file(f)[0].content.trim().split(/\r?\n/).slice(1).map((l) => l.split(','));
@@ -32,7 +31,7 @@ const LINES = [
 const S = (extra) => Object.assign({ subject_id: 'sub-test-a', scheme_id: 'sch-test', period: '2026-10-15', verdict: 'unverified',
   points_earned: '15', points_available: '25', points_unverified: '10', unknown_count: '1', lines: LINES }, extra);
 
-test('score_save: OFF behind its own switch; owner only', () => {
+test('score_save: OFF behind its own switch; user only', () => {
   const off = env({ TABLE_ON_score_assessment: '' });
   assert.equal(post(off, S()).code, 'TABLE_OFF');
   const e = env();
@@ -73,3 +72,4 @@ test('score_save: refuses bad input, unknown records, future dates and a missing
   const short = env({}, { a: A_H.replace(',replaces_id', '') });
   assert.equal(post(short, S()).code, 'HEADER_MISMATCH');
 });
+

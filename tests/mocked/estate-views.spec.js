@@ -1,5 +1,3 @@
-// Web Estate Access tab and client view (30 Oct 2026): role names only, never a login; a client view shows one
-// client's rows with no other client, no other company and no internal note. Pretend Google; invented rows.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -7,7 +5,7 @@ const F = require('../fixtures/estate/rows.js');
 
 const CONFIG = fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8');
 const ROWS = F.ROWS.concat([
-  { key: 'a2.example.test', kind: 'site', company: 'Second Ltd', client: 'Client A', owner_role: 'builder', url_or_domain: 'https://a2.example.test', live_status: 'live', access_note: 'owner: someone@example.com; editor: Pat', flag: 'INTERNAL-ONLY-FLAG', source: 'manual' },
+  { key: 'a2.example.test', kind: 'site', company: 'Second Ltd', client: 'Client A', user_role: 'builder', url_or_domain: 'https://a2.example.test', live_status: 'live', access_note: 'user: someone@example.com; editor: Pat', flag: 'INTERNAL-ONLY-FLAG', source: 'manual' },
   { key: 'b2.example.test', kind: 'site', company: 'Third Ltd', client: 'Client B', url_or_domain: 'https://b2.example.test', live_status: 'down', access_note: 'manager: Sam' },
 ]);
 
@@ -44,6 +42,7 @@ test.describe('Web Estate access and client view', () => {
     await expect(page.locator('[data-card="clients"] a')).toHaveCount(2);
     await page.locator('[data-card="clients"] a', { hasText: 'Client B' }).click();
     await expect(page).toHaveURL(/#\/client\?client=Client%20B$/);
-    await expect(page.locator('.prop')).toHaveCount(2); // b2 and the invented Client B ads account
+    await expect(page.locator('.prop')).toHaveCount(2);
   });
 });
+

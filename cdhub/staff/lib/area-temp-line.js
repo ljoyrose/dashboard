@@ -31,10 +31,8 @@
   function slotOf(r) { var at = String(r.period_start || r.taken_at || ''), hr = parseInt(at.slice(11, 13), 10); return isNaN(hr) || hr < 12 ? 'am' : 'pm'; }
   function londonHour() { return parseInt(new Date().toLocaleString('en-GB', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London'), hour: '2-digit', hour12: false }), 10); }
 
-  /** The limit in force on day d (YYYY-MM-DD; blank = every row): the room's own rows first, else the general rows;
-   *  by the youngest dog's age when rows have ages; the later from_date first. */
   function limitFor(areaId, bands, youngestDays, d) {
-    var on = C.inForce(bands || [], day(d)).slice()   // the shared rule (capacity.js)
+    var on = C.inForce(bands || [], day(d)).slice()
       .sort(function (a, b) { return day(b.from_date).localeCompare(day(a.from_date)); });
     var own = on.filter(function (b) { return b.area_id === areaId; });
     var rows = own.length ? own : on.filter(function (b) { return !b.area_id; });
@@ -81,7 +79,6 @@
         var forT = !t.id || r.thermometer_id === t.id || (!r.thermometer_id && roomCount === 1);
         if (!forT) return;
         var s = slotOf(r), was = got[s];
-        // own reading beats a linked copy; else the later one
         if (!was || (was.linked_from && !r.linked_from) || (!!was.linked_from === !!r.linked_from && String(r.taken_at || '') >= String(was.taken_at || ''))) got[s] = r;
       });
       var am = slotState(got.am, 'am', lim, hour), pm = slotState(got.pm, 'pm', lim, hour);
@@ -92,3 +89,4 @@
   }
   return { lineFor: lineFor, limitFor: limitFor };
 }));
+

@@ -1,7 +1,3 @@
-// JOB 34b (Studio): the states nobody else opens. studio.spec.js covers a failed REFRESH (page kept, "Offline" banner)
-// and job34-studio-flows covers two state files; this adds the FIRST read failing (500, no access, offline, sign-in
-// expired) and recovering with Read again, the slow first read (no example data while it waits), an empty studio-state.json on every view,
-// a signed-out deep link, and a sign-in Google refuses. Invented data only (tests/fixtures/studio/state.js, HUBS.studio).
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -11,12 +7,11 @@ const ctx = { window: {} };
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8'), ctx);
 const ST = ctx.window.DASH_CONFIG.studio;
-const LIST = /^https:\/\/www\.googleapis\.com\/drive\/v3\/files\?q=/; // the "find studio-state.json" call
+const LIST = /^https:\/\/www\.googleapis\.com\/drive\/v3\/files\?q=/;
 const MEDIA = /^https:\/\/www\.googleapis\.com\/drive\/v3\/files\/[^?]+\?alt=media/; // reading the file itself
 const view = (page) => page.locator('#view');
 const NOW = new Date('2026-10-28T10:10:00');
 
-// Put a studio-state.json in the pretend Drive (the sample one, or the text given) and open Studio at `hash`, signed in.
 async function openWith(page, guard, { text, hash = '#/me', wait = true } = {}) {
   const { build } = require('../fixtures/studio/state');
   await page.clock.setFixedTime(NOW);
@@ -25,7 +20,6 @@ async function openWith(page, guard, { text, hash = '#/me', wait = true } = {}) 
   await page.goto('studio/' + hash);
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
-  // Ready = the engine pill is drawn (it is hidden by CSS under 600px wide, so wait for its class, not for it to show).
   if (wait) await expect(page.locator('#enginePill')).not.toHaveClass(/hidden/);
 }
 
@@ -35,7 +29,7 @@ test.describe('JOB 34b Studio: the first read fails', () => {
       allowedConsole.push(new RegExp(`Failed to load resource: .*${status}`));
       await fail(page, LIST, status);
       await openWith(page, guard, { wait: false });
-      await expect(view(page).locator('.banner')).toHaveText(words, { timeout: 15000 }); // a 500 is tried 4 times (toolkit.js) first
+      await expect(view(page).locator('.banner')).toHaveText(words, { timeout: 15000 });
       for (const id of ['#enginePill', '#budgetPill', '#exBanner']) await expect(page.locator(id)).toBeHidden();
       await expect(page.locator('#refreshBtn')).toBeVisible(); // a way out is offered
       await expect(page.locator('#tabs')).toBeVisible();
@@ -87,7 +81,6 @@ test.describe('JOB 34b Studio: slow network', () => {
     await expect(view(page).locator('[data-hub-main="studio"] [data-hm="next"]')).toBeVisible();
   });
 
-  // The missing "Reading…" state straight after sign-in is parked on main as J34-F84 (job34-states-slow.spec.js).
 
   test('a slow Read again keeps the page on screen (never blanks to Reading…)', async ({ page, guard }) => {
     await openWith(page, guard);
@@ -135,7 +128,7 @@ test.describe('JOB 34b Studio: signed out', () => {
     await page.goto('studio/#/decide');
     await expect(view(page).locator('[data-action="signin"]')).toBeVisible();
     for (const id of ['#tabs', '#newBtn', '#refreshBtn', '#signOutBtn', '#enginePill', '#budgetPill']) await expect(page.locator(id)).toBeHidden();
-    await expect(page.locator('#signInBtn')).toBeEnabled(); // Google sign-in has loaded; a click before that does nothing
+    await expect(page.locator('#signInBtn')).toBeEnabled();
     await view(page).locator('[data-action="signin"]').click();
     await expect(page.locator('#enginePill')).toBeVisible();
     await expect(view(page)).toHaveAttribute('data-view', 'decide');
@@ -173,3 +166,4 @@ test.describe('JOB 34b Studio: the pop-up is closed', () => {
     await expect(page.locator('#tabs')).toBeHidden();
   });
 });
+

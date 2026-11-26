@@ -8,14 +8,12 @@ const { expect } = require('@playwright/test');
 const RANK = { late: 0, today: 1, wait: 2 };
 const SHOTS = process.env.HUBMAIN_SHOTS || '';
 
-// The parts of #view's Main, in order (data-hm on each direct child of the .hm block).
 async function parts(page) {
   const hm = page.locator('#view [data-hub-main], [data-hub-main]').first();
   await expect(hm).toBeVisible();
   return hm.locator(':scope > [data-hm]').evaluateAll((els) => els.map((e) => e.getAttribute('data-hm')));
 }
 
-// Everything on Main is the .hm block: no other card or list is drawn next to it (a hub's own heading and banner may stay).
 async function onlyMain(page, root = '#view') {
   const extra = await page.locator(root).evaluate((v) => {
     const hm = v.querySelector('[data-hub-main]');
@@ -31,8 +29,6 @@ async function onlyMain(page, root = '#view') {
   expect(extra, 'Main shows only Next, Needs you and the 3 numbers').toEqual([]);
 }
 
-// Checks one Main. want = { labels: [3], hrefs: [3] (exact href attribute, or RegExp), values?: [3] (exact text), empty?: bool,
-// fail?: bool, late?: [bool x3] }.
 async function checkMain(page, want) {
   const p = await parts(page);
   if (want.fail) expect(p).toEqual(['fail', 'nums']);
@@ -46,11 +42,9 @@ async function checkMain(page, want) {
     expect(n).toBeLessThanOrEqual(5);
     const kinds = await rows.evaluateAll((els) => els.map((e) => e.getAttribute('data-kind')));
     for (let i = 1; i < kinds.length; i++) expect(RANK[kinds[i]], 'Needs you order late > today > waiting: ' + kinds.join(',')).toBeGreaterThanOrEqual(RANK[kinds[i - 1]]);
-    // Every row carries its action (a real link), and Next is the first row.
     for (let i = 0; i < n; i++) await expect(rows.nth(i).locator('a[data-hm-act]')).toHaveAttribute('href', /./);
     await expect(hm.locator('[data-hm="next"] a[data-hm-act]')).toHaveAttribute('href', /./);
     expect(await hm.locator('[data-hm="next"] .hm-what').innerText()).toBe(await rows.first().locator('.hm-t > a').innerText());
-    // Late rows wear the rose pill.
     for (let i = 0; i < n; i++) if (kinds[i] === 'late') await expect(rows.nth(i).locator('.dpill.late')).toBeVisible();
   } else {
     await expect(hm.locator('[data-hm="next"], [data-hm="needs"]')).toHaveCount(0);
@@ -71,12 +65,11 @@ async function checkMain(page, want) {
   return got;
 }
 
-// Each number opens its filtered view: click it and the page moves to that address and draws something.
 async function clickNumbers(page, labels) {
   for (const l of labels) {
     const a = page.locator('[data-hub-main] a.hm-n[data-k="' + l + '"]');
     const href = await a.getAttribute('href');
-    if (!/^#\//.test(href)) continue; // links that leave the page are checked by href only
+    if (!/^#\//.test(href)) continue;
     await a.click();
     await expect(page).toHaveURL(new RegExp(href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'));
     await expect(page.locator('[data-hub-main]')).toHaveCount(0);
@@ -158,3 +151,4 @@ async function numberGroup(page, links, v) {
 }
 
 module.exports = { numberGroup, steadyRows, parts, onlyMain, checkMain, clickNumbers, noSideways, shot };
+

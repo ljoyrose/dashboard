@@ -1,8 +1,5 @@
 name: Protection watch (weekly)
 
-# Checks once a week that branch protection on main is still ON and still requires the check that really exists.
-# Read-only: it changes nothing and needs no admin key (a normal read token can see the rule).
-# If it is off, ONE issue ("Branch protection is off") is opened; it closes itself when protection is back.
 on:
   schedule:
     - cron: '5 7 * * 1' # Mondays 07:05 UTC
@@ -39,3 +36,4 @@ jobs:
         if: ${{ success() && github.ref == 'refs/heads/main' }}
         continue-on-error: true
         run: node tests/support/report-issue.js --state green --label protection-off
+

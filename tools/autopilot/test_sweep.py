@@ -30,7 +30,7 @@ class T(unittest.TestCase):
     def test_draft_skipped(self):
         self.assertEqual(cls(pr(isDraft=True)), "SKIP")
 
-    def test_sensitive_needs_lisa(self):
+    def test_sensitive_needs_user(self):
         self.assertEqual(cls(pr(files=[{"path": ".github/workflows/x.yml"}])), "DO")
         self.assertEqual(cls(pr(files=[{"path": "merge-policy.json"}])), "DO")
 
@@ -84,3 +84,4 @@ class T(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

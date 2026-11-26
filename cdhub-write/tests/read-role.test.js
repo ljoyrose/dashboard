@@ -1,16 +1,15 @@
 'use strict';
-/** 12 Nov 2026 (TEMPS): a read reply carries the caller's own role, so the page can hide owner-only buttons. The script still decides what is read. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { standardEnv } = require('./harness');
 const fx = require('./fixtures');
 
-test('a read reply says the caller\'s own role: OWNER for an owner code, STAFF for a staff code', () => {
+test('a read reply says the caller\'s own role: USER for a user code, STAFF for a staff code', () => {
   const env = standardEnv({ props: { READ_ENABLED: 'true' } });
   const f = env.file('BLD-field_visibility.csv')[0];
   f.content = f.content.replace(/\r?\n?$/, '\r\n') + ['aud-admin', 'aud-staff'].flatMap((a) => ['*', 'id', 'name'].map((c) => `fv-x,${fx.TENANT},area,${c},${a},yes,,,t,2026-11-12,t`)).join('\r\n') + '\r\n';
   const role = (code) => env.ctx.sinkRead_({ v: 1, action: 'read', code, table: 'area' }).role;
-  assert.equal(role(env.codes.owner), 'OWNER');
+  assert.equal(role(env.codes.user), 'USER');
   assert.equal(role(env.codes.staff), 'STAFF');
 });
 
@@ -21,15 +20,15 @@ test('a read reply also says the caller\'s own name (the Welcome line), never an
   const r = (code) => env.ctx.sinkRead_({ v: 1, action: 'read', code, table: 'area' });
   assert.equal(typeof r(env.codes.staff).name, 'string');
   assert.ok(r(env.codes.staff).name.length > 0);
-  assert.notEqual(r(env.codes.staff).name, r(env.codes.owner).name);
+  assert.notEqual(r(env.codes.staff).name, r(env.codes.user).name);
 });
 
-test('key_prefix=job. (15 Nov 2026, SOPJOBS S8): staff read only the job.* owner settings from breeding_rule', () => {
+test('key_prefix=job. (SOPJOBS S8): staff read only the job.* user settings from breeding_rule', () => {
   const env = standardEnv({ props: { READ_ENABLED: 'true' } });
   const t = fx.TENANT;
   const rules = env.file('BLD-breeding_rule.csv');
   const text = ['id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date',
-    `br-1,${t},job.paper_default_time,12:00,2026-11-14,Lisa,,,,`, `br-2,${t},link_kind.main,Main photo,2026-01-01,t,,,,`,
+    `br-1,${t},job.paper_default_time,12:00,2026-11-14,User,,,,`, `br-2,${t},link_kind.main,Main photo,2026-01-01,t,,,,`,
     `br-3,${t},file.who_may,STAFF,2026-01-01,t,,,,`].join('\r\n') + '\r\n';
   if (rules.length) { rules[0].content = text; rules[0].sheet = undefined; } else env.addFile('BLD-breeding_rule.csv', text);
   const f = env.file('BLD-field_visibility.csv')[0];
@@ -41,13 +40,13 @@ test('key_prefix=job. (15 Nov 2026, SOPJOBS S8): staff read only the job.* owner
   assert.equal(r.scope, 'the job.* rows');
 });
 
-test('key_prefix=job.|size_from_kg.|size_colour. (Lisa 22 Nov 2026): one row-rule allows several prefixes; every other key stays hidden', () => {
+test('key_prefix=job.|size_from_kg.|size_colour. : one row-rule allows several prefixes; every other key stays hidden', () => {
   const env = standardEnv({ props: { READ_ENABLED: 'true' } });
   const t = fx.TENANT;
   const rules = env.file('BLD-breeding_rule.csv');
   const text = ['id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date',
-    `br-1,${t},job.paper_default_time,12:00,2026-11-14,Lisa,,,,`, `br-2,${t},size_from_kg.medium,10,2026-11-12,Lisa,,,,`,
-    `br-3,${t},size_colour.medium,green,2026-01-01,Lisa,,,,`, `br-4,${t},file.who_may,STAFF,2026-01-01,t,,,,`,
+    `br-1,${t},job.paper_default_time,12:00,2026-11-14,User,,,,`, `br-2,${t},size_from_kg.medium,10,2026-11-12,User,,,,`,
+    `br-3,${t},size_colour.medium,green,2026-01-01,User,,,,`, `br-4,${t},file.who_may,STAFF,2026-01-01,t,,,,`,
     `br-5,${t},size_from_kgx.bad,1,2026-01-01,t,,,,`].join('\r\n') + '\r\n';
   if (rules.length) { rules[0].content = text; rules[0].sheet = undefined; } else env.addFile('BLD-breeding_rule.csv', text);
   const f = env.file('BLD-field_visibility.csv')[0];
@@ -55,7 +54,7 @@ test('key_prefix=job.|size_from_kg.|size_colour. (Lisa 22 Nov 2026): one row-rul
     .map(([c, cond]) => `fv-x,${t},breeding_rule,${c},aud-staff,yes,${cond},,t,2026-11-15,t`).join('\r\n') + '\r\n';
   const r = env.ctx.sinkRead_({ v: 1, action: 'read', code: env.codes.staff, table: 'breeding_rule' });
   assert.deepEqual(Array.from(r.rows, (x) => x.rule_key), ['job.paper_default_time', 'size_from_kg.medium', 'size_colour.medium']);
-  assert.equal(r.rows[1].source, 'Lisa');
+  assert.equal(r.rows[1].source, 'User');
   assert.equal(r.scope, 'the job.*, size_from_kg.*, size_colour.* rows');
 });
 
@@ -83,7 +82,6 @@ function q3Env(extra) {
   return env;
 }
 const readArea = (env, code) => env.ctx.sinkRead_({ v: 1, action: 'read', code: code || env.codes.staff, table: 'area' });
-// extra row: field,audience,visible,condition,redaction,set_by,set_on,reason,row_id,role_code,from_date,to_date,source
 
 test('Q3: no new columns, or blank ones: reads exactly as before', () => {
   const r = readArea(q3Env([]));
@@ -92,12 +90,12 @@ test('Q3: no new columns, or blank ones: reads exactly as before', () => {
 });
 
 test('Q3: one record hidden (row_id + *), one cell hidden (row_id + column), for staff only', () => {
-  const env = q3Env(['*,aud-staff,no,,,t,2026-10-01,t,area-t1,,,,owner', 'm2_note,aud-staff,no,,,t,2026-10-01,t,area-t2,,,,owner']);
+  const env = q3Env(['*,aud-staff,no,,,t,2026-10-01,t,area-t1,,,,user', 'm2_note,aud-staff,no,,,t,2026-10-01,t,area-t2,,,,user']);
   const s = readArea(env);
   assert.deepEqual(Array.from(s.rows, (x) => x.id), ['area-t2', 'area-t3-1']);
   assert.equal(s.rows[0].m2_note, '');
   assert.equal(s.rows[0].code, 'T2');
-  const o = readArea(env, env.codes.owner);
+  const o = readArea(env, env.codes.user);
   assert.deepEqual(Array.from(o.rows, (x) => x.id), ['area-t1', 'area-t2', 'area-t3-1']);
   assert.equal(o.rows[1].m2_note, 'fake note, with a comma');
 });
@@ -113,11 +111,8 @@ test('Q3: a hide row is in force only from .. to (both days included); a whole c
 
 test('Q3: an unreadable date keeps a hide row in force and a show row out; a row_id row can never show more', () => {
   assert.deepEqual(Array.from(readArea(q3Env(['*,aud-staff,no,,,t,,t,area-t1,,someday,,'])).rows, (x) => x.id), ['area-t2', 'area-t3-1']);
-  // a show row for grouping with a bad date gives nothing extra
   assert.ok(!Array.from(readArea(q3Env(['grouping,aud-staff,yes,,,t,,t,,,soon,,'])).fields).includes('grouping'));
-  // a yes row with a row_id does not widen anything
   assert.ok(!Array.from(readArea(q3Env(['grouping,aud-staff,yes,,,t,,t,area-t1,,,,'])).fields).includes('grouping'));
-  // and a hide row with a row_id does not switch the whole list off
   assert.equal(readArea(q3Env(['*,aud-staff,no,,,t,,t,area-t3-1,,,,'])).rows.length, 2);
 });
 
@@ -126,10 +121,11 @@ test('Q3: role_code names the role when audience_id is blank; the person\'s and 
   const s = readArea(env);
   assert.deepEqual(Array.from(s.rows, (x) => x.id), ['area-t2', 'area-t3-1']);
   assert.ok(Array.from(s.fields).includes('grouping'));
-  assert.equal(readArea(env, env.codes.owner).rows.length, 3);
+  assert.equal(readArea(env, env.codes.user).rows.length, 3);
   const p = q3Env([`*,person:${'X'},no,,,t,,t,area-t2,,,,`].map((x) => x));
   const sid = p.ids.staff;
   const f = p.file('BLD-field_visibility.csv')[0];
   f.content = f.content.replace('person:X', 'person:' + sid) + `fv-q,${fx.TENANT},area,*,,no,,,t,,t,area-t3-1,STAFF,,,\r\n`;
   assert.deepEqual(Array.from(readArea(p).rows, (x) => x.id), ['area-t1']);
 });
+

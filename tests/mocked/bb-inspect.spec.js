@@ -1,6 +1,3 @@
-// Breed Better inspector page (spec S10), laid out to the owner's inspector design (13 Nov 2026).
-// Fake script id and fake code only; invented test dogs. The inspector sees Pass / Unverified / Fail on the must-pass checks
-// (owner's answer, 13 Nov 2026) when the script sends a must-pass summary; never points, the target, ranking or notes.
 const { test, expect } = require('../support/test');
 
 test.use({ allowedConsole: [/404/] });
@@ -69,7 +66,6 @@ test('S10 a broken link says it is not complete', async ({ page }) => {
   await expect(page.locator('#screen')).toContainText('This link is not complete.');
 });
 
-// ---- the owner's inspector design: must-pass words, litters against the limit, chip last 4, A to Z; never points
 const FULL = {
   subject: { fields: ['id', 'name', 'sex', 'dob'], rows: [
     { id: 'sub-test-dog-2', name: 'Test Dog B', sex: 'male', dob: '2023-01-09' },
@@ -105,11 +101,9 @@ test('S10 inspector layout: A to Z, chip last 4, must-pass words per line and pe
   const lit = a.locator('.ins-check', { hasText: 'Litters' });
   await expect(lit).toContainText('3 of 6');
   await expect(lit).toContainText('Last 2 Mar 2026 · 1 in last 12 months');
-  // Open folds the shared record in place; nothing on the page can change anything
   await a.locator('.ins-check', { hasText: 'Hips X-ray' }).locator('summary', { hasText: 'Open' }).click();
   await expect(a.locator('.ins-check', { hasText: 'Hips X-ray' }).locator('.ins-row')).toContainText('Grade Good');
   await expect(page.locator('button, input, form, select, textarea')).toHaveCount(0);
-  // inspectors never see points, the target, Below target or ranking
   await expect(page.locator('#screen')).not.toContainText(/points|target|Below target|rank/i);
   await expect(page.locator('#screen')).not.toContainText('Unproven');
   if (process.env.BB_SHOTS) {
@@ -151,3 +145,4 @@ test('18 Nov 2026: temperatures and job records show after the dogs, by day, new
     await expect(page.locator('button, input, form')).toHaveCount(0);
   } finally { delete DATA.area_reading; delete DATA.check_log; }
 });
+

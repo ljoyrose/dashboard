@@ -1,5 +1,4 @@
 'use strict';
-// One file store: file_add (14 Nov 2026, DOGCARD). Invented rows and a one-pixel picture only; folder ids are stand-ins.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { standardEnv } = require('./harness');
@@ -23,7 +22,7 @@ function env(props, rules) {
 }
 function post(e, fields, code) {
   n += 1;
-  const body = { v: 1, request_id: 'req-files-' + String(n).padStart(4, '0'), code: code || e.codes.owner, action: 'file_add', fields };
+  const body = { v: 1, request_id: 'req-files-' + String(n).padStart(4, '0'), code: code || e.codes.user, action: 'file_add', fields };
   return JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify(body) } }).getContent());
 }
 const rows = (e) => {
@@ -33,7 +32,7 @@ const rows = (e) => {
   return lines.slice(1).map((l) => Object.fromEntries(cells(l).map((v, i) => [head[i], v])));
 };
 
-test('file_add: owner only by default, behind its own switch', () => {
+test('file_add: user only by default, behind its own switch', () => {
   const off = env({ TABLE_ON_files: '' });
   assert.equal(post(off, { kind: 'link', url: 'https://example.org/a' }).code, 'TABLE_OFF');
   const e = env();
@@ -57,7 +56,7 @@ test('a photo is stored in the file store folder under a neutral name and one fi
   assert.equal(row.set_on, '2026-10-15');   // the London day
   assert.equal(row.created_at, '2026-10-15T22:30:00Z');   // UTC
   assert.equal(row.updated_at, '');
-  assert.equal(row.set_by, e.ids.owner);   // the code's public id, not a name
+  assert.equal(row.set_by, e.ids.user);
 });
 
 test('the same bytes again are not stored twice: the existing id comes back', () => {
@@ -79,7 +78,7 @@ test('a link saves without a folder or types row; https addresses only', () => {
   assert.equal(post(e, { kind: 'link', url: 'http://example.org/plain' }).code, 'INVALID');   // https only
 });
 
-test('types and size come from owner rule rows: none set = refused; not listed = refused; over max_bytes = refused', () => {
+test('types and size come from user rule rows: none set = refused; not listed = refused; over max_bytes = refused', () => {
   assert.equal(post(env({}, []), { kind: 'photo', mime: 'image/png', data_base64: PNG }).code, 'INVALID');
   assert.equal(post(env(), { kind: 'upload', mime: 'application/zip', data_base64: PNG }).code, 'INVALID');
   const t = 'ten-test';
@@ -106,16 +105,17 @@ test('the bytes must match the claimed type; a files sheet missing created_at/up
   assert.notEqual(post(old, { kind: 'link', url: 'https://example.org/a' }).ok, true);
 });
 
-test('who may add is an owner rule row file.who_may: blank = owner only; the owner can add the STAFF role or one person', () => {
+test('who may add is an user rule row file.who_may: blank = user only; the user can add the STAFF role or one person', () => {
   const base = (t) => [`r1,${t},file.types,image/png,2026-01-01,test,,,,`];
   const t = 'ten-test';
   const none = env({}, base(t));
   assert.equal(post(none, { kind: 'link', url: 'https://example.org/a' }, none.codes.staff).code, 'NOT_ALLOWED');
-  const role = env({}, base(t).concat([`r2,${t},file.who_may,OWNER|STAFF,2026-01-01,test,,,,`]));
+  const role = env({}, base(t).concat([`r2,${t},file.who_may,USER|STAFF,2026-01-01,test,,,,`]));
   assert.equal(post(role, { kind: 'link', url: 'https://example.org/a' }, role.codes.staff).ok, true);
   const person = env({}, base(t));
   const f = person.file('BLD-breeding_rule.csv')[0];
   f.content += `r3,${t},file.who_may,person:${person.ids.staff},2026-01-01,test,,,,\r\n`;
   assert.equal(post(person, { kind: 'link', url: 'https://example.org/b' }, person.codes.staff).ok, true);
-  assert.equal(post(person, { kind: 'link', url: 'https://example.org/c' }, person.codes.owner).ok, true);   // the owner always may
+  assert.equal(post(person, { kind: 'link', url: 'https://example.org/c' }, person.codes.user).ok, true);
 });
+

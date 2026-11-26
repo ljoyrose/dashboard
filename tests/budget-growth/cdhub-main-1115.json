@@ -1,4 +1,4 @@
 {
   "cdhub": 2000,
-  "why": "Main grew 818 bytes past the CD Hub budget after several PRs merged on 15 Nov 2026 (find lists, staff code, menu work); allowance so the publish gate passes."
+  "why": "size"
 }

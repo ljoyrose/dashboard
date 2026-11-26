@@ -20,7 +20,7 @@ test('rules: Settings text read, unknown names ignored, defaults kept', () => {
 });
 
 test('ACCEPT: an invented enquiry replied on Monday is due Wednesday', () => {
-  const e = [enq(1, 'replied')], v = [ev(1, 'replied', '2026-11-02T10:00:00')]; // Monday 2 Nov 2026, UK clock
+  const e = [enq(1, 'replied')], v = [ev(1, 'replied', '2026-11-02T10:00:00')];
   const tue = plan(e, v, [], '2026-11-03T12:00:00Z');
   assert.equal(tue.length, 1);
   assert.deepEqual([tue[0].rule, tue[0].try, tue[0].status, tue[0].due_uk], ['first-reply', 1, 'waiting', '2026-11-04T10:00:00']);
@@ -102,3 +102,4 @@ test('requests: replied and done carry keys only; unknown keys refused', () => {
   assert.equal(C.doneRequest('x').ok, false);
   assert.equal(C.snoozeRequest('x', '2027-01-01T10:00:00').ok, false);
 });
+

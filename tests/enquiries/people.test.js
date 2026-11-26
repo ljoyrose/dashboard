@@ -1,6 +1,3 @@
-// Stage 6: one person across sources, history, past deposits and the do-not-contact gate.
-// Run: node --test tests/enquiries/people.test.js
-// Every person here is invented: "Buyer A" style names, example.com addresses and Ofcom fiction numbers (07700 900xxx).
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -147,3 +144,4 @@ test('allocation tabs: both header shapes read; leads with no deposit are not pa
   assert.equal(C.depositFlags({ phone_e164: '+447700900372' }, keys).past_deposit, false, 'a lead with no deposit');
   assert.deepEqual(C.depositFlags({ name: 'Buyer L Sample' }, keys), { past_deposit: true, repeat_buyer: true, check: 'deposit list match on name only' });
 });
+

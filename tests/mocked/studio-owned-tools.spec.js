@@ -19,7 +19,7 @@ async function signIn(page, hash) {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
-  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
 }
 
 test('config.js names the sheet and the OWNED_TOOLS tab for the Owned tools list', () => {
@@ -49,11 +49,9 @@ test('signed in: Tools reads the Owned Tools tab once, with the sign-in token, a
   await expect(first.locator('[data-tier]')).toHaveText('Tier 2 · 2 codes (2 redeemed)');
   await expect(first.locator('[data-agency]')).toHaveText('Yes - agency use allowed');
   await expect(first.locator('[data-verdict]')).toHaveText('KEEP');
-  // The Tools search finds owned tools too.
   await page.locator('input[data-lq="tools"]').fill('snapper');
   await expect(card.locator('[data-ownedtool]')).toHaveCount(1);
   await expect(card.locator('[data-ownedtool="Sample Snapper"]')).toBeVisible();
-  // Another page and back: no second read until Refresh.
   await page.evaluate(() => { location.hash = '#/me'; });
   await page.evaluate(() => { location.hash = '#/tools'; });
   await expect(page.locator('[data-owned="ok"]')).toBeVisible();
@@ -97,14 +95,12 @@ test('public repo: no tool data is hard-coded and the sheet id lives only in con
   const files = walk(ROOT).filter((f) => /\.(html|js|md|csv|json|yml|yaml|txt)$/.test(f) && f !== 'package-lock.json');
   expect(files.filter((f) => f !== 'config.js' && fs.readFileSync(path.join(ROOT, f), 'utf8').includes(OT.sheetId)), 'sheet id outside config.js').toEqual([]);
   const page = fs.readFileSync(path.join(ROOT, 'studio', 'index.html'), 'utf8');
-  // The page reads the id from config and builds rows only from the Sheets answer.
   expect(page).toMatch(/ST\.ownedTools/);
   expect(page).toMatch(/OT\.rows = v\.slice\(1\)/);
-  // No sample tool, tier or code text written into the page.
   for (const r of SAMPLE.slice(1)) for (const cell of r.slice(0, 4).filter((c) => c.length > 8)) expect(page, 'page holds owned-tool text: ' + cell).not.toContain(cell);
   expect(page, 'no code counts written into the page').not.toMatch(/\d+ codes? \(/);
-  // The read sits behind the sign-in check.
   const fn = page.slice(page.indexOf('function loadOwned()'), page.indexOf('function ownedCard()'));
   expect(fn).toMatch(/if \(!signedIn \|\| !accessToken[^)]*\) return;/);
   expect(fn.indexOf('signedIn')).toBeLessThan(fn.indexOf('sheets.googleapis.com'));
 });
+

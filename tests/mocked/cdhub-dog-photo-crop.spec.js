@@ -12,7 +12,7 @@ test.describe('CD Hub dog photo: crop, then shrink', () => {
     await openOneDog(page, guard);
     const bodies = await recordSaves(page);
     const big = await bigPhoto(page);
-    expect(big.b64len).toBeGreaterThan(350000);   // the original would have been too large
+    expect(big.b64len).toBeGreaterThan(350000);
     await page.locator('#rows article.dc input[data-photo-src="upload"]').setInputFiles(big.file);
     const dlg = page.locator('.pcrop[role="dialog"]');
     await expect(dlg).toBeVisible();
@@ -65,3 +65,4 @@ test.describe('CD Hub dog photo: crop, then shrink', () => {
     expect(bodies.length).toBe(0);
   });
 });
+

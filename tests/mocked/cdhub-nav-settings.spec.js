@@ -1,5 +1,3 @@
-// CD Hub Settings, Menu (menu PR 3, OV11 15 Nov 2026): the owner sets which sections are on and which sit on the bar.
-// Saved as owner-setting rows (nav.on.*, nav.tab.OWNER.*) from today; nothing deleted. Invented rows only.
 const { test: base, expect } = require('../support/test');
 const { buildWorld, IDS } = require('../support/world');
 const { tabClick } = require('../support/tabs');
@@ -12,7 +10,7 @@ function world() {
   d.file('adm-aud', 'BLD-audience.csv', AUD, { parents: [IDS.bld], driveId: 'drv-alpha1' });
   return d;
 }
-const asOwner = base.extend({ world: async ({}, use) => use(world()) });
+const asUser = base.extend({ world: async ({}, use) => use(world()) });
 const URL_ = 'https://script.google.com/macros/s/AKfyTEST_only_123/exec';
 
 const open = async (page, sent) => {
@@ -30,8 +28,8 @@ const open = async (page, sent) => {
   await expect(page.locator('#navMenu')).toBeVisible();
 };
 
-asOwner.describe('CD Hub Settings: Menu', () => {
-  asOwner('no rows: the starting layout, said so; Sales on the bar instead of People saves the whole bar and changes it', async ({ page }) => {
+asUser.describe('CD Hub Settings: Menu', () => {
+  asUser('no rows: the starting layout, said so; Sales on the bar instead of People saves the whole bar and changes it', async ({ page }) => {
     const sent = [];
     await open(page, sent);
     await expect(page.locator('#navMenu')).toContainText('Starting layout, not set.');
@@ -42,15 +40,15 @@ asOwner.describe('CD Hub Settings: Menu', () => {
     await page.locator('#navSave').click();
     await expect(page.locator('#navMsg')).toContainText('Saved');
     const rows = sent.filter((b) => b.table === 'breeding_rule').map((b) => [b.fields.rule_key, b.fields.value]);
-    expect(rows).toEqual(expect.arrayContaining([['nav.tab.OWNER.compliance', '1'], ['nav.tab.OWNER.ops', '2'], ['nav.tab.OWNER.sales', '3'], ['nav.tab.OWNER.people', '0']]));
-    expect(rows.every(([k]) => /^nav\.(on|tab\.OWNER)\./.test(k))).toBe(true);
+    expect(rows).toEqual(expect.arrayContaining([['nav.tab.USER.compliance', '1'], ['nav.tab.USER.ops', '2'], ['nav.tab.USER.sales', '3'], ['nav.tab.USER.people', '0']]));
+    expect(rows.every(([k]) => /^nav\.(on|tab\.USER)\./.test(k))).toBe(true);
     await expect(page.locator('#nav > [data-section]')).toHaveCount(4);   // Main + 3
     await expect(page.locator('#nav > [data-section="sales"]')).toBeVisible();
     await expect(page.locator('#nav > [data-section="people"]')).toHaveCount(0);
     await expect(page.locator('#navMenu')).toContainText('Your menu');
   });
 
-  asOwner('a section on the bar but switched off, or two in one place, is refused and nothing is sent', async ({ page }) => {
+  asUser('a section on the bar but switched off, or two in one place, is refused and nothing is sent', async ({ page }) => {
     const sent = [];
     await open(page, sent);
     await page.locator('#navOn-ops').uncheck();
@@ -63,3 +61,4 @@ asOwner.describe('CD Hub Settings: Menu', () => {
     expect(sent).toHaveLength(0);
   });
 });
+

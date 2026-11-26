@@ -1,17 +1,9 @@
-// JOB 35 regression guard (30 Oct 2026) for the first half of the pages: home (root index.html), cdhub, factory, food.
-// The second half (marketplace, privacy, money, studio) is job35b-a11y-budget.spec.js.
-// Fails if any view gains an axe problem (WCAG 2.2 AA tags, 1280px and 390px), or if a page's own load (its files from
-// this site, signed in with pretend Google, Drive and Sheets) grows more than 10% over the size measured on 30 Oct 2026.
-// Every-view-access uses axe's default rules; this adds the WCAG 2.2 tags and phone width.
-// When a page is made smaller, or a KNOWN item is fixed, lower its number here so it can never creep back.
 const { test, expect } = require('../support/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 const { HUBS, go } = require('../support/hubs');
 const { withGrowth } = require('../support/budgets');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
-// Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-// From 3 Nov 2026 a PR that adds weight adds a file in tests/budget-growth/ (see tests/support/budgets.js) instead of editing this line.
 const BYTES = withGrowth({ home: 353000, cdhub: 240000, factory: 245800, food: 154200 });
 // cdhub 239700 > 240000, factory 245400 > 245800, food 153800 > 154200 (+300 to +400 each) on 3 Nov 2026: config.js grew 336 bytes (TidyUp stage 9, #142), and every page loads it.
 // Measured 263882, 270262 and 169407.
@@ -38,7 +30,6 @@ const BYTES = withGrowth({ home: 353000, cdhub: 240000, factory: 245800, food: 1
 // food raised 102000 > 113000 on 1 Nov 2026 (JOB 34.3): real growth from the Food stages (orders, growth numbers, fish treats, postage; PRs #199-#210). Measured 113019.
 // Known axe problems kept on purpose: { 'page:view@width': { ruleId: places } }, each with its reason.
 const KNOWN = {
-  // FIX-REQUEST to the Factory owner (JOB 32): the health column header needs visible text; an attribute does not satisfy axe.
   'factory:all@1280': { 'empty-table-header': 1 },
   'factory:all@390': { 'empty-table-header': 1 },
 };
@@ -72,3 +63,4 @@ for (const p of PAGES) {
     });
   }
 }
+

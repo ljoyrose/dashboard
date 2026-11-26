@@ -15,17 +15,11 @@
   'use strict';
 
   var FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv',
-    /* evidence only Breed Better reads; the hub already loads health_screen, dna_result, litter and subject_status */
     'BLD-fit_to_breed.csv', 'BLD-score_judgement.csv',
-    /* saved dated scores (15 Nov 2026, draft names; written only when TABLE_ON_score_assessment is on) */
     'BLD-score_assessment.csv',
-    /* optional settings rows: grade-to-colour bands for health results, and what each kind of outside viewer may see */
     'BLD-grade_band.csv', 'BLD-viewer_level.csv',
-    /* the values typed on a Checks form (grade, certainty, answer), read onto their check_log row */
     'BLD-check_value.csv'];
-  /* default words; a scheme row can change any of them with verdict_words, e.g. "unverified=To prove" */
   var VERDICT = { pass: 'Pass', below_target: 'Below target', unverified: 'Unverified', fail: 'Fail' };
-  /* other words a scheme row may set the same way (verdict_words "to_prove=still to prove") */
   var EXTRA_WORDS = { to_prove: 'to prove' };
   var ORDER = ['pass', 'below_target', 'unverified', 'fail'];
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -36,7 +30,6 @@
     undated: 'Record has no date', blank_answer: 'Blank on the record', no_rule_for_answer: 'Answer is not in the rules',
     recorded_unverified: 'Recorded, cannot be scored yet', not_accepted: 'Not accepted yet'
   };
-  /* reasons that mean "the current record is missing": they count as Due on the Calendar */
   var MISSING = { no_record: 1, not_judged: 1, undated: 1, blank_answer: 1 };
   var state = {
     from: null, unenrol: '', filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', age: '', month: '',
@@ -50,14 +43,12 @@
   function signedOff(r, today) { var d = t(r && r.signed_off_on); return /^\d{4}-\d{2}-\d{2}$/.test(d) && d <= t(today); }
   var TESTING = '<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span>';
 
-  /** 2026-03-02 -> "2 Mar 2026". Anything else is shown as it is. */
   function day(d) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(d));
     if (m && typeof BLDDates !== 'undefined') return BLDDates.long(t(d));   /* the one formatter (13 Nov 2026) */
     return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1] + ' ' + m[1] : t(d);
   }
 
-  /* the scheme row's verdict_words over a set of default words (only keys the set already has) */
   function wordsOver(base, scheme) {
     var w = Object.assign({}, base);
     t(scheme && scheme.verdict_words).split(';').forEach(function (pair) {
@@ -66,13 +57,10 @@
     });
     return w;
   }
-  /** The four verdict words only (main, #491). */
   function wordsFor(scheme) { return wordsOver(VERDICT, scheme); }
-  /** The other words (to_prove), kept apart from the verdict words. */
   function extraWordsFor(scheme) { return wordsOver(EXTRA_WORDS, scheme); }
   function verdictOf(r) { return r.verdict || r.gate_result; }
 
-  /** "field=value" pairs joined by ';' (the calculator's own form). Blank matches everything. */
   function fieldsMatch(spec, row) {
     if (!t(spec)) return true;
     return t(spec).split(';').every(function (pair) {
@@ -81,8 +69,6 @@
     });
   }
 
-  /** Judged answers (programme and looks) for one animal: the newest row per check on or before the day. Keyed by check id,
-   *  matched on the check's id or its key, so a later version of a check keeps its answer. */
   function judgementsFor(T, subjectId, criteria, asOf) {
     var rows = (T['BLD-score_judgement.csv'] || []).filter(function (j) {
       return j.subject_id === subjectId && t(j.answer) && (!isDate(j.judged_on) || j.judged_on <= asOf);
@@ -107,16 +93,13 @@
       if (t(l.role) !== 'enrolled_in' || !/^subjects?$/.test(t(l.from_table)) || !/^score_schemes?$/.test(t(l.to_table))) return;
       out.push({ id: t(l.id), src: 'link', subject_id: t(l.from_id), scheme_id: t(l.to_id), from: t(l.from_date), to: t(l.to_date), off: false, reason: t(l.end_reason) });
     });
-    /* once an animal has a link row for a scheme, the links say it all: its older row for that scheme is no longer read */
     var linked = {}; out.forEach(function (e) { if (e.src === 'link') linked[e.subject_id + '|' + e.scheme_id] = 1; });
     return out.filter(function (e) { return e.src === 'link' || !linked[e.subject_id + '|' + e.scheme_id]; });
   }
 
-  /** One result per enrolled animal, best first. { results, error, byId } */
   function compute(v) {
     var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv', 'BLD-subject_status.csv', 'BLD-links.csv'])
       .map(function (f) { return (T[f] || []).length; }).join(',');
-    /* the same row counts can hold different rows (a re-read after an edit): reuse only when every table is the very same one */
     var names = Object.keys(T).sort(), held = names.map(function (f) { return T[f]; });
     if (memo && memo.key === key && memo.names === names.join('|') && memo.held.every(function (x, i) { return x === held[i]; })) return memo;
     var all = enrolments(T);
@@ -130,7 +113,6 @@
     } });
     var open = all.filter(function (e) { return !e.off && !(e.to && e.to < v.today) && !(e.from && e.from > v.today); });
     var isOpen = {}; open.forEach(function (e) { isOpen[e.subject_id] = 1; });
-    /* kept for the Archive: an animal whose every enrolment has ended, with the latest one's dates and reason */
     var last = {};
     all.forEach(function (e) {
       if (isOpen[e.subject_id] || !(e.off || (e.to && e.to < v.today)) || !subjects[e.subject_id]) return;
@@ -142,7 +124,6 @@
       out.enrol[e.subject_id] = e;
       var subject = subjects[e.subject_id];
       if (!subject) { out.error = 'An enrolled animal is not in the animal list: check BLD-score_enrolment.'; return; }
-      /* the enrolment names one scheme; a later version of it (same name, species and breed) takes over on its own date */
       var schemes = T['BLD-score_scheme.csv'] || [];
       var named = schemes.filter(function (s) { return s.id === e.scheme_id; })[0];
       var scheme = named && Score.pickScheme(schemes.filter(function (s) {
@@ -165,7 +146,6 @@
     });
     out.results.sort(function (a, b) {
       var d = ORDER.indexOf(verdictOf(a)) - ORDER.indexOf(verdictOf(b));
-      /* within a verdict, by percent of what each animal could earn: a male and a female can have different totals */
       return d || (pct(b) - pct(a)) || a.name.localeCompare(b.name);
     });
     memo = out;
@@ -178,13 +158,11 @@
   function vpill(k, w) { return '<span class="bb-v bb-' + k + '">' + (w || words)[k] + '</span>'; }
   function pill(r) { return vpill(verdictOf(r), r.words); }
   function unv(r) { return r.points_unverified ? ', ' + r.points_unverified + ' ' + r.words.unverified.toLowerCase() : ''; }
-  /** "Target x%. This dog y%." when the scheme's target is a percent of points available. Both numbers are worked out. */
   function pctLine(r) {
     if (!r.scheme || !/^percent\b/i.test(t(r.scheme.target_is)) || !t(r.scheme.target_points) || !r.points_available) return '';
     return 'Target ' + t(r.scheme.target_points) + '%. This dog ' + Math.round(100 * r.points_earned / r.points_available) + '%.';
   }
 
-  /* Drawing only: verdict icons, the must-pass star, tab and section icons. No rule lives here. */
   var ICON = {
     pass: 'M5 12l5 5l10 -10', below_target: 'M6 9l6 6l6 -6', fail: 'M18 6l-12 12 M6 6l12 12',
     unverified: 'M8 8a3.5 3 0 0 1 3.5 -3h1a3.5 3 0 0 1 3.5 3a3 3 0 0 1 -2 3a3 4 0 0 0 -2 4 M12 19l0 .01',
@@ -215,13 +193,10 @@
     var k = verdictOf(r);
     return '<span class="bb-vw">' + ic(ICON[k], 16, 'var(' + VTEXT[k] + ')') + r.words[k] + '</span>';
   }
-  /* a band's colour cell may hold a kit word (red, orange...) or a #hex; anything else draws in the line grey */
   function bandColour(b) {
     var c = t(b.colour), k = BANDVAR[c.toLowerCase()];
     return k ? 'var(' + k + ')' : /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(c) ? c : 'var(--line)';
   }
-  /* Section icons (Style, 12 Nov 2026). Drawing only: a band row's own icon cell wins (a name below); otherwise its key picks one;
-     a key not listed gets the plain circle. No rule lives here. */
   var SECICON = {
     target: 'M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0 M12 12m-5 0a5 5 0 1 0 10 0a5 5 0 1 0 -10 0 M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0',
     star: ICON.star,
@@ -239,7 +214,6 @@
     var own = t(b.icon).toLowerCase(), key = t(b.key).toLowerCase();
     return SECICON[own] || SECICON[SECKEY[key]] || (b.kind === 'gate' ? SECICON.star : SECICON.circle);
   }
-  /** One section's result for its colour: the worst of its lines. Status sections have none. */
   function secResult(lines) {
     var gates = lines.filter(function (l) { return l.kind === 'gate'; }), pts = lines.filter(function (l) { return l.kind !== 'gate' && l.kind !== 'status'; });
     if (!gates.length && !pts.length) return '';
@@ -249,7 +223,6 @@
     return got >= max ? 'pass' : 'below_target';
   }
   function sortBands(bands) { return bands.slice().sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); }); }
-  /** Points bands in their own order, each with what it can give, what was earned and what is still to prove. */
   function bandStats(r) {
     return sortBands(r.bands).filter(function (b) { return t(b.kind) === 'points'; }).map(function (b) {
       var o = { band: b, max: 0, earned: 0, unv: 0 };
@@ -261,7 +234,6 @@
       return o;
     }).filter(function (o) { return o.max > 0; });
   }
-  /** One band's count: "n of m met" for must-pass, "x of y" points, from this animal's own lines (a skipped line is not counted). */
   function bandCount(r, b) {
     var lines = r.lines.filter(function (l) { return l.band_id === b.id; });
     if (t(b.kind) === 'gate') {
@@ -276,7 +248,6 @@
     return { text: '', n: 0, of: 0, lit: false, attention: false };
   }
   function fmt(n) { return String(Math.round(n * 10) / 10); }
-  /** A line still to do: a must-pass not passed, points not proved, or a record due. Done lines are the rest. */
   function needsWork(l) {
     if (l.kind === 'gate') return l.gate_outcome !== 'pass' || !!l.due;
     if (l.kind === 'points') return l.points === '' || !!l.due;
@@ -291,7 +262,6 @@
     function pt(x) { x = x * Math.PI / 180; return (c + rad * Math.sin(x)).toFixed(2) + ' ' + (c - rad * Math.cos(x)).toFixed(2); }
     return 'M' + pt(a) + 'A' + rad + ' ' + rad + ' 0 ' + (b - a > 180 ? 1 : 0) + ' 1 ' + pt(b);
   }
-  /** The score ring round the photo: each points band owns an arc sized by its points, filled as far as earned. */
   function ring(r) {
     var st = bandStats(r), all = st.reduce(function (s, o) { return s + o.max; }, 0), a = 0, out = '';
     if (!all) return '';
@@ -305,12 +275,10 @@
     return '<svg class="bb-ring" width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">' + out + '</svg>';
   }
   function hubDog(v, id) { return (v.dogs && v.dogs[id]) || null; }
-  /** The animal's photo in a circle, or a plain circle when there is none. The hub loads the picture. */
   function photo(v, r) {
     var d = hubDog(v, r.subject_id), pic = d && v.photoId ? v.photoId(d.photo) : '';
     return '<span class="bb-ph">' + ring(r) + '<span class="bb-pic">' + (pic ? '<img class="dogphoto off" alt="" data-photo-id="' + v.esc(pic) + '" referrerpolicy="no-referrer">' : '') + '</span></span>';
   }
-  /** "3 yrs 7 mths" on the given day. */
   function age(dob, today) {
     var a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(dob)), b = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(today));
     if (!a || !b) return '';
@@ -342,13 +310,6 @@
     var n = best ? Number(t(best.value)) : 0;
     return n > 0 ? [{ key: 'puppy', label: 'Puppy', from: 0, to: n }, { key: 'adult', label: 'Adult', from: n, to: Infinity }] : [];
   }
-  /* Records typed on the Checks screen (15 Nov 2026, OV11: the phone entry for Fit to Breed, health screens and judged
-     answers is the existing Checks form, any industry): each check_log row carries the values typed on its form
-     (BLD-check_value: field_key = value) as if they were its own columns, so a criterion can read e.g.
-     answer_field=grade, evidence_match=check_type_id=cty-hips;certainty=final. A real column of the same name wins.
-     Each row also carries check_type_key, the type_key of its check type (16 Nov 2026, OV11). A check type changes by a
-     new dated row with a new id (cty-fit_to_breed-1, then -2) but keeps its type_key, so a criterion that matches
-     check_type_key=fit_to_breed reads every version, past and future, with no list of ids anywhere. */
   function withValues(logs, values, types) {
     if (!logs) return logs;
     var kind = {};
@@ -393,25 +354,21 @@
     return [d && t(d.sex), age(r.dob, v.today)].filter(Boolean).join(', ');
   }
 
-  /* ---- addresses: each tab has its own, so Back and reload keep it ---- */
   var TABKEY = { score: 'score', evidence: 'evidence', dogs: 'dogs', cal: 'calendar', more: 'more', system: 'system', archive: 'archive', history: 'history', dna: 'dna', viewers: 'viewers' };
   var KEYTAB = {}; Object.keys(TABKEY).forEach(function (k) { KEYTAB[TABKEY[k]] = k; }); KEYTAB.cal = 'cal';
   var DOG_TABS = { score: 1, evidence: 1, history: 1 };
   var MORE_TABS = { system: 1, archive: 1, history: 1, dna: 1, viewers: 1 };
   function href(tab, id) { return 'breed/' + TABKEY[tab] + (id && DOG_TABS[tab] ? '.' + encodeURIComponent(id) : ''); }
-  /** A button that opens one animal's Score tab at one section (data-bb-sec), through the hub's own address change. */
   function secAttrs(esc, id, bandId) {
     return ' data-go="' + esc(href('score', id)) + '" data-bb-sec="' + esc(id) + '"' + (bandId ? ' data-bb-band-go="' + esc(bandId) + '"' : '');
   }
 
-  /* Sort choices (11 Nov 2026). Verdict best to worst is the default; "Fail to Pass" is the one opt-in reverse. */
   var SORTS = [
     ['verdict', 'Verdict, Pass to Fail'], ['high', 'Score, highest %'], ['low', 'Score, lowest %'], ['name', 'Name, A to Z'],
     ['oldest', 'Oldest first'], ['youngest', 'Youngest first'], ['attention', 'Verdict, Fail to Pass']
   ];
   function byVerdict(a, b) { return ORDER.indexOf(verdictOf(a)) - ORDER.indexOf(verdictOf(b)); }
   function byName(a, b) { return a.name.localeCompare(b.name); }
-  /* no date of birth sorts last either way */
   function byDob(dir) { return function (a, b) { return (!a.dob - !b.dob) || dir * a.dob.localeCompare(b.dob); }; }
   var SORT_FN = {
     verdict: function (a, b) { return byVerdict(a, b) || (pct(b) - pct(a)) || byName(a, b); },
@@ -443,7 +400,6 @@
     }).join('') : '<p class="mut">None.</p>';
   }
 
-  /* the row's section icons: in the section colour when it has points (or its must-pass checks are met), grey when nothing yet */
   function secsHtml(r) {
     var bands = r.bands.slice().sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); }).filter(function (b) { return t(b.kind) !== 'status'; });
     if (!bands.length) return '';
@@ -456,8 +412,6 @@
     }).join('') + '</span>';
   }
 
-  /* Species words (Style, 12 Nov 2026): from the scheme's species row, never fixed. common_name gives "Find a dog";
-     plural_word, when the row has one, names the tab. With no row, neutral words. */
   function spWords(v) {
     var sch = (v.T['BLD-score_scheme.csv'] || [])[0] || {}, id = t(sch.species_id);
     var all = v.T['BLD-species.csv'] || [], lc = id.toLowerCase();
@@ -479,14 +433,12 @@
       + '<label class="bb-lab">Sort<select id="bbSort" data-bb-sort="1">' + SORTS.map(function (o) {
         return '<option value="' + o[0] + '"' + (state.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
       }).join('') + '</select></label></div>';
-    /* sex: the words the hub holds, so another species' words show as they are */
     var sexes = {};
     c.results.forEach(function (r) { var d = hubDog(v, r.subject_id), x = d && t(d.sex); if (x) sexes[x] = (sexes[x] || 0) + 1; });
     var sk = Object.keys(sexes).sort();
     var sx = sk.length > 1 ? '<div class="bb-filt" role="group" aria-label="Filter by sex">' + [''].concat(sk).map(function (k) {
       return '<button type="button" class="bb-f" data-bb-sex="' + esc(k) + '" aria-pressed="' + (state.sex === k) + '">' + esc(k || 'Any sex') + (k ? ' <span class="cnt">' + sexes[k] + '</span>' : '') + '</button>';
     }).join('') + '</div>' : '';
-    /* age groups: only when the owner has rows for them */
     var groups = ageGroups(v.T, v.today);
     var ag = groups.length ? '<div class="bb-filt" role="group" aria-label="Filter by age">' + [{ key: '', label: 'Any age' }].concat(groups).map(function (g) {
       var n = g.key ? c.results.filter(function (r) { return inAge(g, r.dob, v.today); }).length : 0;
@@ -497,7 +449,6 @@
   }
   function shownText(c) { return shownRows(c).length + ' of ' + c.results.length + ' shown'; }
 
-  /** The animal's details from the hub, folded. Only what the hub holds is shown. */
   function infoHtml(v, r) {
     var esc = v.esc, d = hubDog(v, r.subject_id) || {}, pic = v.photoId ? v.photoId(d.photo) : '';
     var chips = [t(d.sex), age(r.dob, v.today), r.dob ? 'Born ' + day(r.dob) : '', d.colour && t(d.colour.name), t(d.pat),
@@ -511,7 +462,6 @@
   }
   function chev() { return '<span class="bb-chev">' + ic(ICON.down, 18) + '</span>'; }
 
-  /** Why this verdict, in plain words, from the lines themselves. */
   function whyHtml(r) {
     var k = verdictOf(r);
     var gates = r.lines.filter(function (l) { return l.kind === 'gate'; });
@@ -522,7 +472,6 @@
     return (gates.length ? 'All must pass met' : 'Scored') + (hasTarget(r) ? ', target reached.' : '.');
   }
 
-  /** The verdict box: word, points, target (and the percent line), a bar split by section with the target marked, and why. */
   function verdictHtml(r) {
     var k = verdictOf(r), all = r.points_available || 0, st = bandStats(r);
     var lost = Math.max(0, all - r.points_earned - r.points_unverified);
@@ -540,8 +489,6 @@
       + '<p class="bb-why">' + whyHtml(r) + '</p><p class="bb-pts bb-scored">Scored on ' + day(r.as_of) + '</p></div>';
   }
 
-  /** The header on an animal's own tabs (main's look): Back to the list, previous and next as the list is filtered and sorted now,
-   *  then the name, verdict and points. Each button keeps the tab in the address. */
   function dogHead(v, r, c, tab) {
     var esc = v.esc, list = shownRows(c), at = -1;
     list.forEach(function (x, i) { if (x.subject_id === r.subject_id) at = i; });
@@ -556,7 +503,6 @@
       + '<div class="bb-head"><h3>' + esc(r.name) + '</h3>' + pill(r) + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></div>';
   }
 
-  /** One section card on the dog page: icon, label and count in the header; things to do first; done lines folded under "show done". */
   function bandHtml(v, r, b) {
     var esc = v.esc, lines = r.lines.filter(function (l) { return l.band_id === b.id; });
     if (!lines.length) return '';
@@ -589,14 +535,12 @@
     return n ? ', ' + n + ' due' : '';
   }
 
-  /** The Due level: shown beside the result, never a result itself. */
   function dueHtml(l) {
     if (l.due === 'overdue') return '<span class="bb-due bb-overdue">Overdue since ' + day(l.due_date) + '</span>';
     if (l.due === 'due_soon') return '<span class="bb-due">Due ' + day(l.due_date) + '</span>';
     return '';
   }
 
-  /** What is still needed to prove a check: the check's own proof_label, else its guidance, else a dated record of it. */
   function toProve(r, l) {
     var crit = r && r.input ? r.input.criteria.filter(function (c) { return c.id === l.criterion_id; })[0] : null;
     var need = crit && (t(crit.proof_label) || t(crit.guidance));
@@ -617,20 +561,17 @@
     if (l.rules_then) when += ' · rules then';
     if (l.weight !== undefined && l.weight < 1) when += ' · at ' + l.age_months + ' months, ' + (l.weight === 0.5 ? 'half' : Math.round(l.weight * 100) + '%') + ' points';
     if (l.judged_by) when += ' · judged by ' + esc(l.judged_by);
-    /* a held-back record says what it holds, in the record's own word: "Preliminary" */
     var why = l.unknown_reason === 'not_accepted' && l.held_then ? esc(cap(l.held_then)) + (l.answer_then ? ': ' + esc(l.answer_then) : '') + when
       : l.unknown_reason ? (REASON[l.unknown_reason] || '') + when : (l.answer_then ? 'Recorded: ' + esc(l.answer_then) + when : '');
     if (l.due_date && !l.due) why += ' · due ' + esc(day(l.due_date));
     res += dueHtml(l);
     var unverified = l.gate_outcome === 'unverified' || (l.kind === 'points' && l.points === '');
-    /* Open stays on this page. data-go would be caught by the hub and sent back to the dog list. */
     var openBtn = l.criterion_id ? ' <button type="button" class="bb-src" data-bb-edit="' + esc(l.criterion_id) + '">Open</button>' : '';
     return '<div class="bb-line" data-bb-crit="' + esc(l.criterion_id) + '"><span class="bb-mk">' + mark + '</span><span class="bb-l">' + (l.kind === 'gate' ? star() : '') + esc(l.label_then) + '</span>' + res
       + '<span class="bb-why">' + why + openBtn + '</span>'
       + (unverified ? '<span class="bb-prove">' + esc(toProve(r, l)) + '</span>' : '') + '</div>';
   }
 
-  /** Add or edit one check's result. Replaces the dog page until Back. */
   function editHtml(v, r, criterionId) {
     var esc = v.esc;
     var line = (r.lines || []).filter(function (l) { return l.criterion_id === criterionId; })[0];
@@ -655,9 +596,7 @@
       + '<p class="bb-pts" data-bb-edit-msg role="status"></p></form></section>';
   }
 
-  /* ---- the five tabs at the bottom (owner's design): Score, Evidence, Dogs, Calendar, More ---- */
   var TABS = [['score', 'Score', ICON.award], ['evidence', 'Evidence', ICON.folder], ['dogs', 'Dogs', ICON.list], ['cal', 'Calendar', ICON.cal], ['more', 'More', ICON.more]];
-  /** The animal an animal tab opens: the one chosen (or last viewed), else the first in the list as it is now. */
   function dogFor(c) { return state.dog || (c && (shownRows(c)[0] || c.results[0] || {}).subject_id) || ''; }
   function tabsHtml(v, c) {
     var on = MORE_TABS[state.tab] ? 'more' : state.tab, esc = v ? v.esc : function (s) { return s; }, id = dogFor(c);
@@ -669,9 +608,6 @@
   }
   function addDays(iso, n) { var d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 
-  /** The Calendar's items, from the lines the calculator already worked out (no table of its own):
-   *  done = a dated record still valid, on its own date; due / overdue = the date each check's rules give for its next record;
-   *  missing = no current record at all (no date, listed apart). */
   function calItems(c, today) {
     var out = [];
     c.results.forEach(function (r) {
@@ -689,7 +625,6 @@
   var CAL_IN = { due: { due: 1, overdue: 1, missing: 1 }, done: { done: 1 }, all: { due: 1, overdue: 1, missing: 1, done: 1 } };
   var CAL_WORD = { done: 'Done', due: 'Due', overdue: 'Overdue', missing: 'Due' };
   var CAL_COLOUR = { done: VTEXT.pass, due: VTEXT.unverified, overdue: VTEXT.fail, missing: VTEXT.unverified };
-  /** Due / Done / All counts: All = Due + Done. */
   function calCounts(items) {
     var n = { due: 0, done: 0, all: 0 };
     items.forEach(function (x) { if (x.kind === 'done') n.done++; else n.due++; });
@@ -736,10 +671,8 @@
       + (undated.length ? '<details class="bb-calnone bb-showdone" data-bb-band="cal-none"' + (state.open['cal-none'] ? ' open' : '') + '><summary>No record yet <span class="cnt">' + undated.length + '</span>' + chev() + '</summary>' + undated.map(row).join('') + '</details>' : '');
   }
 
-  /* ---- Evidence: every dated record and judged answer the calculator reads for one animal. Read only, newest first. ---- */
   function tableWords(name) { var s = t(name).replace(/^BLD-/, '').replace(/_/g, ' '); return s.charAt(0).toUpperCase() + s.slice(1); }
   var DOC_FIELDS = ['document_id', 'file_id', 'storage_ref', 'document'];
-  /** [{key, kind, kindLabel, date, answer, doc, checks:[label]}], newest first. One record used by several checks is one item. */
   function evidenceItems(v, r) {
     var T = v.T, items = {}, order = [];
     var crit = r.input ? r.input.criteria.filter(function (c) { return Score.inForce(c, v.today); }) : [];
@@ -752,7 +685,6 @@
         }).forEach(function (j) { add('judged', 'Judged', 'judged|' + (t(j.id) || order.length), t(j.judged_on), t(j.answer), false, c); });
         return;
       }
-      /* Checks records carry the values typed on their forms (main, Checks records), as the calculator reads them */
       var rows = src === 'BLD-check_log' ? (T['BLD-check_log.csv'] ? withValues(T['BLD-check_log.csv'], T['BLD-check_value.csv']) : null) : T[src + '.csv'];
       if (!rows) return;
       var sf = t(c.subject_field) || 'subject_id', df = t(c.date_field);
@@ -795,9 +727,6 @@
       }).join('') : '<p class="mut">No records yet.</p>') + '</div>';
   }
 
-  /* ---- History: the animal's dated entries, and its score worked out again as of each date. Nothing is stored here.
-     When saved scores are switched on (#644, the host gives saveScore), a score saved for a date is shown for that date
-     instead of the worked-out one, marked Saved: it is what the page said then. ---- */
   function savedByDate(v, r) {
     var out = {};
     if (!v.saveScore) return out;
@@ -836,12 +765,11 @@
     return '<button type="button" class="bb-dog bb-more" data-bb-tab="' + tab + '" data-go="' + href(tab, DOG_TABS[tab] ? dogFor(c) : '') + '"><span class="bb-mic">' + ic(icon, 20) + '</span><span class="bb-name">' + label + '</span>'
       + (extra || '') + '<span class="bb-chev">' + ic(ICON.right, 18) + '</span></button>';
   }
-  /* Inspector links are made on the owner's own page (the host gives its address as ownerPage); with none, say where to set it up */
   function inspectorHtml(v) {
-    var u = t(v.ownerPage);
+    var u = t(v.userPage);
     return /^https:\/\//.test(u)
-      ? '<a class="bb-dog" href="' + v.esc(u) + '" target="_blank" rel="noopener"><span class="bb-name">Inspector links</span><span class="bb-pts">Make, copy or stop a read-only link (owner page)</span></a>'
-      : '<div class="bb-dog" aria-disabled="true"><span class="bb-name">Inspector links</span><span class="bb-pts">Set up saving first, then links are made on the owner page.</span></div>';
+      ? '<a class="bb-dog" href="' + v.esc(u) + '" target="_blank" rel="noopener"><span class="bb-name">Inspector links</span><span class="bb-pts">Make, copy or stop a read-only link (user page)</span></a>'
+      : '<div class="bb-dog" aria-disabled="true"><span class="bb-name">Inspector links</span><span class="bb-pts">Set up saving first, then links are made on the user page.</span></div>';
   }
   function moreHtml(v, c) {
     return '<h3 class="bb-h">More</h3>'
@@ -872,7 +800,6 @@
     var ids = autoIds(ruleOn(T, AUTO_KEY, day));
     return ids.indexOf('*') >= 0 || ids.indexOf(t(scId)) >= 0;
   }
-  /* the value to save when one scheme is turned on or off; every other scheme keeps its setting */
   function autoNext(T, day, scId, on) {
     var ids = autoIds(ruleOn(T, AUTO_KEY, day)).filter(function (x) { return x !== 'none'; });
     if (ids.indexOf('*') >= 0) {
@@ -905,7 +832,6 @@
       + (can ? '' : ' <span class="bb-pts">' + NOSAVE + '</span>') + msgHtml(id) + '</div>';
   }
 
-  /** The rules in force today, read only: sections, checks, must pass, answers and points, target, and where each rule came from. */
   function systemHtml(v) {
     var esc = v.esc, T = v.T, today = v.today, schemes = (T['BLD-score_scheme.csv'] || []);
     var ids = {}; enrolments(T).forEach(function (e) { ids[e.scheme_id] = 1; });
@@ -933,7 +859,6 @@
           }).join('') + '</div>';
       }).join('');
   }
-  /** Who sees what: each outside viewer type and the level it gets. Read only: the owner's two levels, or the viewer level rows. */
   function viewersHtml(v) {
     var esc = v.esc, set = Levels.levels(v.T, v.today);
     return backMore() + '<h3 class="bb-h">Who sees what</h3><p class="bb-pts">Read only. ' + (set.fromRows ? 'From the viewer level rows.' : 'Two levels: A, records only; B, records and Pass, Unverified or Fail on the must-pass checks.')
@@ -948,7 +873,6 @@
       }).join('');
   }
 
-  /** The animal the Score, Evidence and History tabs show: the chosen one, else the first in the list as it is now. */
   function pickDog(c) {
     var r = state.dog && c.byId[state.dog];
     if (!r) r = shownRows(c)[0] || c.results[0];
@@ -981,9 +905,6 @@
     return err + body + tabsHtml(v, c);
   }
 
-  /* The look (owner's design, 13 Nov 2026): house tokens only; Lexend 400, 500 and 600; nothing under 14px; 12px corners;
-     1px lines inside; 3px verdict line; no fill at rest, pale grey (--hov) on hover or tap, no outline; the name is 16px and the
-     score 18px (a Breed Better size, --bb-fs-name, so the house body size is unchanged). */
   var STYLE = [
     '#bbRoot,.bb-sec{--bb-fs-name:16px;--bb-tabs-h:64px}',
     '.bb-v{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);border:1px solid;font-size:var(--fs-small);font-weight:500;white-space:nowrap;background:transparent}',
@@ -999,7 +920,6 @@
     '.bb-dog::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--v,var(--line))}',
     '.bb-name{font-weight:500;flex:1 1 auto;font-size:var(--bb-fs-name)}.bb-pts,.bb-why{color:var(--muted);font-size:var(--fs-small)}',
     '.bb-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}',
-    /* list row: the row is one button; the section icons sit on top of it, in the info column */
     '.bb-ph{width:84px;height:84px;flex-shrink:0;position:relative}.bb-ring{position:absolute;inset:0}',
     '.bb-pic{position:absolute;inset:9px;border-radius:50%;background:var(--hov);overflow:hidden;display:block}',
     '.bb-pic img{width:100%;height:100%;object-fit:cover;display:block}.bb-pic img.off{display:none}',
@@ -1053,7 +973,6 @@
     '.bb-ev{display:flex;gap:12px;align-items:flex-start}.bb-evic{display:inline-flex;color:var(--muted);margin-top:2px}',
     '.bb-hist .bb-l1{align-items:center}.bb-hist p{margin:4px 0 0}',
     '.bb-shows{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}.bb-shows li{display:flex;gap:8px;align-items:center;font-size:var(--fs-small)}.bb-shows li[data-on=false]{color:var(--muted)}',
-    /* main's look (house selected look, logo header, section icons, enrol): later, so it wins where both style a thing */
       '.bb-v{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);border:1px solid;font-size:var(--fs-small);font-weight:500;white-space:nowrap;background:transparent}',
       '.bb-pass{border-color:var(--ljr-5);color:var(--ink)}.bb-below_target{border-color:var(--ljr-3);color:var(--ink)}.bb-unverified{border-color:var(--ljr-6);color:var(--ink)}.bb-fail{border-color:var(--ljr-2);color:var(--ink)}',
       '.bb-due{font-size:var(--fs-small);color:var(--muted);white-space:nowrap}.bb-overdue{color:var(--ljr-3-text)}',
@@ -1088,7 +1007,6 @@
       '.bb-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:8px 0}.bb-l{flex:1 1 60%}.bb-why{flex:1 1 100%}',
       '.bb-src{min-height:24px;padding:0 8px;font-size:var(--fs-small);color:var(--ink)}',
       '.bb-chip{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;margin-top:4px}',
-      /* list row and dog page (mock-up and Style, 12 Nov 2026): colour sits in lines and icons, never a fill at rest */
       '.bb-dog{position:relative;flex-wrap:nowrap;gap:12px;padding:12px 12px 12px 15px;overflow:hidden}',
       '.bb-dog::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--v,var(--line))}',
       '.bb-ph{width:84px;height:84px;flex-shrink:0;position:relative}.bb-ring{position:absolute;inset:0}',
@@ -1138,7 +1056,6 @@
       '.bb-gates{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}',
       '.bb-gates li{display:flex;align-items:center;gap:8px;min-height:32px;border-top:1px solid var(--line);font-size:var(--fs-small)}.bb-gates li:first-child{border-top:0}',
       '.bb-gl{flex:1;min-width:0}.bb-gw{color:var(--muted)}.bb-gates li[data-gate=fail] .bb-gw{color:var(--ljr-2-text)}',
-    /* the five tabs, fixed at the bottom of Breed Better, directly above the house bar; the page pads so nothing hides under them */
     '#bbRoot{padding-bottom:calc(var(--bb-tabs-h) + 16px)}',
     '.bb-tabs{margin:0;position:fixed;left:0;right:0;bottom:calc(var(--house-tabs-h,70px) + env(safe-area-inset-bottom,0px));z-index:19;display:flex;justify-content:center;gap:4px;height:var(--bb-tabs-h);padding:4px 8px;box-sizing:border-box;background:var(--card);border-top:1px solid var(--line)}',
     '.bb-tab{flex:1 1 0;max-width:128px;min-width:0;border-color:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0;font-size:var(--fs-small);color:var(--ink)}',
@@ -1155,7 +1072,6 @@
     document.head.appendChild(s);
   }
 
-  /** After a draw: bring the section a button asked for into view (data-bb-band-go). */
   function focusSoon() {
     if (!state.focus || typeof document === 'undefined') return;
     var f = state.focus; state.focus = '';
@@ -1165,16 +1081,13 @@
     }, 0);
   }
 
-  /** The whole page. v = { T, today, esc } */
   function page(v) {
     last = v; css();
     focusSoon();
-    /* the heading drops the label only when every scored animal's scheme is signed off; nothing scored keeps it */
     var res = compute(v).results, done = res.length && res.every(function (r) { return signedOff(r, v.today); });
     return '<h2 class="bb-top">' + LOGO + '<span>Breed Better</span>' + (done ? '' : ' ' + TESTING) + '</h2><div class="bb-rb" aria-hidden="true"></div><div id="bbRoot">' + inner(v) + '</div>';
   }
 
-  /** The score on a dog card, as one small button. Empty when that animal is not enrolled. */
   function chip(v, id) {
     last = v; css();
     var r = compute(v).byId[id];
@@ -1183,15 +1096,11 @@
     return '<button type="button" class="bb-chip" data-go="breed" data-bb-dog="' + v.esc(id) + '" aria-label="Breed Better score' + (off ? '' : ', testing: trial scores, not yet signed off') + '">' + pill(r) + '<span class="bb-pts">' + total(r) + '</span>' + (off ? '' : TESTING) + '</button>';
   }
 
-  /* The Breed Better logo file sits beside this script (bb-logo.svg). */
   var LOGO_SRC = (function () { try { var c = document.currentScript && document.currentScript.src; return c ? c.replace(/[^/]*$/, '') + 'bb-logo.svg' : 'bb-logo.svg'; } catch (e) { return 'bb-logo.svg'; } }());
   var LOGO = '<img class="bb-logo" src="' + LOGO_SRC + '" width="32" height="32" alt="Breed Better logo">';
   var GATE_WORD = { pass: 'Passed', fail: 'Failed', unverified: 'Missing' };
   var GATE_ICON = { pass: ICON.pass, fail: ICON.fail, unverified: 'M12 8v5 M12 16h.01 M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0' };
 
-  /** The Breed Better section on a dog card: ONE line, folded (logo, verdict, Testing, "x of y" points, chevron).
-   *  Unfolds in place to the checks grouped by section, must pass first, things to do first in each.
-   *  Every line opens that animal's Score tab at that check's section. */
   function section(v, id) {
     last = v; css();
     var c = compute(v), r = c.byId[id];
@@ -1227,8 +1136,6 @@
   }
 
 
-  /** What an inspector link may show of one animal's must-pass checks: the word, the answer, its date and when it is next due.
-   *  Never points, target or ranking. For the save script to send to an inspector (it does not yet; see the PR). */
   function mustPassFor(r) {
     return r.lines.filter(function (l) { return l.kind === 'gate'; }).map(function (l) {
       return { subject_id: r.subject_id, label: l.label_then, outcome: l.gate_outcome || 'unverified', answer: l.answer_then, date: l.date_then, due_date: l.due_date,
@@ -1246,7 +1153,6 @@
     if (!f || !f.id) return '';
     if (!state.from) state.from = f;
     var inHistory = fromHistory();
-    /* the history entry is ours: HubNav's button and Back. Otherwise (no entry yet), the old way back by address. */
     if (nav() && inHistory) return '<button type="button" class="cb hback bb-ret" data-hub-back>\u2190 Back to ' + v.esc(f.label || 'the dog card') + '</button>';
     return '<button type="button" class="bb-f bb-ret hback" data-bb-return="1">' + ic('M15 6l-6 6l6 6', 18) + 'Back to ' + v.esc(f.label || 'the dog card') + '</button>';
   }
@@ -1262,7 +1168,6 @@
     var from = { id: card.getAttribute('data-dog') || id, label: t(d.name) || t(r.name), hash: location.hash || '#/dogs', y: window.scrollY };
     state.from = { id: from.id, label: from.label, hash: from.hash, y: from.y, top: card.getBoundingClientRect().top };
     state.tab = 'dogs';
-    /* the hub pushes #/breed on this same click; then its entry carries where we came from */
     setTimeout(function () { try { if (location.hash === '#/breed') history.replaceState(Object.assign({}, history.state || {}, { from: from }), '', location.href); } catch (err) { /* no history: the button still works */ } }, 0);
   }
   function backToCard() {
@@ -1289,7 +1194,6 @@
   }
   function refresh() { memo = null; if (last && typeof last.refresh === 'function') last.refresh(); else redraw(); }
   function hhmm() { var d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
-  /* un-enrol ends the enrolment yesterday, so today it is already out; an enrolment that began today ends today */
   function endDay(e, today) { var y = addDays(today, -1); return e.from && y < e.from ? today : y; }
   function enrolClick(b) {
     var v = last, id;
@@ -1320,7 +1224,7 @@
     if (b.hasAttribute('data-bb-auto')) {
       var sid = b.getAttribute('data-bb-auto'), val = b.getAttribute('data-bb-auto-v');
       id = 'auto:' + sid; b.disabled = true;
-      Promise.resolve(v.setRule(AUTO_KEY, autoNext(v.T, v.today, sid, val === 'on'), v.today, 'Owner setting, Breed Better My system')).then(function () {
+      Promise.resolve(v.setRule(AUTO_KEY, autoNext(v.T, v.today, sid, val === 'on'), v.today, 'User setting, Breed Better My system')).then(function () {
         enrolMsg[id] = { ok: true, text: 'Saved ' + hhmm() }; refresh();
       }, function (err) { enrolMsg[id] = { ok: false, text: (err && err.message) || 'Not saved.' }; refresh(); });
       return true;
@@ -1367,7 +1271,6 @@
       + '<span class="bb-pts">' + (a ? 'Last saved ' + esc(day(t(a.period))) + ', ' + esc(((r.words && r.words[t(a.verdict)]) || VERDICT[t(a.verdict)] || t(a.verdict))) + ', ' + esc(t(a.points_earned)) + ' of ' + esc(t(a.points_available)) : 'Not saved yet') + '</span>'
       + (can ? '' : ' <span class="bb-pts">' + NOSAVE + '</span>') + '</p>' + msgHtml(id);
   }
-  /* the scheme to enrol into: the one this animal was last in, else the one scheme in force today (newest if several) */
   function enrolScheme(v, c, id) {
     var was = c.ended.filter(function (x) { return x.id === id; })[0];
     if (was && was.scheme_id) return was.scheme_id;
@@ -1381,7 +1284,6 @@
     return '<button type="button" class="bb-f" data-bb-enrol="' + v.esc(id) + '" data-bb-scheme="' + v.esc(sch) + '"' + (canSave(v) ? '' : ' disabled') + '>Enrol</button>'
       + (canSave(v) ? '' : ' <span class="bb-pts">' + NOSAVE + '</span>') + msgHtml(id);
   }
-  /** The folded section on a card whose animal is not enrolled: why (if it ended), the pup's DNA chances from its parents, and Enrol. */
   function notInHtml(v, c, id) {
     var T = v.T, esc = v.esc;
     if (!(T['BLD-score_scheme.csv'] || []).length) return '';   /* no scheme rows: Breed Better is not set up, or this reader cannot see it */
@@ -1400,7 +1302,6 @@
       + ic('M6 9l6 6l6 -6', 16) + '</summary><div class="bb-secbd">' + body + '</div></details></section>';
   }
 
-  /* remembered open sections: { animal id: 1 }, newest last, at most SEC_MAX; a private window simply forgets */
   var SEC_KEY = 'bb-sec-open', SEC_MAX = 200, secMem = null;
   function secStore() {
     if (secMem) return secMem;
@@ -1415,8 +1316,6 @@
     try { localStorage.setItem(SEC_KEY, JSON.stringify(m)); } catch (e) { /* not kept; the fold still works now */ }
   }
 
-  /* typing or a new sort redraws the rows only, so the search box keeps focus */
-  /* the hub loads the photos after each draw */
   function after() { if (last && typeof last.after === 'function') last.after(); }
   function redrawRows() {
     var el = document.getElementById('bbList'); if (el && last && memo) { el.innerHTML = rowsHtml(last, memo); after(); }
@@ -1425,7 +1324,6 @@
   function redraw() { var el = document.getElementById('bbRoot'); if (el && last) { el.innerHTML = inner(last); after(); } }
 
   if (typeof document !== 'undefined') {
-    /* remember which sections are open, so a redraw keeps them */
     document.addEventListener('toggle', function (e) {
       var d = e.target;
       if (d && d.getAttribute && d.hasAttribute('data-bb-band')) state.open[d.getAttribute('data-bb-band')] = d.open;
@@ -1441,7 +1339,6 @@
       if (el.hasAttribute('data-bb-calc-test')) { state.calc = { code: el.value }; redraw(); }
       if (el.hasAttribute('data-bb-evcheck')) { state.evCheck = el.value; redraw(); }
     });
-    /* capture, so the state is set before the hub's own click handler changes the address and draws the page */
     document.addEventListener('click', function (e) {
       var eb = e.target.closest && e.target.closest('[data-bb-enrol],[data-bb-unenrol],[data-bb-unenrol-go],[data-bb-unenrol-x],[data-bb-auto],[data-bb-score-save]');
       if (eb && !eb.disabled) { e.preventDefault(); e.stopPropagation(); enrolClick(eb); return; }
@@ -1450,7 +1347,6 @@
       var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-return],[data-bb-filter],[data-bb-open],[data-bb-back],[data-bb-tab],[data-bb-sex],[data-bb-age],[data-bb-cal],[data-bb-month],[data-bb-calc],[data-bb-edit],[data-bb-edit-back],[data-bb-sec],[data-bb-day],[data-bb-evkind],[data-bb-step]');
       if (!b) return;
       var viaHub = b.hasAttribute('data-go');
-      /* a dog card's heading: that dog's Score tab, and Back returns to the card (HubNav) */
       if (b.hasAttribute('data-bb-dog')) { cameFrom(b); state.dog = b.getAttribute('data-bb-dog'); state.tab = 'score'; state.edit = ''; return; }
       if (b.hasAttribute('data-bb-return')) {
         e.preventDefault(); e.stopPropagation();
@@ -1487,8 +1383,6 @@
       else if (b.hasAttribute('data-bb-evkind')) state.evKind = b.getAttribute('data-bb-evkind');
       else if (b.hasAttribute('data-bb-calc')) { var cv = b.getAttribute('data-bb-calc').split(':'); state.calc[cv[0]] = Number(cv[1]); }
       else if (b.hasAttribute('data-bb-month')) { state.month = b.getAttribute('data-bb-month'); state.calDay = ''; }
-      /* a button that also changes the address: the hub draws the page itself. Came from a dog card: the address changes
-         without a new Back step (HubNav.back.replace), so "Back to <dog>" still returns to that card in one step. */
       if (viaHub && state.from && nav() && nav().replace && b.closest && b.closest('#bbRoot') && fromHistory()) {
         e.preventDefault(); e.stopPropagation();
         var go = b.getAttribute('data-go');
@@ -1517,8 +1411,6 @@
     });
   }
 
-  /** The hub's #/breed/<sub> address: a tab (calendar, more ...), a tab and an animal (score.<id>, evidence.<id>,
-   *  history.<id>), or just an animal id (its Score tab). Blank goes back to the list. */
   function open(sub) {
     sub = t(sub); state.edit = ''; state.editPushed = false;
     if (!sub) { state.tab = 'dogs'; state.dog = ''; return; }
@@ -1529,7 +1421,6 @@
     } else { state.tab = 'score'; state.dog = sub; }
   }
   function setTab(k) { state.tab = k; state.edit = ''; if (!DOG_TABS[k]) state.dog = state.dog || ''; }
-  /** For tests: the parts of the state a test may set, and a reset. */
   function setState(o) { Object.keys(o || {}).forEach(function (k) { state[k] = o[k]; }); }
   function getState() { return Object.assign({}, state); }
 
@@ -1543,3 +1434,4 @@
     SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); }
   };
 }));
+

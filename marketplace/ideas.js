@@ -1,6 +1,3 @@
-/* Marketplace "Product ideas": the contract in code. No DOM, no network, no Google.
- * The page (stage 2) and the tests both use these functions, so the rule lives in one place.
- * Contract text: docs/marketplace-ideas/CONTRACT.md */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(); else root.MktIdeas = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
@@ -20,7 +17,6 @@
   var LIMITS = { name: 120, text: 500 };
 
   function str(v) { return v === undefined || v === null ? '' : String(v).trim(); }
-  /** GS1 check digit for EAN-8, UPC-A, EAN-13, GTIN-14. */
   function barcodeOk(code) {
     if (!/^\d+$/.test(code) || [8, 12, 13, 14].indexOf(code.length) < 0) return false;
     var sum = 0, d = code.split('').map(Number), check = d.pop();
@@ -28,13 +24,11 @@
     return (10 - (sum % 10)) % 10 === check;
   }
   function httpsUrl(u) { return /^https:\/\/[^\s/$.?#][^\s]*$/i.test(u) && u.length <= 2000; }
-  /** "£4.5", "4.50", "4,50" -> "£4.50"; '' if it is not a positive amount. */
   function money(v) {
     var n = parseFloat(str(v).replace(/[£\s]/g, '').replace(',', '.'));
     return isFinite(n) && n > 0 && /^[£\s]*\d+([.,]\d{1,2})?\s*$/.test(str(v)) ? '£' + n.toFixed(2) : '';
   }
 
-  /** The Add idea form. Only the name is required. Returns { ok, errors: {field: words}, clean: {field: value} }. */
   function validateIntake(input) {
     input = input || {};
     var e = {}, c = { name: str(input.name) };
@@ -56,7 +50,6 @@
   }
 
   var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-  /** IDEA-20261102-1530-ab12: sortable, no personal data. `rand` is injectable for tests. */
   function newId(now, rand) {
     var d = new Date(now), r = String(rand || Math.random().toString(36).slice(2, 6)).replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 4);
     return 'IDEA-' + d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + '-' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + '-' + r;
@@ -64,25 +57,21 @@
   var cardKey = function (id) { return 'IDEA|' + id; };
   var fileName = function (id) { return 'MKT-IDEA-REQ-' + id + '.json'; };
 
-  /** The ONE request file the hub writes. The engine turns it into the card; nothing else is written. */
   function buildRequest(clean, now, by, opts) {
     opts = opts || {};
     var id = opts.id || newId(now, opts.rand), req = { kind: 'mkt-idea', v: V, id: id, at: new Date(now).toISOString(), by: str(by), dry_run: !!opts.dryRun, name: clean.name };
     INTAKE_KEYS.forEach(function (k) { req[k] = clean[k] || ''; });
     return req;
   }
-  /** What the engine puts on the card row from a request: the fresh detail JSON. */
   function newDetail(req) {
     var intake = {}; INTAKE_KEYS.forEach(function (k) { intake[k] = str(req[k]); });
     return { kind: 'idea', v: V, status: 'new', gate: 0, verdict: '', intake: intake, infinity_item: '' };
   }
   function cardRow(req) { return [cardKey(req.id), SECTION, 'Ideas', req.name, JSON.stringify(newDetail(req)), req.at, '', '', '', '', '', '']; }
 
-  /** The board item's link, or '' (not made yet, or not a startinfinity.com https link). The engine writes it; the hub card stays the master. */
   function infinityLink(d) { var u = d && typeof d.infinity_item === 'string' ? d.infinity_item.trim() : ''; return /^https:\/\/([a-z0-9-]+\.)?startinfinity\.com\/[^\s]*$/i.test(u) && u.length <= 2000 ? u : ''; }
   var isNum = function (v) { return typeof v === 'number' && isFinite(v); };
   var isStrArr = function (v) { return Array.isArray(v) && v.every(function (x) { return typeof x === 'string'; }); };
-  /** Check a card's detail JSON by value. Codes: MISSING, WRONG_TYPE, BAD_VALUE. Never returns a cell value. */
   function checkDetail(d) {
     var out = [], bad = function (code, field, msg) { out.push({ code: code, field: field, msg: field + ': ' + msg }); };
     if (!d || typeof d !== 'object' || Array.isArray(d)) return [{ code: 'WRONG_TYPE', field: '', msg: 'detail is not an object' }];
@@ -122,7 +111,6 @@
     if (d.verdict === 'no' && d.status !== 'dropped') bad('BAD_VALUE', 'status', 'verdict no means status dropped');
     return out;
   }
-  /** Can a Go idea move to New stock? It needs a price and a supplier: the same fields the New stock card reads. */
   function goReady(d) {
     var miss = [];
     if (!d || d.verdict !== 'go') return { ok: false, missing: ['verdict go'] };
@@ -132,9 +120,7 @@
     return { ok: !miss.length, missing: miss };
   }
 
-  /** What the investigator may write back. Never the intake, the board link, kind or version: those are not its to change. */
   var RESULT_KEYS = ['status', 'gate', 'verdict', 'classification', 'classification_assumed', 'margin_est', 'top3_risks', 'top3_unknowns', 'kill_rule', 'next_step', 'dropped_reason', 'evidence', 'gate1', 'gate2', 'gate3', 'unit_ex_p', 'unit_inc_p', 'profit_p', 'sell', 'moq', 'supplier', 'lines', 'terms'];
-  /** Merge one result file's patch into a card's detail. All or nothing: if the merged card would not pass checkDetail, the old detail is kept. */
   function mergeResult(detail, result) {
     var patch = result && result.patch, rejected = [], merged = {};
     if (!result || result.kind !== 'mkt-idea-result' || !patch || typeof patch !== 'object' || Array.isArray(patch)) return { ok: false, detail: detail, rejected: [], problems: [{ code: 'WRONG_TYPE', field: 'patch', msg: 'not a result file' }] };
@@ -147,3 +133,4 @@
   return { SECTION: SECTION, V: V, ENUMS: ENUMS, INTAKE_KEYS: INTAKE_KEYS, barcodeOk: barcodeOk, money: money, validateIntake: validateIntake, newId: newId, cardKey: cardKey, fileName: fileName,
     buildRequest: buildRequest, newDetail: newDetail, cardRow: cardRow, checkDetail: checkDetail, goReady: goReady, infinityLink: infinityLink, mergeResult: mergeResult, RESULT_KEYS: RESULT_KEYS };
 });
+

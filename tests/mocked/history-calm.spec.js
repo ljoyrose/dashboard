@@ -2,7 +2,6 @@
 // "the info i need without looking alarming"). Pretend Drive only; every row here is invented.
 // RULES is the one list later screens reuse (round, year report, prints).
 const { test, expect } = require('../support/test');
-// The page builds a whole year of views before it says "Up to date"; under a full parallel run that can pass 7 s (quality review 12 Nov).
 const LOADED = { timeout: 20000 };
 const fs = require('fs');
 const path = require('path');
@@ -11,24 +10,23 @@ const RULES = {
   layout: {
     widths: [{ name: 'phone', width: 375, height: 812 }, { name: 'desktop', width: 1280, height: 800 }],
     noSideScroll: true,          // the page never scrolls sideways
-    panelFits: true,             // the day panel fits inside the screen
-    minTap: 40,                  // buttons, links, inputs, tabs and calendar days are at least 40px
-    tapExempt: ['.sd', '.d.empty', '.d.future', '.d.nd', '.dh', '.skip'],   // year strip is an overview; blanks are not targets
-    desktopExempt: ['.house-ib', '.house-fold'],   // house header buttons: 36px for a mouse, 44px on a phone (house.css)
+    panelFits: true,
+    minTap: 40,
+    tapExempt: ['.sd', '.d.empty', '.d.future', '.d.nd', '.dh', '.skip'],
+    desktopExempt: ['.house-ib', '.house-fold'],
   },
   words: {
     never: [/\bOK\b/, /In range/i, /Out of range/i, /Submitted/i, /camera/i, /typed/i, /photo/i, /corrected/i,
       /taken by/i, /entered by/i, /Feels like/i, /Max °C/, /Min °C/, /\bactual\b/i, /source/i],
     roomLine: /^[^·]+ · (AM (\d+\.\d–\d+\.\d( ✓)?|missed|due))?( · )?(PM (\d+\.\d–\d+\.\d( ✓)?|missed|due))?/,
     outsideLine: /^-?\d+(\.\d)? \/ -?\d+(\.\d)? °C(, rain \d+(\.\d)? mm)?$/,
-    dayTitle: /^\d{1,2} [A-Z][a-z]{2} \d{4}$/,   // 2 Mar 2026
+    dayTitle: /^\d{1,2} [A-Z][a-z]{2} \d{4}$/,
   },
   colour: {
-    // Every colour on the page must be one of these house tokens (or transparent).
     allowed: ['--paper', '--card', '--soft', '--line', '--ink', '--muted', '--frame', '--frame-ink', '--frame-line', '--press',
       '--ljr-5', '--ljr-5-tint', '--ljr-5-text', '--ljr-6', '--ljr-6-tint', '--ljr-4-tint', '--ljr-3', '--ljr-3-text'],
     never: ['--ljr-2', '--ljr-2-text', '--ljr-2-icon', '--ljr-2-solid'],   // red: never
-    warnOnly: ['--ljr-3', '--ljr-3-text'],   // orange: .warn (outside limit), .miss (outline), and those legend swatches
+    warnOnly: ['--ljr-3', '--ljr-3-text'],
     outsideCalendarNever: ['--ljr-3', '--ljr-3-text', '--ljr-2', '--ljr-2-text'],
   },
   audit: {
@@ -36,8 +34,6 @@ const RULES = {
   },
 };
 
-// Fixture month: Jan 2026. Today is 12/01/26 at 20:00 (PM today is still due).
-// R1-R3 in use from 05/01; R4 retired: its room.in_use row ends 10/01 (BLD-requirement), so never missed after that.
 const NOW = new Date('2026-01-12T20:00:00');
 const ROOMS = 'id,code,group_sort\narea-r1,R1,1\narea-r2,R2,2\narea-r3,R3,3\narea-r4,R4,4\n';
 const NEEDS = 'id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on\nreq-1,t,room.in_use,area,area-r4,2025-01-01,2026-01-10,,,\n';
@@ -45,7 +41,7 @@ const R = [];
 const add = (aid, day, slot, min, max, note) => R.push([aid, day, slot, min, max, note || '']);
 for (const aid of ['area-r1', 'area-r2', 'area-r3', 'area-r4']) { add(aid, '2026-01-05', 'am', '12.0', '15.0'); add(aid, '2026-01-05', 'pm', '12.5', '16.0'); }
 for (const aid of ['area-r1', 'area-r3', 'area-r4']) { add(aid, '2026-01-06', 'am', '12.0', '15.0'); }
-add('area-r2', '2026-01-06', 'am', '14.0', '27.0', 'Fan on, door open');            // over 26: cooling action (Temps A, 17 Nov 2026), with a note
+add('area-r2', '2026-01-06', 'am', '14.0', '27.0', 'Fan on, door open');
 for (const aid of ['area-r1', 'area-r2', 'area-r3', 'area-r4']) add(aid, '2026-01-06', 'pm', '12.0', '15.0');
 for (const aid of ['area-r1', 'area-r2', 'area-r3', 'area-r4']) add(aid, '2026-01-07', 'am', '12.0', '15.0');
 for (const aid of ['area-r1', 'area-r2', 'area-r4']) add(aid, '2026-01-07', 'pm', '12.0', '15.0');   // R3 PM missed
@@ -57,7 +53,6 @@ const READINGS = 'id,area_id,taken_at,period_start,min_c,max_c,read_method,camer
 const OUTDOOR = 'on_date,reading_kind,max_temp,min_temp,realfeel_max_temp,rain_value,cloud_cover_pct,wind_kmh\n'
   + '2026-01-05,sample,5.3,-1.9,2.3,0,8,13.7\n2026-01-06,sample,11.0,4.0,9.0,2.5,80,20\n2026-01-07,sample,28.0,15.0,29.0,0,5,10\n';
 
-// What the rules say Jan should total (worked out here, not by the page).
 function expected() {
   const needed = { 'area-r1': ['2026-01-05', '2026-01-12'], 'area-r2': ['2026-01-05', '2026-01-12'], 'area-r3': ['2026-01-05', '2026-01-12'], 'area-r4': ['2026-01-05', '2026-01-10'] };
   let slots = 0;
@@ -88,7 +83,6 @@ async function openDay(page, iso) {
   await expect(page.locator('#drill')).toBeVisible();
 }
 
-// ------------------------------------------------------------------ LAYOUT
 for (const size of RULES.layout.widths) {
   test(`layout (${size.name} ${size.width}px): no side scroll, the day panel fits, tap targets ≥ ${RULES.layout.minTap}px; screenshot saved`, async ({ page, guard }) => {
     await open(page, guard, size);
@@ -125,7 +119,6 @@ for (const size of RULES.layout.widths) {
   });
 }
 
-// ------------------------------------------------------------------ INFORMATION
 test('information: one short line per room, a tick inside the limit, the unit once, outside as max / min and rain, dates as 2 Mar 2026', async ({ page, guard }) => {
   await open(page, guard);
   await openDay(page, '2026-01-05');
@@ -147,7 +140,6 @@ test('information: one short line per room, a tick inside the limit, the unit on
   }
 });
 
-// ------------------------------------------------------------------ COLOUR / ALARM
 test('colour: no red anywhere; orange only for outside-limit or missed; the outside calendar uses no warning colour; every colour is a house token', async ({ page, guard }) => {
   await open(page, guard);
   for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards', 'Report']) {
@@ -181,23 +173,21 @@ test('colour: no red anywhere; orange only for outside-limit or missed; the outs
     expect(found, view).toEqual([]);
     if (view === 'Heat map') await page.locator('#drill .dclose').click();
   }
-  // The hot outside day (07/01, 24 °C) is a calm colour, not a warning.
   await page.getByRole('button', { name: 'Heat map' }).click();
   await expect(page.locator('#view-a [data-cal="out"] button.d[title^="7 Jan 2026"]')).toHaveClass(/owarm/);
 });
 
-// ------------------------------------------------------------------ AUDIT
 test('audit: each day matches its rows; missed only where needed; outside-limit shows what was done; month totals equal the rows', async ({ page, guard }) => {
   await open(page, guard);
   await page.getByRole('button', { name: 'Heat map' }).click();
   const state = async (iso) => (await day(page, iso).getAttribute('class')).split(' ')[1];
-  expect(await state('2026-01-04')).toBe('nd');      // before any room was in use: nothing needed, no alarm
+  expect(await state('2026-01-04')).toBe('nd');
   expect(await state('2026-01-05')).toBe('allok');
-  expect(await state('2026-01-06')).toBe('warmd');   // R2 AM over 26: cooling action, a light warm tint, not orange
-  expect(await state('2026-01-10')).toBe('warn');    // R1 PM below 10: outside the limit
+  expect(await state('2026-01-06')).toBe('warmd');
+  expect(await state('2026-01-10')).toBe('warn');
   expect(await state('2026-01-07')).toBe('miss');    // R3 PM missed
   expect(await state('2026-01-08')).toBe('miss');    // nothing read, rooms in use
-  expect(await state('2026-01-12')).toBe('allok');   // today: AM all read, PM still due
+  expect(await state('2026-01-12')).toBe('allok');
   for (const [cls, word] of Object.entries(RULES.audit.dayStates)) {
     const one = page.locator(`#view-a [data-cal="indoors"] button.d.${cls}`).first();
     if (await one.count()) await expect(one).toHaveAttribute('aria-label', new RegExp(word + '$'));
@@ -217,7 +207,6 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   await expect(page.locator('#drill .rl', { hasText: 'R3' }).locator('.warn')).toHaveText('PM missed');
   await page.locator('#drill .dclose').click();
 
-  // The retired room is never missed after its last reading (10/01).
   await page.getByRole('button', { name: 'The round' }).click();
   await page.locator('#rdate').fill('2026-01-11');
   await page.locator('#rdate').dispatchEvent('change');
@@ -238,7 +227,6 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   await expect(jan).toContainText(`${want.warm} warm (cooling action)`);
   await expect(jan).toContainText(`${want.miss} missed`);
   await expect(jan).toContainText(`${Math.round(100 * (want.read - want.out) / (want.read + want.miss))}% in limit`);
-  // quality review 12 Nov: no card for a month that has not started; a card opens its month on the heat map
   await expect(page.locator('#view-c .mitem')).toHaveCount(1);
   await jan.click();
   await expect(page.locator('#view-a')).toBeVisible();
@@ -251,7 +239,6 @@ test('phone: the round shows room cards only, never the table beside them (quali
   await expect(page.locator('#view-d .rscroll')).toBeHidden();
 });
 
-// Found by the click-crawl, 13 Nov 2026: later days and days with no readings were buttons that did nothing when tapped.
 test('heat map: a day with nothing to open is not a button you can press; every day you can press opens its panel', async ({ page, guard }) => {
   await open(page, guard);
   await page.getByRole('button', { name: 'Heat map' }).click();
@@ -262,7 +249,6 @@ test('heat map: a day with nothing to open is not a button you can press; every 
   expect(kinds.filter((k) => k.blank).length, 'the sample year has later days or days with no readings').toBeGreaterThan(0);
   expect(kinds.filter((k) => k.blank && !k.disabled), 'a blank day must not be pressable').toEqual([]);
   expect(kinds.filter((k) => !k.blank && (k.disabled || !k.opens)), 'a day with readings must open its panel').toEqual([]);
-  // every blank day still says what it is (for a screen reader and on hover)
   await expect(page.locator('#view-a button.d.future').first()).toHaveAttribute('aria-label', /Later$/);
 });
 
@@ -273,11 +259,11 @@ test('audit: a room in use with no readings at all is listed and shows missed, n
   await expect(page.locator('#view-d .rtile .rn')).toHaveText(['R1', 'R2', 'R3', 'R5']);
   await expect(page.locator('#view-d .rtile', { hasText: 'R5' }).locator('.warn')).toHaveText(['AM missed', 'PM missed']);
   await page.getByRole('button', { name: 'Heat map' }).click();
-  expect((await day(page, '2026-01-05').getAttribute('class')).split(' ')[1]).toBe('miss');   // R5 missed from the first reading day
+  expect((await day(page, '2026-01-05').getAttribute('class')).split(' ')[1]).toBe('miss');
   expect((await day(page, '2026-01-04').getAttribute('class')).split(' ')[1]).toBe('nd');     // nothing before readings began
   await page.getByRole('button', { name: 'Month cards' }).click();
   const want = expected();
-  await expect(page.locator('#view-c .mitem[data-month="1"]')).toHaveAttribute('data-miss', String(want.miss + 15));   // R5: 7 days x 2 + today AM
+  await expect(page.locator('#view-c .mitem[data-month="1"]')).toHaveAttribute('data-miss', String(want.miss + 15));
 });
 
 module.exports = { RULES };
@@ -300,7 +286,7 @@ test('audit: Room empty is covered, never missed; an outside reading in an empty
   await expect(page.locator('#drill .rl', { hasText: 'R3' })).toContainText('PM empty');
   await expect(page.locator('#drill .rl', { hasText: 'R3' }).locator('.warn')).toHaveCount(0);
   await page.locator('#drill .dclose').click();
-  expect((await day(page, '2026-01-07').getAttribute('class')).split(' ')[1]).toBe('allok');   // the only gap was an empty room
+  expect((await day(page, '2026-01-07').getAttribute('class')).split(' ')[1]).toBe('allok');
   await openDay(page, '2026-01-08');
   await expect(page.locator('#drill .rl', { hasText: 'R1' }).locator('.warn').first()).toHaveText('AM 8.0–14.0 · Room empty');
   await expect(page.locator('#drill .rl', { hasText: 'R1' })).not.toContainText('what was done');
@@ -309,9 +295,9 @@ test('audit: Room empty is covered, never missed; an outside reading in an empty
   const want = expected();
   await page.getByRole('button', { name: 'Month cards' }).click();
   const jan = page.locator('#view-c .mitem[data-month="1"]');
-  await expect(jan).toHaveAttribute('data-out', String(want.out));          // the empty room's outside reading is not counted
+  await expect(jan).toHaveAttribute('data-out', String(want.out));
   await expect(jan).toHaveAttribute('data-read', String(want.read + 2));
-  await expect(jan).toHaveAttribute('data-miss', String(want.miss - 3));    // R3 PM 07/01, R1 and R2 AM 08/01 covered
+  await expect(jan).toHaveAttribute('data-miss', String(want.miss - 3));
 });
 
 // the owner 18 Nov 2026 ("mark h2 (iso) as empty since 01/01/25 ... temps can stay in records just hide them"): a room.empty
@@ -324,7 +310,7 @@ test('audit: a room marked empty by a room.empty row shows empty AM and PM, its 
   await page.reload();
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('.yr-btn[data-yr="2026"]').click();
-  await openDay(page, '2026-01-10');   // R1 had 11.0-15.0 and 9.0-14.0 (outside) that day
+  await openDay(page, '2026-01-10');
   const r1 = page.locator('#drill .rl', { hasText: 'R1' });
   await expect(r1).toContainText('AM empty');
   await expect(r1).toContainText('PM empty');
@@ -333,7 +319,7 @@ test('audit: a room marked empty by a room.empty row shows empty AM and PM, its 
   await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 12.0–15.0 ✓');   // other rooms unchanged
   await page.locator('#drill .dclose').click();
   expect((await day(page, '2026-01-10').getAttribute('class')).split(' ')[1]).toBe('allok');   // R1's outside reading is hidden
-  await openDay(page, '2026-01-08');   // no reading in R1 that day: empty, never missed
+  await openDay(page, '2026-01-08');
   await expect(page.locator('#drill .rl', { hasText: 'R1' })).toContainText('AM empty');
   await expect(page.locator('#drill .rl', { hasText: 'R1' }).locator('.miss')).toHaveCount(0);
 });
@@ -384,7 +370,6 @@ test('audit: area links show old rooms\' readings in the new rooms, widest for a
   await expect(page.locator('#view-d .rtile', { hasText: '3B.1/2/3 (from 3B.1/2, 3B.3/4)' })).toContainText('10.0–15.0');
   await expect(page.locator('#view-d .rtile', { hasText: '3B.4/5 (from 3B.3/4)' })).toContainText('10.0–14.0');
   await expect(page.locator('#view-d .rtile', { hasText: /^3B\.1\/2\b/ }).first()).toBeVisible();
-  // after the link's to_date the old room's reading stays only on the old room
   await page.locator('#rdate').fill('2026-01-13');
   await page.locator('#rdate').dispatchEvent('change');
   await expect(page.locator('#view-d .rtile', { hasText: '(from' })).toHaveCount(0);
@@ -418,11 +403,9 @@ test('audit: a room holding a puppy under 4 weeks is judged by the puppy band th
   await expect(r1).toContainText('AM 12.0–15.0 ✓');
   await expect(r1.locator('.cool-act')).toHaveCount(0);   // the owner 18 Nov 2026: no "bed spot not recorded" words
   await expect(r1).not.toContainText('bed spot not recorded');
-  // R2 has no dogs: the adult band, 12.0–15.0 is in
   await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 12.0–15.0 ✓');
   await expect(page.locator('#drill .rl', { hasText: 'R2' }).locator('.warn')).toHaveCount(0);
   await page.locator('#drill .dclose').click();
-  // A bed spot reading is judged on the puppy row: 24.5 is below 26 (outside), 27.0 is inside.
   const spotRows = 'id,area_id,taken_at,period_start,min_c,max_c,spot_c,read_method\n'
     + 'rdg-s1,area-r1,2026-01-07T09:00:00Z,2026-01-07T00:00:00+00:00,12.0,15.0,24.5,typed\n'
     + 'rdg-s2,area-r1,2026-01-07T16:00:00Z,2026-01-07T12:00:00+00:00,12.0,15.0,27.0,typed\n';
@@ -546,14 +529,12 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   await expect(missed.first()).toHaveClass(/\bwarn\b/);
   expect(await page.locator('#drill span.warn').count()).toBe(await page.locator('#drill span.warn.miss').count());
   await page.locator('#drill .dclose').click();
-  // A limit typed with from_date of today still colours a July reading (standing guidance, entered late).
   upsert('bld-band', 'BLD-temperature_band.csv', 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\ntb-a,Adult,29,,10,26,2026-11-12,\n');
   await page.reload();
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('.yr-btn[data-yr="2026"]').click();
   await page.getByRole('button', { name: 'Heat map' }).click();
   expect((await dayM('2026-07-10').getAttribute('class')).split(' ')[1]).toBe('warn');
-  // A puppy row already in force must not hide the adult row that was typed later. 18–22 is inside 10–26, so the day is in limit, not an uncoloured pale cell.
   upsert('bld-band', 'BLD-temperature_band.csv', 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\n'
     + 'tb-p,under four weeks,0,28,26,28,,\n'
     + 'tb-a,four weeks and over,29,,10,26,2026-11-12,\n');
@@ -589,11 +570,11 @@ test('guard: a sorted sheet whose heading row is not row 1 (or sits lower down) 
   await open(page, guard);
   await expect(page.locator('[data-hdrbad]')).toHaveCount(0);   // the normal sheet: no warning
   const lines = READINGS.trimEnd().split('\n');
-  put('BLD-area_reading.csv', [lines[1], lines[0]].concat(lines.slice(2)).join('\n') + '\n');   // sorted: a reading on row 1, heading on row 2
+  put('BLD-area_reading.csv', [lines[1], lines[0]].concat(lines.slice(2)).join('\n') + '\n');
   await page.reload();
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await expect(page.locator('[data-hdrbad]')).toContainText('row 1 is not the heading row');
-  put('BLD-area_reading.csv', [lines[0], lines[1], lines[0]].concat(lines.slice(2)).join('\n') + '\n');   // heading on row 1 and again lower down
+  put('BLD-area_reading.csv', [lines[0], lines[1], lines[0]].concat(lines.slice(2)).join('\n') + '\n');
   await page.reload();
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await expect(page.locator('[data-hdrbad]')).toContainText('a heading row is also lower down');
@@ -650,14 +631,12 @@ test('21 Nov (Steward on #346): the outdoor calendar has an amber corner dot on 
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('.yr-btn[data-yr="2026"]').click();
   const day = (d) => page.locator('[data-cal="out"] button[title^="' + d + ' Jan 2026 out"]');
-  await expect(day(7).locator('.d-dot.idot-warn')).toHaveCount(1);    // 8.0 is below the 10 limit row
+  await expect(day(7).locator('.d-dot.idot-warn')).toHaveCount(1);
   await expect(day(8).locator('.d-dot.idot-flag')).toHaveCount(1);    // max lower than min
-  await expect(day(9).locator('.d-dot')).toHaveCount(0);              // 12.0-15.0 is inside 10-26
-  // House colours: never red, no warning colour on the outside calendar - the dot is ink (solid) or an ink ring.
+  await expect(day(9).locator('.d-dot')).toHaveCount(0);
   const dotCols = await page.evaluate(() => [...document.querySelectorAll('[data-cal="out"] .d-dot')].map((d) => getComputedStyle(d).backgroundColor + '|' + getComputedStyle(d).boxShadow));
   const ink = await page.evaluate(() => { const i = document.createElement('i'); i.style.color = 'var(--ink)'; document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return c; });
   for (const c of dotCols) expect(c).toContain(ink);
-  // The limit is the row, never a fixed 15-25: raise the row's minimum to 13 and 12.0 on the 9th is outside.
   upsert('bld-band', 'BLD-temperature_band.csv', 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\ntb-a,Adult,29,,13,26,,\n');
   await page.reload();
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
@@ -685,7 +664,6 @@ test('Print / PDF: summary and room table for a month, totals and outside list f
   await expect(rep.locator('[data-rp="table"] [data-rp-totals]')).toContainText(`Readings taken: ${want.read} · missed: ${want.miss} · outside the limit: ${want.out}`);
   await expect(rep.locator('.rp-out li', { hasText: 'R1' }).first()).toContainText('nothing recorded');
   await expect(rep.locator('[data-rp="table"] td.miss').first()).toHaveText('MISS');
-  // whole year, tables only: January only (the rest of 2026 has not begun on the pretend date)
   await panel.locator('input[name="rpPeriod"][value="year"]').check();
   await panel.locator('#rpSummary').uncheck();
   await panel.locator('#rpGo').click();
@@ -696,7 +674,6 @@ test('Print / PDF: summary and room table for a month, totals and outside list f
   await panel.locator('#rpGo').click();
   await expect(panel.locator('#rpMsg')).toContainText('Tick at least one');
   expect(await page.evaluate(() => window.__printed)).toBe(2);
-  // a sample PDF of the month for a person to look at (invented rows only)
   await panel.locator('#rpTable').check(); await panel.locator('#rpSummary').check();
   await panel.locator('input[name="rpPeriod"][value="month"]').check();
   await panel.locator('#rpGo').click();
@@ -731,14 +708,13 @@ test('Print / PDF: a 30-room month prints the summary on one page and the room t
   await expect(page.locator('#report [data-rp="table"] tbody th[rowspan]')).toHaveCount(n);
   await page.emulateMedia({ media: 'print' });
   await page.evaluate(() => document.body.classList.add('rp-printing'));
-  // nothing runs off the sheet: every calendar and the table sit inside their page
   const off = await page.evaluate(() => [...document.querySelectorAll('#report .rp-cal, #report .rp-t')].filter((e) => {
     const p = e.closest('.rp-page').getBoundingClientRect(), r = e.getBoundingClientRect();
     return r.right > p.right + 0.5 || r.bottom > p.bottom + 0.5;
   }).length);
   expect(off).toBe(0);
   for (const which of ['summary', 'table', 'both']) {
-    await page.evaluate(() => document.body.classList.add('rp-printing'));   // each PDF run fires afterprint, which takes it off
+    await page.evaluate(() => document.body.classList.add('rp-printing'));
     await page.evaluate((w) => document.querySelectorAll('#report .rp-page').forEach((p) => { p.style.display = (w === 'both' || p.dataset.rp === w) ? '' : 'none'; }), which);
     const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
     await info.attach('print-' + which + '.pdf', { body: pdf, contentType: 'application/pdf' });
@@ -746,3 +722,4 @@ test('Print / PDF: a 30-room month prints the summary on one page and the room t
     expect(pages, which).toBe(which === 'both' ? 2 : 1);
   }
 });
+

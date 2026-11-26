@@ -10,11 +10,9 @@ const { tabClick } = require('../support/tabs');
 
 const BB = path.resolve(__dirname, '..', 'fixtures', 'breed-better');
 const readBB = (f) => fs.readFileSync(path.join(BB, f), 'utf8');
-// three more invented must-pass checks with no rule rows, so they read "Missing"
 const EXTRA = ['c-elbow-gate,s-test,b-gate,elbow_gate,Elbows X-ray,BLD-health_screen,subject_id,test=elbows,grade,tested_on,latest,,,unknown,,invented',
   'c-pat-gate,s-test,b-gate,patella_gate,Patella check,BLD-health_screen,subject_id,test=patella,grade,tested_on,latest,,,unknown,,invented',
   'c-ftb-gate,s-test,b-gate,ftb_gate,Fit to Breed,BLD-fit_to_breed,subject_id,,result,assessed_on,latest,,,unknown,,invented'];
-// one invented answer each, so the rules are complete; the test dogs have no such records, so these read Missing
 const EXTRA_POINTS = ['px1,c-elbow-gate,in:0,,pass,', 'px2,c-pat-gate,in:0,,pass,', 'px3,c-ftb-gate,in:Fit,,pass,'];
 function world() {
   const d = buildWorld();
@@ -54,7 +52,6 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     await expect(gates.locator('.bb-gl')).toHaveText(['Hips pass', 'Elbows X-ray', 'Patella check', 'Fit to Breed']);
     await expect(sec.locator('.bb-gates li[data-gate="unverified"] .bb-gw').first()).toHaveText('Missing');
     for (const w of await gates.locator('.bb-gw').allTextContents()) expect(['Passed', 'Missing', 'Failed']).toContain(w);
-    // no grey strip: the old one-line chip text is gone
     await expect(card(page, 'Test Dog Two')).not.toContainText(/Unverified · 0 of/);
     const shots = process.env.DOGCARD_SHOTS;
     if (shots) { fs.mkdirSync(shots, { recursive: true }); await page.addStyleTag({ content: '#nav{display:none!important}' }); await card(page, 'Test Dog Two').screenshot({ path: path.join(shots, 'after-desktop.png') }); }
@@ -74,7 +71,7 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     const nextBtn = page.locator('.bb-nav [data-bb-open]').last();
     if (await nextBtn.isEnabled()) await nextBtn.click(); else await page.locator('.bb-nav [data-bb-open]').first().click();
     await expect(page.locator('#bbRoot h3')).not.toContainText('Test Dog Two');
-    await page.locator('[data-bb-back]').click();   // to the Breed Better list and its tabs
+    await page.locator('[data-bb-back]').click();
     await page.locator('.bb-tabs [data-bb-tab]:not([aria-current])').last().click();
     await expect(page.getByRole('button', { name: 'Back to Test Dog Two' })).toBeVisible();
     await expect(page.locator('#bbRoot [data-hub-back]')).toHaveText('\u2190 Back to Test Dog Two');   // HubNav's own Back (NAV #610)
@@ -87,7 +84,6 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     await page.goBack();
     await expect(two.locator('.bb-sechd')).toBeVisible();
     await expect.poll(() => two.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(Math.round(top));
-    // opened from the menu, there is no Back to a dog
     await tabClick(page, '#nav button[data-go="breed"]');
     await expect(page.locator('#bbRoot').getByRole('button', { name: /Back to / })).toHaveCount(0);
   });
@@ -113,7 +109,7 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     await expect(sec().locator('.bb-gates')).toBeHidden();
   });
 
-  test('dog card, Breed Better, Open on Fit to Breed lands on add/edit, and Back returns to that dog @regression', async ({ page }) => {
+  test('t-cdhub-dog-card-bb-section-spec-1', async ({ page }) => {
     await openDogs(page);
     await card(page, 'Test Dog Two').locator('section.bb-sec .bb-sechd').click();
     await expect(page.locator('#main h2')).toContainText('Breed Better');
@@ -147,7 +143,6 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     expect((await sec.locator('.bb-sechd').boundingBox()).height).toBeGreaterThanOrEqual(44);
     expect((await sec.locator('.bb-misshd').boundingBox()).height).toBeGreaterThanOrEqual(44);
     await sec.locator('.bb-misshd').click();
-    // nothing in the section overlaps: each must-pass line sits inside the card, word clear of the edge
     for (const li of await sec.locator('.bb-gates li').all()) {
       const lb = await li.boundingBox(), wb = await li.locator('.bb-gw').boundingBox();
       expect(lb.x + lb.width).toBeLessThanOrEqual(b.x + b.width + 1);
@@ -157,3 +152,4 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     if (shots) { fs.mkdirSync(shots, { recursive: true }); await page.addStyleTag({ content: '#nav{display:none!important}' }); await card(page, 'Test Dog One').screenshot({ path: path.join(shots, 'after-phone.png') }); }
   });
 });
+

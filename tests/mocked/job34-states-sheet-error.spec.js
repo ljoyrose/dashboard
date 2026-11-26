@@ -1,7 +1,3 @@
-// JOB 34 state matrix (group E): DRIVE / SHEETS ANSWER 500, every hub. Every Drive files call and every Sheets call
-// fails with 500 (after any retries the page makes). Each hub must show a visible error message in its own words and
-// not crash. The browser's own "Failed to load resource ... 500" network line is expected here and allowed; anything
-// else on the console still fails the test.
 const { test, expect, HUBS, fail, SHEETS, fixture } = require('../fixtures/job34/load');
 const H = fixture('states', 'hubs.json');
 
@@ -23,10 +19,9 @@ for (const hub of Object.keys(HUBS)) {
   });
 }
 
-// J34-F80 (fixed in money/index.html): when every Drive read fails, the stamp says "Read failed" and Main lists the
-// unread files first, never a calm "Nothing needs you".
 test('J34-F80 money: every Drive read failing must not say "Nothing needs you" and the stamp must say Read failed', async ({ page, guard, allowedConsole }) => {
   await openFailing(page, guard, allowedConsole, 'money');
   await expect(page.locator('#readStamp')).toHaveText(/Read failed/, { timeout: 45_000 });
   await expect(page.locator('#view')).not.toContainText('Nothing needs you');
 });
+

@@ -1,5 +1,3 @@
-// Web Estate Hub pure logic. Run: node --test tests/estate/core.test.js
-// Every name here is invented (example.com / example.org / .test style). No estate row lives in this repo.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const E = require('../../estate/core.js');
@@ -117,3 +115,4 @@ test('readTags sees the Google & YouTube app by its api client id too (seen on a
   assert.deepEqual(t.ga4, ['G-ABC1234XYZ']);
   assert.equal(E.readTags('{"apiClientId":17803630}').loadedBy.includes('Google & YouTube app'), false, 'a longer number is another app');
 });
+

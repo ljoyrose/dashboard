@@ -1,9 +1,3 @@
-/* Dashboard Tech (TECH-HUB-1): find bar and tool tiles. studio/tech-core.js draws the tile; index.html loads this file only when
-   Tech opens, so no other page carries its weight. Uses the house tokens and names only (tokens.css, house.css). The find bar is Factory's calm row: Search and
-   Filter (plus Add tech) on one row, the group, flag and sort chips behind Filter. A tile is a card with its group's 3px colour bar
-   (--sc), the logo or initials first, a few words, no paragraph. Colour only in dots, bars, rings and icons; no fills. Status, flags
-   and the review link are 1px rings in house state colours (ok, soon, risk, the grey ring). Icons are grey at rest and take the
-   group's icon colour (--tic) on hover. Unknown figures read "unknown" in muted words, never 0. */
 .tbar { display: flex; flex-direction: column; gap: 8px; margin: 0 0 var(--house-gap); }
 .tbar .srow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .tbar .sbox { flex: 1 1 220px; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: var(--house-btn); padding: 0 10px;
@@ -67,3 +61,4 @@ a.tt-rev:focus-visible { outline: var(--house-focus) solid var(--ink); outline-o
   .tbar .sbox, .tform .fin, a.tt-rev, .tg-h { min-height: var(--house-btn-phone); }
   .tform .trow2 { grid-template-columns: 1fr; }
 }
+

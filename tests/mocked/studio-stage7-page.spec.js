@@ -1,6 +1,3 @@
-// Studio Stage 7 page side (engine v0.2.24, bot maker loop): who is making a piece, the automatic check's verdict
-// chips and reasons, and the one-line bot settings summary. Nothing shows when the fields are absent.
-// Pretend Google and Drive only; the data is tests/fixtures/studio/state.js (invented).
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -23,7 +20,7 @@ async function open(page, guard, hash, change) {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
-  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
 }
 const details = async (page, id) => {
   const d = page.locator(`[data-more="${id}"]`);
@@ -91,3 +88,4 @@ test.describe('Studio Stage 7: bot maker loop', () => {
     await noSidewaysScroll(page);
   });
 });
+

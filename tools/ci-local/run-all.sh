@@ -1,16 +1,4 @@
 #!/usr/bin/env bash
-# run-all.sh - run the same checks CI runs, inside a session, with no GitHub Actions minutes. JOB 38.
-# Pattern for repos whose Actions minutes are used up (see docs/job38/PRIVATE-REPOS.md).
-#
-#   bash tools/ci-local/run-all.sh            every check (browser suite about 10 min)
-#   bash tools/ci-local/run-all.sh --quick    skip the browser suite
-#
-# Runs on a clean copy of HEAD in a temp folder OUTSIDE the repo (uncommitted files are not tested, as in CI).
-# Privacy guard: the real denylist never lives here. Set PRIVACY_DENYLIST_FILE to a file outside the repo;
-# if unset, a placeholder holding one invented term is made in the temp folder (DENY is then a placeholder,
-# the EMAIL, DRIVE, PHONE, PATH and AUTHOR rules run for real). CI's "Privacy guard" runs the real DENY rule.
-# Browser: if Playwright's own pinned browser is missing, a wrapper config (in the temp folder) points it at
-# $PW_EXECUTABLE (default /opt/pw-browsers/chromium). Nothing is pushed, sent or written inside the repo.
 set -u
 QUICK=0; [ "${1:-}" = "--quick" ] && QUICK=1
 REPO=$(git rev-parse --show-toplevel) || exit 2
@@ -28,7 +16,6 @@ else npm ci --no-audit --no-fund >"$TMP/npm.log" 2>&1 || { echo "npm ci failed (
 
 DENY_NOTE="outside file"
 if [ -z "${PRIVACY_DENYLIST_FILE:-}" ]; then
-  # The term is built at run time so it never appears in any file the guard scans (it would flag this script).
   printf 'zz%sq%sx\n' "$RANDOM$RANDOM" "$$" > "$TMP/denylist.txt"
   export PRIVACY_DENYLIST_FILE="$TMP/denylist.txt"; DENY_NOTE="placeholder"
 fi
@@ -80,3 +67,4 @@ for r in "${ROWS[@]}"; do IFS='|' read -r a b c d <<<"$r"; printf '%-6s %-52s %-
 if [ $KEEP = 1 ]; then trap - EXIT; git -C "$REPO" worktree remove --force "$WT" >/dev/null 2>&1; echo "Logs kept in $TMP"; fi
 [ $FAIL = 0 ] && echo "ALL GREEN" || echo "RED"
 exit $FAIL
+

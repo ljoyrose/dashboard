@@ -20,11 +20,6 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="money/core.js"></script>
 <script>
-// Dashboard Main: each hub's 3 numbers, its "needs you" rows and its Decide / Do rows, read with the Dashboard's own
-// look-only sign-in (drive.readonly; Sheets values are read with it too, GET only). Every number is worked out the way
-// that hub works it out (see the hub's own file, named at each reader). A hub that cannot be read gives ok: false and the
-// page shows "–": never a made-up number. Nothing here writes anything.
-// Row shape: { hub, kind: 'late' | 'soon' | 'wait', text, href, sort? }. Number shape: [label, value | null, late?].
 (function (root) {
   'use strict';
   var FILES = 'https://www.googleapis.com/drive/v3/files';
@@ -49,7 +44,7 @@
       var o = {}; head.forEach(function (h, k) { o[h] = String(r[k] == null ? '' : r[k]).trim(); }); return o;
     });
   }
-  function table(values) { // Sheets header row + rows -> objects (as Food does)
+  function table(values) {
     var v = values || [], head = (v[0] || []).map(function (h) { return String(h).trim(); });
     return v.slice(1).filter(function (r) { return r.some(function (x) { return String(x).trim(); }); }).map(function (r) {
       var o = {}; head.forEach(function (h, k) { o[h] = r[k] == null ? '' : String(r[k]); }); return o;
@@ -71,8 +66,6 @@
   function readJson(io, folder, name) { return findFile(io, folder, name).then(function (f) { return io.get(FILES + '/' + encodeURIComponent(f.id) + '?alt=media&supportsAllDrives=true'); }); }
   function none() { return { ok: false }; }
 
-  // ---- Money (money/index.html summary + money/core.js). Overdue = the Main strip's overdue count; Due Soon = Dates due in
-  // the next 14 days; Cash = business bank balances added up (business and personal are never added together).
   function money(d) {
     var MC = root.MoneyCore;
     if (!MC || !d || d.gate !== 'ok') return none();
@@ -89,7 +82,6 @@
     return { ok: true, nums: [['Overdue', over, over > 0], ['Due Soon', soon], ['Cash', cash == null ? null : (cash < 0 ? '−' : '') + gbp(Math.abs(cash))]], decide: decide, todo: todo, needs: [] };
   }
 
-  // ---- Web (estate/core.js summarise + rank). Only read once the RR_WEB-ESTATE sheet id is set in config.js.
   function web(io, cfg) {
     var ES = cfg.estate || {};
     if (!ES.sheetId || !io.need) return Promise.resolve(none());
@@ -112,7 +104,6 @@
     }).catch(none);
   }
 
-  // ---- Food (food/index.html pageHome). Late = orders Not at GA; Owe GA = unpaid invoices; Today = orders placed today (UK).
   function food(io, cfg, now) {
     var F = cfg.food || {};
     if (!F.bookId) return Promise.resolve(none());
@@ -135,7 +126,6 @@
     }).catch(none);
   }
 
-  // ---- Dogs (cdhub/index.html counts + needsToday). Temps: readings are not saved anywhere yet ("Saving off for now"), so "–".
   var BLD = ['BLD-subject.csv', 'BLD-occupancy.csv', 'BLD-subject_status.csv', 'BLD-mating.csv', 'BLD-WORK.csv'];
   function dogs(io, cfg, now) {
     var C = cfg.cdhub || {};
@@ -161,7 +151,6 @@
       var here = dogsAll.filter(onPrem);
       var bitches = here.filter(function (d) { return months(d.dob) >= 6 && d.sex === 'Female' && (d.neuter || 'entire') !== 'neutered'; }).length;
       var unplaced = here.filter(function (d) { return !d.area_id; }).length;
-      // In whelp (cdhub inWhelp + needsToday): first open mating per dam, shown from day 50; late after day 63, soon from day 57.
       var today = TODAY.toISOString().slice(0, 10), bydam = {}, needs = [], todo = [];
       T[3].forEach(function (m) { if (m.dam_subject_id) (bydam[m.dam_subject_id] = bydam[m.dam_subject_id] || []).push(m); });
       Object.keys(bydam).forEach(function (dam) {
@@ -173,14 +162,13 @@
         if (!(day >= 50 && day <= 72)) return;
         needs.push({ hub: 'dogs', kind: day > 63 ? 'late' : day >= 57 ? 'soon' : 'wait', text: names[dam] + ' in whelp: day ' + day, href: 'cdhub/#/today', sort: -day });
       });
-      T[4].filter(function (r) { return r.status === 'BLOCKED' && r.owner === 'Lisa'; }).forEach(function (r) {
+      T[4].filter(function (r) { return r.status === 'BLOCKED' && r.user === 'User'; }).forEach(function (r) {
         var row = { hub: 'dogs', kind: 'wait', text: r.item || r.id, href: 'cdhub/#/work' }; needs.push(row); todo.push(row);
       });
       return { ok: true, nums: [['Temps', null], ['Unplaced', unplaced], ['Bitches', bitches]], needs: needs, todo: todo, decide: [] };
     }).catch(none);
   }
 
-  // ---- Apps (factory/index.html decisions, mine, vAllApps "Live"). Questions = open decisions that are not gates.
   function apps(io, cfg) {
     var FC = cfg.factory || {};
     if (!FC.logsFolderId) return Promise.resolve(none());
@@ -197,7 +185,7 @@
       });
       var sendIds = Object.keys(next).map(function (k) { return next[k].t.id; });
       var mine = [].concat(L.work || [], L.sends || [], L.incidents || []).filter(function (t) {
-        return isOpen(t) && !test(t) && tags(t).indexOf('lisa-done') < 0 && tags(t).indexOf('queued') < 0 && (tags(t).indexOf('who-lisa') >= 0 || sendIds.indexOf(t.id) >= 0);
+        return isOpen(t) && !test(t) && tags(t).indexOf('user-done') < 0 && tags(t).indexOf('queued') < 0 && (tags(t).indexOf('who-user') >= 0 || sendIds.indexOf(t.id) >= 0);
       });
       var stage = function (a) { var m = String(a.status || '').match(/^(\d)/); return m ? +m[1] : /^(rescue|operate)$/i.test(a.status) ? 8 : -1; };
       var probe = (S.health || []).filter(function (h) { return h.job === 'leakProbe'; })[0];
@@ -213,7 +201,6 @@
     }).catch(none);
   }
 
-  // ---- Marketplace (marketplace/index.html posts, waiting, ordersStrip). Fish Treats cards from the GA book count as posts.
   var MKT_DO = ['remove', 'post', 'vinted', 'job'], MKT_DECIDE = ['go', 'check', 'cost', 'offer', 'receipt', 'supplier', 'learn', 'vat'];
   function market(io, cfg, packs) {
     var M = cfg.marketplace || {};
@@ -238,7 +225,6 @@
     }).catch(none);
   }
 
-  // ---- Studio (studio/index.html reviews, gates, doItems, needOf). Sold: the state keeps running totals only, not dated sales, so "–".
   function studio(io, cfg) {
     var ST = cfg.studio || {};
     if (!ST.logsFolderId) return Promise.resolve(none());
@@ -250,7 +236,7 @@
       var dd = function (a) { return a.dated && a.eventDate ? daysTo(a.eventDate) : null; };
       var reviews = all.filter(function (a) { return a.stage === 7; });
       var gates = all.filter(function (a) { return a.gate && a.gate.question && a.stage < 7; });
-      var hands = all.filter(function (a) { return a.fit === 'HAND' && a.who === 'lisa' && a.stage < 7 && !(a.gate && a.gate.question); });
+      var hands = all.filter(function (a) { return a.fit === 'HAND' && a.who === 'user' && a.stage < 7 && !(a.gate && a.gate.question); });
       var doIt = hands.concat(all.filter(function (a) { return hands.indexOf(a) < 0 && ((a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent') || (a.delivery && a.delivery.status === 'ready (not sent)')); }));
       var dueToday = all.filter(function (a) { return a.stage < 8 && dd(a) === 0; }).length;
       var row = function (a) { var d = dd(a), k = a.stage < 8 && d !== null && d < 0 ? 'late' : a.stage < 8 && d !== null && d <= 3 ? 'soon' : 'wait';
@@ -261,7 +247,6 @@
     }).catch(none);
   }
 
-  // io: { get(url) -> JSON, text(url) -> text, need([scripts]) -> loads site scripts }. Never rejects.
   function load(io, cfg, now) {
     var f = food(io, cfg, now);
     return Promise.all([web(io, cfg), f, dogs(io, cfg, now), apps(io, cfg), f.then(function (x) { return market(io, cfg, x.packs); }), studio(io, cfg)]).then(function (r) {
@@ -275,8 +260,6 @@
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="house.css">
 <style>
-  /* Colours come from ../tokens.css (one shared LJR7 file). These short names only point at it.
-     Map 1 Vision · Read first/Drive 0 · PC-Personal/Drive check 4 Ops · Bin 8 · Changes/Cf 7 · Money 3. Failed reads and delete actions use 2 Risk. */
   :root {
     --s0: var(--ljr-0); --s1: var(--ljr-1); --s1-edge: var(--ljr-1-edge); --s1-stripe: var(--ljr-paper);
     --s2: var(--ljr-2); --s4: var(--ljr-4); --s7: var(--ljr-7); --s8: var(--ljr-8);
@@ -302,7 +285,6 @@
   .wrap { margin: 0 auto; padding: 0 var(--house-gutter); }
   .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-  /* Header: the only fixed element (desktop only). */
   header { background: var(--surface); border-bottom: 1px solid var(--line); }
   @media (min-width: 700px) { header { position: sticky; top: 0; z-index: 2; } }
   .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: 12px;
@@ -319,7 +301,6 @@
   #view.fade { opacity: 0; }
   @media (prefers-reduced-motion: reduce) { #view { transition: none; } }
 
-  /* Cards: solid = established, dashed = not established. */
   .card { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--slot, var(--s0));
           border-radius: 16px; padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); min-width: 0; }
   .card.sec { border-radius: 12px; }
@@ -342,7 +323,6 @@
   .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: var(--fs-small); border-top: 1px solid var(--line); padding-top: 8px; text-align: left; }
   .source a { color: var(--muted); }
 
-  /* State badge: colour + shape + word. */
   .state { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-small); color: var(--muted); white-space: nowrap; }
   .shape { width: 12px; height: 12px; flex: none; display: inline-block; }
   .st-ok .shape { border-radius: 50%; background: var(--slot, var(--s0)); }
@@ -390,9 +370,7 @@
   .btn.danger { border-color: var(--risk-text); color: var(--risk-text); font-weight: 600; }
   .btn.danger.solid { background: var(--ljr-2-solid); color: var(--ljr-2-on); }
   .btn.ai { border-color: var(--ljr-7-solid); background: var(--ljr-7-solid); color: var(--ljr-7-on); font-weight: 600; }
-  /* A filled control's focus line is its own text colour, 1px inside, so it shows on the fill. */
   html body .btn.danger.solid:focus-visible { outline-color: var(--ljr-2-on) !important; } html body .btn.ai:focus-visible { outline-color: var(--ljr-7-on) !important; }
-  /* Folded cards: summary always shows title + count; body opens on click and stays open across redraws. */
   details.fold > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 32px; }
   details.fold > summary::-webkit-details-marker { display: none; }
   details.fold > summary h3, details.fold > summary h4 { display: flex; align-items: center; gap: 8px; }
@@ -418,7 +396,6 @@
   label.tick { display: flex; align-items: flex-start; gap: 8px; text-align: left; font-weight: 600; }
   label.tick input { width: 18px; height: 18px; margin: 4px 0 0; flex: none; }
   label.tick span { overflow-wrap: anywhere; min-width: 0; }
-  /* Money tile: Finances copper for money, Operations for to-dos and dates, Risks for overdue, Connections for on track. */
   .slotfin { --slot: var(--fin); --tint: var(--fin-tint); }
   .mtag { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-small); font-weight: 600; background: var(--mt, var(--s0-tint)); border-radius: 8px; padding: 0 8px; white-space: nowrap; }
   .mtag::before { content: ''; width: 9px; height: 9px; background: var(--mc, var(--s0)); border-radius: 50%; flex: none; }
@@ -427,7 +404,6 @@
   .mtag.ok { --mc: var(--ok); --mt: var(--ok-tint); }
   .mtag.fin { --mc: var(--fin); --mt: var(--fin-tint); }
   .mtag.bin { --mc: var(--s8); --mt: var(--s8-tint); } .mtag.bin::before { border-radius: 0; }
-  /* Needs you today: one short list, at most 7 rows, each in its LJR7 colour. */
   .needs ol { list-style: none; margin: 8px 0 0; padding: 0; }
   .needs li { display: flex; gap: 10px; align-items: baseline; padding: 8px 0 8px 10px; border-top: 1px solid var(--line, rgba(0,0,0,.08)); border-left: 3px solid var(--nc, var(--s0)); }
   .needs li:first-child { border-top: 0; }
@@ -441,10 +417,6 @@
   .ment .sub { font-size: var(--fs-small); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
   .mgroup { font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 0; text-align: left; }
   .hidden { display: none !important; }
-  /* Main hub tiles: icon + name + 3 numbers, no fills; colour only as the 3px line and the icon.
-     Numbers 18px, labels 14px; a number that means late is a rose ring. The whole square opens the hub
-     (the name link stretches under the card). Each number and the Food tick sit above it and keep their own page.
-     Phone: the square, the name and those links are at least 44px (--house-btn-phone). */
   .hubgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--house-gap, 12px); }
   .hubtile { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 6px 10px; min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); color: var(--ink); text-align: left; box-shadow: none; }
   .hubtile .hn { display: flex; align-items: center; gap: 6px; min-height: var(--house-btn-phone); font-weight: 600; font-size: var(--fs-body); line-height: 24px; pointer-events: none; }
@@ -471,7 +443,6 @@
   @media (hover: hover) { .hubtile a:hover { background:var(--hov); } }
   .hubtile a:active { background:var(--hov); }
   .hubtile a:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
-  /* Needs you, Decide and Do rows: the hub's icon and its 3px line down the row. */
   ol.hrows { list-style: none; margin: 8px 0 0; padding: 0; }
   .needs ol:has(> li.house-lbar), ol.hrows { display: flex; flex-direction: column; gap: 4px; }
   .needs li.house-lbar[class], ol.hrows > li { --house-lbar-out: 0px; display: flex; gap: 8px; align-items: center; padding: 6px 0 6px 12px; border: 0; border-radius: var(--radius); }
@@ -501,24 +472,17 @@
   /* One page width everywhere (the owner, 2 Nov): the full window, the house side gap (--house-gutter: 24px; phones 16px). */
   .wrap, .wrap.wide, .wide, .hin { max-width: none; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
 
-  /* Fewer scrolls: on wide screens file lists use 2-3 columns. */
   @media (min-width: 900px) { ul.files { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 8px 12px; } ul.files > li { margin: 0; } }
 
-/* Calm: one line width all round; colour edge only on hover. */
 .card[class], details.card[class], nav.card[class], .needs li[class] { border-left-width: 1px; }
 .card[class]:hover, details.card[class]:hover, .needs li[class]:hover { border-left-color: var(--slot, var(--nc, var(--line))); }
 
-  /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
 
-  /* Hub V2 (25 Oct 2026, same layout as Marketplace): five sections in a bar at the bottom, in thumb reach on the phone.
-     Dashboard, Drive, Bin, Changes, More. Red number = things that need you. Nothing hides under the bar. */
   html { scroll-padding-bottom: 96px; }
   body { padding-bottom: 96px; }
-  /* "You are here" title: focus moves here on every screen change for screen readers; it must not draw a box. */
   #hereTitle, #hereTitle:focus, #hereTitle:focus-visible { outline: none; border: 0; box-shadow: none; }
-  /* Home: Needs you: N, three big count tiles that open a tab, then the one most urgent thing. */
   .needsline { font-size: var(--fs-figure); font-weight: 600; margin: 0; }
   .needsline .zero { color: var(--ljr-5-text); }
   #homeTop { display: flex; flex-direction: column; gap: 12px; }
@@ -527,19 +491,12 @@
   .urgent .btn { min-height: 52px; justify-content: center; font-size: var(--fs-body); font-weight: 600; }
   .hint { margin: 0; font-size: var(--fs-small); color: var(--muted); }
 
-  /* ==== House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio). Lexend 400/600, nothing under 13px, line height 1.5.
-     1px lines; hover AND selected = the same 1px edge turns ink (outline over it), nothing moves; focus 1px ink inside. One radius, 12px.
-     No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints. Dark frame top and bottom. ==== */
-  /* Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule: ../tokens.css through ../house.css.
-     Home's own: the Bin tab colour (slot 8 as warm charcoal, never black). */
   :root { --tc8: #3A3632; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --tc8: var(--ljr-8); } }
   :root[data-theme="dark"] { --tc8: var(--ljr-8); }
   h1, h2, h3, h4, b, strong, th { font-weight: 600; }
   body { background: var(--bg); color: var(--ink); line-height: 1.5; }
-  /* No coloured words: failures and warnings keep ink text and carry a small rose dot or ring instead. */
   .note.fail, .st-failed, .res.bad, .skip, .needsline .zero, .btn.danger { color: var(--ink); }
-  /* Bin "why it is held" lines share the class name with the skip link and were pushed off screen with it; now they show. */
   div.skip { position: static; left: auto; top: auto; z-index: auto; background: none; padding: 0; border: 0; border-radius: 0; font-size: var(--fs-small); color: var(--ink); }
   .note.fail::before, .res.bad::before, div.skip::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; border: 1px solid var(--ljr-2); background: var(--ljr-2-tint); vertical-align: 1px; }
   /* No solid colour fills: the strong buttons are a light tint on the same clear line. */
@@ -549,12 +506,10 @@
   .btn.ai { background: var(--ljr-7-tint); color: var(--ink); border-color: var(--hl); }
   .st-empty .shape, .st-idle .shape, .st-loading .shape { border-width: 1px; }
   .st-empty .shape { border-radius: 50%; }
-  /* One radius on everything; only status dots are round. */
   .banner, a.skip, .mtag, .chip, .stat, .scrollbox, .ment, a.keytile, .subnav a, .index .btn, .picker select, input.find, .info, .card { border-radius: var(--radius); }
   a.skip { border-width: 1px; }
   .banner { border-style: solid; border-color: var(--ljr-2); }
   .banner.info { border-color: var(--line); }
-  /* Cards: 1px line, one 12px step; no colour stripe (colour shows on an icon ring when pointed at). */
   .card, .card[class] { border: 1px solid var(--line); padding: 12px; gap: 12px; box-shadow: var(--shadow); }
   .card.failed[class] { border-color: var(--ljr-2); }
   .card[class]:hover, details.card[class]:hover, nav.card[class]:hover { border-left-color: var(--line); }
@@ -569,18 +524,12 @@
   #view { gap: 12px; }
   .here h2 { font-size: var(--fs-head); }
   .card h3, .card h2.h3 { font-size: var(--fs-head); }
-  /* Titles wrap to 2 lines, then … */
   .fname, .urgent .what, .needs .nt a { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
   html body .fname a:focus-visible, html body .needs .nt a:focus-visible { outline-offset: -2px !important; }
-  /* Two pill sizes. Read (24px): chips, tags, counts. Press (36px desktop, 44px phone): buttons, sub-tabs, inputs. */
   .chip, .mtag { height: 24px; min-height: 24px; display: inline-flex; align-items: center; box-sizing: border-box; font-size: var(--fs-small); line-height: 1; padding: 0 8px; }
-  /* Read pills (tags, dates): a plain 1px ring in the clear line, muted words. Late = rose ring + tint, soon = amber ring + tint (ink words).
-     The small dot before the words keeps the slot colour. Read-only: no hover. */
   .mtag { background: transparent; border: 1px solid var(--ctl); color: var(--muted); font-weight: 600; }
   .mtag.risk { border-color: var(--ljr-2); background: var(--ljr-2-tint); color: var(--ink); }
   .mtag.fin { border-color: var(--ljr-3-text); background: var(--ljr-3-tint); color: var(--ink); }
-  /* Count pills: ONE exact box so 1 and 2 digits match in any font: 30 x 24, 14px words, line 22px, radius 12px (the house count tokens).
-     Only 3+ digits (and worded pills) get .wide and grow. Ring only, no fill: rose = late / risk, grey = waiting. */
   .cnt { width: var(--house-count-w); min-width: var(--house-count-w); height: var(--house-count-h); min-height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); box-sizing: border-box;
     display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: var(--fs-small); white-space: nowrap; font-variant-numeric: tabular-nums; overflow: hidden; }
   .cnt.wide { width: auto; padding: 0 6px; overflow: visible; }
@@ -599,7 +548,6 @@
     a.ment.bad:hover { border-color: var(--ljr-2); }
     a.card[class]:hover { border-color: var(--ctl); }
   }
-  /* Everything you can press rests on the same clear line (--ctl); containers keep the softer --line. No button starts out ink. */
   a.keytile { border-width: 1px; border-color: var(--ctl); background: var(--surface); }
   a.card, a.card[class], a.card.vision[class], a.card.vision[class]:not(:hover) { border-color: var(--ctl); }
   .ment, .ment.bad { border: 1px solid var(--ctl); background: var(--surface); }
@@ -608,7 +556,6 @@
   /* Keyboard focus: the 1px ink line inside (the owner, 3 Nov 2026: no exception to 1px). The screen title keeps no box. */
   html body :focus-visible { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
   html body #hereTitle, html body #hereTitle:focus, html body #hereTitle:focus-visible { outline: none !important; }
-  /* Home: Needs you line with its urgency split, three tiles, then the Next card. */
   .needsrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
   .needsline { font-size: var(--fs-figure); font-weight: 600; }
   .hsplit { display: inline-flex; flex-wrap: wrap; gap: 8px; }
@@ -637,20 +584,16 @@
   .nextcard[class] { border-color: var(--ink); background: var(--card); }
   .nextcard .actions { gap: 12px; }
   .nextcard .hint { flex: 1 1 180px; }
-  /* Friendly empty state: a small green-ring check. */
   .okstate { display: flex; flex-direction: row; align-items: center; gap: 12px; }
   .okstate h3 { margin: 0; }
   .okring { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--ljr-5); background: var(--ljr-5-tint); color: var(--ink); font-size: var(--fs-body); font-weight: 600; }
-  /* Frame: dark top bar and dark bottom tab bar (never black); the bottom bar one step lighter so both read the same. */
   header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
   header .btn, header .btn.vision { color: var(--frame-ink); background: transparent; border-color: var(--ctl); }
   @media (hover: hover) { header .btn:hover { background:var(--frame-hov); border-color: var(--ctl); } }
-  /* Signed out the sign-in gate hides the header box (and its dark frame), so the one Sign in button sits on the page: page colours. */
   html.dash-locked header .btn, html.dash-locked header .btn.vision { color: var(--ink); background: var(--surface); }
   @media (hover: hover) { html.dash-locked header .btn:hover { background:var(--hov); } }
   html.dash-locked body header :focus-visible { outline-color: var(--ink) !important; }
   html body header :focus-visible { outline-color: var(--frame-ink) !important; }
-  /* Bottom tabs: ../house.css section 6 (the same bar on every page). Keys see the frame's light ring on the dark bar. */
   html body nav.house-tabs .ht:focus-visible { outline: 1px solid var(--frame-ink) !important; outline-offset: -1px !important; }
   html { scroll-padding-bottom: 104px; } body { padding-bottom: 104px; }
   /* House hover rule (the owner, 12 Nov 2026, replaces 28 Oct): hover and tap = the pale grey fill, no line, for every control, meaning
@@ -741,15 +684,11 @@
 (function () {
   'use strict';
 
-  // ---- Settings (none of these are secrets). Ids and addresses live in config.js. ----
   var CFG = window.DASH_CONFIG, KIT = window.DashKit;
   var CLIENT_ID = CFG.clientId;
   var SCOPE = CFG.scopes.read;
-  // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
   var WRITE_SCOPE = CFG.scopes.write;
   var DRIVES_API = CFG.urls.drives;
-  // Hard rule 14: excluded shared drives are never queried, listed, searched or binned.
-  // Ids and names come from config (cleanup.excludedDrives). An empty allow-list means every other shared drive.
   var EXCLUDED_DRIVES = (CFG.excludedDrives || []).filter(function (id) { return typeof id === 'string'; }).slice();
   var EXCLUDED_NAMES = [];
   var ALLOW_DRIVES = (CFG.cleanup && CFG.cleanup.sharedDriveAllowIds) || [];
@@ -778,18 +717,14 @@
     if (ALLOW_DRIVES.length && ALLOW_DRIVES.indexOf(d.id) === -1) return true;
     return false;
   }
-  var SWEEP_PREFIX = 'ZZ_';   // wide search only. Other ZZ_ names are listed under Rename needed and never binned.
-  var DELETE_PREFIX = 'ZZ_DELETE_'; // the only name that can be binned, and only with a ledger row
-  var ARCHIVE_PREFIX = 'RR_'; // archive: never touched, including anywhere in a name
+  var SWEEP_PREFIX = 'ZZ_';
+  var DELETE_PREFIX = 'ZZ_DELETE_';
+  var ARCHIVE_PREFIX = 'RR_';
   var LEDGER_FILE_ID = CFG.home.ledgerFileId; // RR_DELETE-LEDGER, file_id column
   var SLIP_PREFIX = 'AA_DELETE-LEDGER-ROWS_'; // pending ledger slips, same file_id column
   var LEDGER_FAIL = 'The delete ledger could not be read. Nothing will be binned.';
-  // E02 money rollback (RR_MASTER v0.59). Wins over a tick, a ledger row, Select all and every other bin rule.
-  // Never restore, migrate or bin these. Folder holds use the two Drive ids below, never the folder name.
   var E02_LABEL = 'Held: money rollback (E02), do not touch until FIX 6 is confirmed';
-  // 0.1 - Index. Its parent is Money 00; that parent is not excluded.
   var INDEX_FOLDER_ID = CFG.money.folders.index;
-  // 4 - Ops, the one that holds CHECK-LOG. Another folder also named "4 - Ops" is not this id and is not excluded.
   var OPS_FOLDER_ID = CFG.money.folders.ops;
   var BIN_SHOW = 50;
   var CF_FOLDER_ID = CFG.home.cfFolderId;
@@ -814,27 +749,21 @@
   var BG_CFG = CFG.binGuard || {};
   var CHECK_FOLDER_ID = BG_CFG.checkFolderId;
   var BG_URL_RE = /^https:\/\/script\.google\.com\/(a\/macros\/puppyclassroom\.com\/|macros\/)s\/[A-Za-z0-9_-]+\/exec$/;
-  // Projects Hub tile: drawn only when config.js holds a valid Apps Script /exec address (same rule as the Bin guard).
   var PH_URL = (CFG.projectsHub || {}).webAppUrl || '';
   if (!BG_URL_RE.test(PH_URL)) PH_URL = '';
-  // Its 3 numbers come from the hub's own Sheet (INDEX tab), read with the same read-only sign-in. Never written.
   var PH_SHEET = (CFG.projectsHub || {}).sheetId || '', PH_TAB = (CFG.projectsHub || {}).tab || 'INDEX';
 
-  // Page state stays in memory. The sign-in token is the one thing shared, via auth.js.
   var accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
-  // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
   function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), canva: blank(), icloud: blank(), mac: blank(), check: blank(), runlog: blank(), mins: blank(), hubs: blank(), ph: blank(), tech: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
-  var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
-  // Money Hub and CD Hub open in a new tab so the dashboard stays put (the sign-in is shared, auth.js).
-  // rel="opener" (same site only) lets the hub's "Dashboard" button bring this tab back and close itself.
+  var R = { sweep: null, check: null };
   var HUB_TAB = ' target="_blank" rel="opener"';
-  var ledgerCache = null;           // promise of the delete-ledger id set, cleared on refresh and sign-out
-  var PICK = {};                    // ticked ids per bulk action, memory only
-  var SHOW = {};                    // how many rows of each list are on screen; 'all' means every row
+  var ledgerCache = null;
+  var PICK = {};
+  var SHOW = {};
   var pcpLoadGen = 0;
 
   var $ = function (id) { return document.getElementById(id); };
@@ -885,8 +814,6 @@
     return { text: 'Unexpected error.' };
   }
 
-  // ---- Drive API. GETs for browsing; PATCH/DELETE only from the Bin buttons. ----
-  // tok: only the Personal Drive page passes its own look-only token (GETs only); everything else uses the work token.
   function apiCall(method, url, body, tok) {
     if (tok !== undefined) {
       if (!tok || (method !== 'GET' && tok !== personalAuth.binToken())) return Promise.reject(new ApiError(401, 'Personal sign-in expired', 'authError'));
@@ -927,7 +854,6 @@
   function getFolder(id) {
     return apiGet(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,webViewLink,parents,driveId');
   }
-  // Every list in the Drive view and Bin is scoped to one shared drive (corpora=drive). My Drive is never listed.
   function inDrive(driveId, params) {
     var p = { corpora: 'drive', driveId: driveId };
     Object.keys(params).forEach(function (k) { p[k] = params[k]; });
@@ -973,13 +899,8 @@
   function driveName(id) { var d = driveById(id); return d ? d.name : 'Shared drive'; }
 
   // ---- Bin rules ----
-  // Drive's "contains" is only a wide net. A file can be binned only when its name starts exactly
-  // ZZ_DELETE_ (case-sensitive), its id is in the delete ledger or a pending slip, and RR_ is nowhere
-  // in the name or in a parent folder. ZZ_SUPERSEDED_ is retired: those names are listed for renaming
-  // and are never a reason to bin anything.
   function normName(name) { return String(name == null ? '' : name).trim(); }
   function compactPrefix(s) { return String(s || '').toLowerCase().replace(/[\s_-]+/g, ''); }
-  // exact = starts with the prefix as written. odd = same prefix with different case, spaces or hyphens.
   function spellingOf(name, exactPrefix) {
     var n = normName(name);
     if (!n || !exactPrefix) return '';
@@ -1036,7 +957,6 @@
     }
     return false;
   }
-  // Filename patterns are held anywhere. Folder holds are the two ids only, not a matching folder name.
   function isMoneyRollback(f, chain) {
     if (!f) return true;
     if (e02NameHit(f.name)) return true;
@@ -1056,7 +976,6 @@
     if (!metaCache[id]) metaCache[id] = apiGet(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,parents,driveId');
     return metaCache[id];
   }
-  // Folder names from the shared drive root down to the item. null if too deep to be sure.
   function ancestors(item, driveId) {
     var chain = [], ids = [], guard = 0;
     function step(pid) {
@@ -1067,7 +986,6 @@
     }
     return step((item.parents || [])[0]);
   }
-  // Does a ZZ_ folder hold any RR_ item? true / false / null (too big to check, so treat as unsafe).
   function archiveInside(folderId, driveId) {
     var level = [folderId], req = 0;
     function next() {
@@ -1078,7 +996,7 @@
       return listAll(inDrive(driveId, { q: q, pageSize: '1000', fields: 'nextPageToken,files(id,name,mimeType)' }), 3).then(function (r) {
         if (r.more) return null;
         for (var i = 0; i < r.files.length; i++) {
-          if (nameHasRr(r.files[i].name)) return true; // RR_ at the start or anywhere in the name
+          if (nameHasRr(r.files[i].name)) return true;
           if (r.files[i].mimeType === FOLDER_MIME) level.push(r.files[i].id);
         }
         return next();
@@ -1087,9 +1005,6 @@
     return next();
   }
 
-  // A marked folder can be binned only when every item inside is junk or itself marked
-  // (exact delete prefix + ledger row). Anything else is reported and the folder is skipped.
-  // driveId null = My Drive. Shared drives pass the drive id (owner is the drive, not a person).
   function contentsVerdict(folderId, driveId, led, prefix) {
     var level = [folderId], req = 0, unsure = 0, unproven = 0, other = 0, holdName = '', e02 = false, tooBig = false;
     function result() {
@@ -1141,8 +1056,6 @@
     return next();
   }
 
-  // Live kept copies only: not trashed, not zero-byte, not a shortcut or Google-native file,
-  // name does not start with a ZZ_ variant, and no ZZ_ or AA_HOLD_ folder sits above it.
   function keeperBlocked(file, folders, driveId) {
     if (isZzFamilyName(file.name) || isHoldFolderName(file.name)) return true;
     var pid = (file.parents || [])[0], guard = 0, seen = {};
@@ -1202,7 +1115,6 @@
     return next();
   }
 
-  // Breadth-first walk, several parents per query, capped.
   function walkTree(rootId, rootName) {
     var files = [], folderInfo = {}, level = [rootId], depth = 0, requests = 0, capped = false, folderCount = 0, maxDepthSeen = 0, depthCapped = false, shortcuts = 0, native = 0;
     folderInfo[rootId] = { name: rootName, path: rootName, depth: 0 };
@@ -1260,7 +1172,6 @@
     });
   }
 
-  // ---- Loaders: each panel keeps its own status and read time ----
   function run(key, promise) {
     S[key].status = 'loading'; S[key].error = null;
     render();
@@ -1271,13 +1182,10 @@
     }).then(render);
   }
 
-  // ---- Dropbox line (counts only). Read from a Drive folder after sign-in, so nothing about Dropbox is public. ----
-  var DBX_FOLDER_ID = CFG.home.dbxFolderId;                       // Drive folder holding DROPBOX-TOTALS.json (set once the folder exists)
-  var DBX_TOTALS_NAME = CFG.home.dbxTotalsName;  // written by the private Dropbox scan job
+  var DBX_FOLDER_ID = CFG.home.dbxFolderId;
+  var DBX_TOTALS_NAME = CFG.home.dbxTotalsName;
   var DBX_JOB_URL = 'https://github.com/ljoyrose/dropbox-cleanup/actions/workflows/dropbox-delete.yml';   // workflow 3 (press Run workflow there)
-  var DBX_TRASH_URL = 'https://www.dropbox.com/deleted_files';   // Dropbox cannot empty this by API on a personal account
-  // iCloud and Mac dry-run reports (stage 9): written by the private engines into the same Drive folder. Look only.
-  // iCloud and Mac dry-run reports, written by the private engines into the Dropbox-totals folder (look only).
+  var DBX_TRASH_URL = 'https://www.dropbox.com/deleted_files';
   var REPORT_NAMES = { icloud: 'ICLOUD-REPORT.json', mac: 'MAC-REPORT.json' };
   function loadReport(key, name) {
     if (!signedIn || !accessToken) return;
@@ -1292,28 +1200,12 @@
   }
   function loadDbx() { loadReport('dbx', DBX_TOTALS_NAME); }
 
-  // ---- Bin page Log: run history (RUN-LOG.csv). Read only; this page never writes it. ----
-  // RUN-LOG.csv column contract (the private repo's engines write it; one row per run; header row first;
-  // columns are matched by name, any order, extra columns ignored):
-  //   date_uk            when the run ended: ISO 8601, with an offset (2026-10-30T14:05:00+00:00 or ...Z) preferred;
-  //                      without an offset (2026-10-30 14:05) it is read as UK time. Required; a row without it is skipped.
-  //   job                which engine ran (bin-engine, bin-guard, drive-sweep ...). "engine" is accepted as the same column.
-  //   place              shared drive, Work My Drive or Dropbox the run looked at.
-  //   mode               dry (dry run), or mark / trash / live (live run).
-  //   found              items the run looked at as candidates (whole number).
-  //   changed            items renamed or binned (whole number; 0 on a dry run).
-  //   ledger_rows_added  delete-ledger rows the run wrote (whole number).
-  //   errors             errors in the run (whole number).
-  //   result             ok, partial or failed. Blank = ok when errors is 0, else partial.
-  //   lesson             one short line, or blank. The Log lists the last 7 days' distinct lessons.
-  // Missing folder id, missing file, unreadable file or no date_uk column: the Log says "No runs logged yet".
-  // A failed read is never a Bin problem and never blocks the page.
   var RUNLOG_FOLDER_ID = CFG.home.runLogFolderId || '';
   var RUNLOG_NAME = CFG.home.runLogName || 'RUN-LOG.csv';
   var RUNLOG_DAYS = 7, RUNLOG_SHOW = 30, LESSONS_SHOW = 5;
   var runFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZoneName: 'short' });
   var ukParts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
-  function ukOffset(ms) { // minutes London is ahead of UTC at this moment (0 or 60)
+  function ukOffset(ms) {
     var p = {}; ukParts.formatToParts(new Date(ms)).forEach(function (x) { p[x.type] = x.value; });
     return Math.round((Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) - Math.floor(ms / 1000) * 1000) / 60000);
   }
@@ -1390,7 +1282,6 @@
     }
   }
 
-  // ---- Actions minutes (counts only). ACTIONS-MINUTES.json is written by the private collector in Drive; empty folder id = example. ----
   var MINS = CFG.actionsMinutes || {};
   function loadMins() {
     if (!signedIn || !accessToken) return;
@@ -1403,7 +1294,6 @@
       return apiGet(API + '/' + encodeURIComponent(r.files[0].id) + '?alt=media&supportsAllDrives=true').then(function (st) { return { state: st }; });
     }));
   }
-  // Invented numbers, shown with the Example tag until the collector exists. Labels are made up.
   function minsExample(now) {
     var d = new Date(now);
     return {
@@ -1413,7 +1303,6 @@
       workflows: [{ repo: 'Repo A', label: 'Nightly scan', minutes: 780, runs: 26 }, { repo: 'Repo A', label: 'Tests', minutes: 130, runs: 41 }, { repo: 'Repo B', label: 'Sync', minutes: 300, runs: 60 }]
     };
   }
-  // Level, days to reset and age, worked out from the file and config.js (amber 75%, red 90%, stale after 2 days).
   function minsView(st, now) {
     var free = st.free_minutes || MINS.freeMinutes || 2000, used = Number(st.used_minutes) || 0, r = free ? used / free : 0;
     var reset = Date.parse(st.reset_at), age = now - Date.parse(st.generated_at);
@@ -1426,7 +1315,6 @@
     };
   }
 
-  // ---- Projects tile numbers: the hub Sheet's INDEX tab, read by header name so a moved column cannot shift them. ----
   function loadPh() {
     return apiGet('https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(PH_SHEET) + '/values/' +
       encodeURIComponent(PH_TAB) + '?majorDimension=ROWS').then(function (r) { return phCounts((r && r.values) || []); });
@@ -1440,18 +1328,16 @@
     var out = { stuck: 0, waiting: 0, running: 0, open: 0 };
     rows.slice(1).forEach(function (r) {
       if (col(r, 'status_u45') !== 'LIVE' || col(r, 'kind') === 'reserved' || !/^\d+$/.test(col(r, 'number'))) return;
-      var st = col(r, 'project_status'), owner = col(r, 'owner_tag');
+      var st = col(r, 'project_status'), user = col(r, 'user_tag');
       if (st === 'Done' || st === 'Parked') return;
       out.open++;
-      if (st === 'Waiting on Lisa') out.waiting++;
-      else if (st === 'Blocked' || !owner || /^no owner$/i.test(owner)) out.stuck++;
+      if (st === 'Waiting on User') out.waiting++;
+      else if (st === 'Blocked' || !user || /^no user$/i.test(user)) out.stuck++;
       if (st === 'Running') out.running++;
     });
     return out;
   }
 
-  // timed = the 5-minute refresh. It keeps your ticks, Show-more choices and Bin results;
-  // only the Refresh button (or signing in) starts from clean.
   function loadAll(timed) {
     if (loading) return;
     if (!accessToken || Date.now() > tokenExpiresAt) { handleExpired(); return; }
@@ -1494,7 +1380,6 @@
     });
   }
 
-  // Site scripts a hub reader needs only once that hub is set up (Web: estate/core.js then estate/reader.js, in that order).
   var scriptsLoaded = {};
   function needScripts(list) {
     return list.reduce(function (p, src) {
@@ -1505,13 +1390,12 @@
     }, Promise.resolve());
   }
 
-  // Lazy reads for the current route: a folder in a shared drive, or the Bin lists.
   function ensureRoute() {
     if (!signedIn || !accessToken || loading) return;
     var r = parseRoute();
     if ((r.view === 'drive' || r.view === 'drives') && r.driveId && driveById(r.driveId) && !F[folderKey(r)]) loadFolder(r);
     if (r.view === 'bin' && S.bin.status === 'idle' && drives()) loadBin();
-    else if (r.view === 'bin' && S.bin.status === 'idle' && S.drive.status === 'failed') run('bin', Promise.reject(S.drive.error)); // J34b-F01: no drive list, so the Bin read fails too
+    else if (r.view === 'bin' && S.bin.status === 'idle' && S.drive.status === 'failed') run('bin', Promise.reject(S.drive.error));
     if (r.view === 'bin' && S.check.status === 'idle' && CHECK_FOLDER_ID) loadCheck();
     if (r.view === 'map' && S.mins.status === 'idle') loadMins();
     if (r.view === 'tech' && S.tech.status === 'idle') loadTech();
@@ -1546,11 +1430,9 @@
     if (cell.length || row.length) { row.push(cell); rows.push(row); }
     return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); });
   }
-  var ledgerSurf = {}; // 'surface file_id' keys, e.g. 'drive-personal 1abc'
+  var ledgerSurf = {};
   function idsFromLedgerCsv(text, info) {
     var rows = parseCsv(text);
-    // The ledger may start with one note line such as "COUNT: 232 rows. …" (or "CURRENT: …") above the header.
-    // Only that one note line is skipped; anything else without a file_id header still fails safe (nothing binned).
     if (rows.length && rows[0].length === 1 && /^\s*(COUNT|CURRENT)\s*:/i.test(rows[0][0])) rows = rows.slice(1);
     if (!rows.length) return null;
     var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
@@ -1640,7 +1522,6 @@
     f._block = '';
     return 'ready';
   }
-  // Direct children of 0.1 - Index and 4 - Ops, found by those two ids only.
   function listHoldFolderFiles(driveId) {
     var fields = 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,webViewLink)';
     var ids = [INDEX_FOLDER_ID, OPS_FOLDER_ID];
@@ -1660,7 +1541,6 @@
       return { files: files, more: more };
     });
   }
-  // ---- 00 CHECK (Bin guard). Read-only here. ----
   function bgUrlOk(u) { return BG_URL_RE.test(String(u || '')); }
   function loadBgUrl() {
     if (BG_CFG.webAppUrl) return Promise.resolve(bgUrlOk(BG_CFG.webAppUrl) ? BG_CFG.webAppUrl : '');
@@ -1698,7 +1578,6 @@
     R.check = { at: Date.now(), n: ids.length, action: action };
     render();
   }
-  // Bin > Check: put back by the bin guard (00 CHECK). Plain words; the internal detail sits in the "why" fold.
   function viewCheck() {
     var p = S.check, d = p.data, html = '';
     var n = d ? d.items.length : null, picked = pickCount('check'), live = !!(d && d.url);
@@ -1723,7 +1602,6 @@
         var refer = f.properties && f.properties.REFER_TO_AI;
         var meta = '<div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' + (refer ? '<span class="chip" data-refer>Sent to the AI</span>' : '') +
           '<span>Changed ' + esc(fmtTime(f.modifiedTime) || 'date unknown') + '</span></div>';
-        // A protected row has no tick box at all (never a disabled one); its reason sits in the tooltip.
         if (f._block || !live) return '<li data-id="' + esc(f.id) + '"' + (f._block ? ' data-blocked="1" title="' + esc(f._block) + '"' : '') + '><div class="fname">' + nameHtml + '</div>' + meta +
           (f._block ? '<p class="note">Protected, never binned</p>' : '') + '</li>';
         return '<li data-id="' + esc(f.id) + '">' + tickBox('check', f.id, false, nameHtml) + meta + '</li>';
@@ -1775,7 +1653,7 @@
               }
               if (holdMoney(f, chain)) return;
               if (chain === null) { f._skip = 'Folder path too deep to check, left alone.'; return; }
-              if (chain.some(nameHasRr)) { f._skip = 'Inside an RR_ archive folder, left alone.'; return; } // any folder above, any position in its name
+              if (chain.some(nameHasRr)) { f._skip = 'Inside an RR_ archive folder, left alone.'; return; }
               if (f.mimeType === FOLDER_MIME) {
                 return archiveInside(f.id, d.id).then(function (has) {
                   if (has === true) f._skip = 'Folder holds an RR_ item, left alone.';
@@ -1955,8 +1833,6 @@
       return { ok: false, text: 'Not moved: ' + (err && err.status === 403 && !isScopeError(err) ? 'no permission to bin this.' : fr.text) };
     });
   }
-  // Bin these (n): one confirm for every ticked Ready row, shared drives and Work My Drive alike.
-  // Each side keeps its own safety re-checks (sweepItems, pcpBinItems); nothing moves before the confirm.
   function sweep() {
     if (busy) return;
     var d = S.bin.data;
@@ -2000,14 +1876,13 @@
     });
   }
 
-  // ---- PC-Personal / lisah Personal: files in MY Drive that already exist, byte for byte (MD5 + size), in a shared drive ----
   var PCP_PREFIX = 'ZZ_DELETE_DRIVE_';
   function pcpFresh(status, log) {
     return { status: status, log: log, email: '', mine: 0, matches: [], matchBytes: 0, marked: null, binned: null, error: '', candidates: [], binStatus: 'idle', ledgerOk: true, ledgerNote: '', stats: emptyKeeperStats(), failedDrives: [], keeper: null, skippedMarked: 0, personalUnsure: 0, personalNoChecksum: 0 };
   }
   var P = pcpFresh('idle', '');
   function pcpLabel() {
-    return P.email && P.email === ((CFG.money || {}).owner || '') ? 'PC-Personal' : /@(gmail|googlemail)\.com$/i.test(P.email || '') ? 'lisah Personal' : (P.email || 'Personal drive');   // by account type: the business account (config.js) or a personal Gmail
+    return P.email && P.email === ((CFG.money || {}).user || '') ? 'PC-Personal' : /@(gmail|googlemail)\.com$/i.test(P.email || '') ? 'user Personal' : (P.email || 'Personal drive');
   }
   function pcpAllPages(params, each, tok) {
     var n = 0;
@@ -2021,8 +1896,6 @@
     }
     return page(null);
   }
-  // Two scan slots, one scan code: 'work' = the work account's My Drive (P), 'personal' = the Personal Drive page (Q).
-  // The shared drives are always read with the work token; only the personal My Drive list uses the personal token.
   var Q = pcpFresh('idle', '');
   var personalAuth = DashAuth.personal({
     clientId: CLIENT_ID,
@@ -2038,7 +1911,7 @@
     var st = slotState(slot), tok = slot === 'personal' ? personalAuth.token() : undefined;
     st.mine = 0; st.matches = []; st.matchBytes = 0; st.skippedMarked = 0; st.personalUnsure = 0; st.personalNoChecksum = 0;
     st.log = 'Reading your ' + (slot === 'personal' ? 'personal Drive' : 'work My Drive') + '…'; render();
-    return pcpAllPages({ corpora: 'user', q: "'me' in owners and trashed = false and mimeType != '" + FOLDER_MIME + "'", pageSize: '1000', fields: 'nextPageToken,files(id,name,size,md5Checksum,mimeType,modifiedTime,ownedByMe)' }, function (files, n) {
+    return pcpAllPages({ corpora: 'user', q: "'me' in users and trashed = false and mimeType != '" + FOLDER_MIME + "'", pageSize: '1000', fields: 'nextPageToken,files(id,name,size,md5Checksum,mimeType,modifiedTime,ownedByMe)' }, function (files, n) {
       files.forEach(function (f) {
         if (f.trashed || f.ownedByMe === false) return;
         if (isShortcut(f) || isGoogleNative(f) || !f.md5Checksum) { st.personalNoChecksum++; return; }
@@ -2067,7 +1940,6 @@
       if (slot === 'personal') Q = st; else P = st;
     } else { st.status = 'running'; st.error = ''; st.log = 'Continuing…'; }
     render();
-    // Work slot only: which work account is signed in. The personal token is never used for this.
     var start = continuing || slot === 'personal' ? Promise.resolve() : apiGet(CFG.urls.driveApi + '/about?fields=user(emailAddress)').then(function (a) {
       st.email = a && a.user ? a.user.emailAddress : '';
     });
@@ -2156,9 +2028,9 @@
     }
     var candFields = 'nextPageToken,files(id,name,parents,mimeType,size,md5Checksum,modifiedTime,ownedByMe)';
     loadLedgerSet().then(function (led) {
-      return pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "' and 'me' in owners and trashed = false", pageSize: '1000', fields: candFields }, take)
-        .then(function () { return pcpAllPages({ corpora: 'user', q: "name contains 'ZZ-DELETE' and 'me' in owners and trashed = false", pageSize: '200', fields: candFields }, take); })
-        .then(function () { return pcpAllPages({ corpora: 'user', q: "name contains 'ZZ DELETE' and 'me' in owners and trashed = false", pageSize: '200', fields: candFields }, take); })
+      return pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "' and 'me' in users and trashed = false", pageSize: '1000', fields: candFields }, take)
+        .then(function () { return pcpAllPages({ corpora: 'user', q: "name contains 'ZZ-DELETE' and 'me' in users and trashed = false", pageSize: '200', fields: candFields }, take); })
+        .then(function () { return pcpAllPages({ corpora: 'user', q: "name contains 'ZZ DELETE' and 'me' in users and trashed = false", pageSize: '200', fields: candFields }, take); })
         .then(function () {
           return mapLimit(found.filter(function (f) { return f.mimeType === FOLDER_MIME && spellingOf(f.name, PCP_PREFIX) === 'exact'; }), 3, function (f) {
             return contentsVerdict(f.id, null, led, PCP_PREFIX).then(function (v) {
@@ -2218,7 +2090,6 @@
       return !f.blocked && !f._moneyHold && !isMoneyRollback(f, f._chain || []) && spellingOf(f.name, PCP_PREFIX) === 'exact' && !nameHasRr(f.name) && !isZeroByte(f);
     });
   }
-  // Runs from Bin these (sweep) after its one confirm.
   function pcpBinItems(items) {
     busy = true; P.binned = { done: 0, failed: 0, skipped: 0, unsure: 0, found: items.length, notes: [] }; render();
     var halted = false;
@@ -2248,7 +2119,6 @@
       busy = false; render();
     });
   }
-  // Personal Drive bin steps (estate/pbin.js): fetched only once bin actions are allowed. Its Rename step writes the bin-list rows.
   function loadPBin() {
     if (window.PBin) { PBin.load(); return; }
     if (scriptsLoaded.pb) return;
@@ -2273,8 +2143,6 @@
         (reason ? '<div class="skip">' + esc(reason) + '</div>' : '') + '</li>';
     }).join('') + '</ul>' + showBar(listKey, items.length, step);
   }
-  // Drives > Work My Drive (slot 'work') and Drives > Personal Drive (slot 'personal'): look-only. Scan and list only;
-  // the rename and bin steps for the work account live on #/bin (Ready to bin). The Personal Drive page can never change anything.
   function viewPersonal(slot) {
     var st = slotState(slot), running = st.status === 'running', personal = slot === 'personal';
     var title = personal ? 'Personal Drive' : 'Work My Drive';
@@ -2306,8 +2174,6 @@
     }
     return html + '</section>';
   }
-  // Bin > Work My Drive: rename exact copies (from the last Work My Drive scan) and bin marked files. Bin stage 5 folds this into Ready to bin.
-  // ---- Streaming MD5 (browsers have no built-in MD5). Matches Google Drive's md5Checksum. ----
   var MD5_K = [], MD5_S = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
   for (var mi = 0; mi < 64; mi++) MD5_K[mi] = Math.floor(Math.abs(Math.sin(mi + 1)) * 4294967296) >>> 0;
   function Md5() { this.h = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476]; this.buf = new Uint8Array(64); this.n = 0; this.len = 0; this.w = new Int32Array(16); }
@@ -2350,7 +2216,6 @@
   };
 
   // ==USB-START==
-  // ---- Drive check: a USB stick, external drive or Mac folder vs the shared drives. Files are read on this computer only. ----
   var USB_PREFIX = 'ZZ_DELETE_LOCAL_';
   var USB_SKIP = /^(\.|\$RECYCLE\.BIN$|System Volume Information$)/;
   function usbBlock(m) {
@@ -2613,7 +2478,7 @@
     var foot = '<div class="source"><span>From the Money Hub shared drive</span><span><a href="money/" target="_blank" rel="opener">Open Money Hub</a></span></div>';
     if (!MC) return '<section class="card slotfin pending">' + head + '<p class="note fail">Money Hub code did not load.</p>' + foot + '</section>';
     if (!d) return '<section class="card slotfin' + cardClass(p) + '" id="moneyTile">' + head + failNote(p) + foot + '</section>';
-    if (d.gate !== 'ok') return '<section class="card slotfin pending" id="moneyTile">' + head + '<p class="note">Lisa only.</p>' + foot + '</section>';
+    if (d.gate !== 'ok') return '<section class="card slotfin pending" id="moneyTile">' + head + '<p class="note">User only.</p>' + foot + '</section>';
     var gbpf = MC.gbp, fd = function (x) { return esc(MC.fmtDate(x, d.today)); };
     function ent(m) {
       var bad = (m.liab && m.liab.overdue.length) || (m.dryState === 'dry' && m.dryDays <= 30);
@@ -2656,13 +2521,11 @@
     { key: 'money', name: 'Money', icon: 'money', slot: 3, href: 'money/' },
     { key: 'food', name: 'Food', icon: 'bowl', slot: 4, href: 'food/' },
     { key: 'dogs', name: 'Dogs', icon: 'paw', slot: 4, href: 'cdhub/' },
-    // href is the folder the KPI hashes are appended to. main is the header only: a bare factory/ opens Rooms, Main is #/me.
     { key: 'apps', name: 'Apps', icon: 'factory', slot: 4, href: 'factory/', main: 'factory/#/me' },
     { key: 'market', name: 'Marketplace', icon: 'store', slot: 6, href: 'marketplace/' },
     { key: 'studio', name: 'Studio', icon: 'brush', slot: 7, href: 'studio/' }
   ];
   var HUB = {}; HUBS.forEach(function (h) { HUB[h.key] = h; });
-  // The Dashboard's own rows (the Bin, a failed read) use the Bin's slot 8 and the Main icon.
   HUB.dash = { key: 'dash', name: 'Dashboard', icon: 'dash', slot: 8 };
   function hubStyle(h) { return ' style="--sc:' + (h.line || 'var(--ljr-' + h.slot + ')') + ';--hic:' + (h.ic || 'var(--ljr-' + h.slot + '-icon)') + '"'; }
   function hubIcon(h) { return h.icon === 'dash' ? '<svg class="hico" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg>' : h.icon === 'case' ? '<svg class="hico" aria-hidden="true" focusable="false"><use href="#i-briefcase"/></svg>' : '<svg class="hico" aria-hidden="true" focusable="false"><use href="#h-' + h.icon + '"/></svg>'; }
@@ -2675,7 +2538,6 @@
   // Every number opens the place in its hub where you act on it (the owner, 2 Nov: every piece of info is clickable).
   var HUB_NUMS = {
     projects: [['Stuck', ''], ['Waiting', ''], ['Running', '']],
-    // The same filtered lists each hub's own Main numbers open (Hub Mains, 2 Nov 2026).
     web: [['Down', '#/all?show=down'], ['Expiring', '#/all?show=expiring'], ['Live', '#/all?show=live']],
     money: [['Overdue', '#/now/over'], ['Due Soon', '#/dates/soon'], ['Cash', '#/money/biz']],
     food: [['Late', '#/orders?late'], ['Owe GA', '#/invoices?unpaid'], ['Today', '#/orders?today']],
@@ -2684,7 +2546,6 @@
     market: [['To Post', '#/do?post'], ['To Reply', '#/reply'], ['Sold', '#/sold']],
     studio: [['Approve', '#/review'], ['Due Today', '#/me/today'], ['Sold', '#/library']]
   };
-  // Projects: the hub Sheet's INDEX tab (loadPh). Stuck above 0 is broken: the black badge (DashKit.count); Waiting and Running stay grey.
   function phNums() {
     var d = S.ph.data;
     return d ? [['Stuck', d.stuck, 'stuck'], ['Waiting', d.waiting], ['Running', d.running]] : null;
@@ -2692,19 +2553,17 @@
   function hubTiles() {
     var D = hubData();
     return '<section id="hubTiles" aria-label="Hubs"><div class="hubgrid">' + HUBS.map(function (h) {
-      var link = h.key === 'projects' ? PH_URL : h.href; // KPI base: hashes append here, so a header hash must not live on href
+      var link = h.key === 'projects' ? PH_URL : h.href;
       var head = h.main || link; // header opens that hub's Main
       if (!link) return '';
       var x = D[h.key] || { ok: false }, nums = h.key === 'projects' ? phNums() : x.ok ? x.nums : null;
       var tab = h.key === 'projects' ? ' target="_blank" rel="noopener"' : HUB_TAB;
       var body = '<span class="hks"' + (h.key === 'projects' ? ' data-ph="' + (S.ph.data ? 'ok' : esc(S.ph.status)) + '"' : '') + '>' + HUB_NUMS[h.key].map(function (k, i) {
-        // n[2]: true = late (rose ring), or the broken word 'down' / 'stuck' / 'failed' (black badge): DashKit.count, the one rule.
         var n = nums ? nums[i] : null, v = n && n[1] != null ? String(n[1]) : '–', why = DashKit.count.why(v, n && n[2]);
         return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + (why ? ' aria-label="' + esc(v + ' ' + k[0] + ' ' + why + ', ' + h.name) + '"' : '') + '>' + '<b' + (why ? ' class="' + DashKit.count.cls(v, n[2]).trim() + '"' : '') + '>' + esc(v) + '</b> ' + '<span>' + esc(k[0]) + '</span></a>';
       }).join('') + '</span>';
-      // Same target as the Food hub's own tick: orders filtered to "Not at GA yet".
       var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders?ga"' + HUB_TAB + '>✓ XML</a>'
-        : h.key === 'food' && x.ok && x.toSend ? '<a class="xml need" data-send href="food/#/do"' + HUB_TAB + '>' + x.toSend + ' to send</a>' : '';   // never "✓ XML" while an order waits for Send
+        : h.key === 'food' && x.ok && x.toSend ? '<a class="xml need" data-send href="food/#/do"' + HUB_TAB + '>' + x.toSend + ' to send</a>' : '';
       var why = h.key === 'projects' && S.ph.status === 'failed' ? ' title="Numbers could not be read. Tap to open the hub."' : '';
       return '<div class="card house-lbar hubtile" data-open-row data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo house-open" href="' + esc(head) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + body + '</div>';
     }).join('') + '</div></section>';
@@ -2739,7 +2598,6 @@
   }
   function viewDecide() { return hubListView('decide', 'Decide', 'Nothing waiting on your decision.'); }
   function viewDo() { return hubListView('todo', 'Do', 'Nothing to do.') + (window.DoQ ? DoQ.card() : ''); }
-  // Standing approvals card: its code (estate/donq.js) is fetched only when the Do page opens.
   function loadDoQ() {
     if (window.DoQ || scriptsLoaded.dq) return;
     scriptsLoaded.dq = 1;
@@ -2750,8 +2608,6 @@
     }).catch(function () {});
   }
 
-  // Signed out: nothing about the dashboard is shown, only the sign-in button.
-  // The key links are drawn by viewMap, which only runs after sign-in.
   function viewGate() {
     return '<div class="card vision pending"><div class="cardhead"><h2 class="h3">Sign in</h2>' +
       '<span class="state st-idle"><span class="shape"></span>Not signed in</span></div>' +
@@ -2790,7 +2646,6 @@
   // A rose count means late (the owner's sweep, 3 Nov 2026; read out as "N late"). A failed read or the Bin ledger is rose-lined (risk) but not late.
   function isLateNeed(x) { return x.tag === 'Late'; }
   function hubLink(href) { return /^(money|cdhub|factory|marketplace|food|studio|estate)\//.test(String(href || '')); }
-  // The first reads after sign-in are still running (a 5-minute reread keeps the last numbers instead).
   function firstRead() { return ['readfirst', 'drive', 'cf', 'money', 'hubs'].some(function (k) { return S[k].status === 'loading' && !S[k].data; }); }
   function needsCount() { return signedIn ? needsToday().length : 0; }
   // ---- Needs you as hub colour cards (the owner, 13 Nov 2026; the 12 Nov house look: no fill at rest, pale grey on hover and tap, no line).
@@ -2826,8 +2681,6 @@
     return h + '</section>';
   }
 
-  // Home opens with what needs you: the count, then the ONE most urgent thing. No tiles repeat a tab (stage 2c).
-  // The 3 groups of Needs you: urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
   var NEED_GROUPS = [
     { key: 'urgent', kind: 'risk', word: 'urgent', has: function (x) { return x.kind === 'risk'; } },
     { key: 'soon', kind: 'fin', word: 'due soon', has: function (x) { return x.kind === 'fin'; } },
@@ -2837,7 +2690,6 @@
     var hb = HUB[x.hub] || HUB.dash, label = { risk: 'risk', fin: 'fin', ops: 'ops', bin: 'bin' };
     return '<li class="house-lbar n-' + x.kind + '" data-hub="' + hb.key + '"' + hubStyle(hb) + '>' + hubIcon(hb) + '<span class="mtag ' + label[x.kind] + '">' + esc(x.tag) + '</span><span class="nt"><a href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>' + esc(x.text) + '</a></span></li>';
   }
-  // Do, one group of Needs you (from the pills at the top of Main): exactly the rows that pill counted.
   function viewDoGroup(key) {
     var g = NEED_GROUPS.filter(function (x) { return x.key === key; })[0], rows = needsToday().filter(g.has), reading = firstRead();
     var h = '<section class="card needs" id="todoGroup" data-group="' + g.key + '" aria-labelledby="todoGroupTitle"><div class="cardhead"><h3 id="todoGroupTitle">Do · ' + esc(g.word) + '</h3>' +
@@ -2872,7 +2724,6 @@
     return h + '</section>';
   }
   function viewMap() {
-    // Main: what needs you first (homeTop: the count and the Next card), then Needs you (5 rows), then the hub tiles.
     var html = homeTop() + needsPanel() + hubTiles();
     if (!signedIn) {
       html += '<div class="card vision pending"><div class="cardhead"><h3>Not signed in</h3>' +
@@ -2883,7 +2734,6 @@
     return html; // Main = Next, Needs you, hub tiles. The Money and Actions minutes cards live in More (the owner, 2 Nov).
   }
 
-  // Actions minutes card: private minutes used this month against the free allowance. Read only; sends nothing.
   function minsTile() {
     var p = S.mins, d = p.data, st = d && d.state;
     var tag = d && d.example ? '<span class="mtag" data-example>Example</span>' : '';
@@ -2892,8 +2742,6 @@
     var open = '<section class="card slot7' + cardClass(p) + '" id="minsCard">';
     if (!d) return open + head + failNote(p) + foot;
     if (d.none) return open + head + '<p class="note">No minutes file yet. The collector has not written one.</p>' + foot;
-    // The old collector (engine 0.1) also counted the public repo, which GitHub does not charge, so its total reads far too high.
-    // A file with no engine field is shown as before; only a stated version below 0.2 is held back.
     if (!d.example && st && typeof st.engine === 'string' && parseFloat(st.engine) < 0.2) return open + head + '<p class="note" data-mins-oldengine>Waiting for the collector update (v0.2). The old one counts the public repo, so its total is wrong.</p>' + foot;
     var v = minsView(st, Date.now()), lvl = { ok: ['ok', 'Under 75%'], amber: ['ops', 'Over 75%'], red: ['risk', 'Over 90%'] }[v.level];
     var chip = { success: ['ok', 'Passed'], failure: ['risk', 'Failed'], running: ['ops', 'Running'], cancelled: ['', 'Cancelled'], none: ['', 'No runs'] };
@@ -2918,13 +2766,7 @@
     return h + foot;
   }
 
-  // ---- Tech (TECH-HUB-1, More > Tech): one tile per paid tool, from the tools tab Studio already reads (config.js studio.ownedTools).
-  // Read ONCE per page load, after sign-in, with the read-only token (GET only); the 5-minute refresh never reads it again, only
-  // Refresh does. studio/tech-core.js does every sum (header check, flags, filter, sort, the tile); this part only reads and draws.
-  // Fails closed: tab unreadable, a Tech column missing or the code not loaded = one plain line and no tiles; the rest of the
-  // Dashboard carries on. Add tech drops one TECH-ROW-REQUEST_ file into tech.requestsFolderId (empty = "Not saved", nothing sent).
   var TECH = CFG.tech || {}, TECH_TAB = (CFG.studio && CFG.studio.ownedTools) || {}, TC = window.TechCore || null;
-  // The Tech code and look load only when Tech first opens (studio/ is a published folder), so Main and every hub stay as light.
   function techCode() {
     if (!document.querySelector('link[data-tech-css]')) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'studio/tech.css'; l.setAttribute('data-tech-css', ''); document.head.appendChild(l); }
     return needScripts(['studio/tech-core.js']).then(function () { TC = window.TechCore || null; if (!TC) throw new Error('Tech code did not load'); });
@@ -3006,7 +2848,6 @@
     var when = p.readAt ? (p.status === 'failed' ? 'Failed ' : 'Read ') + esc(stamp(p.readAt)) : 'Not read yet';
     return h + '<div class="source"><span>From the tools tab in your Drive sheet. Read once when the page opens; Refresh reads it again.</span><span>' + when + '</span></div></section>';
   }
-  // Typing repaints only the list and the chips, so the search box keeps its place.
   function techPaint() {
     var d = S.tech.data;
     if (!d || !d.tiles || !$('techList')) { render(); return; }
@@ -3033,7 +2874,6 @@
     else if (a === 'techpick') { TF.d[t.getAttribute('data-f')] = v; techPaintForm(); }
     else if (a === 'techsave') techSave();
   }
-  // Add tech: check the entry (studio/tech-core.js), then one request file for the engine. "Saved" only when Drive returns the new file.
   function techSave() {
     if (TF.busy || !TC) return;
     var d = S.tech.data, keys = d && d.keys ? d.keys : [];
@@ -3053,7 +2893,6 @@
       TF.res = { ok: false, text: 'Not saved: ' + friendlyError(err).text + kept };
     }).then(function () { TF.busy = false; techPaintForm(); });
   }
-  // A tool logo that fails to load swaps to its initials in the same 20 x 20 slot (as Studio's brand marks do).
   document.addEventListener('error', function (e) {
     var t = e.target; if (!t || !t.matches || !t.matches('img.tlogo')) return;
     var sp = document.createElement('span'); sp.className = 'bmark bav'; sp.setAttribute('aria-hidden', 'true');
@@ -3080,7 +2919,6 @@
   function viewDrive(r) {
     var p = S.drive, d = p.data, html;
     if (!r.driveId) {
-      // Read first is pinned here (not a pill): one line into the folder the AIs read first.
       var rf = S.readfirst;
       html = '<p class="note" data-readfirst-pin><a href="#/drives/readfirst">Read first</a> · the folder the AIs read first' + (rf.data ? ' (' + num(rf.data.files.length) + ' items)' : '') + '</p>';
       html += '<section class="card slot0' + cardClass(p) + '"><div class="cardhead"><h3>Recent in shared drives</h3>' + stateBadge(p, d ? d.files.length : null) + '</div>';
@@ -3116,7 +2954,6 @@
     return html;
   }
 
-  // Fold state lives here so a redraw never closes a section you opened.
   var FOLD = {}, BF = '';
   function foldOpen(key, dflt, cls, id) {
     var open = key in FOLD ? FOLD[key] : dflt;
@@ -3147,8 +2984,6 @@
         (f._block ? '<div class="skip">' + esc(f._block) + '</div>' : '') + '</li>';
     }, listKey);
   }
-  // ---- Bin page (job file section 8): Needs you now, Ready to bin, Check, Not ready yet, Already in the bin, Log, Dropbox ----
-  // Plain words lead; internal names sit in tooltips or a "why" fold. Only "Bin these" is a red button.
   var WMD = 'Work My Drive';
   function plainName(name) {
     var s = String(name || '');
@@ -3190,7 +3025,6 @@
   }
   function readyCard() {
     var p = S.bin, d = p.data, n = pickCount('bin') + pickCount('pcpbin');
-    // Same rows pickedItems() counts: the visible slice of each list, allowed rows only, so no tick box is ever disabled.
     var shared = d && d.ledgerOk ? visibleRows('bin').filter(function (f) { return rowAllowed('bin', f); }) : [];
     var work = P.binStatus === 'ok' ? visibleRows('pcpbin').filter(function (f) { return rowAllowed('pcpbin', f); }) : [];
     var total = binReadyN();
@@ -3215,7 +3049,6 @@
     html += renameBlock() + '</div></details>';
     return html;
   }
-  // Work My Drive exact copies: renaming them gets them ready to bin. A neutral button; nothing is binned here.
   function renameBlock() {
     if (P.status !== 'done') return '<p class="note">Scan <a href="#/drives/work">' + WMD + '</a> to find exact copies to tidy.</p>';
     var rows = visibleRows('pcpmark').filter(function (f) { return rowAllowed('pcpmark', f); }), n = pickCount('pcpmark');
@@ -3235,12 +3068,12 @@
   function notReadyCard() {
     var d = S.bin.data, groups = [], count = 0;
     var WAIT = 'Waiting for the tidy bot to log it', NAME = 'Name needs fixing by the tidy bot', EMPTY = 'Empty file, left for a person to check', KEEP = 'Protected, never binned';
-    function add(key, title, list, owner, place, whyOf) {
+    function add(key, title, list, user, place, whyOf) {
       if (!list || !list.length) return;
       count += list.length;
       groups.push('<div data-bin-list="' + key + '"><h4>' + esc(title) + ' (' + num(list.length) + ')</h4>' + binList(list, function (f) {
         var why = whyOf ? whyOf(f) : (f._block || f.reason || f._skip || '');
-        var who = typeof owner === 'function' ? owner(f) : owner;
+        var who = typeof user === 'function' ? user(f) : user;
         return '<li data-id="' + esc(f.id) + '"' + (why ? ' title="' + esc(why) + '"' : '') + '><div class="fname">' + esc(f.name || '') + '</div>' +
           '<div class="meta"><span class="mtag" title="' + esc(f._path || '') + '">' + esc(place || f._drive || 'Shared drive') + '</span></div><p class="note">' + esc(who) + '</p></li>';
       }, 'nr-' + key) + '</div>');
@@ -3299,7 +3132,6 @@
     html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', S.bin);
     return html + '</div></details>';
   }
-  // Other apps (TidyUp Apps 5): read-only list from CFG.tidyApps. Placed before Dropbox, which stays the last card.
   var APP_STATUS = { 'bot-and-browser': 'Bot moves, you empty', 'bot-capable': 'Bot can tidy, nothing marked', 'browser-only': 'By hand', 'nothing': 'Nothing to do' };
   function appsCard() {
     var rows = (CFG.tidyApps || []).filter(function (r) { return r && r.app; });
@@ -3340,14 +3172,12 @@
   var CANVA = CFG.canvaBin || {};
   var CANVA_DRY = CANVA.dryRun !== false;
   var CANVA_ACCOUNTS = CANVA.accounts || [];
-  // UNVERIFIED against Canva's docs: Canva publishes no URL scheme. Folder links follow what the Canva web app shows.
   var CANVA_PROJECTS_URL = 'https://www.canva.com/projects';
   function canvaFolderUrl(id) { return /^[A-Za-z0-9_-]{6,}$/.test(String(id || '')) ? 'https://www.canva.com/folder/' + id : CANVA_PROJECTS_URL; }
-  function ukNameStamp(ms) { // 2026-11-03-1405 (UK time), for file names
+  function ukNameStamp(ms) {
     var p = {}; ukParts.formatToParts(new Date(ms)).forEach(function (x) { p[x.type] = x.value; });
     return p.year + '-' + p.month + '-' + p.day + '-' + p.hour + p.minute;
   }
-  // The check the bot repeats before a move, kept in the ledger row's merged_into: "check: modified=<ISO>; pages=<n>".
   function canvaCheckText(f) { return 'check: modified=' + f.modified + '; pages=' + f.pages; }
   function canvaCheckOf(text) {
     var m = /modified=([^;\s]+)/.exec(text || ''), n = /pages=(\d+)/.exec(text || '');
@@ -3398,7 +3228,7 @@
     if (!d.accounts) return 0;
     return d.accounts.reduce(function (n, a) { return n + a.ready.length + a.held.length + a.rename.length; }, 0);
   }
-  function driveUpload(name, mime, text, folderId) { // folderId: another request folder (Add tech); default the Canva card's
+  function driveUpload(name, mime, text, folderId) {
     var meta = { name: name, parents: [folderId || CANVA.folderId], mimeType: mime }, b = 'cv' + Date.now();
     var body = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: ' + mime + '\r\n\r\n' + text + '\r\n--' + b + '--';
     return KIT.googleFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name', {
@@ -3414,7 +3244,7 @@
     if (!window.confirm('Write ' + items.length + ' ledger row' + (items.length === 1 ? '' : 's') + ' for these Canva designs? Nothing moves yet. The rows record the last-modified time and page count the tidy bot checks before any move.')) return;
     var now = Date.now(), day = ukNameStamp(now).slice(0, 10);
     var text = 'date,old_name,file_id,merged_into,agent,surface\n' + items.map(function (f) {
-      return [day, f.name, f.id, 'Canva ZZ_BIN (bot move), then Canva trash by Lisa (30 days); ' + canvaCheckText(f), 'dashboard Canva card', 'canva-' + f.account].map(csvCell).join(',');
+      return [day, f.name, f.id, 'Canva ZZ_BIN (bot move), then Canva trash by User (30 days); ' + canvaCheckText(f), 'dashboard Canva card', 'canva-' + f.account].map(csvCell).join(',');
     }).join('\n') + '\n';
     busy = true; render();
     driveUpload(SLIP_PREFIX + ukNameStamp(now) + '_01.csv', 'text/csv', text).then(function () {
@@ -3447,7 +3277,6 @@
     var label = esc(f.name);
     var meta = '<div class="meta"><span class="chip">' + esc(f.type || 'Design') + '</span><span class="chip">' + num(f.pages || 0) + (f.pages === 1 ? ' page' : ' pages') + '</span>' +
       (f.modified ? '<span>Changed ' + esc(fmtTime(f.modified)) + '</span>' : '') + (f.folder ? '<span class="mtag">' + esc(f.folder) + '</span>' : '') + '</div>';
-    // In a dry run, or when the row cannot be acted on, there is no tick box at all (never a disabled one).
     var tick = group && rowAllowed(group, f);
     return '<li data-id="' + esc(f.id) + '" data-group="' + esc(group || 'held') + '"' + (f._block ? ' title="' + esc(f._block) + '"' : '') + '>' +
       (tick ? tickBox(group, f.id, false, label) : '<div class="fname">' + label + '</div>') + meta +
@@ -3486,12 +3315,11 @@
       '<li>2: you trash them in Canva. Canva Trash keeps them 30 days. Only you empty it.</li><li>The page never calls Canva.</li></ul>' +
       whyFold('canvawhy', 'How the Canva bin works', ['Only ZZ_DELETE_ designs can move. Other ZZ_ names: name needs fixing, never moved.', 'Each design needs a ledger row first (surface canva-main or canva-book), written as an AA_DELETE-LEDGER-ROWS_ slip.',
         'The row keeps the last-modified time and page count. Canva shows no size or checksum, so those two are the check.', 'Move: the page drops one CANVA-BIN-REQUEST_ file. The tidy bot re-reads each design and moves it to ZZ_BIN only if the name, time and pages still match.',
-        'Dry run is on until Lisa switches it off. In a dry run nothing is written.', 'Step 2 links are not checked against Canva docs (UNVERIFIED).']);
+        'Dry run is on until User switches it off. In a dry run nothing is written.', 'Step 2 links are not checked against Canva docs (UNVERIFIED).']);
     return html + sourceLine('Canva list', CANVA.folderId ? folderUrl(CANVA.folderId) : 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
   }
   function binsCard() {
     var p = S.bin, d = p.data, html = '';
-    // Already in the bin: per shared drive, read only, folded.
     html += foldOpen('bins', false, 'card slot2' + cardClass(p), 'binCard') + '<summary><h3>Already in the bin</h3>' + stateBadge(p, d ? d.per.length : null) + '</summary><div class="fbody">';
     html += failNote(p);
     if (d) {
@@ -3521,7 +3349,6 @@
     return html;
   }
 
-  // ---- Dropbox, iCloud and Mac (Drives sub-menu, stage 9): look only, counts from each engine's dry-run report ----
   function viewCoverage(view) {
     var key = view === 'dropbox' ? 'dbx' : view, p = S[key], d = p.data, label = VIEWS[view];
     var html = '<section class="card slot4' + cardClass(p) + '" id="coverageCard" data-coverage="' + view + '"><div class="cardhead"><h3>' +
@@ -3537,7 +3364,7 @@
     }
     if (d && !d.notConnected && !d.none && p.status !== 'failed')
       html += '<p class="note">' + (view === 'dropbox' ? 'Scan' : 'Dry run') + ' ' + esc(fmtTime(d.generated) || 'date unknown') + (d.complete === false ? ' (not finished)' : '') + '. Nothing was renamed or moved.</p>';
-    html += '<p class="note" data-bin-pointer>Anything to tidy is done in Bin.</p>';  // text only: Bin keeps one way in
+    html += '<p class="note" data-bin-pointer>Anything to tidy is done in Bin.</p>';
     var name = view === 'dropbox' ? 'Dropbox totals' : label + ' report';
     return html + sourceLine(name, DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', p) + '</section>';
   }
@@ -3588,25 +3415,19 @@
     return html;
   }
 
-  // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
   var VIEWS = { map: 'Dashboard', decide: 'Decide', do: 'Do', money: 'Money', minutes: 'Actions minutes', tech: 'Tech', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', dropbox: 'Dropbox', icloud: 'iCloud', mac: 'Mac', bin: 'Bin', changes: 'Changes' };
-  // Every Drives page lights up the Drives tab.
   var TAB_OF = { drive: 'drives', readfirst: 'drives', personal: 'drives', pdrive: 'drives', usb: 'drives', dropbox: 'drives', icloud: 'drives', mac: 'drives' };
-  // Drives sub-menu: #/drives/<key> shows view <view>. The pills are the existing .subnav (as on Changes).
   var DRIVES = [
     { key: 'shared', view: 'drive', label: 'Shared drives', purpose: 'Browse the shared drives and see what changed in 24 hours.' },
     { key: 'work', view: 'personal', label: 'Work My Drive', purpose: 'Find files in your work My Drive that already sit in a shared drive.' },
     { key: 'personal-drive', view: 'pdrive', label: 'Personal Drive', purpose: 'See which files in your personal Google Drive already sit in a shared drive.' },
     { key: 'usb', view: 'usb', label: 'Drive check', purpose: 'Check a plugged-in drive against the shared drives before you clear it.' },
-    // Stage 9, look only: each shows its engine's dry-run report. Any action sits in Bin.
     { key: 'dropbox', view: 'dropbox', label: 'Dropbox', purpose: 'See how much is still in Dropbox and what is marked to delete.' },
     { key: 'icloud', view: 'icloud', label: 'iCloud', purpose: 'See what the last iCloud check found. Nothing is changed here.' },
     { key: 'mac', view: 'mac', label: 'Mac', purpose: 'See what the last Mac check found. Nothing is changed here.' }
   ];
   var DRIVES_PURPOSE = "See what's where, spot what changed, and send anything to tidy to Bin.";
   var READFIRST_PURPOSE = 'The folder the AIs read first, and what is in it.';
-  // Old addresses keep working: #/drive(/drive/folder), #/readfirst, #/personal and #/usb move under #/drives;
-  // #/more (the old fifth tab) opens the Dashboard, which holds the hub tiles.
   function redirectOld(hash) {
     if (/^#\/more(\/.*)?$/.test(hash)) return '#/map';
     var m = /^#\/(drive|readfirst|personal|usb)(\/.*)?$/.exec(hash);
@@ -3690,8 +3511,8 @@
   function tabBadge(key, n, label, late) {
     var b = $('n-' + key); if (!b) return;
     b.textContent = n ? String(n) : '';
-    b.classList.toggle('wide', String(n).length > 2); // count pills: exact 30px box for 1-2 digits, only 3+ grow
-    b.classList.toggle('need', !!(n && late));         // rose = late only; everything else waits in grey
+    b.classList.toggle('wide', String(n).length > 2);
+    b.classList.toggle('need', !!(n && late));
     b.parentNode.setAttribute('aria-label', label + (n ? ', ' + n + (n && late ? ' late' : ' waiting') : ''));
   }
   function updateHeader() {
@@ -3713,7 +3534,6 @@
   }
   function clearBanner() { $('banner').className = 'banner hidden'; $('banner').innerHTML = ''; }
 
-  // ---- Auth. The token itself is stored by auth.js so Money and CD Hub can reuse it. ----
   function requestToken() { auth.requestInteractive(); }
   function rememberToken(resp, hasWrite) {
     accessToken = resp.access_token;
@@ -3740,10 +3560,9 @@
     refreshTimer = setInterval(timedRefresh, REFRESH_MS);
   }
   function hasTicks() { return Object.keys(PICK).some(function (k) { return PICK[k] && Object.keys(PICK[k]).some(function (id) { return PICK[k][id]; }); }); }
-  // The 5-minute refresh waits while the tab is hidden, while something is being moved, or while you have ticks.
   function timedRefresh() {
     if (Date.now() > tokenExpiresAt) { handleExpired(); return; }
-    if (document.hidden || busy || hasTicks() || TF.open) { refreshPending = true; return; } // TF.open: an Add tech entry is being typed
+    if (document.hidden || busy || hasTicks() || TF.open) { refreshPending = true; return; }
     refreshPending = false;
     loadAll(true);
   }
@@ -3759,7 +3578,6 @@
     if (accessToken && Date.now() < tokenExpiresAt) return;
     if (hadExpired) showBanner('Sign-in expired. Sign in again.', false, true);
   }
-  // otherTab: another tab already signed out (and revoked), so just forget everything here.
   function signOut(otherTab) {
     stopTimer();
     var t = otherTab === true ? null : accessToken;
@@ -3785,7 +3603,6 @@
     onToken: onToken,
     onError: function (e) {
       var type = e && e.type ? e.type : '';
-      // J34-F01: the Bin permission window closing is a "no" to the Bin, not a failed sign-in; the person is still signed in.
       if (wantWrite) { wantWrite = false; if (signedIn) { showBanner('Bin access not granted. Browsing still works.', false, false); return; } }
       showBanner(type === 'popup_failed_to_open' ? 'Sign-in window blocked by browser.' : type === 'popup_closed' ? 'Sign-in window closed early.' : 'Sign-in did not complete.', false, true);
     },
@@ -3801,7 +3618,6 @@
     return true;
   }
 
-  // Skip link: jump to the content without changing the #/ address.
   document.addEventListener('click', function (e) {
     var k = e.target.closest && e.target.closest('[data-skip]');
     if (!k) return;
@@ -3876,8 +3692,6 @@
     }
     if (t && t.id === 'drivePicker') location.hash = t.value ? '#/drives/shared/' + t.value : '#/drives/shared';
   });
-  // A screen change moves keyboard focus to the screen title (no scroll), so screen readers say where you are.
-  // Tapping the link to the screen you are already on reads it again and goes back to its top (never a dead click).
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a[href^="#/"]');
     if (a && a.getAttribute('href') === location.hash && !e.defaultPrevented) { e.preventDefault(); render(); window.scrollTo(0, 0); }
@@ -3888,7 +3702,6 @@
   });
   var restored = restoreShared();
   render();
-  // Another tab signed in, refreshed the token, or signed out.
   DashAuth.onChange(function (saved) {
     if (!saved || !DashAuth.hasScope(saved, SCOPE)) { if (signedIn) signOut(true); return; }
     var wasIn = signedIn && accessToken;
@@ -3896,7 +3709,6 @@
     clearBanner();
     if (!wasIn) { startTimer(); loadAll(); }
   });
-  // ---- Search (press /): Drive file names in each shared drive, plus Money to-dos and dates already read ----
   function driveQuote(q) { return String(q).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
   KIT.search.register(function (q) {
     var list = signedIn ? (drives() || []).slice(0, 12) : [];
@@ -3909,8 +3721,8 @@
   KIT.search.register(function (q) {
     var d = S.money.data, hit = KIT.search.matches(q), out = [];
     if (!d || d.gate !== 'ok') return out;
-    (d.data.register || []).filter(function (r) { return hit([r.subject, r.id, r.entity, r.owner].join(' ')); }).slice(0, 10).forEach(function (r) {
-      out.push({ group: 'Money to-dos', slot: 3, title: r.subject, sub: [r.entity, r.owner, r.status].filter(Boolean).join(' · '), href: 'money/#/register/' + encodeURIComponent(r.id) });
+    (d.data.register || []).filter(function (r) { return hit([r.subject, r.id, r.entity, r.user].join(' ')); }).slice(0, 10).forEach(function (r) {
+      out.push({ group: 'Money to-dos', slot: 3, title: r.subject, sub: [r.entity, r.user, r.status].filter(Boolean).join(' · '), href: 'money/#/register/' + encodeURIComponent(r.id) });
     });
     (d.data.dates || []).filter(function (r) { return hit([r.filing, r.entity, r.id].join(' ')); }).slice(0, 10).forEach(function (r) {
       out.push({ group: 'Money dates', slot: 3, title: r.filing, sub: [r.entity, r.due_on].filter(Boolean).join(' · '), href: 'money/#/dates' });
@@ -3933,13 +3745,12 @@
 })();
 </script>
 <script>
-/* Calm: every help bullet list (ul.notes) becomes one (i); its words show on hover or tap. */
 (function () {
   function calm() {
     document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
       var t = Array.prototype.map.call(ul.querySelectorAll('li'), function (li) { return li.textContent.trim(); }).join(' · ');
       var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.textContent = 'i';
-      var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h); // screen readers (and tests) still get the words
+      var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h);
       ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
     });
   }
@@ -3949,3 +3760,4 @@
 </script>
 </body>
 </html>
+

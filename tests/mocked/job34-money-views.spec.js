@@ -1,6 +1,4 @@
 const { tabClick, tabTo } = require('../support/tabs');
-// JOB 34 (group B): Money Hub views, buttons and states that no other spec proves yet.
-// Every row is invented (tests/fixtures/job34/money/). Pretend Google and Drive only.
 const { test, expect, HUBS, fixture, DRIVE, sideScroll, tabWalk } = require('../fixtures/job34/load');
 
 const useManyTodos = (world) => {
@@ -117,7 +115,7 @@ test.describe('Money Hub: slow and failed reads', () => {
   test('while Drive is slow the stamp says "Reading…", then the read time', async ({ page, guard }) => {
     await page.goto('money/');
     await expect(page.locator('#signInBtn')).toBeEnabled();
-    let held = false; // hold only the first Drive call so the test stays quick
+    let held = false;
     await page.route(DRIVE, async (route) => { if (!held) { held = true; await new Promise((r) => setTimeout(r, 2500)); } return route.fallback(); });
     await page.locator('#signInBtn').click();
     await expect(page.locator('#readStamp')).toHaveText('Reading…');
@@ -154,3 +152,4 @@ test.describe('Money Hub phone: views the phone spec does not visit', () => {
     }
   });
 });
+

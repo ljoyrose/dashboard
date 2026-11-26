@@ -1,6 +1,3 @@
-// OPTIONAL. Opens the three real web addresses, signed out, and checks they are up.
-// Never signs in. Skipped unless LIVE_SMOKE=1 (see TESTS.md). In CI this runs as a separate,
-// non-blocking job, so a GitHub Pages hiccup cannot turn the main result red.
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -26,9 +23,6 @@ for (const [name, url, title, selector] of PAGES) {
   });
 }
 
-// Is what is LIVE exactly what was merged? Compares the live files with the repo files, byte for byte.
-// Only the workflows on `main` turn this on (LIVE_MATCH_REPO=1); on a feature branch the live site is rightly different.
-// Waits up to 90 s for GitHub Pages to finish publishing (LIVE_MATCH_WAIT_MS to change).
 const FILES = [['index.html', ''], ['cdhub/index.html', 'cdhub/'], ['money/index.html', 'money/'], ['money/core.js', 'money/core.js'], ['factory/index.html', 'factory/'], ['marketplace/index.html', 'marketplace/'], ['food/index.html', 'food/'], ['studio/index.html', 'studio/'], ['estate/index.html', 'estate/'], ['estate/core.js', 'estate/core.js'], ['auth.js', 'auth.js'], ['config.js', 'config.js'], ['toolkit.js', 'toolkit.js'], ['tokens.css', 'tokens.css'], ['house.css', 'house.css'], ['manifest.webmanifest', 'manifest.webmanifest'], ['sw.js', 'sw.js'], ['icons/icon.svg', 'icons/icon.svg']];
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 test.describe('Live files match the repo', () => {
@@ -46,3 +40,4 @@ test.describe('Live files match the repo', () => {
     });
   }
 });
+

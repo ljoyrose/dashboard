@@ -1,8 +1,7 @@
-// Hard rule 14: Karen - SHARED is never listed, read, searched or binned, on any page.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
 
-const KAREN = IDS.excludedDrive; // read from config.js, never copied (this repo is public)
+const KAREN = IDS.excludedDrive;
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
@@ -10,7 +9,7 @@ const signIn = async (page) => {
 };
 
 test.describe('Excluded shared drive (Karen - SHARED, hard rule 14)', () => {
-  test('is in config, never queried and never shown on Map, Drive, Bin, Changes, PC-Personal or search @regression', async ({ page, guard }) => {
+  test('t-excluded-drive-spec-1', async ({ page, guard }) => {
     const w = guard.world;
     w.addDrive(KAREN, 'Karen - SHARED');
     w.folder('karen-f', 'Karen folder sample', { parents: [KAREN], driveId: KAREN });
@@ -30,7 +29,6 @@ test.describe('Excluded shared drive (Karen - SHARED, hard rule 14)', () => {
     await page.goto('./#/drives/shared');
     await expect(page.locator('#drivePicker option[value="' + KAREN + '"]')).toHaveCount(0);
 
-    // PC-Personal duplicate scan: compares with every shared drive except the excluded one.
     await page.goto('./#/drives/work');
     await page.locator('[data-action="pcpscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished|already in a shared drive|personal files/);
@@ -46,3 +44,4 @@ test.describe('Excluded shared drive (Karen - SHARED, hard rule 14)', () => {
     expect(w.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 });
+

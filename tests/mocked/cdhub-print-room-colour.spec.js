@@ -1,4 +1,3 @@
-// Room card size icons stay coloured on screen and in print, and the square metres come from the device copy when the live row omits them.
 const { test, expect } = require('../support/test');
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
@@ -16,18 +15,18 @@ const tables = {
   qr_tag: [{ tag: 'ROOM0001', kind: 'area', ref_id: 'r01', active: 'true' }]
 };
 
-test('room card dog icons stay coloured and the room size prints from the device copy @regression', async ({ page }) => {
+test('t-cdhub-print-room-colour-spec-1', async ({ page }) => {
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }], version: 'test' } });
     const b = JSON.parse(route.request().postData());
-    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'OWNER' } } });
+    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'USER' } } });
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'x' } } });
   });
-  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-USER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
   await page.evaluate(async () => {
     await new Promise((res, rej) => {
-      const r = indexedDB.open('cdhub-owner-copy', 1);
+      const r = indexedDB.open('cdhub-user-copy', 1);
       r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('copy')) r.result.createObjectStore('copy'); };
       r.onerror = () => rej(r.error);
       r.onsuccess = () => {
@@ -70,3 +69,4 @@ test('room card dog icons stay coloured and the room size prints from the device
   const pdf = await page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true, margin: { top: '0', right: '0', bottom: '0', left: '0' } });
   expect((pdf.toString('latin1').match(/\/Type\s*\/Page(?!s)/g) || []).length).toBeGreaterThan(0);
 });
+

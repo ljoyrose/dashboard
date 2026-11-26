@@ -1,4 +1,0 @@
-{
-  "cdhub": 4500,
-  "why": "PR 669: owners save with their Google sign-in (no code), automatic retry when the save script is busy, Room empty in one tap and adding several dogs to a room in a row (cdhub/index.html, about 4 KB)."
-}

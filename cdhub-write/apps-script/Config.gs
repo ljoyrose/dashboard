@@ -1,41 +1,3 @@
-/**
- * BLD write sink - configuration.
- *
- * Nothing secret lives in this file. Secrets and switches live in Script
- * Properties (Project Settings > Script Properties), set by Lisa:
- *
- *   SAVE_ENABLED     'true' to switch saving on. Anything else (or missing) = OFF.
- *   TABLE_ON_<key>   'true' to let one table be written, e.g. TABLE_ON_area_reading, TABLE_ON_occupancy.
- *                    Every table is OFF until its own switch is 'true'.
- *   MODE_<key>       'direct' or 'pending'. Missing = the table's own default (temperature log: direct;
- *                    occupancy moves: pending). Corrections ALWAYS go to the approvals queue.
- *   OWNER_EDIT_ENABLED  'true' to let Lisa (signed in, owner page only) overwrite a wrong entry IN PLACE.
- *                    OFF by default. No record of the old value is kept by this script.
- *   READ_ENABLED     'true' to let staff codes READ lists (default OFF). What each role may see is
- *                    decided by rows in BLD-field_visibility.csv; no row = nothing (default deny).
- *   BLD_FOLDER_ID    Drive folder id of BLD-app-tables.
- *   TENANT_ID        tenant id written on every row (e.g. the kennel's tenant id).
- *   ADMIN_EMAILS     comma list of Google accounts allowed to approve pending rows.
- *   CODE_SALT        random text, created by adminSetup(). Never share.
- *   STAFF_REGISTRY   JSON of hashed staff codes, managed by adminAddStaffCode().
- *   ALLOW_CREATE     'true' only while Lisa runs adminCreateEmptyTables().
- *   BACKUP_ON        'true' to let the optional daily backup copy run (see adminInstallDailyBackup).
- *   MOVES_QUEUE_UNTIL  kept for older deploys. Occupancy moves now always go straight in (Lisa 12 Nov 2026);
- *                    this date and MODE_occupancy are ignored for moves. Corrections on other tables may still queue.
- *   DOG_PHOTOS_FOLDER_ID  Shared Drive folder id for dog photos. Never a My Drive folder. Missing = photo upload is refused.
- *                    The id stays in Script Properties. It is not written in the repository and is not sent to the page.
- *   FILES_FOLDER_ID  Shared Drive folder id for the one file store (photos, uploads; Lisa 13 Nov 2026). Never the tables
- *                    folder. Missing = file_add of a photo or upload is refused; links still save.
- *   INSPECT_PAGE_URL  https address of the inspector page (.../cdhub/staff/inspect/). The owner page builds each link as
- *                    this address + #s=<INSPECT_SCRIPT_ID>&c=<code>. Not secret. Missing = the owner page shows the code only.
- *   INSPECT_SCRIPT_ID  the Save deployment's id (between /macros/s/ and /exec). Not secret; the inspector's phone needs it.
- *   HUB_CLIENT_ID    the CD Hub's Google sign-in client id (the hub page's DASH_CONFIG.clientId; not secret). Set =
- *                    owners save with their Google sign-in, no code (Lisa 16 Nov 2026, option A; owner list = ADMIN_EMAILS,
- *                    a personal Gmail counts). Missing = codes only, as before. See authOwnerGoogle_ in Auth.gs.
- *
- * NOBODY should hand-edit the files this script writes to. Edits in Drive can collide with a save and
- * are not recorded. Corrections go through the screen.
- */
 var BLD = {
   VERSION: '1.3.0',
   TZ: 'Europe/London',
@@ -51,7 +13,7 @@ var BLD = {
     ALLOW_CREATE: 'ALLOW_CREATE',
     BACKUP_ON: 'BACKUP_ON',
     READ_ENABLED: 'READ_ENABLED',
-    OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED',
+    USER_EDIT_ENABLED: 'USER_EDIT_ENABLED',
     MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL',
     DOG_PHOTOS_FOLDER: 'DOG_PHOTOS_FOLDER_ID',
     FILES_FOLDER: 'FILES_FOLDER_ID',
@@ -61,32 +23,28 @@ var BLD = {
   },
   RETENTION_FILE: 'BLD-retention_setting.csv',
   LIMITS: {
-    MAX_BODY_CHARS: 60000,   // room for the daily check: one id per dog, 500 dogs at most
-    MAX_PHOTO_CHARS: 2500000, // whole dog-photo request (base64 picture included)
-    MAX_PHOTO_B64: 1800000,   // the picture itself, after whitespace is removed
-    MAX_FILE_B64: 1800000,    // file_add: the platform request cap; the owner's file.max_bytes row sets the real limit
+    MAX_BODY_CHARS: 60000,
+    MAX_PHOTO_CHARS: 2500000,
+    MAX_PHOTO_B64: 1800000,
+    MAX_FILE_B64: 1800000,
     MAX_TEXT_CHARS: 500,
-    FAIL_WINDOW_SEC: 600,   // bad staff codes are counted for 10 minutes
-    FAIL_MAX: 25,           // after this many, every save is refused until the window ends
-    DUP_WINDOW_MIN: 30,     // a second reading for the same room inside this window is refused
+    FAIL_WINDOW_SEC: 600,
+    FAIL_MAX: 25,
+    DUP_WINDOW_MIN: 30,
     PERIOD_MAX_AGE_HOURS: 168,
-    SAVE_TAIL_ROWS: 200,    // a fast append (Specs fastAppend) reads this many of the last rows in full; the rest only the checked columns
-    // Lisa 9 Nov 2026: how long records are kept is user-set per section (BLD-retention_setting rows); with no row for
-    // a section, the legal period, else this many years. Used only as that fallback.
+    SAVE_TAIL_ROWS: 200,
     RETENTION_DEFAULT_YEARS: 6,
-    REQUEST_CACHE_SEC: 86400,   // 24 h: the phone may resend for up to 23 h (OV13, 24 Nov 2026)
+    REQUEST_CACHE_SEC: 86400,
     LOCK_WAIT_MS: 20000,
-    MAX_BATCH_ITEMS: 200,   // a list save (add_many): a round's readings (the hub sends 20 at a time) or a Daily records import (22 Nov 2026)
+    MAX_BATCH_ITEMS: 200,
     TEMP_MIN: -30,
     TEMP_MAX: 60,
-    READ_MAX_ROWS: 3000,    // a read never returns more rows than this
-    READ_TAIL_ROWS: 3000,   // a read with a from-date reads only this many of the newest rows when they reach back past that date (22 Nov 2026)
-    MOVES_QUEUE_DAYS: 14,   // moves queue for this many days after go-live (adminStartMovesQueue)
-    CHECK_MAX_DOGS: 500     // most dogs one daily-check confirmation may list
+    READ_MAX_ROWS: 3000,
+    READ_TAIL_ROWS: 3000,
+    MOVES_QUEUE_DAYS: 14,
+    CHECK_MAX_DOGS: 500
   },
-  // The permissions file the read action consults. It is only ever READ by the script.
   VISIBILITY_FILE: 'BLD-field_visibility.csv',
-  // The approvals queue: the only file apart from the table files in TABLES (see Specs.gs) that the sink writes to.
   PENDING_FILE: 'BLD-_pending.csv',
   PENDING_COLUMNS: [
     'event_id', 'pending_id', 'event', 'at', 'by', 'role', 'target_file',
@@ -94,14 +52,6 @@ var BLD = {
   ]
 };
 
-/* ---------------------------------------------------------------------------------------------------------------
- * Time zone (14 Nov 2026; Lisa: "international app"; OV11: the locale row, not a new table). Live since 14 Nov 20:45.
- * tzOn_(tenant, day) = the IANA time zone on the tenant's BLD-locale row in force on `day` (S4.15 from_date/to_date;
- * latest from_date wins). No row in force: the Apps Script project time zone (a setting), never a fixed city.
- * BLD.TZ is a getter for today's zone, so every existing BLD.TZ / todayLondon_ / londonIso_ / inspectEndOfDay_ call
- * follows the row without each being rewritten (those names are kept as aliases; they are no longer London-only).
- * Read once per run, and cached for 10 minutes, so it costs no extra Drive read on most saves.
- * --------------------------------------------------------------------------------------------------------------- */
 var TZ_MEMO_ = {};
 var TZ_FILE_ = 'BLD-locale.csv';
 var TZ_RE_ = /^[A-Za-z]+(?:\/[A-Za-z0-9_+\-]+){1,2}$|^UTC$/;
@@ -111,7 +61,6 @@ function tzFallback_() {
   return 'UTC';
 }
 
-/** The locale rows with a time zone: [{tz, from, to}], from the cache or one read. */
 function tzRows_(tenant) {
   var key = 'tzrows:' + (tenant || ''), cache = null, hit;
   if (TZ_MEMO_[key]) return TZ_MEMO_[key];
@@ -128,14 +77,12 @@ function tzRows_(tenant) {
   return (TZ_MEMO_[key] = out);
 }
 
-/** Forget the cached locale rows (after the owner changes BLD-locale, or in tests). */
 function tzForget_(tenant) {
   var key = 'tzrows:' + (tenant || '');
   delete TZ_MEMO_[key];
   try { CacheService.getScriptCache().remove(key); } catch (e) { /* unavailable */ }
 }
 
-/** The time zone in force on `day` (YYYY-MM-DD; blank = today by UTC) for `tenant` (blank = this script's tenant). */
 function tzOn_(tenant, day) {
   if (tenant === undefined || tenant === null || tenant === '') { try { tenant = prop_(BLD.PROP.TENANT_ID); } catch (e) { tenant = ''; } }
   var d = /^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) ? String(day) : new Date().toISOString().slice(0, 10);
@@ -147,7 +94,6 @@ function tzOn_(tenant, day) {
   return best ? best.tz : tzFallback_();
 }
 
-/** True when no locale row gives a time zone today (Data checks shows "Time zone not set"). */
 function tzNotSet_() {
   var tenant = ''; try { tenant = prop_(BLD.PROP.TENANT_ID); } catch (e) { tenant = ''; }
   var d = new Date().toISOString().slice(0, 10);
@@ -155,3 +101,4 @@ function tzNotSet_() {
 }
 
 Object.defineProperty(BLD, 'TZ', { get: function () { return tzOn_(); }, enumerable: true });
+

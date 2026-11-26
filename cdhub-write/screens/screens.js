@@ -1,14 +1,3 @@
-/*!
- * BLDScreens - the two staff screens for the write path:
- *   locationConfirm(host, opts)   daily "Where is everyone?" check: Moved for the movers, then one "All the rest unmoved" (The Board's look)
- *   temperatureEntry(host, opts)  room min/max temperatures
- *   staffInput(host, opts)        staff roster (owner only)
- *
- * They are plain DOM, no framework, and use the page's own colours (see bld-save.css), so the same
- * code drops into the Bloodline redesign, the Board, or the standalone test page.
- *
- * They only ever call BLDSave.submit. They never write to Drive.
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.BLDScreens = factory();
@@ -32,7 +21,6 @@
 
   function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); }
 
-  /* ----- shared pieces: banner + staff code box ----- */
   function mountHeader(doc, host, save, tableKey, onChange) {
     var banner = el(doc, 'div', { class: 'bs-banner', role: 'status', 'aria-live': 'polite' });
     var codeIn = el(doc, 'input', { type: 'password', autocomplete: 'off', class: 'bs-in', 'aria-label': 'Your staff code', placeholder: 'Your staff code', value: save.getCode() });
@@ -48,7 +36,7 @@
       return b;
     }
     host.appendChild(banner);
-    if (save.deviceCode) codeRow.hidden = true;   // the staff page: this phone was set up once, so no box to type in
+    if (save.deviceCode) codeRow.hidden = true;
     host.appendChild(codeRow);
     paint();
     return { paint: paint, codeRow: codeRow };
@@ -63,23 +51,13 @@
     if (general) general.textContent = '';
   }
 
-  /* ================================================================== temperature entry */
-  /**
-   * @param {HTMLElement} host
-   * @param {Object} o
-   *   save       BLDSave instance (required)
-   *   areas      [{id, label, group}]  rooms, from the area list the page already loaded
-   *   bandForArea(areaId) -> {band:{band,min,max}, dogId, days} | {reason}   optional (uses BLDBands)
-   *   actionFor(value)    -> text   optional
-   *   document   (tests only)
-   */
   function temperatureEntry(host, o) {
-    var doc = o.document || host.ownerDocument || document;
+    var doc = o.document || host.userDocument || document;
     var save = o.save;
     clear(host);
     host.classList.add('bs');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Room temperatures' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Read the min/max thermometer, then type both numbers to 1 decimal place exactly as shown. A saved reading is never edited. Wrong entry? Tell the owner \u2013 she can fix it.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Read the min/max thermometer, then type both numbers to 1 decimal place exactly as shown. A saved reading is never edited. Wrong entry? Tell the user \u2013 she can fix it.' }));
 
     var cards = el(doc, 'div', { class: 'bs-cards' });
     var header = mountHeader(doc, host, save, 'area_reading', refreshButtons);
@@ -108,7 +86,7 @@
       var noteRow = fieldRow(doc, 'What was done about it', noteIn, errs.mitigation_note, 'Needed when a reading is outside the band.');
       noteRow.hidden = true;
       var result = el(doc, 'div', { class: 'bs-result', role: 'status', 'aria-live': 'polite' });
-      var requestId = null; // reused if the same entry is sent again after a network failure
+      var requestId = null;
       var btn = el(doc, 'button', { class: 'bs-btn', type: 'button', text: 'Save' });
       buttons.push(btn);
 
@@ -127,7 +105,7 @@
         return '';
       }
       function onType() {
-        requestId = null; // the entry changed, so it is a new request
+        requestId = null;
         var oob = outOfBand();
         noteRow.hidden = !oob;
         bandNote.setAttribute('data-oob', oob ? 'yes' : 'no');
@@ -154,7 +132,7 @@
             requestId = null;
             [minIn, maxIn, spotIn, noteIn].forEach(function (i) { i.value = ''; });
             noteRow.hidden = true;
-            result.appendChild(el(doc, 'div', { class: 'bs-sub bs-wrong', text: 'Wrong entry? Tell the owner \u2013 she can fix it.' }));
+            result.appendChild(el(doc, 'div', { class: 'bs-sub bs-wrong', text: 'Wrong entry? Tell the user \u2013 she can fix it.' }));
           } else {
             result.className = 'bs-result bs-bad';
             result.textContent = r.message;
@@ -176,18 +154,13 @@
     return { refresh: refreshButtons };
   }
 
-  /* ================================================================== staff input */
-  /**
-   * @param {Object} o  save, people [{id,label}], document (tests)
-   * Owner only; always goes through approval. Honest empty states when the roster file or people list is missing.
-   */
   function staffInput(host, o) {
-    var doc = o.document || host.ownerDocument || document;
+    var doc = o.document || host.userDocument || document;
     var save = o.save;
     clear(host);
     host.classList.add('bs');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Staff roster' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Add a member of staff to the roster. Owner only. Every entry goes into the approvals queue and is never edited afterwards: a change is a new entry.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Add a member of staff to the roster. User only. Every entry goes into the approvals queue and is never edited afterwards: a change is a new entry.' }));
     var form = el(doc, 'div', { class: 'bs-card' });
     var header = mountHeader(doc, host, save, 'staff', refresh);
     host.appendChild(form);
@@ -231,24 +204,9 @@
     return { refresh: refresh };
   }
 
-  /* ================================================================== daily location check */
-  /**
-   * Every dog on site, with the room it was last recorded in. Staff change ONLY the dogs that moved ("Moved", pick the
-   * room, "Save move": that appends a new occupancy row, nothing is overwritten), then press ONE button,
-   * "All the rest unmoved", which appends ONE row to the daily check log listing every dog that did not move.
-   * Off-site dogs (vets, groomers...) are listed apart and are not asked to move. One recorded as off-site through this screen has a Back button.
-   * @param {Object} o
-   *   save     BLDSave instance (required)
-   *   dogs     [{id, label, areaId, areaLabel, known, away, out}]   from BLDOccupancy.dailyList
-   *   areas    [{id, label, group}]                            the rooms to pick from
-   *   skipped  number of dogs left out because nothing says they are on site
-   *   offSite  true adds an Off-site choice to the room picker (the page must have the occupancy_out table)
-   *   loader   optional function() -> Promise<{ok, message?}>   "Load the dogs" with the staff code (no Google sign-in)
-   *   document (tests only)
-   */
   var OFF_SITE = '__off_site__';   // the picker's Off-site choice; never saved
   function locationConfirm(host, o) {
-    var doc = o.document || host.ownerDocument || document;
+    var doc = o.document || host.userDocument || document;
     var save = o.save;
     clear(host);
     host.classList.add('bs'); host.classList.add('bs-board');
@@ -258,7 +216,7 @@
 
     var all = o.dogs || [], areas = o.areas || [];
     var dogs = all.filter(function (d) { return !d.away; }), away = all.filter(function (d) { return d.away; });
-    var moves = [], btns = [];                    // moves: ids of dogs whose move was sent; btns: the per-dog buttons
+    var moves = [], btns = [];
     var confirmed = false;
     var progText = el(doc, 'div', { class: 'bs-prog-t', role: 'status', 'aria-live': 'polite' });
     var progBar = el(doc, 'i');
@@ -276,12 +234,11 @@
     var cards = el(doc, 'div', { class: 'bs-cards' });
     host.appendChild(cards);
 
-    // the ONE confirm button: sticky at the bottom of the screen
     var restBtn = el(doc, 'button', { class: 'bs-btn bs-big bs-rest', type: 'button', text: 'All the rest unmoved' });
     var restMsg = el(doc, 'div', { class: 'bs-result', role: 'status', 'aria-live': 'polite' });
     var restBar = el(doc, 'div', { class: 'bs-sticky' }, [restBtn, restMsg]);
 
-    function restIds() {      // dogs with a known room that did not move today
+    function restIds() {
       return dogs.filter(function (d) { return d.known && moves.indexOf(d.id) < 0; }).map(function (d) { return d.id; });
     }
     function noRoom() { return dogs.filter(function (d) { return !d.known && moves.indexOf(d.id) < 0; }).length; }
@@ -316,7 +273,7 @@
       var err = el(doc, 'span', { class: 'bs-err' });
       var go = el(doc, 'button', { class: 'bs-btn bs-big', type: 'button', text: 'Save move' });
       var movePane = el(doc, 'div', { class: 'bs-move' }, [sel, err, go]);
-      movePane.hidden = d.known || !!d.out;      // an unknown room goes straight to "pick a room"
+      movePane.hidden = d.known || !!d.out;
       if (!d.known && !d.out) no.hidden = true;
       var card = el(doc, 'section', { class: 'bs-card bs-dog' + (d.out ? ' bs-away' : ''), 'data-dog': d.id }, [
         el(doc, 'h3', { class: 'bs-dog-name', text: d.label }), was,
@@ -335,7 +292,7 @@
         if (!sel.value) { err.textContent = 'Pick the new room first.'; return; }
         go.disabled = true;
         mrid = mrid || save.newRequestId();
-        var leaving = sel.value === OFF_SITE;   // off-site is a new occupancy row with no room
+        var leaving = sel.value === OFF_SITE;
         (leaving ? save.submit('occupancy_out', { subject_id: d.id, off_site_kind: 'temporary' }, { requestId: mrid })
           : save.submit('occupancy', { subject_id: d.id, area_id: sel.value }, { requestId: mrid })).then(function (r) {
           if (r.ok) {
@@ -375,7 +332,7 @@
       var ids = restIds();
       if (!ids.length) return;
       var key = ids.join('|') + '#' + moves.length;
-      if (key !== lastKey) { crid = null; lastKey = key; }      // the list changed, so it is a new request
+      if (key !== lastKey) { crid = null; lastKey = key; }
       crid = crid || save.newRequestId();
       restBtn.disabled = true; restMsg.removeAttribute('data-sent'); restMsg.className = 'bs-result'; restMsg.textContent = 'Sending...';
       save.submit('occupancy_check', { dog_ids: ids, moved_count: moves.length }, { requestId: crid }).then(function (r) {
@@ -401,3 +358,4 @@
 
   return { temperatureEntry: temperatureEntry, staffInput: staffInput, locationConfirm: locationConfirm };
 }));
+

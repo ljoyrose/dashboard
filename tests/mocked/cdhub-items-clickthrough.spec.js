@@ -1,7 +1,3 @@
-// Items page, click by click (ITEMS, 14 Nov 2026). Two made-up businesses on the same page with no code change:
-// a kennel's plug-in tests (UK, readings typed with a decimal point) and a café's fridge probe checks (readings typed
-// with a decimal comma, as in much of Europe). Every button is pressed and every save is checked as it leaves the page.
-// The save script is pretend. Set ITEMS_SHOTS=<folder> to keep a screenshot of each step.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -9,7 +5,6 @@ const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
 
 const SINK = 'https://script.google.com/macros/s/PRETENDSCRIPT/exec';
 const csv = (h, rows) => [h].concat(rows).join('\r\n') + '\r\n';
-// Replaces a sample table that already exists (two files with one name stop the hub), else adds it.
 const addTable = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
   if (f) { f.content = content; f.size = String(content.length); }
@@ -60,7 +55,6 @@ async function open(page, guard, opts) {
     const ok = (result) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result }) });
     if (b.action === 'file_add') return ok({ status: 'saved', id: 'fil-new', drive_file_id: 'drvfilenewpretend000000001' });
     if (b.action === 'link_add') return ok({ status: 'saved', id: 'lnk-new-' + sent.length, role: b.fields.role, ended: (b.fields.role === 'placed_in' && opts && opts.ended) || [] });
-    // 16 Nov 2026: BUSY is now retried by the hub on its own, so the failed save here is one the person must retry.
     if (b.table === 'readings' && readingFails > 0) { readingFails--; return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'CHANGED_DURING_WRITE', message: 'Try again.' }) }); }
     return ok({ status: 'saved', id: (b.table || 'x').slice(0, 3) + '-new-' + sent.length });
   });
@@ -124,9 +118,9 @@ test.describe('CD Hub: items, click by click', () => {
     await page.locator('form[data-itm-save="test"] button[type="submit"]').click();
     await expect(card(page).locator('[role="status"]')).toHaveText('Say briefly what failed.');
     expect(sent.length).toBe(0);
-    await expect(page.locator('[name="outcome"]')).toHaveValue('concern');      // a refused save keeps what was typed
+    await expect(page.locator('[name="outcome"]')).toHaveValue('concern');
     await expect(page.locator('[name="r_r1"]')).toHaveValue('0.2');
-    await page.locator('[name="on"]').fill('2026-11-10');                          // Earlier: answers stay when the date changes
+    await page.locator('[name="on"]').fill('2026-11-10');
     await expect(page.locator('[name="r_r1"]')).toHaveValue('0.2');
     await page.locator('[name="on"]').fill(await page.evaluate(() => todayISO()));
     await page.locator('[name="note"]').fill('Earth bond high');
@@ -301,7 +295,6 @@ test.describe('CD Hub: items, click by click', () => {
       await expect(f).toContainText('Now: C1 since 28 May 2025');
       expect(await f.locator('optgroup').evaluateAll((g) => g.map((x) => x.label + ': ' + Array.from(x.children).map((o) => o.textContent).join(', '))))
         .toEqual(['Pretend cabins: C1, C2', 'Pretend corridors: Pretend corridor', 'Pretend site: Pretend office']);
-      // a day on or before the current room's start is refused before anything is sent
       await f.locator('select[name="area_id"]').selectOption('a-site');
       await f.locator('input[name="from_date"]').fill('2025-05-28');
       await f.locator('button[type="submit"]').click();
@@ -337,3 +330,4 @@ test.describe('CD Hub: items, click by click', () => {
     expect(names).toEqual(['Pick a room', 'C1', 'Pretend office']);
   });
 });
+

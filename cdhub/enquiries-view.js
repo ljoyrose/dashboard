@@ -1,7 +1,3 @@
-/*!
- * Puppy enquiries inside CD Hub. Reads the enquiries list and the BLD tables already loaded by the hub.
- * Example mode (empty sheet id) shows invented rows and sends nothing. Writes stay behind cdhub.enquiriesWrites.
- */
 (function (root) {
   'use strict';
   var Core = root.EnquiriesCore;
@@ -9,7 +5,7 @@
   if (!Core && typeof require === 'function') Core = require('../enquiries/core.js');
   if (!Examples && typeof require === 'function') Examples = require('../enquiries/examples.js');
 
-  var FILES = ['BLD-person.csv', 'BLD-household.csv', 'BLD-household_member.csv', 'BLD-subject_owner.csv', 'BLD-sale.csv', 'BLD-match_candidate.csv'];
+  var FILES = ['BLD-person.csv', 'BLD-household.csv', 'BLD-household_member.csv', 'BLD-subject_user.csv', 'BLD-sale.csv', 'BLD-match_candidate.csv'];
   var VIEWS = [['home', 'Home'], ['today', 'Today'], ['all', 'All'], ['litters', 'Litters'], ['add', 'Add']];
   var WORD = { young: 'young_word', female: 'adult_female_word', male: 'adult_male_word', birth: 'birth_event_word' };
   var state = { view: 'home', key: '', litter: '', stage: '', msg: '', tabs: null, example: true, demo: false };
@@ -73,12 +69,11 @@
     return speciesWord(speciesRows, sub.species, 'young') || t(sub.id);
   }
 
-  /** Assigned or Owner, with the household name read from the household row at run time. */
   function householdLine(T, subjectId) {
-    var owners = rows(T, 'BLD-subject_owner.csv').filter(function (r) { return r.subject_id === subjectId; });
-    var row = owners.filter(function (r) { return r.role === 'owner'; })[0] || owners.filter(function (r) { return r.role === 'assigned'; })[0];
+    var users = rows(T, 'BLD-subject_user.csv').filter(function (r) { return r.subject_id === subjectId; });
+    var row = users.filter(function (r) { return r.role === 'user'; })[0] || users.filter(function (r) { return r.role === 'assigned'; })[0];
     if (!row) return '';
-    var word = row.role === 'owner' ? 'Owner' : 'Assigned';
+    var word = row.role === 'user' ? 'User' : 'Assigned';
     var home = rows(T, 'BLD-household.csv').filter(function (h) { return h.id === row.household_id; })[0];
     var name = home ? t(home.household_name || home.name) : '';
     if (!name && home) {
@@ -195,7 +190,6 @@
   }
 
   function pageAll(litters, subjects, speciesRows) {
-    /* the count says what it counts: "6 enquiries", not a bare 6 (17 Nov 2026) */
     var list = shown(state.tabs.Enquiries, litters);
     return shell(litterSelect(litters) + '<div class="card"><h3>All</h3><p class="mut" data-enq-count>' + list.length + (list.length === 1 ? ' enquiry' : ' enquiries') + '</p></div>' +
       (list.length ? list.map(function (e) { return rowHtml(e, litters, subjects, speciesRows); }).join('') : '<p class="mut">No enquiry matches.</p>'));
@@ -293,14 +287,14 @@
           var sub = subjectFor(e, litters, subjects);
           var chain = Promise.resolve();
           if (sub && (stage === 'working to collection' || stage === 'after collection')) {
-            var role = stage === 'after collection' ? 'owner' : 'assigned';
-            var own = Core.bldSubjectOwnerRow({ subject_id: sub.id, person_id: pid, household_id: hid, role: role });
-            chain = post('subject_owner', { subject_id: own.subject_id, person_id: own.person_id, household_id: own.household_id, role: own.role });
+            var role = stage === 'after collection' ? 'user' : 'assigned';
+            var own = Core.bldSubjectUserRow({ subject_id: sub.id, person_id: pid, household_id: hid, role: role });
+            chain = post('subject_user', { subject_id: own.subject_id, person_id: own.person_id, household_id: own.household_id, role: own.role });
           }
           if (stage === 'after collection' && sub) {
             var dep = depositFor(e);
             chain = chain.then(function () {
-              var sale = Core.bldSaleRow({ subject_id: sub.id, person_id: pid, household_id: hid, role: 'owner', deposit: dep.deposit || '', deposit_date: dep.deposit_date || '', sold_on: dep.collection_date || '', price: '' });
+              var sale = Core.bldSaleRow({ subject_id: sub.id, person_id: pid, household_id: hid, role: 'user', deposit: dep.deposit || '', deposit_date: dep.deposit_date || '', sold_on: dep.collection_date || '', price: '' });
               return post('sale', { subject_id: sale.subject_id, person_id: sale.person_id, household_id: sale.household_id, deposit: sale.deposit, deposit_date: sale.deposit_date, sold_on: sale.sold_on, price: sale.price });
             });
           }
@@ -337,3 +331,4 @@
   root.CDEnquiries = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 }(typeof self !== 'undefined' ? self : this));
+

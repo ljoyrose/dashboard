@@ -38,3 +38,4 @@ test('two readings in one slot: widest, never an average', () => {
   assert.deepEqual(L.widest({ min: '11.0', max: '19.5' }, { min: '9.5', max: '18.0' }), { min: 9.5, max: 19.5 });
   assert.deepEqual(L.widest({ min: '', max: '20.0' }, null), { min: null, max: 20 });
 });
+

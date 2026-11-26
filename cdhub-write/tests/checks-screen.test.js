@@ -1,5 +1,4 @@
 'use strict';
-/** The staff checks screen, driven in a fake browser against the REAL Apps Script code on a fake Drive. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
@@ -23,7 +22,7 @@ function world() {
     vis.content += `v-${t}*,${fx.TENANT},${t},*,aud-staff,yes,,,,,,\r\n`;
     cols.forEach((c) => { vis.content += `v-${t}-${c},${fx.TENANT},${t},${c},aud-staff,yes,,,,,\r\n`; });
   });
-  const r = save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: { type_key: 'feeding', label: 'Feeding', target: 'dog', asks_item: 'true', asks_amount: 'true', amount_unit: 'g', effective_from: '2026-01-01' } }));
+  const r = save(env, req(env, { code: env.codes.user, table: 'check_type', fields: { type_key: 'feeding', label: 'Feeding', target: 'dog', asks_item: 'true', asks_amount: 'true', amount_unit: 'g', effective_from: '2026-01-01' } }));
   assert.equal(r.ok, true, JSON.stringify(r));
   const fetch = async (url, init = {}) => {
     if (!init.method || init.method === 'GET') { const o = env.ctx.doGet({ parameter: {} }); return { json: async () => JSON.parse(o.getContent()) }; }
@@ -93,7 +92,7 @@ test('checks screen: stays closed while the table is off', async () => {
 
 test('the four approved checks, one after another, each save with their own wording and rules', async () => {
   const w = world(), d = w.dom.window.document;
-  const add = (f) => assert.equal(save(w.env, req(w.env, { code: w.env.codes.owner, table: 'check_type', fields: Object.assign({ effective_from: '2026-01-01' }, f) })).ok, true);
+  const add = (f) => assert.equal(save(w.env, req(w.env, { code: w.env.codes.user, table: 'check_type', fields: Object.assign({ effective_from: '2026-01-01' }, f) })).ok, true);
   add({ type_key: 'medicine', label: 'Medicine given', target: 'dog', asks_item: 'true', item_label: 'Medicine', asks_amount: 'true', amount_unit: 'dose' });
   add({ type_key: 'cleaning', label: 'Cleaning', target: 'area' });
   add({ type_key: 'incident', label: 'Incident or near miss', target: 'optional', note_label: 'What happened?', note_required: 'true', asks_outcome: 'false' });
@@ -133,7 +132,7 @@ test('checks screen: its published copy matches; the old checks page is retired 
   for (const m of html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)) assert.ok(fs.existsSync(path.join(root, 'cdhub/checks', m[1])), m[1]);
   assert.match(html, /This page has moved/);
   assert.match(html, /href="\.\.\/staff\/#m\/jobs"/);
-  assert.doesNotMatch(html, /src="checks\.js"|<form|<select/);   // nothing can be saved from the retired page
+  assert.doesNotMatch(html, /src="checks\.js"|<form|<select/);
 });
 
 test('demo 2a: a save line says who and when from the reply, and never ticks a refusal', () => {
@@ -209,3 +208,4 @@ test('BLDNeeds.coversDay: inclusive both ends, blank to_date = no end, any cover
   assert.equal(N.endDay([], 'n', 't', '1'), '');
   assert.equal(N.coversDay(rows, 'n', 't', '2', '2026-11-12'), true);   // another target has no rows: open
 });
+

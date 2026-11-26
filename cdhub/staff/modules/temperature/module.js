@@ -1,22 +1,3 @@
-/*!
- * Room temperatures (staff page module). The round: scan the room's QR, read the wall min/max thermometer with
- * the LIVE camera, check the two numbers, save, press CLR. Twice a day: before 12:00 is the morning reading, after
- * is the afternoon one, saved with the same period_start as the CD Hub round, into the same BLD-area_reading list.
- *
- * NO PICTURE IS EVER KEPT. The camera is read live (getUserMedia). Each frame is copied into memory, turned into
- * grey numbers, read by reader.js on the phone, and dropped; the next frame overwrites it. Nothing is saved to the
- * phone, its camera roll, the page's storage or anywhere online; only the two numbers are sent. No AI, no outside
- * service. If the camera cannot read the screen, the person types the numbers (the fallback that always works).
- *
- * Room limits are ROWS (BLD-temperature_band: band by the youngest dog's age, optionally per room), never coded here.
- * A reading outside the limit asks what was done about it.
- *
- * Also here: the year report per room (every reading, highs and lows, each breach and what was done) and the
- * sensor (Govee) CSV import, kept as back-up rows beside the thermometer readings, never instead of them.
- *
- * Guest (inspector) page: BLDTemperature.rooms(host, {save, areas, guest:true}) uses this same entry; guest
- * readings go to their own list (guest_reading), so they never count as, or overwrite, a staff reading.
- */
 (function () {
   'use strict';
   var BASE = (document.currentScript && document.currentScript.src || '').replace(/[^/]*$/, '');
@@ -58,14 +39,13 @@
     return (rules || []).some(function (r) { return r && String(r.rule_key || '').trim() === 'job.temps_keep_photo'; });
   }
 
-  /* ------------------------------------------------------------------ small helpers */
   function h(tag, attrs, kids) {
     var e = document.createElement(tag);
     Object.keys(attrs || {}).forEach(function (k) {
       var v = attrs[k];
       if (k === 'text') e.textContent = v;
       else if (k === 'class') e.className = v;
-      else if (k === 'html') e.innerHTML = v;   // only the fixed ICON strings below, never data
+      else if (k === 'html') e.innerHTML = v;
       else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
       else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v);
     });
@@ -76,28 +56,25 @@
   function setMsg(el, text, kind) { el.className = 'msg ' + (kind || ''); el.textContent = text || ''; }
   function num(v) { if (v === '' || v == null) return null; var n = parseFloat(v); return isNaN(n) ? null : n; }
   function oneDp(v) {
-    v = String(v == null ? '' : v).trim().replace(',', '.');   // "25,3" = 25.3 (OV11 15 Nov 2026)
+    v = String(v == null ? '' : v).trim().replace(',', '.');
     if (!/^-?\d{1,2}(\.\d)?$/.test(v)) return null;
-    return parseFloat(v).toFixed(1);   // an unusual value is the save script's warning ("Save anyway?", STAFF PR 458), never a stop here
+    return parseFloat(v).toFixed(1);
   }
   function londonParts(d) {
     var p = {}; new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
       .formatToParts(d || new Date()).forEach(function (x) { p[x.type] = x.value; });
     return { date: p.year + '-' + p.month + '-' + p.day, hour: parseInt(p.hour, 10) % 24 };
   }
-  /** London offset at that wall time, as +00:00 / +01:00. */
   function londonIso(dateIso, hh) {
     var guess = new Date(dateIso + 'T' + hh + ':00:00Z'), lp = londonParts(guess);
     var off = (lp.hour - parseInt(hh, 10) + 24) % 24; if (off > 12) off -= 24;
     return dateIso + 'T' + hh + ':00:00' + (off < 0 ? '-' : '+') + ('0' + Math.abs(off)).slice(-2) + ':00';
   }
-  /** The round slot now: morning before 12:00, afternoon after (same rule and period_start as the CD Hub round). */
   function slotNow() {
     var p = londonParts();
     var am = p.hour < 12;
     return { key: am ? 'am' : 'pm', label: am ? 'Morning' : 'Afternoon', date: p.date, periodStart: londonIso(p.date, am ? '00' : '12') };
   }
-  /** A given day's morning or afternoon slot, for an earlier reading entered later. */
   function slotFor(dateIso, key) {
     var am = key === 'am';
     return { key: am ? 'am' : 'pm', label: am ? 'Morning' : 'Afternoon', date: dateIso, periodStart: londonIso(dateIso, am ? '00' : '12'), past: true };
@@ -109,11 +86,8 @@
     page: SVG + '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 9h1M9 13h6M9 17h6"/></svg>',
     upload: SVG + '<path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/></svg>'
   };
-  /* can(c, key): may this code use the feature named by key? One helper, so the rule can move to BLD-permission rows
-     (People & access design) without touching each button. Today: owner codes only, from the role the save script
-     reported on the last read (save.role(), STAFF PR 443); '' or any other role is no. The script still decides what is read. */
   function can(c, key) {
-    return !!(c && c.save && typeof c.save.role === 'function' && c.save.role() === 'OWNER');
+    return !!(c && c.save && typeof c.save.role === 'function' && c.save.role() === 'USER');
   }
   /* Dates (the owner 13 Nov 2026): one format everywhere, "2 Mar 2026"; never DD/MM/YY. Stored dates stay ISO. */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -123,7 +97,6 @@
     try { var r = JSON.parse(localStorage.getItem(key) || 'null'); if (r && Date.now() - r.at < ROOM_MINUTES * 60000) return r; } catch (e) { /* none */ }
     return null;
   }
-  // A thermometer QR (set by the staff page's scan) wins over a room scan; it names the place it hangs in.
   function rememberedRoom(areas) {
     var t = remembered(THERMO_KEY);
     if (t) { var a = (areas || []).filter(function (x) { return x.thermometerId && x.thermometerId === t.thermometerId; })[0]; if (a) return { areaId: a.id, key: a.thermometerId, at: t.at }; }
@@ -133,19 +106,15 @@
   /* One round item per thermometer (the owner 11 Nov 2026: H5/6 is one room with 2 named thermometers). An item's key is its
      thermometer id, or the room id when there are no thermometer rows. */
   function itemKey(a) { return a.thermometerId || a.id; }
-  /* Which item a saved reading covers: its thermometer_id; with none (older rows), the room's only thermometer. */
   function readingKey(r, items) {
     if (r.thermometer_id) return String(r.thermometer_id);
     var mine = (items || []).filter(function (a) { return a.id === r.area_id; });
     return mine.length === 1 ? itemKey(mine[0]) : String(r.area_id);
   }
-  /* The slot a period_start names, as London day + hour. The page sends "2026-11-17T12:00:00+00:00"; the save script
-     reads the cell back as shown, "2026-11-17 12:00" (17 Nov 2026: since readings are saved as real dates the two never
-     matched as text, so every saved reading still showed Due). Both start with the same London day and hour. */
   function slotId(s) { s = String(s || ''); return /^\d{4}-\d{2}-\d{2}[T ]\d{2}/.test(s) ? s.slice(0, 10) + ' ' + s.slice(11, 13) : s; }
   function doneFor(rows, items, periodStart) {
     var done = {}, want = slotId(periodStart);
-    (rows || []).forEach(function (r) { if (slotId(r.period_start) === want) done[readingKey(r, items)] = r; });   // the row itself: the card shows its numbers
+    (rows || []).forEach(function (r) { if (slotId(r.period_start) === want) done[readingKey(r, items)] = r; });
     return done;
   }
   /* The round is the thermometer rows (BLD-thermometer: name, area_id), never a coded list: a room with no
@@ -173,7 +142,6 @@
     });
     return out;
   }
-  /* "3A.1 (retired 11 Nov '26)": a room whose room.in_use rows all ended before today (BLDNeeds.endDay). */
   function areaRows(raw, req, today) {
     var N = window.BLDNeeds;
     return (raw || []).map(function (a) {
@@ -187,7 +155,6 @@
     });
   }
 
-  /* ------------------------------------------------------------------ limits (rows, never coded) */
   function ageDays(dob, onIso) {
     if (!/^\d{4}-\d{2}-\d{2}/.test(dob || '')) return null;
     return Math.floor((Date.parse(onIso.slice(0, 10) + 'T00:00:00Z') - Date.parse(dob.slice(0, 10) + 'T00:00:00Z')) / 86400000);
@@ -213,11 +180,10 @@
       var from = num(b.age_from_days), to = num(b.age_to_days), lo = num(b.min_temp), hi = num(b.max_temp);
       if (lo === null || hi === null) return false;
       if (from === null && to === null) return true;             // a room-wide row with no age
-      if (young === null) return to === null;                   // no dogs or no dates of birth: the open-ended (adult) band
+      if (young === null) return to === null;
       return young >= (from || 0) && (to === null || young <= to);
     });
     if (!fits.length) return { reason: young === null ? 'No dates of birth for this room, so no limit.' : 'No limit row covers ' + young + ' days old.' };
-    // this room's row first, then the narrowest age, then the later from_date (two rows in force: the newer wins)
     fits.sort(function (a, b) { return (b.area_id ? 1 : 0) - (a.area_id ? 1 : 0) || (num(b.age_from_days) || 0) - (num(a.age_from_days) || 0) || String(b.from_date || '').localeCompare(String(a.from_date || '')); });
     var f = fits[0];
     // Temps A (the owner 17 Nov 2026): the room itself is judged on the open-ended (adult) row; a puppy row (with an upper
@@ -228,8 +194,6 @@
     return { min: num(f.min_temp), max: num(f.max_temp), label: f.band || '', id: f.id || '', puppy: puppy,
       adult: adult ? { min: num(adult.min_temp), max: num(adult.max_temp) } : null };
   }
-  /* '' | 'low' (below the limit) | 'warm' (over the limit: cooling action) | 'spotlow' | 'spothigh' (bed spot outside the
-     puppy row). Every one asks "What was done?"; only low, spotlow and spothigh are outside the limit. */
   function breach(lim, mn, mx, sp) {
     if (!lim || lim.min == null) return '';
     var J = window.BLDTempJudge;
@@ -245,12 +209,6 @@
     return b === 'low' ? 'Below the limit.' : b === 'warm' ? 'Over the limit: what cooling was done?' : b === 'spotlow' ? 'Bed spot below the puppy limit.' : b === 'spothigh' ? 'Bed spot above the puppy limit.' : '';
   }
 
-  /* ------------------------------------------------------------------ live camera reader */
-  /**
-   * Opens the back camera in a <video>. Every READ_MS one frame is copied (only the part inside the guide frame)
-   * into an in-memory canvas, read, and dropped. Calls done({max, min}) when 3 frames in a row agree, or fail(msg).
-   * Returns stop(): turns the camera off and blanks the canvas.
-   */
   function cameraRead(box, R, done, fail, status) {
     var video = h('video', { playsinline: true, muted: true, autoplay: true, 'aria-label': 'Camera view of the thermometer' });
     video.muted = true;
@@ -265,7 +223,7 @@
       if (timer) clearInterval(timer); timer = null;
       if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); stream = null;
       video.srcObject = null;
-      canvas.width = 0; canvas.height = 0;                       // nothing of the last frame is left in memory
+      canvas.width = 0; canvas.height = 0;
       if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
     }
     var WORDS = {
@@ -276,7 +234,6 @@
     };
     function frame() {
       if (stopped || video.readyState < 2 || !video.videoWidth) return;
-      // the guide frame's place in the video, allowing for the video being cropped to fill its box
       var vw = video.videoWidth, vh = video.videoHeight, bw = wrap.clientWidth, bh = wrap.clientHeight;
       var sc = Math.max(bw / vw, bh / vh), offX = (vw * sc - bw) / 2, offY = (vh * sc - bh) / 2;
       var g = guide.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
@@ -286,7 +243,7 @@
       cx.drawImage(video, sx, sy, sw, sh, 0, 0, W, H);
       var px = cx.getImageData(0, 0, W, H);
       var r = R.readDisplay(R.toGray(px.data, W, H), W, H);
-      px = null; cx.clearRect(0, 0, W, H);                       // the frame is gone; only numbers remain
+      px = null; cx.clearRect(0, 0, W, H);
       var got = steady.feed(r);
       if (got) { stop(); done(got); return; }
       status(r.ok ? 'Reading...' : (WORDS[r.reason] || 'Hold still, square on.'));
@@ -320,7 +277,7 @@
     return (r && r.who ? ' · ' + r.who : '') + (t ? ' · ' + t : '');
   }
   function entry(host, o) {
-    var stopCam = null, cam = null, stopEv = null;   // cam = {max, min} as the camera read them; stopEv = the keep-photo camera
+    var stopCam = null, cam = null, stopEv = null;
     var slot = o.slot || slotNow(), past = !!slot.past, table = o.table || 'area_reading', lim = o.limit || {};
     host.textContent = '';
     host.appendChild(h('h2', { text: o.area.label }));
@@ -332,9 +289,6 @@
     var camBox = h('div'), camMsg = say('');
     var camBtn = h('button', { class: 'btn', type: 'button', text: 'Read with camera', onclick: startCam });
     var typeBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Type it', onclick: function () { stopNow(); form.hidden = false; maxIn.focus(); } });
-    // An earlier reading comes from paper, a photo or an app (e.g. Govee): the thermometer no longer shows that day's numbers.
-    // the MAX and MIN boxes are open at once, so a reading is one
-    // entry and one Save; the camera stays as a choice, and "Type it" is no longer needed.
     if (!past) host.appendChild(h('div', { class: 'tg-row' }, [camBtn]));
     var emptyIn = h('input', { type: 'checkbox', 'aria-label': 'Room empty' }), emptyMsg = say('');
     if (table === 'area_reading') {
@@ -356,14 +310,13 @@
     var saveBtn = h('button', { class: 'btn', type: 'button', text: 'Save', onclick: send });
     var form = h('div', { hidden: true }, [
       h('div', { class: 'tg-pair' }, [h('label', { class: 'tg-f' }, [h('span', { text: 'MAX' }), maxIn]), h('label', { class: 'tg-f' }, [h('span', { text: 'MIN' }), minIn])]),
-      // Temps A: with puppies under four weeks the bed spot is what the puppy limit is about, so it is open and asked for
       h('details', { class: 'tg-spot', open: !!lim.puppy }, [h('summary', { text: lim.puppy ? 'Bed spot reading (puppies under 4 weeks: ' + lim.min.toFixed(1) + '–' + lim.max.toFixed(1) + ' C)' : 'Bed spot reading (optional)' }), spotIn]),
       checkMsg, noteRow, saveBtn, msg
     ]);
     host.appendChild(form);
     form.hidden = false;
     [maxIn, minIn, spotIn].forEach(function (i) { i.addEventListener('input', check); });
-    var requestId = null, anyway = null, none = false;   // none: Room empty with no temperatures (set by send)
+    var requestId = null, anyway = null, none = false;
 
     function stopNow() { if (stopCam) { stopCam(); stopCam = null; } if (stopEv) { stopEv(); stopEv = null; } }
     function startCam() {
@@ -409,13 +362,9 @@
       requestId = requestId || o.save.newRequestId();
       go(f);
     }
-    // One save. The script may answer an unusual value (a temperature outside its range, a day long ago) with
-    // fields.confirm_unusual = 'Save anyway?' and the reason in another field: show both and a "Save anyway" button,
-    // which sends the same entry again with confirm_unusual: 'yes' (never stored; STAFF PR 458, 12 Nov 2026).
     function go(f) {
       if (anyway) { anyway.remove(); anyway = null; }
       saveBtn.disabled = true; setMsg(msg, 'Saving...');
-      // 20 Nov 2026 (OV12, STAFF PR 731): while saves queue on this device the line says "Waiting, 2 ahead", then "Saving...".
       var onTurn = function (n) { var D = window.BLDDone; setMsg(msg, D && D.turn ? D.turn(n) : 'Saving...'); };
       o.save.submit(table, f, { requestId: requestId, onTurn: onTurn }).then(function (r) {
         saveBtn.disabled = false;
@@ -440,8 +389,6 @@
         host.appendChild(h('div', { class: 'card tg-clr', role: 'alert' }, [
           h('div', { class: 'nm', text: '✓ ' + (r.status === 'queued' ? 'Sent' : 'Saved') + whoWhen(r) }), clrHint
         ]));
-        // Keep a photo with the reading only while the owner's dated setting is on (evidence.js). A queued reading
-        // has no record id yet, so no photo is offered for it.
         var evBox = h('div'); host.appendChild(evBox);
         if (table === 'area_reading' && !none && r.id && r.status !== 'queued' && keepRule(o.rules)) {
           loadEvidence().then(function (E) {
@@ -456,7 +403,6 @@
     return stopNow;
   }
 
-  /** Readings plus a copy for each room an old room became (BLD-area_link via BLDAreaLink); none when either is missing. */
   function linked(rows, links) {
     var L = window.BLDAreaLink;
     return L && links && links.length ? L.expand(rows || [], links) : (rows || []).slice();
@@ -500,11 +446,6 @@
     }
   }
 
-  /* ------------------------------------------------------------------ room list (staff and guest) */
-  /**
-   * o: save, areas [{id,label}], guest, dogs [{id, areaId, dob}], bands (limit rows), done {areaId:true} for this slot,
-   *    readingsAllowed, owner tools (report/import) callbacks
-   */
   function rooms(host, o) {
     var stop = null, slot = slotNow();
     function limit(areaId) {
@@ -520,7 +461,6 @@
       stop = entry(box, { save: o.save, table: o.guest ? 'guest_reading' : 'area_reading', area: a, limit: limit(a.id), guest: o.guest, rules: o.guest ? [] : o.rules,
         dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onSaved: function (f) { if (!o.guest) { var g = {}; Object.keys(f || {}).forEach(function (k) { if (k !== 'confirm_unusual') g[k] = f[k]; }); g._saved_at = new Date().toISOString(); (o.done = o.done || {})[itemKey(a)] = g; } }, onDone: function () { list(); } });
     }
-    /* Each card says Due, the reading ("12.0–15.0"), Outside, or Room empty (OVERSEER 5, 12 Nov 2026). */
     function cardState(a, d) {
       if (!d) return { text: 'Due' };
       if (d === true) return { text: 'Done' };
@@ -563,8 +503,6 @@
     return function () { if (stop) stop(); };
   }
 
-  /* ------------------------------------------------------------------ Govee CSV (back-up sensor) */
-  /** Same room and day -> same reference, so pressing Save again never saves a day twice. */
   function hash(t) { var x = 5381; for (var i = 0; i < t.length; i++) x = ((x * 33) ^ t.charCodeAt(i)) >>> 0; return x.toString(36); }
   function splitCsvLine(line) {
     var out = [], cur = '', q = false;
@@ -575,10 +513,6 @@
     }
     out.push(cur); return out.map(function (s) { return s.trim(); });
   }
-  /**
-   * A Govee export -> one row per London day: {day, min, max, samples}. Finds the time column and the temperature
-   * column by name; Fahrenheit is turned into C. {ok, days, unit} or {ok:false, message}.
-   */
   function parseGovee(text) {
     var lines = String(text || '').replace(/^﻿/, '').split(/\r?\n/).filter(function (l) { return l.trim(); });
     if (lines.length < 2) return { ok: false, message: 'That file has no readings.' };
@@ -605,11 +539,8 @@
     host.textContent = '';
     host.appendChild(h('h2', { text: 'Sensor back-up import' }));
     host.appendChild(h('p', { class: 'sub help', text: 'Govee CSV export. Kept as back-up beside the thermometer readings, never instead of them. One row per day: lowest and highest.' }));
-    // One choice per room (no thermometer list): a sensor row is saved against the room, so the value must be a room id.
-    // (It named a thermometer list this function is not given, and the screen stopped at its title.)
     var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(reportChoices(areas, []).map(function (x) { return h('option', { value: x.value, text: x.text }); })));
     var label = h('input', { class: 'inp', type: 'text', maxlength: '60', placeholder: 'Sensor name (optional)', 'aria-label': 'Sensor name' });
-    // CSV text only: no picture can be chosen here
     var file = h('input', { class: 'inp', type: 'file', accept: '.csv,text/csv', 'aria-label': 'File to import' });
     var msg = say(''), out = h('div');
     host.appendChild(room); host.appendChild(label); host.appendChild(file); host.appendChild(msg); host.appendChild(out);
@@ -708,9 +639,6 @@
     }
   }
 
-  /* ------------------------------------------------------------------ year report (the inspector's annualised record) */
-  /* Report choices: one per room; a room with two or more thermometers also gets one per thermometer, by name
-     ("H5/6 · H5"), value "areaId|thermometerId". The room choice keeps every reading in the room. */
   function reportChoices(areas, thermos) {
     var out = [];
     areas.forEach(function (a) {
@@ -737,15 +665,12 @@
       out.textContent = '';
       if (!room.value) { setMsg(msg, 'Choose the room.', 'bad'); return; }
       setMsg(msg, 'Loading...');
-      // One room, one year per read (the save script's filter), so a year of readings stays under the read limit.
-      // An older script that refuses the filter gets the plain read; yearRows still picks the room and year.
       var pick = room.value.split('|'), areaId = pick[0], thermoId = pick[1] || '';
-      var f = { area_id: areaId, from: year.value + '-01-01', to: (parseInt(year.value, 10) + 1) + '-12-31' };   // to: an earlier reading is saved (taken_at) after its day; yearRows keeps the year by period_start
+      var f = { area_id: areaId, from: year.value + '-01-01', to: (parseInt(year.value, 10) + 1) + '-12-31' };
       function readYear(key) {
         return c.save.read(key, f).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.save.read(key); })
           .then(function (r) { return r.ok ? r : { ok: false, rows: [], code: r.code, message: r.message }; });
       }
-      // A new room's year includes the old rooms linked into it (BLD-area_link): read each, keep the copies for this room.
       var L = window.BLDAreaLink, from = L && links && links.length ? L.sourcesOf(links, areaId) : [];
       function readArea(id) { var g = {}; Object.keys(f).forEach(function (k) { g[k] = f[k]; }); g.area_id = id;
         return c.save.read('area_reading', g).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.save.read('area_reading'); })
@@ -765,13 +690,9 @@
     }
     function draw(rows, areaId) {
       var a = { label: room.options[room.selectedIndex].text };
-      // the header describes the rows in force at the year's end (or today); each reading is judged by its own day's rows
       var endDay = String(year.value) + '-12-31', today = londonParts().date;
       if (endDay > today) endDay = today;
       var lim = limitFor(areaId, bands, [], endDay);
-      // a room-only row (no age) is the fixed limit; otherwise the limit is set by the youngest dog on the day, so
-      // the report marks a breach where staff recorded one (a "what was done" note) or the reading broke the
-      // widest band in the rows.
       function widest(day) {
         var w = bandsOn(bands, day).filter(function (b) { return (!b.area_id || b.area_id === areaId) && num(b.min_temp) !== null; });
         return { lo: w.length ? Math.min.apply(null, w.map(function (b) { return num(b.min_temp); })) : null,
@@ -821,7 +742,6 @@
       r.breach = hadNote || outside;
     }
   }
-  /** Rows of one room and year from the three lists, oldest first. Guest and sensor rows are labelled, never merged. */
   function yearRows(staff, guest, sensor, areaId, year, codeOf) {
     codeOf = codeOf || function (id) { return id; };
     var out = [];
@@ -848,7 +768,6 @@
     return out;
   }
 
-  /* ------------------------------------------------------------------ styles (this module's own) */
   function css() {
     if (document.getElementById('tg-css')) return;
     var s = document.createElement('style'); s.id = 'tg-css';
@@ -867,13 +786,10 @@
     document.head.appendChild(s);
   }
 
-  /* ------------------------------------------------------------------ staff page: register */
   function openStaff(host, c) {
     css();
     var h0 = c.h || h, stop = null;
     host.textContent = 'Loading...';
-    /* 22 Nov 2026: the round and Earlier need only recent readings. Asking for the last 31 days lets the save script read
-       just its newest rows instead of all ~31,000 (minutes on "Loading..."). Older days: the save still refuses a repeat. */
     function recentReadings() {
       var d = new Date(Date.parse(c.today() + 'T12:00:00Z') - 31 * 86400000).toISOString().slice(0, 10);
       return c.save.read('area_reading', { from: d }).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.save.read('area_reading'); })
@@ -889,8 +805,6 @@
       if (!d.ok) { host.textContent = ''; host.appendChild(say(d.message, 'bad')); return; }
       var dob = {}; (d.raw.subject || []).forEach(function (s) { dob[s.id] = s.dob || ''; });
       var dogs = (d.dogs || []).map(function (x) { return { id: x.id, areaId: x.areaId, away: x.away, dob: dob[x.id] || '' }; });
-      // Every room row, retired ones too: a late reading for a day a room was in use still saves, and the year
-      // report still opens for a retired room's past readings. Retired = room.in_use rows ended (BLD-requirement).
       var req = (d.raw && d.raw.requirement) || [];
       var areas = d.raw && d.raw.area && d.raw.area.length ? areaRows(d.raw.area, req, slotNow().date)
         : d.areas.map(function (a) { return { id: a.id, code: a.label, label: a.label, sort: a.sort }; });
@@ -899,8 +813,6 @@
       var links = v[4] && v[4].ok ? v[4].rows : [];   // BLD-area_link (the owner 12 Nov 2026): an old room's readings also count for the room it became
       var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date, req);
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
-      // Who may open Report or Import is an owner setting (permission keys temps.year_report,
-      // temps.sensor_import), read through can(). Until BLD-permission is served, can() allows owner codes only.
       var mayReport = can(c, 'temps.year_report'), mayImport = can(c, 'temps.sensor_import'), mayReadings = can(c, 'temps.reading_import');
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
@@ -929,3 +841,4 @@
     window.StaffPage.register({ id: 'temperature', title: 'Temps', icon: window.StaffPage.ctx.icons.temp, order: 20, open: openStaff });
   }
 }());
+

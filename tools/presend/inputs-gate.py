@@ -54,3 +54,4 @@ if __name__=='__main__':
     a=sys.argv[1:]
     if not a: print(__doc__); sys.exit(2)
     sys.exit(selftest() if a[0]=='--selftest' else (1 if report(a[0]) else 0))
+

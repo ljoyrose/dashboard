@@ -1,7 +1,3 @@
-// Job 34c: navigation flows across pages. Home tiles lead to hubs that load and lead back home signed in;
-// the bottom tabs round-trip with Back and Forward; browser history spans Home and a hub; deep links into
-// each hub survive sign-in; unknown addresses fall back to the hub's first view with its tab lit.
-// All data is the invented sample world from tests/support (pretend Google, Drive and Sheets).
 const { test, expect } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 const { HUBS, go, sheets, marketRows, foodBook } = require('../support/hubs');
@@ -12,7 +8,6 @@ const signIn = async (page) => {
   await expect(page.locator('#mainNav')).toBeVisible();
   await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
 };
-// What each hub shows once it has loaded (signed in or not), so a tile's link is proved to be a real hub page.
 const LANDED = {
   'money/': '#signInBtn, #readStamp',
   'cdhub/': '#signinbtn, #nav button[data-go]',
@@ -22,11 +17,9 @@ const LANDED = {
   'food/': '#view',
   'studio/': '#signInBtn, #enginePill',
 };
-// The lit menu entries on a hub, by href / data-go / data-nav, so every hub's style of menu reads the same.
 const current = (page) => page.evaluate(() => [...document.querySelectorAll('[aria-current="page"]')]
   .map((e) => (e.getAttribute('href') || e.dataset.go || e.dataset.nav || '').replace(/^#\//, '')).filter(Boolean));
 
-// Hub, a view deeper than the first one, the view an unknown address should fall back to.
 const DEEP = [
   ['cdhub', 'litters', 'map'],   // Table map is off the menus (the owner 13 Nov), so a menu view is the deep link
   ['food', 'invoices', 'home'],
@@ -34,11 +27,10 @@ const DEEP = [
   ['factory', 'decide', 'rooms'],
   ['studio', 'do', 'me'],
 ];
-// Open a hub signed in through the shared helper, but arriving at `hash` instead of the helper's own start address.
 async function openAt(page, guard, hub, hash) {
   const real = page.goto.bind(page);
   let first = true;
-  if (hub === 'marketplace') {   // its opener waits for Main, which a deep link does not show; sign in the same way and wait for the read
+  if (hub === 'marketplace') {
     const rows = marketRows();
     await sheets(page, (url) => /!A2:L$/.test(url) ? { values: rows } : { values: [(rows[Number((/!A(\d+)/.exec(url) || [0, 2])[1]) - 2] || [])] });
     await real(HUBS[hub].url + hash);
@@ -46,7 +38,7 @@ async function openAt(page, guard, hub, hash) {
     await expect(page.locator('#readAt')).toContainText(/^Read \d/);
     return;
   }
-  if (hub === 'food') {   // the same: its opener waits for Main; sign in with the same sample workbook and wait for the tabs
+  if (hub === 'food') {
     const b = foodBook();
     await sheets(page, (url) => /:batchGet/.test(url)
       ? { valueRanges: [{ values: b.cards }, { values: b.orders }, { values: b.invoices }, { values: b.products }, { values: b.settings }, { values: [['statement_date', 'total_outstanding']] }, { values: [['date', 'amount']] }, { values: [['kind', 'code', 'name']] }] }
@@ -78,7 +70,7 @@ test.describe('Navigation across pages', () => {
       expect(await back.evaluate((a) => a.href), href).toBe(home);
       await back.click();
       await expect(page, href).toHaveURL(new RegExp('^' + home.replace(/[.?/]/g, (c) => '\\' + c) + '(#/map)?$'));
-      await expect(page.locator('#readStamp'), href).toContainText(/^Read \d/); // the shared sign-in held across the trip
+      await expect(page.locator('#readStamp'), href).toContainText(/^Read \d/);
       await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
     }
   });
@@ -141,11 +133,9 @@ test.describe('Navigation across pages', () => {
 
   for (const [hub, , home] of DEEP) {
     test(`${hub}: an unknown address shows the first view with its tab lit, without errors`, async ({ page, guard }) => {
-      // J34c-F01 (marketplace) and J34c-F02 (factory) fixed: the first view's tab is lit for an unknown address.
       await openAt(page, guard, hub, '#/no-such-view');
       await expect(page.locator('#view, main').first()).toBeVisible();
       await expect.poll(() => current(page)).toContain(home);
-      // and moving from the dead address to a real view still works
       const other = HUBS[hub].views.find((v) => v !== home && !v.includes('/') && v !== 'new');
       await go(page, other);
       await expect.poll(() => current(page)).toContain(other);
@@ -154,3 +144,4 @@ test.describe('Navigation across pages', () => {
     });
   }
 });
+

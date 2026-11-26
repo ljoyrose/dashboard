@@ -1,13 +1,9 @@
-// Dog card photo : a bigger photo; Take photo (camera) or Upload photo on any device; edit
-// (brightness, contrast) and crop before save; the page still shrinks to 800 x 800 within 350,000 characters (#500).
-// Invented dog and invented pictures only; the save script is pretend; the camera is a pretend canvas camera.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { test, expect } = require('../fixtures/job34/load');
 const { openOneDog, recordSaves, bigPhoto, jpegSize } = require('../support/dog-photo-world');
 
-/** A flat mid-grey JPEG (invented), so a brightness change shows plainly in the saved pixels. */
 async function greyPhoto(page, w = 1200, h = 900) {
   const b64 = await page.evaluate(([w, h]) => {
     const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -19,8 +15,6 @@ async function greyPhoto(page, w = 1200, h = 900) {
   return file;
 }
 
-/** A pretend camera: getUserMedia answers with a moving canvas (invented picture), and every track is kept in
- *  window.__tracks so a test can check the camera was turned off. No real camera, no browser flags. */
 async function fakeCamera(page) {
   await page.evaluate(() => {
     const c = document.createElement('canvas'); c.width = 640; c.height = 480;
@@ -31,7 +25,6 @@ async function fakeCamera(page) {
   });
 }
 
-/** Mean of the red channel at the centre of a saved JPEG. */
 async function centreLevel(page, b64) {
   return page.evaluate((b) => new Promise((res) => {
     const i = new Image();
@@ -76,7 +69,6 @@ test.describe('CD Hub dog card photo: bigger, edit before save', () => {
     await dlg.locator('[data-crop-use]').click();
     await expect.poll(() => bodies.length).toBe(2);
 
-    // 3: brighter, then Reset: back to the plain picture
     await expect(input).toBeEnabled();
     await input.setInputFiles(grey);
     await dlg.locator('[data-crop-bright]').fill('40');
@@ -165,3 +157,4 @@ test.describe('CD Hub dog card photo: no camera allowed', () => {
     expect(bodies.length).toBe(0);
   });
 });
+

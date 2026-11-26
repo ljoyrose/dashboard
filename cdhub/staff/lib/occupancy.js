@@ -1,26 +1,13 @@
-/*!
- * BLDOccupancy - who is on site and which room each dog was last recorded in.
- *
- * Pure functions, no network, no Drive. Works in a browser (window.BLDOccupancy) and in Node.
- * It mirrors the rule in apps-script/Specs.gs (occupancyLatest_): occupancy rows are NEVER edited, a move
- * adds a new row, and the current room is the row with the latest moved_in (a row with no moved_in ranks
- * below any dated row; a tie goes to the later row in the file).
- *
- * Input tables use design names:  { area:[], subject:[], subject_status:[], occupancy:[] }
- * (BLDLookups.fromTables maps the BLD-*.csv names to these).
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./needs.js'));
   else root.BLDOccupancy = factory(root.BLDNeeds);
 }(typeof self !== 'undefined' ? self : this, function (N) {
   'use strict';
-  // needs.js missing on a page: every room counts as in use (never hides a room by mistake)
   N = N || { coversDay: function () { return true; }, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); } };
 
   // Permanently not on site (the owner 16 Oct, S02-7): sold, owned_by_family, Collected, deceased. Never asked to move.
   var GONE_KIND = { sold: true, owned_by_family: true, deceased: true };
   var GONE_STATE = { sold: true, collected: true, deceased: true };
-  // Temporarily off site (vets, groomers...): status off_site_temp. Shown as "Away", keeps its room, not asked to move.
   var AWAY_STATE = 'off_site_temp';
 
   /**
@@ -29,11 +16,6 @@
    * room is hidden after its last day and still shows in History.
    */
   function inUse(a, day, reqRows) { return !!a && N.coversDay(reqRows, 'room.in_use', 'area', a.id, day || N.today()); }
-  /**
-   * Can dogs be placed in room `a` on `day`? A place such as a corridor is marked by a BLD-requirement row with need_type
-   * room.no_dogs (target_table area), dated like every need row (overseer 12 Nov 2026: a row, never a word in code).
-   * No such row = dogs can be placed. The place still shows for temperatures; only the dog pickers leave it out.
-   */
   function takesDogs(a, day, reqRows) { return !!a && !N.coversDay(reqRows, 'room.no_dogs', 'area', a.id, day || N.today(), { absentIs: false }); }
   /**
    * Is room `areaId` empty all day on `day`? A BLD-requirement row with need_type room.empty (target_table area), dated
@@ -42,11 +24,6 @@
    * temperatures still show.
    */
   function emptyOn(areaId, day, reqRows) { return !!areaId && N.coversDay(reqRows, 'room.empty', 'area', areaId, day || N.today(), { absentIs: false }); }
-  /**
-   * The readings as the screens show them: a reading on a day its room is marked empty (room.empty) keeps its row but
-   * shows as Room empty with no temperatures. The records are never changed. dayOf(r) gives a reading's London day
-   * (default: the first 10 characters of period_start, else taken_at).
-   */
   function hideEmpty(readings, reqRows, dayOf) {
     var has = (reqRows || []).some(function (r) { return r && r.need_type === 'room.empty'; });
     if (!has) return readings || [];
@@ -58,20 +35,9 @@
       return c;
     });
   }
-  /**
-   * Overnight cabin (The round, overnight picker)? A day pen is marked by a BLD-requirement row with need_type
-   * room.no_overnight (target_table area), dated like every need row. No such row = overnight placement is allowed
-   * (if takesDogs is also true). Need type is a row value, never a room name in code.
-   */
   function takesOvernight(a, day, reqRows) {
     return takesDogs(a, day, reqRows) && !N.coversDay(reqRows, 'room.no_overnight', 'area', a.id, day || N.today(), { absentIs: false });
   }
-  /**
-   * Occupancy record in force on `day` (includes a leave row): the latest moved_in on or before that day
-   * (a row with no moved_in ranks below any dated row; a tie goes to the later row in the file).
-   * Future moved_in is ignored. rowOn() then drops a stay whose moved_out is before the day, a leave, or a temporary off-site.
-   * dailyList uses recordOn so a future leave cannot hide a dog who is still here today.
-   */
   function recordOn(rows, subjectId, day) {
     day = String(day || '').slice(0, 10);
     var best = null, bestKey = '', bestIdx = -1;
@@ -94,7 +60,6 @@
     if (String(best.off_site_kind || '').toLowerCase() === 'temporary') return null;
     return best;
   }
-  /** Subject ids recorded in `areaId` on `day` (dated occupancy, including dogs who have since left). */
   function inArea(rows, areaId, day) {
     var seen = {}, ids = [];
     (rows || []).forEach(function (r) {
@@ -105,7 +70,6 @@
     });
     return ids;
   }
-  /** Latest occupancy row for one dog, or null. */
   function latestRow(rows, subjectId) {
     var best = null, bestKey = '', bestIdx = -1;
     for (var i = 0; i < (rows || []).length; i++) {
@@ -117,7 +81,6 @@
     return best;
   }
 
-  /** Is a dog off site according to its latest row? */
   function offSite(row) {
     if (!row) return false;
     var cls = String(row.classification || '').toLowerCase();
@@ -163,7 +126,7 @@
       var row = recordOn(T.occupancy, s.id, day);
       if (offSite(row)) return;
       var mo = row ? String(row.moved_out || '').slice(0, 10) : '';
-      if (mo && day && mo < day) row = null;   // stay has ended and no later row
+      if (mo && day && mo < day) row = null;
       if (!row && st === null) { skipped++; return; }
       var a = row && row.area_id ? areaById[row.area_id] : null;
       var out = !!row && String(row.off_site_kind || '').toLowerCase() === 'temporary';   // in-force row says Off-site: no room
@@ -174,7 +137,6 @@
         away: st === AWAY_STATE || out, out: out
       });
     });
-    // dogs whose room is not recorded come first (they need a person to pick), then by room, then name; Away dogs last
     dogs.sort(function (x, y) {
       if (!!x.away !== !!y.away) return x.away ? 1 : -1;
       if (x.known !== y.known) return x.known ? 1 : -1;
@@ -204,3 +166,4 @@
 
   return { roomName: roomName, latestRow: latestRow, recordOn: recordOn, rowOn: rowOn, inArea: inArea, offSite: offSite, inUse: inUse, takesDogs: takesDogs, emptyOn: emptyOn, hideEmpty: hideEmpty, takesOvernight: takesOvernight, dailyList: dailyList, loadViaScript: loadViaScript };
 }));
+

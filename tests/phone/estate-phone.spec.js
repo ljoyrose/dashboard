@@ -1,4 +1,3 @@
-// Web Estate page on a phone: no sideways scroll at 360px and every control at least 44px tall. Invented rows only.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -14,7 +13,6 @@ test.describe('Web Estate on a phone', () => {
       await page.route(/^https:\/\/sheets\.googleapis\.com\//, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: F.values() }) }));
       await page.goto('estate/' + hash);
       await page.locator('#view [data-action="signin"]').click();
-      // #/home is the hub Main (2 Nov); the old Home list, with its filters, is #/all.
       await expect(page.locator(hash === '#/home' ? '#view [data-hub-main]' : '#view .needs')).toBeVisible();
       const wide = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(wide).toBeLessThanOrEqual(0);
@@ -25,3 +23,4 @@ test.describe('Web Estate on a phone', () => {
     });
   }
 });
+

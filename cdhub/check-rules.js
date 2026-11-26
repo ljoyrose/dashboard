@@ -1,10 +1,3 @@
-/*!
- * BLDCheckRules - the owner's check settings, worked out from rows. No screen and no saving.
- * A check with no setting row stays logged, on its own how-often, one line per dog where it already
- * says so. Present, Health check all, and Exercise all are one session row unless a setting says off.
- * A past day uses the setting in force that day.
- * The live check_type row is the legal floor (more often is allowed, less often is not).
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.BLDCheckRules = factory();
@@ -24,7 +17,6 @@
   function on(v) { return str(v).toLowerCase() === 'true'; }
   function off(v) { return str(v).toLowerCase() === 'false'; }
 
-  /** Latest row whose from/effective date has started and whose to date has not passed. */
   function inForce(rows, day, key) {
     var best = null, fk = key || 'from_date';
     (rows || []).forEach(function (r) {
@@ -36,7 +28,6 @@
     return best;
   }
 
-  /** The check_type row in force on a day. A latest row that is switched off means the check is not in use. */
   function typeInForce(types, typeKey, day) {
     var best = null;
     (types || []).forEach(function (r) {
@@ -64,7 +55,6 @@
 
   function sessionAllowed(typeKey) { return !!SESSION[typeKey]; }
 
-  /** Why a choice is weaker than the live check, or ''. */
   function refuse(type, choice) {
     if (!type) return 'That check is not in use on that date.';
     var msg = {};
@@ -75,10 +65,6 @@
     return msg;
   }
 
-  /**
-   * What is in force for a check on a day. No setting row = the check's own cadence, logged.
-   * Present, Health check all, and Exercise all are one session row unless a setting says off.
-   */
   function effective(type, setting) {
     var s = setting || {};
     var session = sessionAllowed(type && type.type_key);
@@ -116,7 +102,6 @@
     return null;
   }
 
-  /** One register line per dog on a session row. Other rows pass through. opts.dogName(id) optional. */
   function expandLog(log, dogName) {
     var ids = covered(log), ex = exceptions(log);
     if (!ids.length && !ex.length) return [log];
@@ -137,7 +122,6 @@
     return out;
   }
 
-  /** Years check records are kept: the retention row in force, else 6. */
   function keepYears(rows, day) {
     var hit = inForce((rows || []).filter(function (r) {
       return str(r.section) === 'checks' || str(r.section) === 'jobs';
@@ -146,7 +130,6 @@
     return n > 0 ? n : 6;
   }
 
-  /** A short line for the dog card. Empty when this dog is on no session row. */
   function dogLine(dog, tables, esc) {
     if (!dog || !dog.id) return '';
     var logs = (tables && tables['BLD-check_log.csv']) || [], types = {};
@@ -170,3 +153,4 @@
     keepYears: keepYears, dogLine: dogLine
   };
 }));
+

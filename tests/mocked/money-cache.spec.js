@@ -1,5 +1,3 @@
-// Money downloads only the files that changed since the last read (memory-only cache keyed by Drive's
-// modifiedTime), and a whole refresh stays inside a fixed budget of Drive calls.
 const { test, expect } = require('../support/test');
 
 const signIn = async (page) => {
@@ -15,13 +13,11 @@ const reread = async (page, guard) => {
   await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
 };
 
-// Upper limits for one full read of the sample Money drive. If a change makes the page ask Drive for
-// much more, this fails, so the extra calls are a decision and not an accident.
-const FIRST_READ_MAX = 40; // today: 27 calls, 21 of them downloads
-const REREAD_MAX = 8; // today: 6 (about + 4 folder lists + 1 ledger search), and no downloads
+const FIRST_READ_MAX = 40;
+const REREAD_MAX = 8;
 
 test.describe('Money: only changed files are downloaded again', () => {
-  test('Reread with nothing changed downloads no file at all, and stays inside the Drive call budget @regression', async ({ page, guard }) => {
+  test('t-money-cache-spec-1', async ({ page, guard }) => {
     await page.goto('money/');
     await signIn(page);
     const first = guard.world.calls.slice();
@@ -34,7 +30,7 @@ test.describe('Money: only changed files are downloaded again', () => {
     if (process.env.MEASURE) console.log('BUDGET first', first.length, downloads(first), 'second', second.length);
     expect(downloads(second), 'files downloaded again with nothing changed').toBe(0);
     expect(second.length, 'Drive calls on a reread').toBeLessThanOrEqual(REREAD_MAX);
-    await expect(page.locator('#view')).toContainText('£'); // figures still on screen, from the memory copy
+    await expect(page.locator('#view')).toContainText('£');
   });
 
   test('a file whose modifiedTime changed is downloaded again, and only that one', async ({ page, guard }) => {
@@ -70,3 +66,4 @@ test.describe('Money: only changed files are downloaded again', () => {
     expect(stored).not.toMatch(/BALANCES|CASHFLOW|MON-/);
   });
 });
+

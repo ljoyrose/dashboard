@@ -48,3 +48,4 @@ test.describe('Live state check, Factory and Home @contract', () => {
     expect(r.stdout).toMatch(/Checked 0 file\(s\)/);
   });
 });
+

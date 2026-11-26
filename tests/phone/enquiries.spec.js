@@ -1,4 +1,3 @@
-// Puppy Enquiries Hub on a phone: no sideways scroll at 360 px, every tap target at least 44 px. Example rows only.
 const { test, expect } = require('../support/test');
 
 test.use({ viewport: { width: 360, height: 780 } });
@@ -17,3 +16,4 @@ test('enquiries: every view at 360 px, no sideways scroll, tap targets 44 px', a
     expect(small, h + ': tap targets under 44px').toEqual([]);
   }
 });
+

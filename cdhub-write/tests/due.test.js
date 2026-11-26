@@ -1,5 +1,4 @@
 'use strict';
-/** Next-due dates and "includes" resets, from check_type and check_log rows. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const D = require('../records/due.js');
@@ -148,17 +147,14 @@ test('a whole-site job about dogs: shown on each dog and room it covers, done on
   const dogs = [{ id: 'd1', area_id: 'r1' }, { id: 'd2', area_id: 'r2' }, { id: 'd3', area_id: 'iso' }];
   const line = (dog) => ({ id: 'l-' + dog, check_type_id: 'cty-health-1', subject_id: dog, outcome: 'ok', how_recorded: 'site_tap', taken_at: '2026-03-02T09:00:00Z' });
   const one = (target, logs) => D.forTarget(types, logs, target, '2026-03-02')[0];
-  // one dog done as they go: that dog and its room are done; the site waits for the other dog (the isolation dog is never counted)
   assert.equal(one({ subject_id: 'd1', dogs: [dogs[0]] }, [line('d1')]).status, 'ok');
   assert.equal(one({ area_id: 'r1', dogs: [dogs[0]] }, [line('d1')]).status, 'ok');
   assert.equal(one({ area_id: 'r2', dogs: [dogs[1]] }, [line('d1')]).status, 'never');
   assert.equal(one({ dogs }, [line('d1')]).status, 'never');
   assert.equal(one({ dogs }, [line('d1'), line('d2')]).status, 'ok');
-  // not on the isolation room or its dog, and not on a dog or room screen unless the dogs are given
   assert.equal(one({ area_id: 'iso', dogs: [dogs[2]] }, []), undefined);
   assert.equal(one({ subject_id: 'd3', dogs: [dogs[2]] }, []), undefined);
   assert.equal(one({ subject_id: 'd1' }, []), undefined);
-  // an older dog line makes the site late by that dog
   const old = Object.assign(line('d2'), { taken_at: '2026-02-27T09:00:00Z' });
   assert.equal(one({ dogs }, [line('d1'), old]).days_late, 2);
 });
@@ -171,16 +167,14 @@ test("a visitor's record is kept separate unless that visit counts the job", () 
   assert.equal(one([rec('vl1')]), 'never');                                                        // no visit rows given: left out
   assert.equal(one([rec('vl1')], [{ id: 'vl1', record_counts: '' }]), 'never');                     // default: kept separate
   assert.equal(one([rec('vl1')], [{ id: 'vl1', record_counts: 'feed|clean' }]), 'ok');              // the visit counts this job
-  assert.equal(one([rec('vl2')], [{ id: 'vl1', record_counts: 'clean' }]), 'never');                // another visit's grant does not carry over
+  assert.equal(one([rec('vl2')], [{ id: 'vl1', record_counts: 'clean' }]), 'never');
   assert.equal(one([Object.assign(rec(''), { visit_id: '' })]), 'ok');                              // a staff record is unchanged
-  // today's shape: no visit_id column, the visit is in taken_by
   const byVisit = (link) => ({ id: 'v-t', check_type_id: 'cty-clean-1', area_id: 'r1', outcome: 'ok', taken_by: 'visit:' + link, taken_at: '2026-03-02T09:00:00Z' });
   assert.equal(one([byVisit('vl1')]), 'never');
   assert.equal(one([byVisit('vl1')], [{ id: 'vl1', record_counts: 'clean' }]), 'ok');
   assert.equal(one([Object.assign(byVisit('vl1'), { counts_due: 'true' })]), 'ok');
   assert.equal(one([Object.assign(byVisit('vl1'), { taken_by: 'p-staff1' })]), 'ok');
   assert.equal(D.visitOf({ taken_by: 'visit:vl9' }), 'vl9');
-  // the stamp saved on the row wins over the link (the link may be edited later)
   assert.equal(one([Object.assign(rec('vl1'), { counts_due: 'true' })]), 'ok');
   assert.equal(one([Object.assign(rec('vl1'), { counts_due: 'TRUE' })]), 'ok');
   assert.equal(one([Object.assign(rec('vl1'), { counts_due: 'false' })], [{ id: 'vl1', record_counts: 'clean' }]), 'never');
@@ -236,8 +230,8 @@ test('only_groups: a dog job belongs only to dogs in those groups on the day; bl
   ];
   const day = '2026-03-02';
   assert.deepEqual(D.groupsOf(links, 'd1', day), ['breeding']);
-  assert.deepEqual(D.groupsOf(links, 'd2', day), []);   // left the group 1 Feb 2026
-  assert.deepEqual(D.groupsOf(links, 'd2', '2026-01-15'), ['breeding']);   // the past is judged by the row then
+  assert.deepEqual(D.groupsOf(links, 'd2', day), []);
+  assert.deepEqual(D.groupsOf(links, 'd2', '2026-01-15'), ['breeding']);
   assert.deepEqual(D.groupsOf(links, 'd3', day), []);   // another kind of link
   const n = (sid) => D.forTarget([job], [], { subject_id: sid, groups: D.groupsOf(links, sid, day) }, day).length;
   assert.equal(n('d1'), 1);
@@ -246,7 +240,7 @@ test('only_groups: a dog job belongs only to dogs in those groups on the day; bl
   assert.equal(D.forTarget([Object.assign({}, job, { only_groups: '' })], [], { subject_id: 'd2', groups: [] }, day).length, 1);
 });
 
-test('times a day: an owner row makes a daily job stay due until done that many times today; no row = once', () => {
+test('times a day: an user row makes a daily job stay due until done that many times today; no row = once', () => {
   const room = { area_id: 'iso' };
   const types = [T('iso_check', 'area', '1'), T('clean', 'area', '1')];
   const A = (key, at) => ({ id: 'x' + (++n), check_type_id: 'cty-' + key + '-1', area_id: 'iso', outcome: 'ok', happened_at: at, taken_at: at });
@@ -259,9 +253,7 @@ test('times a day: an owner row makes a daily job stay due until done that many 
   assert.equal(clean.status, 'ok'); assert.equal(clean.times_per_day, 1);
   r = D.forTarget(types, once.concat([A('iso_check', '2026-10-02T18:00:00Z')]), room, '2026-10-02', null, { rules });
   assert.equal(r.find((j) => j.type_key === 'iso_check').status, 'ok');
-  // no rules given: once a day, as before
   assert.equal(D.forTarget(types, once, room, '2026-10-02').find((j) => j.type_key === 'iso_check').status, 'ok');
-  // the row in force on the day: an ended row no longer counts
   assert.equal(D.timesPerDay([R('job.times_per_day.iso_check', '2', '2026-01-01', '2026-06-30')], 'iso_check', '2026-10-02'), 1);
   assert.equal(D.timesPerDay([R('job.times_per_day', '3', '2026-01-01')], 'iso_check', '2026-10-02'), 3);
 });
@@ -273,9 +265,7 @@ test('a room job saved per dog: not due in an empty room; times a day counted pe
   const L = (dog, at) => ({ id: 'y' + (++n), check_type_id: 'cty-iso_checks-1', area_id: 'iso', subject_id: dog, outcome: 'ok', happened_at: at, taken_at: at });
   // nobody in the room: no job
   assert.equal(D.forTarget(types, [], { area_id: 'iso', roomDogIds: [] }, '2026-10-02', null, { rules }).length, 0);
-  // no roomDogIds given (hub, Earlier): as before
   assert.equal(D.forTarget(types, [], { area_id: 'iso' }, '2026-10-02', null, { rules }).length, 1);
-  // two dogs: one room tap = one line each = 1 time, not 2
   const room = { area_id: 'iso', roomDogIds: ['d1', 'd2'] };
   let logs = [L('d1', '2026-10-02T08:00:00Z'), L('d2', '2026-10-02T08:00:00Z')];
   let j = D.forTarget(types, logs, room, '2026-10-02', null, { rules })[0];
@@ -285,23 +275,22 @@ test('a room job saved per dog: not due in an empty room; times a day counted pe
   assert.equal(j.done_today, 2); assert.equal(j.status, 'today');   // d2 only twice
   logs = logs.concat([L('d2', '2026-10-02T18:05:00Z')]);
   assert.equal(D.forTarget(types, logs, room, '2026-10-02', null, { rules })[0].status, 'ok');
-  // one dog's own card counts that dog only
   j = D.forTarget(types, logs.slice(0, 3), { subject_id: 'd1', everyDog: true, dogArea: 'iso' }, '2026-10-02', null, { rules })[0];
   assert.equal(j.done_today, 2);
 });
 
-test('a litter job due by age (owner row job.by_age.<key>): daily in week 1, weekly to 4 weeks, then at 6 and 10 weeks', () => {
+test('a litter job due by age (user row job.by_age.<key>): daily in week 1, weekly to 4 weeks, then at 6 and 10 weeks', () => {
   const types = [{ id: 'pw', type_key: 'pup_weights', label: 'Puppy weights', target: 'litter', every_days: '', active: 'true', effective_from: '2026-01-01' }];
-  const rules = [{ rule_key: 'job.by_age.pup_weights', value: '0-6:1|7-27:7|42|70', effective_from: '2026-01-01', source: 'Lisa 22 Nov 2026' }];
+  const rules = [{ rule_key: 'job.by_age.pup_weights', value: '0-6:1|7-27:7|42|70', effective_from: '2026-01-01', source: 'User 22 Nov 2026' }];
   const born = '2026-03-01', t = { litter_id: 'lit1', born };
   const log = (day) => ({ id: 'w' + day, check_type_id: 'pw', litter_id: 'lit1', outcome: 'ok', taken_at: day + 'T09:00:00Z' });
   const at = (day, logs) => D.forTarget(types, logs, t, day, null, { rules })[0];
   assert.equal(at('2026-03-03', []).status, 'today');                                   // day 2: daily
   assert.equal(at('2026-03-03', [log('2026-03-03')]).next_due, '2026-03-04');
   assert.deepEqual([at('2026-03-04', [log('2026-03-02')]).status, at('2026-03-04', [log('2026-03-02')]).days_late], ['today', 0]);
-  const wk2 = at('2026-03-10', [log('2026-03-08')]);                                    // weekly from day 7: done day 7, next day 14
+  const wk2 = at('2026-03-10', [log('2026-03-08')]);
   assert.deepEqual([wk2.status, wk2.next_due], ['ok', '2026-03-15']);
-  const gap = at('2026-04-01', [log('2026-03-22')]);                                    // after 4 weeks nothing until 6 weeks
+  const gap = at('2026-04-01', [log('2026-03-22')]);
   assert.deepEqual([gap.status, gap.next_due], ['ok', '2026-04-12']);
   const missed = at('2026-04-14', [log('2026-03-22')]);                                 // 6-week weight missed
   assert.deepEqual([missed.status, missed.days_late], ['late', 2]);
@@ -466,3 +455,4 @@ test('times a day by age: bands, fallback, litters, mixed ages, bowls', () => {
   const room = D.forTarget([T('feeding', 'either', '1')], [], { area_id: 'area-a', roomDogs: [young, adult] }, day, null, { rules: bands })[0];
   assert.equal(room.times_per_day, 4);
 });
+

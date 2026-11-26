@@ -1,6 +1,3 @@
-// Web Estate DNS and mail flags on the page. Pretend Google; every domain is invented
-// (example, example.net, example.org, example.co.uk, other.test). The sheet answers are mocked.
-// Nothing in this test writes DNS, a registrar or a mailbox.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -69,3 +66,4 @@ test('DNS and mail flags show on the property and in Needs a look', async ({ pag
   await expect(card.locator('[data-akey="okmx.example"]')).toHaveCount(0);
   expect(methods.every((m) => m === 'GET')).toBe(true);
 });
+

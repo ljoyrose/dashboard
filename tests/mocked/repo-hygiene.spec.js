@@ -1,4 +1,3 @@
-// Safety net: the repo must never hold secrets or real data. Plain file checks, no browser.
 const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
@@ -58,8 +57,6 @@ test('sample CSVs are invented: only example.test addresses and no real-looking 
 });
 
 test('the pages pull in scripts, styles and images only from Google sign-in and Google Fonts', () => {
-  // (Links the person clicks, like WhatsApp or Dropbox, are fine. This is about what loads by itself.
-  //  Every browser test also fails if a page calls an address that is not mocked.)
   const ok = /^https:\/\/(accounts\.google\.com\/gsi\/client|fonts\.googleapis\.com|fonts\.gstatic\.com)(\/|$)/;
   const bad = [];
   for (const f of ['index.html', 'cdhub/index.html', 'money/index.html']) {
@@ -73,9 +70,9 @@ test('the pages pull in scripts, styles and images only from Google sign-in and 
 });
 
 test('no personal email addresses anywhere in the repo (this repo is public)', () => {
-  // No allow-list: personal addresses are never allowed. The privacy guard (tools/privacy-guard) is the main check; this is the backstop.
   const PERSONAL = /[\w.+-]+@(?:me\.com|icloud\.com|gmail\.com|googlemail\.com|outlook\.com|hotmail\.com|yahoo\.[a-z.]+)/gi;
   const bad = [];
   files.forEach((f) => (read(f).match(PERSONAL) || []).forEach((m) => bad.push(`${f}: a personal address (not shown: logs are public)`)));
   expect(bad).toEqual([]);
 });
+

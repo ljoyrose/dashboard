@@ -18,7 +18,6 @@
   }
   function verr(code, msg) { var e = new Error(msg); e.code = code; return e; }
   function rand(n) { var b = new Uint8Array(n); root.crypto.getRandomValues(b); return b; }
-  /* hex, not base64: base64 can start with + or -, which the save refuses at the start of a cell (formula guard) */
   function hex(bytes) { return Array.prototype.map.call(new Uint8Array(bytes), function (x) { return (x < 16 ? '0' : '') + x.toString(16); }).join(''); }
   function unhex(s) { s = String(s || ''); if (!/^([0-9a-f]{2})*$/.test(s)) return new Uint8Array(0); var b = new Uint8Array(s.length / 2); for (var i = 0; i < b.length; i++) b[i] = parseInt(s.substr(i * 2, 2), 16); return b; }
   function utf8(s) { return new TextEncoder().encode(String(s)); }
@@ -30,7 +29,6 @@
     });
   }
 
-  /* Seal one code. Returns the row fields to save: no plain text in it. */
   function seal(password, codeId, plain) {
     if (!codeId) return Promise.reject(verr('NO_ID', 'Say which code.'));
     if (plain == null || String(plain) === '') return Promise.reject(verr('NO_CODE', 'Type the code.'));
@@ -42,7 +40,6 @@
     });
   }
 
-  /* Open one sealed row. A wrong password, a changed row or a row moved to another id all fail the same way. */
   function open(password, row) {
     if (!row || !row.cipher) return Promise.reject(verr('NO_ROW', 'Nothing kept for this code.'));
     var iter = parseInt(row.kdf_iter, 10);
@@ -60,11 +57,7 @@
     return open(password, checkRow).then(function (t) { return t === CHECK_TEXT; }, function (e) { if (e && e.code === 'WRONG_PASSWORD') return false; throw e; });
   }
 
-  /* A typed existing code is checked by the save script (code_check, like a sign-in: ok or no only). The hash and
-     its salt never come to the browser: staff codes are short, so they could be guessed offline (OV11, 14 Nov 2026). */
 
-  /* One unlocked spell. The password is held only inside it and dropped on lock: after idleMs with no use, on
-     lock(), and when the page is hidden. show() opens one row at a time. */
   function session(opts) {
     opts = opts || {};
     var pw = null, timer = null, idle = opts.idleMs || IDLE_MS, onLock = opts.onLock || function () {};
@@ -87,3 +80,4 @@
   root.BLDVault = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
+

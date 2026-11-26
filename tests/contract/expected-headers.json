@@ -3,8 +3,8 @@
   "money": {
     "MON-REGISTER.csv": {
       "key": "id",
-      "columns": ["id", "subject", "kind", "owner", "state", "priority", "trigger_or_event", "entity"],
-      "read": ["id", "subject", "kind", "owner", "state", "priority", "trigger_or_event", "entity"]
+      "columns": ["id", "subject", "kind", "user", "state", "priority", "trigger_or_event", "entity"],
+      "read": ["id", "subject", "kind", "user", "state", "priority", "trigger_or_event", "entity"]
     },
     "MON-SUBJECTS.csv": {
       "key": "id",
@@ -18,8 +18,8 @@
     },
     "MON-DATES.csv": {
       "key": "id",
-      "columns": ["id", "filing", "entity", "due_on", "status", "owner"],
-      "read": ["id", "filing", "entity", "due_on", "status", "owner"]
+      "columns": ["id", "filing", "entity", "due_on", "status", "user"],
+      "read": ["id", "filing", "entity", "due_on", "status", "user"]
     },
     "MON-REPORTS.csv": {
       "key": "week_of",
@@ -125,8 +125,8 @@
       "read": ["rule_key", "value", "effective_from"]
     },
     "BLD-WORK.csv": {
-      "columns": ["id", "area", "item", "status", "owner", "blocked_on", "evidence", "note"],
-      "read": ["id", "area", "item", "status", "owner", "blocked_on", "evidence", "note"]
+      "columns": ["id", "area", "item", "status", "user", "blocked_on", "evidence", "note"],
+      "read": ["id", "area", "item", "status", "user", "blocked_on", "evidence", "note"]
     },
     "BLD-_MANIFEST.csv": {
       "columns": ["file", "rows", "note"],
@@ -200,7 +200,7 @@
       "columns": ["id", "tenant_id", "household_id", "person_id"],
       "read": ["household_id", "person_id"]
     },
-    "BLD-subject_owner.csv": {
+    "BLD-subject_user.csv": {
       "columns": ["id", "tenant_id", "subject_id", "person_id", "household_id", "role"],
       "read": ["subject_id", "person_id", "household_id", "role"]
     },

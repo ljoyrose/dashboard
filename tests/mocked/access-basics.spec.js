@@ -1,4 +1,3 @@
-// Basic keyboard and screen-reader help on all three pages (review part 2, G8). Pretend Google and Drive.
 const { test, expect } = require('../support/test');
 const { tabClick, openView } = require('../support/tabs');
 
@@ -26,3 +25,4 @@ test('CD Hub: every dropdown and box on every section has a name a screen reader
     expect(unnamed, go).toEqual([]);
   }
 });
+

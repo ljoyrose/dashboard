@@ -1,8 +1,3 @@
-// MONEY AND CD HUB DATA CONTRACT (JOB 31b). No browser, no Google. Names and types only.
-// tests/mocked/header-contract.spec.js already pins the column lists for these two hubs. This file adds what JOB 31 added
-// for Food, Marketplace and Studio: every sample file read through the page's own CSV reader (money/core.js parseCSV),
-// date and number cells checked, and each kind of change (MISSING, RENAMED, EXTRA, WRONG_TYPE, EMPTY) giving a named failure.
-// Each failure case proves itself: CONTRACT_PROVE_RED=1 flips it to expect "no problem", so it must go red.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('@playwright/test');
@@ -12,7 +7,6 @@ const { FIX, checkColumns, checkRows, codes } = require('./shape');
 const RED = !!process.env.CONTRACT_PROVE_RED;
 const caught = (problems, code) => (RED ? expect(problems).toEqual([]) : expect(codes(problems)).toEqual([code]));
 const { parseCSV } = moneyCore();
-// Cell kinds by column name. Dates must be YYYY-MM or YYYY-MM-DD (the pages compare them as text); numbers must parse.
 const DATE = /^(as_of|due|due_on|next_due|last_received|expected_on|cash_as_of|runs_dry_on|week_of|month|born_on|dob|performed_on|mated_on|due_date)$/;
 const NUMBER = /^(amount|balance|cash_bank|net_month|projected_balance|income_vs_avg_pct|expense_vs_avg_pct|weight_kg|body_condition_score|bcs_scale)$/;
 
@@ -22,7 +16,6 @@ const SAMPLES = [
 ];
 const text = (s) => fs.readFileSync(s.file, 'utf8');
 
-/** Every problem in one file: header names (found by key below any "CURRENT:" line), data rows, date and number cells. */
 function checkFile(name, e, body) {
   const rows = parseCSV(String(body).replace(/^﻿/, ''));
   const at = e.key ? rows.findIndex((r, i) => i < 6 && r.some((c) => c.trim() === e.key)) : 0;
@@ -39,7 +32,6 @@ function checkFile(name, e, body) {
   }));
   return out;
 }
-/** Change one header cell, or one cell in the first data row, of a CSV text. */
 function edit(body, fn) {
   const lines = body.split(/\r?\n/);
   const at = lines.findIndex((l, i) => i < 6 && !/^CURRENT:/.test(l) && l.includes(','));
@@ -81,3 +73,4 @@ test.describe('Money and CD Hub contract: each kind of change gives a named fail
   test('empty file: MON-REGISTER.csv comes back with nothing', () => { caught(run('MON-REGISTER.csv', ''), 'EMPTY'); });
   test('empty file: BLD-litter.csv has a header but no rows', () => { caught(run('BLD-litter.csv', text(sample('BLD-litter.csv')).split('\n')[0] + '\n'), 'EMPTY'); });
 });
+

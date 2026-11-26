@@ -1,8 +1,5 @@
-// Phone install support. Keeps ONLY the site's own page files so the dashboard opens fast and opens at all
-// when offline. It never stores Google Drive data, the sign-in token, or anything from another address:
-// Google requests are not touched (no respondWith), so they go straight to the network as before.
-var CACHE = 'ljr-shell-v18'; // v18: Jobs and SOP done tick with a day. v17: yearly print grids, temperatures, medicines and SOP print view. v16: SOP Checked today and Print records, and CD Hub check settings. v15 was used on both. v14: CD Hub demo mode (?demo=1). v13: CD Hub and the staff page share one kept code and address; switch-off kept as cdhub.save.off. v12: CD Hub dog size from the one helper shared with the print cards. v11: CD Hub panel reads the kept code; manifest sent with the sign-in cookie. v10: Dashboard Tech (More > Tech). v9: CD Hub tab list. v8: SOP category and role on the public index. Bump this when the page files change.
-var CACHE = 'ljr-shell-v20'; // v20: parasite doses on the medicines list; adult dogs on exercise; system notes hidden. v19: one calendar rule, exercise year marks, medicines register without the recorded-in column. v18: check alias, Bedding and Toys, Present once a day, on top of the yearly print fixes. v17 was used on both. v16: SOP Checked today and Print records, and CD Hub check settings. v15 was used on both. v14: CD Hub demo mode (?demo=1). v13: CD Hub and the staff page share one kept code and address; switch-off kept as cdhub.save.off. v12: CD Hub dog size from the one helper shared with the print cards. v11: CD Hub panel reads the kept code; manifest sent with the sign-in cookie. v10: Dashboard Tech (More > Tech). v9: CD Hub tab list. v8: SOP category and role on the public index. Bump this when the page files change.
+var CACHE = 'ljr-shell-v18';
+var CACHE = 'ljr-shell-v20';
 var SHELL = [
   './', 'index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'house.css', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png',
@@ -20,7 +17,6 @@ self.addEventListener('activate', function (e) {
     return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
 });
-// Network first (so a new version shows at once), the kept copy only when the network fails.
 self.addEventListener('fetch', function (e) {
   var req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin || ALLOWED.indexOf(url.pathname) < 0) return;
@@ -32,3 +28,4 @@ self.addEventListener('fetch', function (e) {
     return caches.match(url.pathname).then(function (hit) { return hit || caches.match(new URL('index.html', BASE).pathname); });
   }));
 });
+

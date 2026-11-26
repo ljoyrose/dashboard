@@ -1,4 +1,3 @@
-// studio/tech-core.js (TECH-HUB-1): the pure view-model behind Dashboard › Tech, tested in Node with no browser. Invented rows only.
 const path = require('path');
 const { test, expect } = require('@playwright/test');
 const T = require(path.join('..', '..', 'studio', 'tech-core.js'));
@@ -34,7 +33,7 @@ test.describe('studio/tech-core.js', () => {
     expect(r.tiles.map((t) => t.key)).toEqual(['example-a', 'example-b', 'example-c', 'example-d', 'example-e', 'example-f', 'example-g', 'example-h', 'example-i']);
     expect(r.hidden).toBe(2);
     expect(r.skipped).toBe(1);
-    expect(r.keys).toContain('example-tool-j'); // hidden rows still block a duplicate Add tech
+    expect(r.keys).toContain('example-tool-j');
   });
 
   test('group order and colour: fixed order, colour from the group, Dev and hosting from the one setting, unknown group = Other', () => {
@@ -59,7 +58,7 @@ test.describe('studio/tech-core.js', () => {
     expect(keys(T.view(tiles, { groups: ['ai'] }, OPTS))).toEqual(['example-b', 'example-a']); // sort_order 1 before 2
     expect(keys(T.view(tiles, { groups: ['ai'], sort: 'name' }, OPTS))).toEqual(['example-a', 'example-b']);
     const v = T.view(tiles, { groups: ['ai'] }, OPTS);
-    expect(v.groupCounts.comms).toBe(2); // a chip row's own choice never hides its other chips
+    expect(v.groupCounts.comms).toBe(2);
     expect(T.view(tiles, { q: 'nothing like this' }, OPTS).shown).toBe(0);
   });
 
@@ -153,3 +152,4 @@ test.describe('studio/tech-core.js', () => {
     expect(src).not.toMatch(/[\w.+-]+@[\w-]+\.[a-z]{2,}/);
   });
 });
+

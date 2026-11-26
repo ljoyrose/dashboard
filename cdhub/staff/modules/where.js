@@ -1,4 +1,3 @@
-/* "Where is everyone?": the daily check, using the existing screen. */
 StaffPage.register({ id: 'where', title: 'Where', icon: StaffPage.ctx.icons.dogs, order: 30, open: function (host, c) {
   host.textContent = 'Loading...';
   Promise.all([c.data(), c.readOptional('area_capacity')]).then(function (x) {
@@ -34,7 +33,7 @@ function findDog(host, c) {
     if (awayH) awayH.hidden = !!q && !cards.querySelector('.bs-away[data-dog]:not([hidden])');
     none.hidden = !q || shown > 0;
     none.textContent = q && !shown ? "No dog called '" + raw.trim() + "'" : '';
-    clearBtn.hidden = !q; clearBtn.style.display = q ? '' : 'none';   // .btn sets display, so hidden alone would not hide it
+    clearBtn.hidden = !q; clearBtn.style.display = q ? '' : 'none';
     var rest = host.querySelector('.bs-sticky'); if (rest) rest.hidden = !!q;
   }
   input.addEventListener('input', run);
@@ -50,3 +49,4 @@ function sleepingRooms(areas, cap, today) {
   BLDCapacity.inForce(cap.rows, today, 'from_date').forEach(function (r) { has[r.area_id] = true; });
   return areas.filter(function (a) { return has[a.id]; });
 }
+

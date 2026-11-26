@@ -7,7 +7,7 @@ test.use({ allowedConsole: [/404/] });
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
-const ROLE = { v: 'OWNER' };   // the role a read reply reports (STAFF PR 443)
+const ROLE = { v: 'USER' };
 const TABLES = {
   area: [{ id: 'area-old', code: '3A.2/3', group_sort: '2' }, { id: 'area-new', code: '3A.1/2', group_sort: '2' }],
   subject: [], occupancy: [], subject_status: [], check_type: [], check_log: [], area_capacity: [], area_access: [], litter: [], capacity_setting: [], qr_tag: [],
@@ -35,7 +35,6 @@ async function setup(page) {
       return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: TABLES[b.table] || [], tables: TABLES, role: ROLE.v } } });
     }
     sent.push(b);
-    // STAFF PR 458: an unusual temperature is a warning the script gives; confirm_unusual = yes saves it
     if (b.fields && parseFloat(b.fields.max_c) > 60 && b.fields.confirm_unusual !== 'yes') {
       return route.fulfill({ headers: CORS, json: { ok: false, code: 'INVALID', message: 'Check the entry.', fields: { max_c: 'That is very high for a room.', confirm_unusual: 'Save anyway?' } } });
     }
@@ -98,7 +97,7 @@ test('the owner 11 Nov: how a reading was taken is saved only; the year report n
 
 test('the owner 11 Nov: an earlier reading outside the limit asks "What was done?", as the round does, and saves the note', async ({ page }) => {
   const sent = await setup(page);
-  await page.clock.setFixedTime(new Date('2026-11-12T15:00:00Z'));   // afternoon: this morning is now a missed slot
+  await page.clock.setFixedTime(new Date('2026-11-12T15:00:00Z'));
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.tg-row').getByRole('button', { name: 'Earlier', exact: true }).click();
   await page.getByLabel('Day').fill('2026-11-12');
@@ -212,7 +211,7 @@ test('year report: a new room includes readings from the old room linked into it
   try {
     await setup(page);
     await page.goto('cdhub/staff/#m/temperature');
-    await page.addScriptTag({ path: 'cdhub/staff/lib/area-link.js' });   // the staff shell loads it once STAFF adds it to FILES
+    await page.addScriptTag({ path: 'cdhub/staff/lib/area-link.js' });
     await page.locator('.tg-row').getByRole('button', { name: 'Report', exact: true }).click();
     await page.getByLabel('Room').selectOption('area-new');
     await page.getByRole('button', { name: 'Open report' }).click();
@@ -242,12 +241,12 @@ test('the owner 12 Nov: a reading is judged by the limit row in force on its own
     await page.getByRole('button', { name: 'Open report' }).click();
     const rows = page.locator('.tg-tab').last().locator('tbody tr');
     await expect(rows).toHaveCount(2);
-    await expect(rows.nth(0)).toHaveClass(/tg-br/);       // 11/11: 21.0 is over 20.0, the row in force that day
-    await expect(rows.nth(1)).not.toHaveClass(/tg-br/);   // 12/11: 22.0 is inside 26.0, the row in force that day
+    await expect(rows.nth(0)).toHaveClass(/tg-br/);
+    await expect(rows.nth(1)).not.toHaveClass(/tg-br/);
   } finally { TABLES.temperature_band = keep.b; TABLES.area_reading = keep.r; }
 });
 
-test('Report and Import show for an owner code only; a staff code sees the round and Earlier', async ({ page }) => {
+test('Report and Import show for an user code only; a staff code sees the round and Earlier', async ({ page }) => {
   ROLE.v = 'STAFF';
   try {
     await setup(page);
@@ -255,7 +254,7 @@ test('Report and Import show for an owner code only; a staff code sees the round
     await expect(page.locator('.tg-row').getByRole('button', { name: 'Earlier', exact: true })).toBeVisible();
     await expect(page.locator('.tg-row').getByRole('button', { name: 'Report', exact: true })).toHaveCount(0);
     await expect(page.locator('.tg-row').getByRole('button', { name: 'Import', exact: true })).toHaveCount(0);
-  } finally { ROLE.v = 'OWNER'; }
+  } finally { ROLE.v = 'USER'; }
   await page.goto('cdhub/staff/#m/temperature');
   await page.reload();
   await expect(page.locator('.tg-row').getByRole('button', { name: 'Import', exact: true })).toBeVisible();
@@ -267,12 +266,10 @@ test('Report and Import show for an owner code only; a staff code sees the round
   }
 });
 
-// Found by the click-crawl, 13 Nov 2026: Sensor CSV threw "thermos is not defined", so the owner got a title and nothing else.
-test('Sensor CSV opens for an owner: room picker and file box; a sensor file is read and saved one day at a time @regression', async ({ page }) => {
+test('t-staff-temperature-spec-1', async ({ page }) => {
   const sent = await setup(page);
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  // this test's save script also has the sensor back-up list switched on
   await page.route(SCRIPT, (route) => (route.request().method() === 'GET'
     ? route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }, { key: 'sensor_reading', on: true, mode: 'direct' }] } })
     : route.fallback()));
@@ -280,8 +277,8 @@ test('Sensor CSV opens for an owner: room picker and file box; a sensor file is 
   await page.getByRole('button', { name: 'Import', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Sensor back-up import' })).toBeVisible();
   const room = page.getByLabel('Room');
-  await expect(room.locator('option')).toHaveText(['Choose the room', '3A.1/2']);   // rooms in use today, one choice each
-  await expect(room.locator('option').nth(1)).toHaveAttribute('value', 'area-new');   // a room id, so the save names a room
+  await expect(room.locator('option')).toHaveText(['Choose the room', '3A.1/2']);
+  await expect(room.locator('option').nth(1)).toHaveAttribute('value', 'area-new');
   await expect(page.getByLabel('Sensor name')).toBeVisible();
   await page.getByLabel('File to import').setInputFiles({ name: 'sample-sensor.csv', mimeType: 'text/csv',
     buffer: Buffer.from('Timestamp,Temperature_Celsius\n2026-11-10 08:00:00,12.0\n2026-11-10 15:00:00,18.5\n2026-11-11 09:00:00,13.0\n') });
@@ -393,3 +390,4 @@ test('a comma decimal is a point: 18,5 and 12,0 save as 18.5 and 12.0 (OV11 15 N
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { max_c: '18.5', min_c: '12.0' } });
 });
+

@@ -1,5 +1,3 @@
-// Invented deposit ledger and Xero invoice export for Stage 11. Nobody here is real: example.com addresses, Ofcom
-// fiction numbers (07700 900xxx), made-up refs (xx26-*) and round invented amounts.
 'use strict';
 const H = ['section', 'ref', 'name', 'status', 'deposit_date', 'deposit', 'balance_due', 'balance_paid', 'collection_date', 'whatsapp', 'email', 'provisional_pup'];
 const ledger = [H,
@@ -13,10 +11,10 @@ const ledger = [H,
   ['CLOSED', 'c1', 'Buyer C1', 'refunded', '2026-01-01', '500', '', '', '', '07700 900621', 'c1@example.com', ''],
   ['WAITING', 'w1', 'Buyer W1', 'waiting', '', '', '', '', '', '07700 900611', 'w1@example.com', '']
 ];
-// A Xero sales-invoice export: header names as Xero writes them; only email, number, date and amount paid are read.
 const xeroCsv = '﻿ContactName,EmailAddress,POAddressLine1,InvoiceNumber,InvoiceDate,DueDate,Total,InvoiceAmountPaid,InvoiceAmountDue,Status\r\n'
   + '"Buyer E, One",e1@example.com,"1 Invented Road, Nowhere",INV-9001,05/10/2026,05/10/2026,500.00,500.00,0.00,Paid\r\n'
   + 'Buyer E Two,e2@example.com,,INV-9002,06/10/2026,06/10/2026,250.00,250.00,0.00,Paid\r\n'
   + 'Buyer E Three,e3@example.com,,INV-9003,07/10/2026,07/10/2026,500.00,0.00,500.00,Awaiting Payment\r\n'
   + 'Stranger,nobody@example.com,,INV-9004,08/10/2026,08/10/2026,500.00,500.00,0.00,Paid\r\n';
 module.exports = { ledger, xeroCsv };
+

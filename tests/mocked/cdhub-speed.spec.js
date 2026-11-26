@@ -8,7 +8,6 @@ const signIn = async (page) => {
   await page.locator('#signinbtn').click();
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
 };
-// hold the Drive read of one file until release() is called
 async function hold(page, world, name) {
   const f = world.files.find((x) => x.name === name);
   const waiting = [];
@@ -19,7 +18,6 @@ async function hold(page, world, name) {
   });
   return { release: async () => { held = false; await Promise.all(waiting.splice(0).map((r) => r.fallback().catch(() => {}))); }, waiting };
 }
-// make the device copy look `min` minutes old (Compliance shows a copy up to 5 minutes old, with its time)
 async function ageCopy(page, min) {
   await page.waitForFunction(() => !READING);
   await page.evaluate(async (m) => { const c = await copyGet(); c.at = new Date(Date.now() - m * 60000).toISOString(); await copyPut(c); }, min);
@@ -30,9 +28,9 @@ async function fullRead(page) {
   await expect.poll(() => hasCopy(page)).toBe(true);
 }
 
-test.describe('CD Hub: owner speed', () => {
+test.describe('CD Hub: user speed', () => {
   test('the first screen shows before the later tables land; a page that needs them waits, then fills in', async ({ page, guard }) => {
-    const h = await hold(page, guard.world, 'BLD-sale.csv');   // an enquiries table: read after the first screen
+    const h = await hold(page, guard.world, 'BLD-sale.csv');
     await page.goto('cdhub/');
     await signIn(page);
     await expect(page.locator('#livepill')).toContainText('live');
@@ -57,8 +55,8 @@ test.describe('CD Hub: owner speed', () => {
     await signIn(page);
     await fullRead(page);
     await ageCopy(page, 6);
-    guard.world.files.find((x) => x.name === 'BLD-subject.csv').content += '\n';   // changed in Drive, so it is read again
-    const h = await hold(page, guard.world, 'BLD-subject.csv');   // a first-screen table: the live read stays open
+    guard.world.files.find((x) => x.name === 'BLD-subject.csv').content += '\n';
+    const h = await hold(page, guard.world, 'BLD-subject.csv');
     await page.reload();
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
     await expect(page.locator('#boot')).toHaveCount(0);
@@ -119,3 +117,4 @@ async function openCompliance(page) {
   await page.evaluate(() => { location.hash = '#/compliance'; });
   await expect(page.locator('#nav [data-go="compliance"][aria-current="page"], #cdWait')).not.toHaveCount(0);
 }
+

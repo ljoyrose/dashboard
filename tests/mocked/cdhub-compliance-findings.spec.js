@@ -1,4 +1,3 @@
-// Compliance mock-up gaps (7 Nov 2026): findings with recurrence. Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 
@@ -32,7 +31,6 @@ test.describe('CD Hub: Compliance findings', () => {
     const li = page.locator('#findList > li');
     await expect(li).toHaveCount(2);
     await expect(page.locator('#compFindings summary .cnt')).toHaveText('2');
-    // best to worst: the one not late first, the late one last
     await expect(li.nth(0)).toHaveAttribute('data-finding', 'f2');
     await expect(li.nth(0)).toContainText('Pretend requirement A');
     await expect(li.nth(0)).toContainText('Pretend major');
@@ -52,3 +50,4 @@ test.describe('CD Hub: Compliance findings', () => {
     await expect(page.locator('#compFindings')).toContainText('No open findings');
   });
 });
+

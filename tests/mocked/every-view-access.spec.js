@@ -1,7 +1,3 @@
-// Accessibility (axe) on EVERY view of the three pages, not just the first screen (review part 2, G1).
-// Same ratchet idea as look-and-access.spec.js: today's known problems are written down below and the test
-// fails only if a view gets WORSE. When you fix something, lower the number so it can never creep back.
-// Run with MEASURE=1 to print today's numbers instead of checking them.
 const { test, expect } = require('../support/test');
 const { openView } = require('../support/tabs');
 const AxeBuilder = require('@axe-core/playwright').default;
@@ -10,7 +6,6 @@ const MAIN = ['map', 'readfirst', 'drive', 'drive/drv-alpha1', 'personal', 'usb'
 const MONEY = ['now', 'money', 'dates', 'todo', 'accountant', 'control', 'e/TESTCO', 'e/TESTPERS'];
 const CDHUB = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops'];
 
-// Known problems today: { 'page:view:scheme': { ruleId: most places allowed } }. Anything missing = 0 allowed.
 const KNOWN = require('./every-view-access.known.json');
 
 const PAGES = [
@@ -50,3 +45,4 @@ for (const p of PAGES) {
     });
   }
 }
+

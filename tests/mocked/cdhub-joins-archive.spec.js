@@ -51,3 +51,4 @@ test('a record pointing at an archived litter resolves; the litter archive is op
   expect(r.a.bad.join(' ')).not.toContain('lit-old');
   expect(r.optional).toBe(true);
 });
+

@@ -1,6 +1,3 @@
-// Chip and occupancy saves must write the file the folder listing already found
-// (the same names the page reads). A missing name, a doubled name, or a failed
-// read stops the save. Pretend Drive only. Invented rows. No real file ids.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -50,7 +47,7 @@ function runSave(page, which) {
   }, which);
 }
 
-test('saveChip and saveArea write the folder file and refuse when it is missing @regression', async ({ page, guard }) => {
+test('t-cdhub-listed-saves-spec-1', async ({ page, guard }) => {
   const pageSrc = fs.readFileSync(path.join(ROOT, 'cdhub/index.html'), 'utf8');
   const configSrc = fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8');
   expect(pageSrc + configSrc).not.toMatch(/microchipFileId|occupancyFileId/);
@@ -179,3 +176,4 @@ test('a sheet update that is refused is not tried again on another id', async ({
   expect(chip.disabled).toBe(false);
   expect(writes).toEqual(['https://sheets.googleapis.com/v4/spreadsheets/bld-chip-live/values/A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS']);
 });
+

@@ -34,7 +34,7 @@ test.describe('CD Hub audit 17 Nov 2026', () => {
 
   test('the Main tab counts each waiting item once: its number matches Needs you', async ({ page }) => {
     await open(page, 860);
-    expect(await page.evaluate(() => (CD.work || []).filter((r) => r.status === 'BLOCKED' && r.owner === 'Lisa').length)).toBe(1);   // also one of the needs
+    expect(await page.evaluate(() => (CD.work || []).filter((r) => r.status === 'BLOCKED' && r.user === 'User').length)).toBe(1);   // also one of the needs
     const same = async () => {
       const n = await page.evaluate(() => needsToday().length);
       const tab = await page.locator('#nav .ht[data-section="main"] .n').textContent();
@@ -83,7 +83,7 @@ test.describe('CD Hub audit 17 Nov 2026', () => {
     await expect(row.locator('.sr')).toHaveText(' not checked');
     await expect(row).toBeVisible();
     const b = await box(row.locator('.t'));
-    expect(b.left).toBeGreaterThan(0);   // on the card, not hidden away like the skip link
+    expect(b.left).toBeGreaterThan(0);
   });
 
   for (const width of [390, 860]) {
@@ -123,7 +123,7 @@ test.describe('CD Hub audit 17 Nov 2026', () => {
     expect(bb.height).toBeGreaterThanOrEqual(44);
     expect(bb.top).toBeGreaterThanOrEqual(lb.top - 0.5);
     expect(bb.bottom).toBeLessThanOrEqual(lb.bottom + 0.5);
-    expect(await btn.evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe('1px');   // still a house control with its line
+    expect(await btn.evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe('1px');
   });
 
   test('Compliance controls are house controls: the date and Add a rule boxes are 44px on a phone; "Not set only" is a normal tick box', async ({ page }) => {
@@ -141,7 +141,7 @@ test.describe('CD Hub audit 17 Nov 2026', () => {
   });
 
   test('narrow tables as cards: no wide-table padding or sticky action cell, and labels in sentence case', async ({ page, guard }) => {
-    setFile(guard.world, 'BLD-WORK.csv', 'id,area,item,status,owner,blocked_on,evidence,note\nW001,sample,Sample item waiting on Lisa,BLOCKED,Lisa,a sample answer,,\n');
+    setFile(guard.world, 'BLD-WORK.csv', 'id,area,item,status,user,blocked_on,evidence,note\nW001,sample,Sample item waiting on User,BLOCKED,User,a sample answer,,\n');
     await open(page, 390);
     await tabClick(page, '#nav [data-go="work"]');
     const table = page.locator('#main table.tstack').first();
@@ -179,7 +179,7 @@ test.describe('CD Hub audit 17 Nov 2026', () => {
     await open(page, 390);
     const more = page.locator('[data-hm-more]');
     await expect(more).toBeVisible();
-    await expect.poll(async () => (await box(more)).height).toBeGreaterThanOrEqual(44);   // Main redraws once the later tables land
+    await expect.poll(async () => (await box(more)).height).toBeGreaterThanOrEqual(44);
   });
 
   test('today is the kennel\'s day: at 00:30 summer time the hub and the medicine form open on that day, not the UTC day before', async ({ page }) => {
@@ -243,7 +243,6 @@ test('plain names: data checks say Links between records, Date formats and Rule 
 });
 
 test('an enquiry card shows the buyer\'s name, with the reference small beside it', async ({ page }) => {
-  // Example enquiries show only with this flag (no sheet connected = "No enquiries yet").
   await page.addInitScript(() => localStorage.setItem('cdhub.enquiries.examples', '1'));
   await page.goto('cdhub/');
   await expect(page.locator('#signinbtn')).toBeEnabled();
@@ -254,3 +253,4 @@ test('an enquiry card shows the buyer\'s name, with the reference small beside i
   await expect(card.locator('a.btn').first()).toHaveText(/^Example\d/);
   await expect(card.locator('[data-enq-ref]')).toHaveText(/^E-\d+/);
 });
+

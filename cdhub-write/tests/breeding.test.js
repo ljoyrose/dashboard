@@ -13,11 +13,11 @@ const env0 = (props) => {
   env.addFile('BLD-breeding_rule.csv', fx.headerOnly(fx.BREEDING_RULE_HEADER));
   return env;
 };
-const rule = (env, fields, code) => save(env, req(env, { code: code || env.codes.owner, table: 'breeding_rule', fields }));
+const rule = (env, fields, code) => save(env, req(env, { code: code || env.codes.user, table: 'breeding_rule', fields }));
 const recs = (env) => { const f = env.file('BLD-breeding_rule.csv')[0];
   const [h, ...rows] = env.ctx.csvParse_(f.content).filter((r) => !(r.length === 1 && r[0] === '')); return rows.map((r) => Object.fromEntries(h.map((c, i) => [c, r[i] || '']))); };
 
-test('breeding rules: the owner adds the three rules, each one row, stamped with who and when', () => {
+test('breeding rules: the user adds the three rules, each one row, stamped with who and when', () => {
   const env = env0();
   for (const [k, v] of [['min_dam_age_months', '12'], ['max_litters_per_dam', '6'], ['min_months_between_litters', '12']]) {
     const r = rule(env, { rule_key: k, value: v, effective_from: '2020-01-01', source: 'licence conditions' });
@@ -54,7 +54,7 @@ test('breeding rules: a value outside the usual range is a warning; "save anyway
   assert.equal(r.ok, true);
   assert.equal(recs(env).length, 1);
   assert.equal(recs(env)[0].value, '40');
-  assert.equal('confirm_unusual' in recs(env)[0], false);          // not a column: nothing extra in the file
+  assert.equal('confirm_unusual' in recs(env)[0], false);
   assert.equal(rule(env, { rule_key: 'max_litters_per_dam', value: '4', effective_from: '2020-01-01', confirm_unusual: 'maybe' }).code, 'INVALID');
 });
 
@@ -127,3 +127,4 @@ test('save anyway: an unusual temperature or a time over 7 days ago warns; confi
   r = V(spec, { at: '2019-11-01T10:00:00Z', confirm_unusual: 'yes' }, {}, now, { oldestMs: Date.UTC(2020, 10, 12), keepYears: 6 });
   assert.match(r.errors.at, /older than these records are kept/);
 });
+

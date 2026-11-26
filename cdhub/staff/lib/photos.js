@@ -8,7 +8,6 @@
 var BLDPhotos = (function () {
   'use strict';
   function ymd(v) { var s = String(v == null ? '' : v).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
-  /** Dog photo links are stored as subject or subjects. Either name is the same dog list. */
   function sameTable(a, b) {
     a = String(a || ''); b = String(b || '');
     if (a === b) return true;
@@ -16,7 +15,6 @@ var BLDPhotos = (function () {
   }
   function on(r, day) { var f = ymd(r.from_date), t = ymd(r.to_date); return (!f || f <= day) && (!t || day <= t); }
   function stamp(r) { return String(r.set_on || r.created_at || ''); }
-  /** The word for a link role in force on a day, from rule rows link_kind.<role> (latest effective_from wins); '' when none. */
   function label(rules, role, day) {
     var best = null;
     (rules || []).forEach(function (r) {
@@ -26,12 +24,6 @@ var BLDPhotos = (function () {
     });
     return best ? String(best.value).trim() : '';
   }
-  /**
-   * One record's photos on a day: {main, gallery, ended, galleryLabel, mainLabel}.
-   * main: the file row of the main link in force (or null). gallery: file rows of open gallery links, by sort
-   * (numbered first), then newest first. ended: file rows whose gallery link has ended (newest end first).
-   * Each file row returned carries link_id. Links to a file id with no files row are left out.
-   */
   function forRecord(links, files, rules, fromTable, id, day) {
     var byId = {};
     (files || []).forEach(function (f) { if (f && f.id) byId[f.id] = f; });
@@ -66,8 +58,8 @@ var BLDPhotos = (function () {
       mainLabel: label(rules, 'main', day)
     };
   }
-  /** A safe web address for a link file: http(s) only, else ''. */
   function safeUrl(u) { u = String(u || '').trim(); return /^https?:\/\/[^\s"'<>]+$/i.test(u) ? u : ''; }
   return { forRecord: forRecord, label: label, safeUrl: safeUrl };
 }());
 if (typeof module !== 'undefined') module.exports = BLDPhotos;
+

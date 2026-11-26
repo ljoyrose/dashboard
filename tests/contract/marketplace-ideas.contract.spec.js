@@ -1,5 +1,3 @@
-// MARKETPLACE PRODUCT IDEAS CONTRACT (MKT-IDEAS stage 1). No browser, no Google. Invented fixtures only.
-// Each failure case proves itself: CONTRACT_PROVE_RED=1 flips it to expect "no problem", so it must go red.
 const { test, expect } = require('@playwright/test');
 const fs = require('fs'), path = require('path');
 const { fixture, checkColumns, checkState, codes } = require('./shape');
@@ -71,7 +69,7 @@ test.describe('Ideas: the board mirror (Infinity) and what stays out', () => {
 });
 
 test.describe('Ideas: the investigator result and the worked example', () => {
-  const example = () => JSON.parse(/```json\n([\s\S]*?)\n```/.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'docs', 'marketplace-ideas', 'EXAMPLE-GATE0.md'), 'utf8'))[1]);
+  const example = () => JSON.parse(fs.readFileSync(path.join(__dirname, 'mkt-idea-result.json'), 'utf8'));
   const fresh = () => I.newDetail(request());
   test('the worked example is a clean result file and gives a clean Gate 0 card when merged', () => {
     const r = I.mergeResult(fresh(), example());
@@ -132,3 +130,4 @@ test.describe('Ideas: the intake rules the Add idea form uses', () => {
     expect(I.goReady(edit((d) => { d.verdict = 'go'; delete d.supplier; delete d.unit_inc_p; })).missing).toEqual(['unit_inc_p', 'supplier']);
   });
 });
+

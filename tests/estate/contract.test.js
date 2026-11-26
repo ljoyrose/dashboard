@@ -1,5 +1,3 @@
-// RR_WEB-ESTATE data contract and reader. Run: node --test tests/estate/contract.test.js
-// Rows are invented (tests/fixtures/estate/rows.js). Pretend Google only: no network.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const E = require('../../estate/core.js');
@@ -34,7 +32,7 @@ test('ACCEPT: every required column, when missing, fails closed with no rows', (
 
 test('ACCEPT: every required column, when renamed, fails closed and is reported as a rename', () => {
   for (const col of E.COLUMNS) {
-    const renamed = col === 'owner_role' ? 'owner role' : col + '_old';
+    const renamed = col === 'user_role' ? 'user role' : col + '_old';
     const header = F.HEADER.map((c) => (c === col ? renamed : c));
     const rows = F.ROWS.map((r) => { const o = { ...r }; o[renamed] = o[col]; delete o[col]; return o; });
     const out = E.rowsFromValues(F.values(header, rows));
@@ -69,7 +67,6 @@ test('an empty sheet fails closed', () => {
   for (const v of [[], [[]], [['', '']], undefined]) assert.equal(E.rowsFromValues(v).ok, false);
 });
 
-// Pretend fetch: records the URL and headers, answers with the given status and body.
 function fakeFetch(status, body, seen) {
   return (url, init) => { seen && seen.push({ url, init }); return Promise.resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) }); };
 }
@@ -133,3 +130,4 @@ test('reader: tabs lists the sheet tab names and never throws', async () => {
   assert.deepEqual(await R.tabs({ sheetId: 'SHEET', token: 'tok', fetch: fakeFetch(403, {}) }), []);
   assert.deepEqual(await R.tabs({ sheetId: 'SHEET', token: 'tok', fetch: () => Promise.reject(new Error('offline')) }), []);
 });
+

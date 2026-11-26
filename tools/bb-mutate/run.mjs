@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// Breed Better mutation check (JOB BB-FIN.1). SCRIPT. Copies breed-better/ and tests/breed-better/ to a temp
-// folder, flips one key condition in score.js at a time, and runs the node tests there. Each mutant must turn a
-// test red ("killed"). Nothing in the repo is changed. Run: node tools/bb-mutate/run.mjs   (exit 1 if a mutant lives)
 import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -46,3 +43,4 @@ for (const [name, from, to] of MUTANTS) {
 for (const r of rows) console.log(r.join('  |  '));
 console.log(lived ? lived + ' mutant(s) not caught' : 'all ' + MUTANTS.length + ' mutants caught');
 process.exit(lived ? 1 : 0);
+

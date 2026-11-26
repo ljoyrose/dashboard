@@ -55,7 +55,6 @@ class Repo:
 class T(unittest.TestCase):
     def setUp(self): self.r = Repo()
 
-    # --- the 17 draft tests (same checks, fake data built at run time) ---
     def test_clean_passes(self):
         self.r.write("a.md", "nothing private\n"); self.assertEqual(self.r.run("--staged").returncode, 0)
 
@@ -77,7 +76,7 @@ class T(unittest.TestCase):
 
     def test_email_blocked_example_test_allowed(self):
         self.r.write("a.md", "mail someone" + AT + "mail.example.org\n"); self.assertEqual(self.r.run("--staged").returncode, 1)
-        r2 = Repo(); r2.write("a.md", "owner" + AT + "example.test\n"); self.assertEqual(r2.run("--staged").returncode, 0)
+        r2 = Repo(); r2.write("a.md", "user" + AT + "example.test\n"); self.assertEqual(r2.run("--staged").returncode, 0)
 
     def test_code_file_reference_is_not_an_email(self):
         self.r.write("a.csv", "Log out" + AT + "Dashboard.tsx" + AT + "the header\n"); self.assertEqual(self.r.run("--staged").returncode, 0)
@@ -86,7 +85,7 @@ class T(unittest.TestCase):
         self.r.write("a.md", "send to box+links-zip" + AT + "mail.example.org\n"); self.assertIn("EMAIL", fails(self.r.run("--staged")))
 
     def test_allow_listed_email_only_in_its_file(self):
-        self.r.write("config.js", f"owner: '{BIZ}'\n"); self.assertEqual(self.r.run("--staged").returncode, 0)
+        self.r.write("config.js", f"user: '{BIZ}'\n"); self.assertEqual(self.r.run("--staged").returncode, 0)
         r2 = Repo(); r2.write("docs/x.md", BIZ + "\n"); self.assertEqual(r2.run("--staged").returncode, 1)
 
     def test_drive_ids_blocked_outside_allow_list(self):
@@ -160,7 +159,6 @@ class T(unittest.TestCase):
         self.r.write("t.js", "a = '1SAMPLE" + "0" * 26 + "'; b = '" + FAKE_ID + "x" * 11 + "'\n"); self.assertEqual(self.r.run("--staged").returncode, 0)
         r2 = Repo(); r2.write("t.js", "a = '1sample" + "0" * 26 + "'\n"); self.assertIn("DRIVE", fails(r2.run("--staged")))
 
-    # --- invented fixtures: fine in test and fixture files only; real-looking values still fail there (+) ---
     def test_invented_fixtures_in_test_files_are_fine(self):
         text = ("mail buyer" + AT + "supplier.example and a" + AT + "example.org and b" + AT + "shop.example.net and c" + AT + "host.test\n"
                 + "call 0" + "1234 567890 or 0" + "113 000 0000 or +44 " + "1234 567890\n"
@@ -185,7 +183,6 @@ class T(unittest.TestCase):
                  ("id = '1test" + "aB3dE5" * 4 + "wxyz'", "DRIVE"), ("note " + T1, "DENY")]
         for text, rule in cases:
             r = Repo(); r.write("tests/mocked/a.spec.js", text + "\n"); self.assertIn(rule, fails(r.run("--staged")), text[:12] + " " + rule)
-        # History mode sees the same thing: a real-looking value added to a test file in an old commit is still found.
         r = Repo(); r.write("tests/a.spec.js", "id = '" + ID_SHAPE + "'; mail buyer" + AT + "supplier.example\n"); r.commit("x")
         p = r.run("--history"); self.assertIn("DRIVE=1", p.stdout); self.assertIn("EMAIL=0", p.stdout)
 
@@ -296,3 +293,4 @@ class T(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=1)
+

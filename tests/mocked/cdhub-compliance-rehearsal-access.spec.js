@@ -1,4 +1,3 @@
-// Compliance mock-up gaps (7 Nov 2026): rehearsal and access. Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 
@@ -8,7 +7,6 @@ const tab = async (page, id) => {
 };
 
 test.describe('CD Hub: Compliance rehearsal and access', () => {
-  // H-04: a rehearsal leaves no trace: no count, no score, nowhere (not the page, not the browser's storage).
   test('rehearsal: notes show while it runs, then End leaves no trace', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'compliance');
@@ -38,7 +36,7 @@ test.describe('CD Hub: Compliance rehearsal and access', () => {
     await expect(page.locator('main')).not.toContainText('Pretend practice note');
   });
 
-  test('access: links to the owner page from the save address; says so when none is set', async ({ page, guard }) => {
+  test('access: links to the user page from the save address; says so when none is set', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'compliance');
     await expect(page.locator('#accOff')).toBeVisible();
@@ -46,3 +44,4 @@ test.describe('CD Hub: Compliance rehearsal and access', () => {
     await expect(page.locator('#accOpen')).toHaveAttribute('href', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec?page=approve');
   });
 });
+

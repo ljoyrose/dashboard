@@ -4,7 +4,6 @@ const assert = require('node:assert');
 const Dna = require('../../breed-better/dna-panel.js');
 
 const esc = (s) => String(s).replace(/[&<>"]/g, '');
-/* invented test rows in the live column shape; no real dogs */
 const T = {
   'BLD-dna_marker.csv': [
     { code: 'TESTR', name: 'Recessive example', inheritance_mode: 'autosomal recessive', copies_0: 'clear', copies_1: 'carrier', copies_2: 'affected', breeding_rule: 'Never carrier x carrier.', source: 'example source' },
@@ -60,3 +59,4 @@ test('the calculator offers only tests it can work, and shows the row breeding r
   assert.match(html, /Source: example source/);
   assert.doesNotMatch(html, /TESTX/);
 });
+

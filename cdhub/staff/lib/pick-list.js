@@ -16,11 +16,6 @@
     if (text != null) e.textContent = text;
     return e;
   }
-  /**
-   * create(host, items, opts) fills host with the list and returns { selected, setBusy }.
-   *   items: [{ id, label }]   opts.only: ids to tick at the start (default: all)   opts.onChange(selectedItems)
-   *   opts.what: the plural word for the count line ("cards" by default)
-   */
   function create(host, items, opts) {
     opts = opts || {};
     var only = opts.only && opts.only.length ? opts.only.map(String) : null, what = opts.what || 'cards';
@@ -51,7 +46,6 @@
     all.addEventListener('click', function () { setAll(true); });
     none.addEventListener('click', function () { setAll(false); });
     boxes.forEach(function (b) { b.box.addEventListener('change', changed); });
-    /* while codes are being saved the list is locked, so a quick re-tick cannot ask for the same new code twice */
     function setBusy(v) { [all, none].concat(boxes.map(function (b) { return b.box; })).forEach(function (x) { x.disabled = !!v; }); }
     count.textContent = selected().length + ' of ' + boxes.length + ' ' + what + ' ticked';
     return { selected: selected, setBusy: setBusy, refresh: changed };
@@ -59,3 +53,4 @@
   function clear(host) { host.textContent = ''; host.className = 'pick noprint'; }
   return { create: create, clear: clear };
 }));
+

@@ -21,7 +21,7 @@ test('Compliance rules come in topic groups; a group with gaps opens; search and
   await expect(card.locator('[data-rule-group="records"] tr[data-rule="link_kind.bff"]')).toBeAttached();
   await expect(card.locator('[data-rule-group="breeding"]')).toHaveAttribute('open', '');   // has rules not set
   await expect(card.locator('[data-rule-group="breeding"] summary')).toContainText('not set');
-  await expect(card.locator('tr[data-rule="max_litters_per_dam"] .info')).toHaveAttribute('title', /Pretend source/);   // source is behind the (i), not a column
+  await expect(card.locator('tr[data-rule="max_litters_per_dam"] .info')).toHaveAttribute('title', /Pretend source/);
   await card.locator('[data-rules-q]').fill('litters');
   await expect(card.locator('tr[data-rule="max_litters_per_dam"]')).toBeVisible();
   await expect(card.locator('[data-rule-group="space"]')).toBeHidden();
@@ -31,7 +31,7 @@ test('Compliance rules come in topic groups; a group with gaps opens; search and
   await expect(card.locator('tr[data-rule="min_dam_age_months"]')).toBeVisible();
 });
 
-test('rules B: the owner\'s BLD-rule_group rows set the groups, their order and names; unmatched rules go in Other', async ({ page }) => {
+test('rules B: the user\'s BLD-rule_group rows set the groups, their order and names; unmatched rules go in Other', async ({ page }) => {
   await page.goto('cdhub/');
   await expect(page.locator('#signinbtn')).toBeEnabled();
   await page.locator('#signinbtn').click();
@@ -54,6 +54,7 @@ test('rules B: the owner\'s BLD-rule_group rows set the groups, their order and 
   expect(order.slice(0, 2)).toEqual(['food', 'people']);
   await expect(card.locator('[data-rule-group="food"] summary')).toContainText('Food safety');
   await expect(card.locator('[data-rule-group="food"] tr[data-rule="fridge.max_c"]')).toBeAttached();
-  await expect(card.locator('[data-rule-group="other"] tr[data-rule="link_kind.bff"]')).toBeAttached();   // the ended group no longer claims it
-  await expect(card.locator('[data-rule-group="breeding"]')).toHaveCount(0);   // the stop-gap groups are not used once rows exist
+  await expect(card.locator('[data-rule-group="other"] tr[data-rule="link_kind.bff"]')).toBeAttached();
+  await expect(card.locator('[data-rule-group="breeding"]')).toHaveCount(0);
 });
+

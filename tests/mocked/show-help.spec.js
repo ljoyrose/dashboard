@@ -17,7 +17,7 @@ test('staff page: help lines are hidden by default, Show help brings them back a
   await staff(page);
   await page.goto('cdhub/staff/#device');
   const line = page.locator('p.help').first();
-  await expect(line).toHaveCount(1);                 // still on the page: hidden, not deleted
+  await expect(line).toHaveCount(1);
   await expect(line).toBeHidden();
   const sw = page.getByRole('switch', { name: 'Show help' });
   await expect(sw).toHaveAttribute('aria-checked', 'false');
@@ -29,3 +29,4 @@ test('staff page: help lines are hidden by default, Show help brings them back a
   await page.getByRole('switch', { name: 'Show help' }).click();
   await expect(page.locator('p.help').first()).toBeHidden();
 });
+

@@ -1,5 +1,3 @@
-// JOB 34 (group A): the home page sign-in flow paths no other spec walks.
-// Pretend Google and Drive only (tests/support). Every row is invented.
 const { test, expect } = require('../fixtures/job34/load');
 const { IDS } = require('../support/world');
 
@@ -9,8 +7,6 @@ const signIn = async (page) => {
   await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
 };
 
-// Since TidyUp stage 5 (05fc972) the Bin page has no Permission card: access is asked from the "Bin these" button.
-// One invented ready file (ZZ_DELETE_ name + ledger row), ticked, so that button has something to ask for.
 const tickReady = async (page, guard) => {
   guard.world.file('zz-ready', 'ZZ_DELETE_ready.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
   guard.world.byId(IDS.ledger).content = 'file_id\nzz-ready\n';
@@ -25,7 +21,6 @@ const tickReady = async (page, guard) => {
 test.describe('Home sign-in: the paths around the button', () => {
   test('Google sign-in script never arrives: the button says "Sign-in unavailable" and a banner explains', async ({ page }) => {
     test.setTimeout(30_000);
-    // An empty script: window.google never appears, so the page gives up after its 100 tries.
     await page.route('https://accounts.google.com/gsi/client', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: '' }));
     await page.goto('./');
     await expect(page.locator('#signInBtn')).toHaveText('Sign-in unavailable', { timeout: 15_000 });
@@ -55,20 +50,17 @@ test.describe('Home sign-in: the paths around the button', () => {
     await expect(page.locator('#banner')).toHaveText('Bin access not granted. Browsing still works.');
     await expect(page.locator('#banner [data-action="signin"]')).toHaveCount(0);
     await expect(page.locator('#signOutBtn')).toBeVisible();
-    // Still asks for access, still not red, nothing binned.
     await expect(allow).toContainText('Allow access, then bin (1)');
     await expect(allow).not.toHaveClass(/danger/);
     expect(guard.world.calls.filter((c) => c.method === 'PATCH')).toEqual([]);
   });
 
-  // J34-F01 (fixed): the Bin permission window closing was reported as a failed sign-in, and wantWrite was never reset.
   test('J34-F01 closing the Bin permission window says the Bin was not allowed, not "Sign in again" while still signed in', async ({ page, guard }) => {
     const allow = await tickReady(page, guard);
     await page.evaluate(() => { window.__GIS_MODE = 'popup-closed'; });
     await allow.click();
     await expect(page.locator('#banner')).toContainText('Bin access not granted');
     await expect(page.locator('#banner [data-action="signin"]')).toHaveCount(0);
-    // A later ordinary sign-in must not be treated as a Bin permission answer.
     await page.evaluate(() => { window.__GIS_MODE = 'ok'; });
     await page.locator('#refreshBtn').click();
     await expect(page.locator('#banner')).toBeHidden();
@@ -118,3 +110,4 @@ test.describe('Home sign-in: the paths around the button', () => {
     expect(guard.world.calls.length).toBeGreaterThan(before);
   });
 });
+

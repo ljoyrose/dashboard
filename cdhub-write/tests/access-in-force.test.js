@@ -1,5 +1,4 @@
 'use strict';
-// Flap access rows: a voided row (to_date before from_date) never counts; with a date, an ended or future row does not either (OV12 18 Nov 2026, 3A.1/2).
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const C = require('../../cdhub/staff/lib/capacity.js');
@@ -38,3 +37,4 @@ test('accessOn (dated flap per day) never counts a voided row, with or without a
   assert.equal(C.accessOn(rows, 'a1', '2026-11-18'), 'free');
   assert.equal(C.accessOn(rows, 'a1', ''), 'free');
 });
+

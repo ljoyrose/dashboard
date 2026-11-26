@@ -7,8 +7,8 @@ const { test, expect } = require('../fixtures/job34/load');
 
 const RULES = [
   { rule_key: 'size_from_kg.medium', value: '12', effective_from: '2026-01-01', source: 'Pretend older rule' },
-  { rule_key: 'size_from_kg.medium', value: '10', effective_from: '2026-11-12', source: 'Pretend owner rule' },
-  { rule_key: 'size_from_kg.large', value: '25', effective_from: '2026-01-01', source: 'Pretend owner rule' },
+  { rule_key: 'size_from_kg.medium', value: '10', effective_from: '2026-11-12', source: 'Pretend user rule' },
+  { rule_key: 'size_from_kg.large', value: '25', effective_from: '2026-01-01', source: 'Pretend user rule' },
   { rule_key: 'size_colour.small', value: 'orange' }, { rule_key: 'size_colour.medium', value: 'green' }, { rule_key: 'size_colour.large', value: 'blue' }];
 
 test.describe('Print card size word from weight and the dated size rows', () => {
@@ -18,7 +18,7 @@ test.describe('Print card size word from weight and the dated size rows', () => 
       const at = (kg, today) => BLDCapacity.sizeForDog({ kg, rules, today }).size;
       return {
         edges: [9.9, 10, 24.9, 25, 25.1].map((kg) => at(kg, '2026-11-18')),
-        newer: at(11, '2026-11-18'), older: at(11, '2026-06-01'),          // medium from 10 (Nov row) vs 12 (Jan row)
+        newer: at(11, '2026-11-18'), older: at(11, '2026-06-01'),
         noWeight: BLDCapacity.sizeForDog({ rules, today: '2026-11-18' }),
         noWeightRange: BLDCapacity.sizeForDog({ sizeText: 'Pretend 17-22kg', rules, today: '2026-11-18' }).size,
         future: BLDCapacity.sizeForDog({ kg: 11, rules: rules.concat([{ rule_key: 'size_from_kg.medium', value: '15', effective_from: '2027-01-01', source: 'Pretend later' }]), today: '2026-11-18' }).size,
@@ -31,13 +31,13 @@ test.describe('Print card size word from weight and the dated size rows', () => 
     expect([r.newer, r.older]).toEqual(['medium', 'small']);
     expect(r.noWeight).toEqual({ size: '', from: '', kg: null });
     expect(r.noWeightRange).toBe('medium');
-    expect(r.future).toBe('medium');   // a row not yet in force changes nothing
+    expect(r.future).toBe('medium');
     expect(r.override).toEqual({ size: 'large', from: 'override', kg: 5 });
     expect(r.backToWeight).toBe('small');
-    expect(r.labels).toEqual({ small: 'Small', medium: 'Pretend Mid', large: 'Large' });   // owner's size_label rows, shared with the hub
+    expect(r.labels).toEqual({ small: 'Small', medium: 'Pretend Mid', large: 'Large' });
   });
 
-  test('kennel cards: size word only, colour from size_colour rows, no kg anywhere; no weight and no size prints none @regression', async ({ page }) => {
+  test('t-cdhub-print-size-word-spec-1', async ({ page }) => {
     const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
     const CORS = { 'access-control-allow-origin': '*' };
     const ids = ['e1', 'e2', 'e3', 'e4', 'e5', 'n1', 'n2', 'n3'];
@@ -63,7 +63,7 @@ test.describe('Print card size word from weight and the dated size rows', () => 
       if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
       return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [] } } });
     });
-    await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+    await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-USER', SCRIPT]);
     await page.goto('cdhub/staff/print/');
     await page.getByRole('button', { name: 'Dog cards' }).click();
     const card = (id) => page.locator('.dcard[data-dog="' + id + '"]');
@@ -74,7 +74,8 @@ test.describe('Print card size word from weight and the dated size rows', () => 
       await expect(card(id).locator('[data-k="size"] b')).toHaveText(word);
       await expect(card(id)).toHaveAttribute('style', new RegExp('--c:var\\(--sz-' + colour + ', ' + colour + '\\)'));
     }
-    await expect(card('n3').locator('[data-k="size"]')).toHaveCount(0);   // no weight and no size typed: no size, never a guess
+    await expect(card('n3').locator('[data-k="size"]')).toHaveCount(0);
     await expect(page.locator('.sheet')).not.toContainText(/kg/i);
   });
 });
+

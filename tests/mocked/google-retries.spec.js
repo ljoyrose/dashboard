@@ -1,12 +1,9 @@
-// Google reads retry by themselves (toolkit.js): up to 4 tries, about 1s, 2s, 4s apart, for
-// "too many requests" (429), a rate-limit 403, and Google hiccups (5xx). Writes are never retried.
-// When the tries run out, every page says the same plain thing instead of an error code.
 const { test, expect } = require('../support/test');
 
 const BUSY = 'Google is busy. Wait a minute, then try again.';
 
 test.describe('Google retries and the plain too-many-requests message', () => {
-  test('home: two 429 answers in a row are retried and the page still reads normally @regression', async ({ page, guard, allowedConsole }) => {
+  test('t-google-retries-spec-1', async ({ page, guard, allowedConsole }) => {
     allowedConsole.push(/status of 429/);
     guard.world.failWith = { status: 429, reason: 'rateLimitExceeded', message: 'Sample busy', times: 2 };
     await page.goto('./');
@@ -74,3 +71,4 @@ test.describe('Google retries and the plain too-many-requests message', () => {
     expect(guard.world.calls.filter((c) => c.method === 'PATCH').length).toBe(1);
   });
 });
+

@@ -1,26 +1,13 @@
-/*!
- * BLDOccupancy - who is on site and which room each dog was last recorded in.
- *
- * Pure functions, no network, no Drive. Works in a browser (window.BLDOccupancy) and in Node.
- * It mirrors the rule in apps-script/Specs.gs (occupancyLatest_): occupancy rows are NEVER edited, a move
- * adds a new row, and the current room is the row with the latest moved_in (a row with no moved_in ranks
- * below any dated row; a tie goes to the later row in the file).
- *
- * Input tables use design names:  { area:[], subject:[], subject_status:[], occupancy:[] }
- * (BLDLookups.fromTables maps the BLD-*.csv names to these).
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./needs.js'));
   else root.BLDOccupancy = factory(root.BLDNeeds);
 }(typeof self !== 'undefined' ? self : this, function (N) {
   'use strict';
-  // needs.js missing on a page: every room counts as in use (never hides a room by mistake)
   N = N || { coversDay: function () { return true; }, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); } };
 
   // Permanently not on site (the owner 16 Oct, S02-7): sold, owned_by_family, Collected, deceased. Never asked to move.
   var GONE_KIND = { sold: true, owned_by_family: true, deceased: true };
   var GONE_STATE = { sold: true, collected: true, deceased: true };
-  // Temporarily off site (vets, groomers...): status off_site_temp. Shown as "Away", keeps its room, not asked to move.
   var AWAY_STATE = 'off_site_temp';
 
   /**
@@ -29,7 +16,6 @@
    * room is hidden after its last day and still shows in History.
    */
   function inUse(a, day, reqRows) { return !!a && N.coversDay(reqRows, 'room.in_use', 'area', a.id, day || N.today()); }
-  /** Latest occupancy row for one dog, or null. */
   function latestRow(rows, subjectId) {
     var best = null, bestKey = '', bestIdx = -1;
     for (var i = 0; i < (rows || []).length; i++) {
@@ -41,22 +27,12 @@
     return best;
   }
 
-  /** Is a dog off site according to its latest row? */
   function offSite(row) {
     if (!row) return false;
     var cls = String(row.classification || '').toLowerCase();
     return !!GONE_KIND[String(row.off_site_kind || '').toLowerCase()] || cls === 'collected' || cls === 'deceased';
   }
 
-  /**
-   * The daily list: every dog on site, with the room it was last recorded in.
-   * A dog is NOT listed when its latest occupancy row says sold / owned_by_family / collected / deceased, or when
-   * its status says Sold / Collected / Deceased. A dog whose status is off_site_temp IS listed, flagged `away: true`
-   * (as is one whose latest occupancy row has off_site_kind temporary, also flagged `out: true`, shown as Off-site):
-   * it keeps its room and is not asked to move. A dog with no occupancy row at all is listed (room not recorded)
-   * only when a status row says it is not sold or collected; otherwise it is counted in `skipped`.
-   * @return {{dogs:Array<{id,label,areaId,areaLabel,known,lastMovedIn,away}>, skipped:number, areas:Array}}
-   */
   function dailyList(T, day) {
     T = T || {};
     day = day || N.today();
@@ -83,7 +59,6 @@
         away: st === AWAY_STATE || out, out: out
       });
     });
-    // dogs whose room is not recorded come first (they need a person to pick), then by room, then name; Away dogs last
     dogs.sort(function (x, y) {
       if (!!x.away !== !!y.away) return x.away ? 1 : -1;
       if (x.known !== y.known) return x.known ? 1 : -1;
@@ -113,3 +88,4 @@
 
   return { latestRow: latestRow, offSite: offSite, inUse: inUse, dailyList: dailyList, loadViaScript: loadViaScript };
 }));
+

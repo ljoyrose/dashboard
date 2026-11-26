@@ -13,7 +13,6 @@ const fullRead = async (page) => {
   await page.waitForFunction(() => window.LOAD && LOAD.state === 'ok' && LOAD.later === 'ok' && !LOAD.copy && !READING);
   await expect.poll(() => page.evaluate(async () => !!((await copyGet()) || {}).mod)).toBe(true);
 };
-// every Drive file read (not the folder list): name, start and end in ms
 async function watchReads(page, world, delay) {
   const reads = [];
   let lists = 0;
@@ -45,7 +44,6 @@ test.describe('CD Hub: Compliance speed', () => {
     expect(late.length).toBeGreaterThan(3);
     const firstEnd = Math.max(...first.map((r) => r.e)), lateStart = Math.min(...late.map((r) => r.s));
     expect(lateStart).toBeLessThan(firstEnd);   // one queue, not two waves
-    // at most READ_AT_ONCE under way at once, and more than one
     let peak = 0;
     for (const r of w.reads) peak = Math.max(peak, w.reads.filter((x) => x.s <= r.s && x.e > r.s).length);
     expect(peak).toBeGreaterThan(1);
@@ -57,7 +55,6 @@ test.describe('CD Hub: Compliance speed', () => {
     await signIn(page);
     await fullRead(page);
     await expect(page.locator('#compAsOf')).toHaveAttribute('data-state', 'live');
-    // hold the folder list so the reopened page is still on the kept read
     let held = true; const waiting = [];
     await page.route((u) => u.hostname === 'www.googleapis.com' && u.pathname === '/drive/v3/files', async (route) => {
       if (held) { waiting.push(route); return; }
@@ -75,7 +72,7 @@ test.describe('CD Hub: Compliance speed', () => {
     await expect(asOf).toHaveAttribute('data-state', 'live');
     await expect(asOf).toContainText(/^As of \d\d:\d\d · live/);
     await page.waitForFunction(() => !READING);
-    expect(w.reads.map((r) => r.name)).toEqual([]);   // nothing changed in Drive: no file read again
+    expect(w.reads.map((r) => r.name)).toEqual([]);
   });
 
   test('a file changed in Drive is read again; the others are not', async ({ page, guard }) => {
@@ -129,3 +126,4 @@ test.describe('CD Hub: Compliance speed', () => {
     expect(await page.evaluate(() => Object.keys(READ_TXT).length + Object.keys(READ_MOD).length)).toBe(0);
   });
 });
+

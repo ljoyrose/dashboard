@@ -1,0 +1,63 @@
+{
+  "kind": "mkt-idea-result",
+  "v": 1,
+  "id": "IDEA-20261102-1530-sam1",
+  "at": "2026-11-03T08:00:00.000Z",
+  "by": "SAMPLE-INVESTIGATOR",
+  "patch": {
+    "status": "screening",
+    "gate": 0,
+    "verdict": "maybe",
+    "classification_assumed": true,
+    "classification": {
+      "product_type": "physical",
+      "buyer": "b2c",
+      "branding": "white_label",
+      "fulfilment": "hold_stock",
+      "source": "wholesaler"
+    },
+    "margin_est": {
+      "worst": 40,
+      "expected": 120,
+      "best": 210
+    },
+    "top3_risks": [
+      "SAMPLE: as white label I am the responsible party for safety and labelling",
+      "SAMPLE: crowded marketplace, many near-identical brushes",
+      "SAMPLE: returns on a low-price item can erase the margin"
+    ],
+    "top3_unknowns": [
+      "SAMPLE: the trade price is not public",
+      "SAMPLE: the minimum order",
+      "SAMPLE: whether the bristles pass a pet-safety check"
+    ],
+    "kill_rule": "Stop if no trade price under \u00a32.80 by 30 Nov",
+    "next_step": "Ask one SAMPLE wholesaler for a trade price list and a minimum order",
+    "unit_ex_p": 250,
+    "unit_inc_p": 300,
+    "profit_p": 120,
+    "sell": "\u00a37.99",
+    "moq": 24,
+    "lines": [
+      "\u25b6 SAMPLE: at an assumed \u00a32.50 ex VAT, about \u00a31.20 profit each",
+      "\u26a0 SAMPLE: at an assumed \u00a33.50 ex VAT, about \u00a30.40 profit each"
+    ],
+    "evidence": [
+      {
+        "claim": "SAMPLE shop sells it at \u00a34.50",
+        "status": "verified",
+        "source": "SAMPLE shop product page, seen sample day"
+      },
+      {
+        "claim": "Sells for \u00a37.99 on a marketplace",
+        "status": "assumed",
+        "source": ""
+      },
+      {
+        "claim": "Trade price is about \u00a32.50 ex VAT",
+        "status": "assumed",
+        "source": ""
+      }
+    ]
+  }
+}

@@ -53,7 +53,7 @@ test('a slot already filled (saved rows, as read back "2026-11-20 00:00") is ski
   const rows = I.parse(base([{ area_id: 'a1', thermometer_id: '', period_start: '2026-11-20 00:00', min_c: '10', max_c: '15' }]),
     H + '2026-11-20,3A.1/2,,overnight,10,15,,\n2026-11-20,3A.1/2,,day,10,15,,\n2026-11-20,3A.1/2,3A.1/2,day,11,16,,\n');
   assert.deepEqual(rows.map((x) => x.ok), [false, true, false]);
-  assert.match(rows[0].why, /already recorded/);   // an older row with no thermometer named: the room's only one
+  assert.match(rows[0].why, /already recorded/);
   assert.match(rows[2].why, /repeated in this file/);
 });
 
@@ -71,7 +71,8 @@ test('a row a week or more old, or an unusual temperature, sends confirm_unusual
 test('the starter file: the heading row and one row per thermometer (a room with none gets one blank)', () => {
   const t = I.template(base());
   assert.equal(t, 'date,room,thermometer,slot,min,max,room_empty,note\r\n2026-11-21,3A.1/2,3A.1/2,overnight,,,,\r\n2026-11-21,H5/6,H5,overnight,,,,\r\n2026-11-21,H5/6,H6,overnight,,,,\r\n2026-11-21,Pretend,,overnight,,,,\r\n');
-  const back = I.parse(base(), t);   // filled in, the starter file reads back column for column
+  const back = I.parse(base(), t);
   assert.equal(back.length, 4);
   assert.match(back[0].why, /both lowest and highest/);
 });
+

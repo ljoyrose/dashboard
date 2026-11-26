@@ -7,16 +7,16 @@ const ID = (n) => '1FAKEDOCFILEIDFORTESTS0000000000' + n;
 const SUBJECT = csv('id,tenant_id,name,sex,dob,kind,neuter_status,size_band', ['sub-x1,t,Pretend Dam One,Female,2021-01-01,Breeding Female,entire,']);
 const STATUS = csv('id,tenant_id,subject_id,state', ['s1,t,sub-x1,Active']);
 const FILES = csv('id,tenant_id,kind,drive_file_id,url,mime,name,size_bytes,taken_on,sha256,source,set_by,set_on', [
-  `fil-1,t,upload,${ID('a')},,application/pdf,pedigree.pdf,1,2024-05-01,,Pretend,lisa,2026-11-17`,
-  `fil-2,t,upload,${ID('b')},,application/pdf,hips.pdf,1,2026-02-10,,Pretend,lisa,2026-11-17`,
-  `fil-3,t,photo,${ID('c')},,image/jpeg,dog.jpg,1,,,Pretend,lisa,2026-11-17`,
+  `fil-1,t,upload,${ID('a')},,application/pdf,pedigree.pdf,1,2024-05-01,,Pretend,user,2026-11-17`,
+  `fil-2,t,upload,${ID('b')},,application/pdf,hips.pdf,1,2026-02-10,,Pretend,user,2026-11-17`,
+  `fil-3,t,photo,${ID('c')},,image/jpeg,dog.jpg,1,,,Pretend,user,2026-11-17`,
 ]);
 const LINKS = csv('id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,source,set_by,set_on', [
-  'lnk-1,t,subjects,sub-x1,pedigree,files,fil-1,2026-01-01,,Pretend,lisa,2026-11-17',
-  'lnk-2,t,subjects,sub-x1,ofa-hips,files,fil-2,2026-01-01,,Pretend,lisa,2026-11-17',
-  'lnk-3,t,subjects,sub-x1,gallery,files,fil-3,2026-01-01,,Pretend,lisa,2026-11-17',
+  'lnk-1,t,subjects,sub-x1,pedigree,files,fil-1,2026-01-01,,Pretend,user,2026-11-17',
+  'lnk-2,t,subjects,sub-x1,ofa-hips,files,fil-2,2026-01-01,,Pretend,user,2026-11-17',
+  'lnk-3,t,subjects,sub-x1,gallery,files,fil-3,2026-01-01,,Pretend,user,2026-11-17',
 ]);
-const DOCTYPE = csv('id,tenant_id,code,label,owner_kind', ['dt-1,t,pedigree,Pedigree,subject', 'dt-2,t,ofa-hips,OFA Hips certificate,subject']);
+const DOCTYPE = csv('id,tenant_id,code,label,user_kind', ['dt-1,t,pedigree,Pedigree,subject', 'dt-2,t,ofa-hips,OFA Hips certificate,subject']);
 
 function put(world, name, content) {
   const f = world.files.find((x) => x.name === name && !x.trashed);
@@ -47,3 +47,4 @@ test.describe('CD Hub dog card documents', () => {
     await expect(docs.locator('a[data-doc="gallery"]')).toHaveCount(0);
   });
 });
+

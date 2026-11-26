@@ -1,6 +1,6 @@
 id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by
-nv1,,nav.view.litters,1,2020-01-01,Test kennel,Pretend owner turned Litters on,,
-nv2,,nav.view.buyers,1,2020-01-01,Test kennel,Pretend owner turned Assocs on,,
-nv3,,nav.view.shape,1,2020-01-01,Test kennel,Pretend owner turned Table map on,,
-nv4,,nav.view.vet,1,2020-01-01,Test kennel,Pretend owner turned Vet on,,
-nv5,,nav.view.enquiries,1,2020-01-01,Test kennel,Pretend owner turned Enquiries on,,
+nv1,,nav.view.litters,1,2020-01-01,Test kennel,Pretend user turned Litters on,,
+nv2,,nav.view.buyers,1,2020-01-01,Test kennel,Pretend user turned Assocs on,,
+nv3,,nav.view.shape,1,2020-01-01,Test kennel,Pretend user turned Table map on,,
+nv4,,nav.view.vet,1,2020-01-01,Test kennel,Pretend user turned Vet on,,
+nv5,,nav.view.enquiries,1,2020-01-01,Test kennel,Pretend user turned Enquiries on,,

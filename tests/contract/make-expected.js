@@ -1,6 +1,3 @@
-// ONE-OFF helper, kept so the list can be rebuilt: node tests/contract/make-expected.js
-// Reads the column NAMES (first header line only) from the invented sample files and writes expected-headers.json.
-// No cell values are copied. After running, read the diff: a changed column list is a decision, not an accident.
 const fs = require('fs');
 const path = require('path');
 const FIX = path.join(__dirname, '..', 'fixtures');
@@ -21,7 +18,6 @@ fs.readdirSync(path.join(FIX, 'bld')).filter((f) => f.endsWith('.csv')).sort().f
   const first = fs.readFileSync(path.join(FIX, 'bld', f), 'utf8').split(/\r?\n/)[0];
   out.cdhub[f] = { columns: parseCSV(first)[0].map((c) => c.trim()) };
 });
-// "read": the columns the page code actually reads today. The test fails if the page stops reading one of them.
 for (const group of ['money', 'cdhub']) {
   const src = pageSource(group);
   Object.values(out[group]).forEach((e) => { e.read = e.columns.filter((c) => readsColumn(src, c)); });
@@ -30,14 +26,12 @@ const pretty = JSON.stringify(out, null, 2).replace(/\[\s+("[^\]]*?)\s+\]/g, (m,
 fs.writeFileSync(path.join(__dirname, 'expected-headers.json'), pretty + '\n');
 console.log('Wrote tests/contract/expected-headers.json');
 
-// ---- JOB 31: Food, Marketplace and Studio. Same rule: names only, built from the invented fixtures and the page code. ----
 const STATE_OUT = path.join(__dirname, 'expected-state.json');
 const src = (g) => pageSource(g);
 const constList = (html, name) => [...(new RegExp('var ' + name + ' = \\[([^\\]]*)\\]').exec(html) || [, ''])[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
 const json = (rel) => JSON.parse(fs.readFileSync(path.join(FIX, rel), 'utf8'));
 const withRead = (group, e) => Object.assign(e, { read: e.columns.filter((c) => readsColumn(src(group), c)) });
 
-// Food: one RR_FOOD workbook read with values:batchGet. Cards by position (no header); the other tabs by their header row.
 const foodHtml = src('food');
 const book = json('food/book.json');
 out.food = {};
@@ -49,7 +43,6 @@ constList(foodHtml, 'RANGES').forEach((range) => {
   out.food[tab] = e;
 });
 
-// Marketplace: the Open work tab by position, RR_LISTINGS.csv by its header (found by listing_id in the first 5 lines).
 const mktHtml = src('marketplace');
 out.marketplace = {
   'Open work tab': withRead('marketplace', { range: '<tab>!A2:L', by: 'position', columns: constList(mktHtml, 'COLS') }),
@@ -57,8 +50,6 @@ out.marketplace = {
 };
 fs.writeFileSync(path.join(__dirname, 'expected-headers.json'), JSON.stringify(out, null, 2).replace(/\[\s+("[^\]]*?)\s+\]/g, (m, inner) => '[' + inner.replace(/\s*\n\s*/g, ' ') + ']') + '\n');
 
-// JSON state files: a key -> type map per path ("brands[]" = each brand, "brands[].kit" = its kit object).
-// Only names the page code reads are kept. Types come from the invented fixture; "required" is a decision, kept here.
 const typeOf = (v) => (Array.isArray(v) ? 'array' : v === null ? 'null' : typeof v);
 function shape(obj, html, at, into) {
   const items = Array.isArray(obj) ? obj : [obj];
@@ -74,7 +65,6 @@ function shape(obj, html, at, into) {
 const studioHtml = src('studio');
 const studioFields = shape(json('studio/contract-state.json'), studioHtml, '', {});
 const top = studioFields['']; delete studioFields[''];
-// Required: top level = the keys the page's schema comment says the engine writes; below = without these the page crashes or drops items.
 const REQUIRED = {
   '': ['generated_at', 'studio', 'health', 'accounts', 'products', 'brands', 'groups', 'assets', 'ideas', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'tools', 'gaps', 'failed'],
   'assets[]': ['id', 'title', 'stage'], 'ideas[]': ['id', 'title'], 'brands[]': ['id', 'name'],
@@ -87,3 +77,4 @@ const state = {
 };
 fs.writeFileSync(STATE_OUT, JSON.stringify(state, null, 2) + '\n');
 console.log('Wrote tests/contract/expected-state.json');
+

@@ -1,6 +1,3 @@
-// JOB 34 state matrix (group E): EMPTY DATA, every hub. The pretend Drive keeps its drives and folders but holds no files,
-// and every Sheets range answers with no rows. Each hub signs in, shows its friendly empty wording (not a crash, not a
-// blank page), and every view still draws. Page errors and console errors fail the test automatically (guard).
 const { test, expect, HUBS, buildWorld, go, SHEETS, fixture } = require('../fixtures/job34/load');
 const H = fixture('states', 'hubs.json');
 const FOLDER = 'application/vnd.google-apps.folder';
@@ -10,8 +7,6 @@ test.use({ world: async ({}, use) => { const w = buildWorld(); w.files = w.files
 
 for (const hub of Object.keys(HUBS)) {
   test(`${hub}: empty Drive and empty sheets show a friendly empty state on every view, no crash`, async ({ page, allowedConsole }) => {
-    // Home's Bin view looks the delete ledger up by its file id; an empty Drive has none, so the browser logs that 404.
-    // The view itself says "The delete ledger" is empty in plain words, which is the page's handling.
     if (hub === 'home') allowedConsole.push(/Failed to load resource: the server responded with a status of 404/);
     await page.route(SHEETS, (r) => r.fulfill({ status: 200, contentType: 'application/json',
       body: JSON.stringify(/:batchGet/.test(r.request().url()) ? { valueRanges: Array.from({ length: 8 }, () => ({})) } : {}) }));
@@ -28,3 +23,4 @@ for (const hub of Object.keys(HUBS)) {
     }
   });
 }
+

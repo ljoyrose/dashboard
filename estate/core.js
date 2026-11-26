@@ -1,6 +1,3 @@
-// Web Estate Hub: pure logic shared by the page (estate/), the node tests and the Apps Script engine.
-// No network, no Drive, no DOM. The engine embeds a copy of this file under a version header.
-// Every example in the tests is invented (example.com style); no estate row ever lives in this repo.
 (function (root, factory) {
   'use strict';
   var api = factory();
@@ -12,7 +9,6 @@
   var VERSION = '1.3.0';
 
   // ---- CSV ----
-  // RFC 4180 style: quoted fields may hold commas, quotes ("") and new lines. Drops a start-of-file marker.
   function parseCSV(text) {
     var rows = [], row = [], cell = '', q = false, i = 0, s = String(text || '');
     if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
@@ -34,7 +30,6 @@
     return rows;
   }
 
-  // Rows of arrays -> objects keyed by the trimmed, lower-cased header.
   function toObjects(rows) {
     if (!rows.length) return [];
     var head = rows[0].map(function (h) { return String(h).trim().toLowerCase(); });
@@ -84,9 +79,6 @@
     };
   }
 
-  // The merge key for a row: the canonical host (no www.) plus path. Rows with no readable address (a funnel or an app
-  // known only by name) keep their own key, so they never fold into each other.
-  // A DNS zone, an email domain or an ads account is its own row beside the site on the same domain.
   var FACET_KINDS = ['dns-zone', 'email-domain', 'ads-account'];
   function keyOf(row) {
     var t = normaliseTarget(row.url_or_domain || row.domain || row.url || '');
@@ -94,8 +86,6 @@
     return row.key ? String(row.key).trim() : 'raw:' + String(row.url_or_domain || row.name || '').trim().toLowerCase();
   }
 
-  // Merges rows that point at the same place. The first non-empty value wins per column; sources are joined.
-  // Returns { rows, duplicates } where duplicates counts the rows folded into an earlier one.
   function mergeRows(rows) {
     var byKey = {}, order = [], duplicates = 0;
     (rows || []).forEach(function (r) {
@@ -116,7 +106,6 @@
     return { rows: order.map(function (k) { return byKey[k]; }), duplicates: duplicates };
   }
 
-  // ---- DNS host from name servers ----
   var NS_HOSTS = [
     [/\.ns\.cloudflare\.com$/, 'Cloudflare'],
     [/\.domaincontrol\.com$/, 'GoDaddy'],
@@ -144,7 +133,6 @@
     [/\.webwave\.(me|dev|pl)$/, 'Webwave']
   ];
 
-  // Name server names -> a plain host name. Several hosts at once is reported, not guessed.
   function classifyDnsHost(nsNames) {
     var names = (nsNames || []).map(function (n) { return String(n).trim().toLowerCase().replace(/\.$/, ''); }).filter(Boolean);
     if (!names.length) return 'not checked';
@@ -159,8 +147,6 @@
   }
 
   // ---- tags in page source ----
-  // Reads analytics and pixel tags from HTML as served. Tags added by script after load can be missed,
-  // so an empty list means "not found in page source", never "none".
   function readTags(html) {
     var s = String(html || '');
     var uniq = function (arr) { return arr.filter(function (v, i) { return arr.indexOf(v) === i; }); };
@@ -185,21 +171,16 @@
     return { ga4: ga4, gtm: gtm, meta: meta, loadedBy: loadedBy, verify: uniq(verify) };
   }
 
-  // What the page may show for a tag list: a word and a count, never the ids.
   function tagWord(ids, checked) {
     if (!checked) return 'not checked';
     return ids && ids.length ? 'found (' + ids.length + ')' : 'not found in page source';
   }
 
-  // ---- data contract: the RR_WEB-ESTATE Properties tab ----
-  // The page and the engine agree on these names, in this order. The engine's PROPERTY_COLUMNS must match.
-  var COLUMNS = ['key', 'kind', 'company', 'brand', 'client', 'owner_role', 'url_or_domain', 'platform', 'dns_host',
+  var COLUMNS = ['key', 'kind', 'company', 'brand', 'client', 'user_role', 'url_or_domain', 'platform', 'dns_host',
     'live_status', 'http_code', 'ssl_expires', 'domain_expires', 'spf', 'dkim', 'dmarc', 'gsc_verified', 'merchant_center',
     'ga4', 'gtm', 'meta_pixel', 'feed', 'keywords_tracked', 'access_note', 'source', 'checked_uk', 'flag'];
   var KINDS = ['site', 'funnel', 'shop', 'app', 'dns-zone', 'email-domain', 'ads-account'];
 
-  // Fails closed: any required column missing means "do not show rows". A missing column next to an unknown one
-  // is reported as a likely rename. Extra columns are harmless and only reported.
   function checkHeader(header) {
     var found = (header || []).map(function (h) { return String(h == null ? '' : h).trim().toLowerCase(); });
     var missing = COLUMNS.filter(function (c) { return found.indexOf(c) === -1; });
@@ -212,8 +193,6 @@
     return { ok: !problems.length, missing: missing, extra: extra, problems: problems };
   }
 
-  // Sheet values (header row first) -> checked rows. A bad header gives no rows at all. A row with no key or an
-  // unknown kind is left out and counted, never guessed.
   function rowsFromValues(values) {
     var v = (values || []).filter(function (r) { return r && r.some(function (c) { return String(c == null ? '' : c).trim() !== ''; }); });
     if (!v.length) return { ok: false, rows: [], skipped: 0, problems: ['the Properties tab is empty: no header row'] };
@@ -232,14 +211,12 @@
   }
 
   // ---- what the page shows ----
-  // Dates arrive as 2026-10-29, 29/10/2026 or with a time after them. Anything else is "no date", never a guess.
   function parseDay(v) {
     var s = String(v == null ? '' : v).trim(), m;
     if ((m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s))) return Date.UTC(+m[1], +m[2] - 1, +m[3]);
     if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s))) return Date.UTC(+m[3], +m[2] - 1, +m[1]);
     return null;
   }
-  // Whole days from today (a Date or a date string) to v; negative = already passed; null = no date.
   function daysUntil(v, today) {
     var d = parseDay(v);
     if (d === null) return null;
@@ -247,8 +224,6 @@
     return Math.round((d - t) / 864e5);
   }
 
-  // One plain status word per row. ClickFunnels "live mode" means live payments, never a visible page, so only
-  // live_status counts.
   var STATUS = ['down', 'blocked', 'parked', 'live', 'not checked'];
   function statusOf(row) {
     var s = String(row.live_status || '').trim().toLowerCase();
@@ -261,7 +236,6 @@
   }
   var STATUS_WORD = { down: 'Down', blocked: 'Blocked to scripts', parked: 'Parked', live: 'Live', 'not checked': 'Not checked' };
 
-  // The sooner of the certificate and domain expiry, in days; null when neither is known.
   function expiresIn(row, today) {
     var a = daysUntil(row.ssl_expires, today), b = daysUntil(row.domain_expires, today);
     if (a === null) return b;
@@ -273,13 +247,11 @@
     return d !== null && d <= (within || 60);
   }
 
-  // mail.js owns the fault words. This reads them so the page and the alerts stay on one list.
   function mailLib() {
     if (typeof module === 'object' && module.exports) return require('./mail.js');
     return typeof EstateMail === 'undefined' ? null : EstateMail;
   }
 
-  // Email sending faults. "not found" for DKIM is not "missing", except when the MX is Google Workspace.
   function emailProblems(row) {
     var M = mailLib();
     if (M && M.rowFaults) return M.rowFaults(row || {});
@@ -294,7 +266,6 @@
     return out;
   }
 
-  // Counts for the top of the page.
   function summarise(rows, today) {
     var c = { total: 0, live: 0, down: 0, blocked: 0, parked: 0, notChecked: 0, expiring: 0, emailFailing: 0 };
     (rows || []).forEach(function (r) {
@@ -307,7 +278,6 @@
     return c;
   }
 
-  // 0 = down, 1 = expiring within 60 days, 2 = blocked, 3 = everything else. Lower shows first.
   function rank(row, today) {
     var s = statusOf(row);
     if (s === 'down') return 0;
@@ -316,8 +286,6 @@
     return 3;
   }
 
-  // Groups by company, then brand, then client. Inside a group: down, then expiring (soonest first), then the rest by
-  // address. Groups holding a down or expiring row come first; then by name.
   function groupRows(rows, today) {
     var by = {}, order = [];
     (rows || []).forEach(function (r) {
@@ -339,7 +307,6 @@
     return groups;
   }
 
-  // Filters live in the URL hash: #/home?company=Sample%20Co&kind=site. Unknown keys are ignored.
   var FILTERS = ['company', 'brand', 'client', 'kind', 'platform', 'flag'];
   function parseFilters(hash) {
     var q = String(hash || '').split('?')[1] || '', out = {};
@@ -354,7 +321,6 @@
     var q = FILTERS.filter(function (k) { return f[k]; }).map(function (k) { return k + '=' + encodeURIComponent(f[k]); }).join('&');
     return '#/' + (view || 'home') + (q ? '?' + q : '');
   }
-  // flag filter: "any" = any flag set, "none" = no flag, otherwise that exact flag.
   function applyFilters(rows, f) {
     return (rows || []).filter(function (r) {
       return FILTERS.every(function (k) {
@@ -367,7 +333,6 @@
       });
     });
   }
-  // The choices for one filter: the distinct non-empty values, sorted.
   function choices(rows, k) {
     var seen = [];
     (rows || []).forEach(function (r) { var v = String(r[k] || ''); if (v && seen.indexOf(v) === -1) seen.push(v); });
@@ -406,3 +371,4 @@
     choices: choices
   };
 });
+

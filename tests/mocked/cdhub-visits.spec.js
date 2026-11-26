@@ -1,4 +1,3 @@
-// CD Hub Admin -> Visits (Lisa 13 Nov 2026): time-boxed visits by card or link. Invented rows only; the save script is pretend.
 const { test: base, expect } = require('../support/test');
 const { buildWorld, IDS } = require('../support/world');
 const { tabClick } = require('../support/tabs');
@@ -11,10 +10,10 @@ const LINK = [LINK_H,
   'il-old,ten-x,ic-1,Old style,2099-12-31,2026-11-01,test,,,,,,,,,,,,,,,,,,,,,,',
   'il-live,ten-x,ic-2,Pretend Inspector,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-1,view|review,subject,,,,,,,,,,,,,,',
   'il-soon,ten-x,ic-3,Pretend Vet,,2026-11-01,test,2098-05-01T09:00:00+01:00,2098-05-01T11:00:00+01:00,vt-1,,,,view,subject,,,,,,,,,,,,sc-a,dl-1,',
-  'il-done,ten-x,ic-4,Pretend Ended,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-2,view,,,,,,,2021-01-01T10:00:00+00:00,owner,left,,,,,,',
+  'il-done,ten-x,ic-4,Pretend Ended,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-2,view,,,,,,,2021-01-01T10:00:00+00:00,user,left,,,,,,',
   'il-live2,ten-x,,,,,,,2099-01-02T17:00:00+00:00,,,,,,,,,,,,,,,,,,,,il-live',
   'il-gone,ten-x,ic-5,Pretend Revoked,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,,view,,,,,,,,,,,,,,,',
-  'il-gone2,ten-x,,,,,,,,,,,,,,,,,,,2021-02-02T10:00:00+00:00,owner,left,,,,,,il-gone',
+  'il-gone2,ten-x,,,,,,,,,,,,,,,,,,,2021-02-02T10:00:00+00:00,user,left,,,,,,il-gone',
 ].join('\n') + '\n';
 const TYPE_H = 'id,tenant_id,type_key,name,role_code,default_hours,max_hours,rights,lists,fields,data_years,record_jobs,record_counts,email_code,needs_id_check,terms_id,from_date,to_date,set_at,set_by,source,grant_basis';
 const TYPES = [TYPE_H,
@@ -25,10 +24,10 @@ const TYPES = [TYPE_H,
 const TAGS = 'id,tenant_id,tag,kind,ref_id,active,made_at,made_by,fixed_type_id\nqt-1,ten-x,' + sha('VC1') + ',visitor_card,Visitor 1,yes,2026-11-01,test,\nqt-2,ten-x,' + sha('VC2') + ',visitor_card,Visitor 2,yes,2026-11-01,test,\nqt-3,ten-x,R1,area,area-1,yes,2026-11-01,test,\n';
 
 const DELEG = 'id,tenant_id,power,holder_person_id,holder_code_id,holder_sign_in_id,parent_id,depth_left,from_date,to_date,grant_type_ids,max_hours,rights,lists,fields,area_ids,subject_ids,end_others,extend_others,ended_at,ended_by,end_reason,end_issued,conferred_by,conferred_at,source,notes\n'
-  + 'dl-1,ten-x,give_visit,,sc-a,,,1,,,vt-1,6,view|raise_finding,,,,,yes,no,,,,,owner,2026-11-13,invented,\n'
+  + 'dl-1,ten-x,give_visit,,sc-a,,,1,,,vt-1,6,view|raise_finding,,,,,yes,no,,,,,user,2026-11-13,invented,\n'
   + 'dl-2,ten-x,give_visit,,sc-b,,dl-1,0,,,vt-1,4,view,,,,,no,no,,,,,sc-a,2026-11-13,invented,\n'
-  + 'dl-3,ten-x,give_visit,,sc-c,,,0,,,,,,,,,,no,no,2026-11-01T10:00:00+00:00,owner,left,keep,owner,2026-10-01,invented,\n'
-  + 'dl-4,ten-x,issue_code,,sc-c,,,0,,,,,,,,,,no,no,,,,,owner,2026-10-01,invented,\n';
+  + 'dl-3,ten-x,give_visit,,sc-c,,,0,,,,,,,,,,no,no,2026-11-01T10:00:00+00:00,user,left,keep,user,2026-10-01,invented,\n'
+  + 'dl-4,ten-x,issue_code,,sc-c,,,0,,,,,,,,,,no,no,,,,,user,2026-10-01,invented,\n';
 const CODES = 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by\ncr-a,ten-x,sc-a,Manny,MANAGER,2026-10-01,,\ncr-b,ten-x,sc-b,Pretend Deputy,STAFF,2026-10-01,,\ncr-c,ten-x,sc-c,Pretend Gone,STAFF,2026-10-01,,\n';
 
 function world({ types = true } = {}) {
@@ -76,8 +75,8 @@ test.describe('CD Hub Visits', () => {
     await expect(live).toContainText('Visitor 1');
     await expect(live).toContainText('Old style');
     await expect(live).not.toContainText('Pretend Ended');
-    await expect(live).not.toContainText('Pretend Revoked');   // a later row revoked it: nothing is edited
-    await expect(live.locator('[data-vis-link="il-live"]')).toContainText('02/01/99');   // the extension row's end, sent as the root id
+    await expect(live).not.toContainText('Pretend Revoked');
+    await expect(live.locator('[data-vis-link="il-live"]')).toContainText('02/01/99');
     await expect(soon).toContainText('Pretend Vet');
     await expect(soon).toContainText('01/05/98');
     await expect(page.locator('[data-adm-open="visits"] small')).toHaveText('2 here now');
@@ -103,7 +102,7 @@ test.describe('CD Hub Visits', () => {
     await page.locator('[data-vis-mode="give"]').click();
     const f = page.locator('form[data-vis-form="give"]');
     await expect(f.locator('[name="type"] option')).toHaveText(['Pretend Inspector type']);   // older version and later row hidden
-    await expect(f.locator('[name="card"] option')).toHaveText(['Visitor 2']);   // Visitor 1 is in use; Visitor 2's visit ended
+    await expect(f.locator('[name="card"] option')).toHaveText(['Visitor 2']);
     await expect(f.locator('[name="hours"]')).toHaveValue('4');
     await f.locator('[name="name"]').fill('Pretend Person');
     await f.locator('[name="org"]').fill('Pretend Council');
@@ -142,7 +141,7 @@ test.describe('CD Hub Visits', () => {
     await expect(page.locator('.vis-url')).toHaveText('https://example.test/inspect/#t=PRETEND');
     const b = bodies[0].fields;
     expect(b.card_tag_id).toBeUndefined();
-    expect(b.usable_from).toBe('2098-05-01T08:00:00Z'); // 09:00 London (BST) stored in UTC, S4.2
+    expect(b.usable_from).toBe('2098-05-01T08:00:00Z');
     expect(b.usable_to).toBe('2098-05-01T10:30:00Z');
     expect(b.email).toBe('someone@example.test');
     await page.locator('[data-vis-url]').click();
@@ -165,13 +164,13 @@ test.describe('CD Hub Visits', () => {
     await expect(page.locator('#adm-visits .adm-ok')).toHaveCount(0);
   });
 
-  test('owner rescans a card: #/admin?visit_tag= opens End now for its visit, or Give for a free card', async ({ page }) => {
+  test('user rescans a card: #/admin?visit_tag= opens End now for its visit, or Give for a free card', async ({ page }) => {
     await open(page);
     await page.evaluate(() => { location.hash = '#/admin?visit_tag=VC1'; });
     await expect(page.locator('form[data-vis-form="end"] [name="grant_id"]')).toHaveValue('il-live');
     await page.evaluate(() => { location.hash = '#/admin?visit_tag=VC2'; });
     await expect(page.locator('form[data-vis-form="give"] [name="card"]')).toHaveValue('qt-2');
-    await page.evaluate(() => { location.hash = '#/admin?visit_tag=' + 'sha256:x'; });   // the stored hash itself is not a card
+    await page.evaluate(() => { location.hash = '#/admin?visit_tag=' + 'sha256:x'; });
     await expect(page.locator('#adm-visits [role="status"]')).toHaveText('That card is not on the list.');
   });
 });
@@ -183,7 +182,7 @@ test.describe('CD Hub Visits: who can give visits', () => {
     await visits(page);
     await page.locator('[data-vis-mode="who"]').click();
     const rowsL = page.locator('#adm-visits .vis-row');
-    await expect(rowsL).toHaveCount(2);   // ended row and the code power are not listed
+    await expect(rowsL).toHaveCount(2);
     await expect(rowsL.nth(0)).toContainText('Manny');
     await expect(rowsL.nth(0)).toContainText('Pretend Inspector type · up to 6h · View, Review');
     await expect(rowsL.nth(0)).toContainText('may pass on (1)');
@@ -227,7 +226,7 @@ test.describe('CD Hub Visits: who gave what', () => {
     await expect(manny).toContainText('from You → Manny');
     await expect(manny).toContainText('Pretend Vet');
     await expect(manny).toContainText('Pretend Deputy: Give visits');   // Manny passed it on
-    await expect(page.locator('[data-vis-who="-"]')).toContainText('Pretend Inspector');   // owner's own visits
+    await expect(page.locator('[data-vis-who="-"]')).toContainText('Pretend Inspector');
     await expect(page.locator('[data-vis-who="sc-b"]')).toContainText('from You → Manny → Pretend Deputy');
     await page.locator('form[data-vis-form="gavef"] [name="who"]').selectOption('sc-a');
     await expect(page.locator('[data-vis-who]')).toHaveCount(1);
@@ -266,3 +265,4 @@ fresh.describe('CD Hub Visits: first use', () => {
     expect(bodies[0].fields.from_date).toMatch(/^\d{4}-\d\d-\d\d$/);
   });
 });
+

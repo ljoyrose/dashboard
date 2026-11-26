@@ -1,5 +1,3 @@
-// Runs the REAL engine file (path in ENQ_ENGINE_FILE, kept in Drive, not this repo) under node with fake Apps Script
-// services and invented API answers. Run: ENQ_ENGINE_FILE=/path/Code.gs node --test tests/enquiries/engine-sim.test.js
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -89,7 +87,6 @@ test('Gmail: the 12 invented emails give 6 enquiries, thread ids only, no body k
   const gmail = MAIL.emails.map((m, i) => Object.assign({}, m, { id: 'THREAD-SAMPLE-' + i }));
   const e = FAKE.load(src, { gmail, dryRun: false });
   e.ctx.setup();
-  // the invented senders stand in for the real ones in Settings
   const st = e.book().getSheetByName('Settings');
   st.rows.forEach((r) => { if (r[0] === 'form_senders') r[1] = MAIL.FORM_SENDERS.join(', '); if (r[0] === 'noise_senders') r[1] = MAIL.NOISE_SENDERS.join(', '); });
   e.ctx.readGmail_();
@@ -118,7 +115,7 @@ test('ClickFunnels: guard passes, anonymous runs are noise, do-not-contact tags 
   e.ctx.setup();
   e.ctx.readClickFunnels_();
   const enq = e.tab('Enquiries');
-  assert.equal(enq.length, 4);   // 3 Website Optin + 1 real breeder form (example.com counts as junk-flagged, still captured)
+  assert.equal(enq.length, 4);
   assert.ok(e.tab('Log').some((r) => /"Breeding Cobberdogs": 3 runs, 1 enquiries, 2 anonymous page views/.test(r.message)));
   assert.ok(e.tab('Log').some((r) => /"Website Optin": 3 runs, 3 enquiries/.test(r.message)));
   assert.equal(enq.find((r) => r.source_ref === 'RUN-SAMPLE-3').consent, 'do-not-contact');
@@ -139,7 +136,6 @@ test('HubSpot: read with the listed search POST only; junk kept out', { skip }, 
   const e = FAKE.load(src, { props: { HUBSPOT_TOKEN: 'test-token-not-real' }, routes: [[/api\.hubapi\.com\/crm\/v3\/objects\/contacts\/search$/, () => ({ results: CRM.hubspot, paging: null })]], dryRun: false });
   e.ctx.setup();
   e.ctx.readHubSpot_();
-  // in the engine example.com is junk (a test domain), so only invented contacts on it are all kept out
   assert.ok(e.tab('Log').some((r) => r.step === 'hubspot' && /5 contacts read/.test(r.message) && /junk kept out/.test(r.message)));
   assert.ok(e.http.every((h) => /contacts\/search$/.test(h.url) && h.method === 'post'));
 });
@@ -157,7 +153,6 @@ test('Add by hand: one request file becomes one row and one Requests line; read 
   assert.ok(e.tab('People').some((p) => p.email === 'buyer.x@example.com' && p.phone_e164 === '+447700900209'));
 });
 
-// ---- Stage 6: people across sources, history, past deposits, contact gate ----------------------------------------
 const req = (id, channel, text, at) => { const b = C.addRequest({ channel, kind: 'puppy', text }, at || '2026-10-29T10:00:00.000Z'); return { id, name: b.name, text: JSON.stringify(b.body) }; };
 const setSetting = (e, name, value) => { const st = e.book().getSheetByName('Settings'); st.rows.forEach((r) => { if (r[0] === name) r[1] = value; }); };
 
@@ -190,7 +185,6 @@ test('Stage 6: same full name by email and by phone is one person marked check; 
 });
 
 test('Stage 6 ACCEPT: a do-not-contact person never gets a FollowUps row, on any of their enquiries', { skip }, () => {
-  // buyer.p is do-not-contact in ClickFunnels; the same address then arrives by hand on Facebook.
   const files = [req('FILE-S6-5', 'facebook', 'From: Buyer P\nHello again buyer.p@example.com'), req('FILE-S6-6', 'email', 'From: Buyer Z Sample\nbuyer.z@example.com')];
   const e = FAKE.load(src, { props: Object.assign({ ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, CF_PROPS), routes: cfRoutes('Australian Labradoodles/Cobberdogs'), files, dryRun: false });
   e.ctx.setup();
@@ -235,8 +229,6 @@ test('Stage 6: past deposit and repeat buyer from the allocation sheets, read on
   assert.ok(e.tab('Log').some((r) => r.step === 'people' && /2 with a past deposit, 1 to check/.test(r.message)));
   for (const t of Object.keys(e.book().sheets.reduce((a, s) => (a[s.name] = 1, a), {}))) {
     const flat = JSON.stringify(e.book().getSheetByName(t).rows);
-    // Litters (Stage 10) mirrors list names, statuses and deposit dates by design, and Deposits (Stage 11, private)
-    // deposit dates; names, ids and numbers never.
     const never = t === 'Litters' ? /Buyer W|"X-1"|7700 9003/ : t === 'Deposits' ? /Buyer|LDB-WAITING|"X-1"|deposit paid|7700 9003/ : /LDB-WAITING|"X-1"|deposit paid|2026-09-10|2025-03-01/;
     assert.ok(!never.test(flat), 'no allocation-sheet text copied into ' + t);
   }
@@ -255,7 +247,6 @@ test('Stage 6: setup() on an older sheet adds only the new settings and keeps th
   assert.ok(st.rows.some((r) => r[0] === 'name_match_min'));
 });
 
-// ---- Stage 7: scoring ----------------------------------------------------------------------------------------------
 test('Stage 7: every enquiry is scored with a band, 1 to 3 reasons and flags; prefs fill blank fields', { skip }, () => {
   const files = [
     req('FILE-S7-1', 'whatsapp', 'From: Buyer S Sample\nLooking for a chocolate girl asap, fenced garden, ready to pay a deposit. I have allergies.\n07700 900401'),
@@ -266,7 +257,7 @@ test('Stage 7: every enquiry is scored with a band, 1 to 3 reasons and flags; pr
   e.ctx.runOnce();
   const enq = e.tab('Enquiries');
   const s = enq.find((x) => x.source_ref === 'FILE-S7-1'), t = enq.find((x) => x.source_ref === 'FILE-S7-2');
-  assert.equal(s.score, 55); // timing 20 + deposit 15 + home 10 + UK 10 (no Litters rows yet, so no fit points)
+  assert.equal(s.score, 55);
   assert.equal(s.band, 'warm');
   assert.equal(String(s.score_reasons).split(' | ').length, 3);
   assert.equal(s.household_flags, 'allergies');
@@ -276,9 +267,6 @@ test('Stage 7: every enquiry is scored with a band, 1 to 3 reasons and flags; pr
   assert.ok(e.tab('Log').some((r) => r.step === 'score' && /2 scored/.test(r.message)));
 });
 
-// ---- Stage 8: reply drafts -----------------------------------------------------------------------------------------
-// FILE-S8-1 is dated an hour ago: the engine reads the real clock, and an enquiry over 7 days old rightly gets the
-// missed-enquiry apology instead of first-uk (this test went red on 5 Nov with a fixed 29 Oct date).
 test('Stage 8: drafts in the Drafts tab only (email + WhatsApp), none for do-not-contact, every one passes the check', { skip }, () => {
   const files = [req('FILE-S8-1', 'email', 'From: Buyer U Sample\nA chocolate girl please buyer.u@example.com', new Date(Date.now() - 3600000).toISOString()),
     req('FILE-S8-2', 'facebook', 'From: Buyer P\nHello again buyer.p@example.com')];
@@ -319,7 +307,6 @@ test('Stage 8: styleSample() keeps only the owner\'s own stripped replies in the
   assert.ok(e.http.every((h) => h.method === 'get'));
 });
 
-// ---- Stage 9: call held ----------------------------------------------------------------------------------------------
 test('Stage 9: "call held" moves the stage to call-held and makes exactly one after-call WhatsApp draft', { skip }, () => {
   const files = [];
   const e = FAKE.load(src, { props: { CALENDLY_TOKEN: 'test-token-not-real', ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, routes: calendlyRoutes(), files, dryRun: false });
@@ -347,7 +334,6 @@ test('Stage 9: "call held" moves the stage to call-held and makes exactly one af
   assert.equal(e.tab('Enquiries').find((x) => x.key === booked.key).stage, 'call-held');
 });
 
-// ---- Stage 10: litters and the adult-dog sale ---------------------------------------------------------------------
 const LIT = require('../fixtures/enquiries/litter.js');
 test('Stage 10: Litters mirrors the allocation sheet read only, with matches and flags; Sale Replies never carry a price', { skip }, () => {
   const others = { 'ALLOC-SAMPLE': { CURRENT: LIT.current, LESSONS: [['x'], ['never read']] }, 'SALE-SAMPLE': { Sheet1: LIT.sale } };
@@ -373,16 +359,13 @@ test('Stage 10: Litters mirrors the allocation sheet read only, with matches and
   assert.equal(sr[0].group_ref, '1'); assert.equal(sr[0].dog_ref, 'Dog Charlie'); assert.equal(sr[0].sale_status, 'Viewing booked');
   assert.doesNotMatch(JSON.stringify(e.book().getSheetByName('Sale Replies').rows), /9999|%|COI/);
   assert.deepEqual(e.touched, [], 'nothing but reads on the allocation and Sale sheets');
-  // A second run keeps when each status started, and adds nothing.
   const since = lit.find((r) => r.pup_ref === 'xx26-03' && r.list === 'pups').status_since_uk;
   e.ctx.runOnce();
   assert.equal(e.tab('Litters').length, lit.length);
   assert.equal(e.tab('Litters').find((r) => r.pup_ref === 'xx26-03' && r.list === 'pups').status_since_uk, since);
-  // Open pups now feed the score: Buyer D1's enquiry gets fit points.
   assert.ok(e.tab('Enquiries').find((x) => x.source_ref === 'FILE-S10-1').score > 0);
 });
 
-// ---- Stage 11: deposits and balances report ----------------------------------------------------------------------
 const DEP = require('../fixtures/enquiries/deposits.js');
 test('Stage 11: Deposits from the allocation sheet and a Xero CSV export, read only; a tap confirms a suggestion', { skip }, () => {
   const others = { 'ALLOC-SAMPLE': { CURRENT: DEP.ledger } };
@@ -408,12 +391,11 @@ test('Stage 11: Deposits from the allocation sheet and a Xero CSV export, read o
   files.push({ id: 'FILE-S11-3', name: tap.name, text: JSON.stringify(tap.body) });
   e.ctx.runOnce();
   const conf = e.tab('Deposits').find((d) => d.deposit_key === sug[0].deposit_key);
-  assert.equal(conf.status, 'held'); assert.match(conf.basis, /confirmed by Lisa/);
+  assert.equal(conf.status, 'held'); assert.match(conf.basis, /confirmed by User/);
   assert.equal(e.tab('Enquiries').find((x) => x.key === e1.key).stage, 'deposit');
   assert.equal(e.tab('Deposits').length, dep.length, 'a re-run adds nothing');
 });
 
-// ---- Stage 12: follow-ups ----------------------------------------------------------------------------------------
 test('Stage 12: a replied enquiry gets a due follow-up and two drafts; snooze moves it; done and lost stop it', { skip }, () => {
   const files = [req('FILE-S12-1', 'email', 'From: Buyer F One\nA puppy please f1@example.com', '2026-10-01T09:00:00.000Z')];
   const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, dryRun: false });
@@ -447,9 +429,6 @@ test('Stage 12: a replied enquiry gets a due follow-up and two drafts; snooze mo
   assert.ok(e.tab('Requests').every((r) => !/refused/.test(r.result)));
 });
 
-// ---- Stage 14: results ------------------------------------------------------------------------------------------
-// The engine runs the real junk check, where example.com IS a test domain, so the people meant to count carry an
-// invented 07700 900xxx number and no address.
 const HS_DEALS = ['Deal Name,Deal Stage,Create Date,Phone Number,First Name,Last Name', 'Pup for Sam,closedwon,2025-11-03 10:00,07700 900111,Sam,Rivers',
   'XkQwPzLmRt,closedlost,2025-11-04 10:00,07700 900112,XkQwPzLmRt,', 'Pup for Max,appointmentscheduled,2026-06-01 10:00,07700 900113,Max,Yew'].join('\n');
 const HS_CONTACTS = ['First Name,Last Name,Email,Phone Number,Create Date,Lifecycle Stage', 'Pat,Bay,,07700 900222,2025-12-05,lead',
@@ -490,14 +469,12 @@ test('Stage 14: in DRY_RUN results_() writes nothing but the Log', { skip }, () 
   assert.ok(e.tab('Log').some((r) => r.step === 'results'));
 });
 
-// ---- Stage 15: alerts ---------------------------------------------------------------------------------------------
 test('Stage 15: alerts_() lists a hot enquiry with no reply after 24 h in one Log line and writes nothing else', { skip }, () => {
   const files = [req('FILE-S15-1', 'phone', 'From: Buyer T One\nRang about a girl\n07700 900151', '2026-10-01T09:00:00.000Z')];
   const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, dryRun: false });
   e.ctx.setup();
   e.ctx.runOnce();
   assert.ok(e.tab('Log').some((r) => r.step === 'alerts'), 'runOnce runs alerts_()');
-  // Make the one invented enquiry hot and still at "new", received weeks ago (the engine clock is the real one).
   const sh = e.book().getSheetByName('Enquiries'), h = sh.rows[0];
   assert.equal(sh.rows.length, 2);
   sh.rows[1][h.indexOf('band')] = 'hot'; sh.rows[1][h.indexOf('stage')] = 'new'; sh.rows[1][h.indexOf('received_uk')] = '2026-10-01T09:00:00';
@@ -512,3 +489,4 @@ test('Stage 15: alerts_() lists a hot enquiry with no reply after 24 h in one Lo
   assert.doesNotMatch(last.message, /Buyer|7700/, 'refs only');
   assert.equal(JSON.stringify(names.map((n) => e.tab(n))), before, 'no other tab changed');
 });
+

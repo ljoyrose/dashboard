@@ -1,6 +1,3 @@
-// TidyUp Apps stage 3: the Personal Drive page as a trash-only bin. Pretend Drive only; every name and id is invented.
-// Look-only until "Allow personal bin actions"; live since 13 Nov 2026 (dry run still tested); a file can be binned only if it starts
-// ZZ_DELETE_DRIVE_ and has a ledger row with surface 'drive-personal'; each move re-checks the file live, then trashes only.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
 
@@ -16,7 +13,6 @@ function world(w) {
   w.byId('sh-a').mine = false;
   w.file('me-a', 'example-a.pdf', 'x', { ...mine, md5Checksum: 'md5-aaa', size: 100 });
   w.file('me-only', 'only-mine.pdf', 'y', { ...mine, md5Checksum: 'md5-zzz', size: 300 });
-  // Marked files: one logged for the personal surface, one logged for another surface, one not logged.
   w.file('me-ok', PCP + 'example-ok.pdf', 'x', { ...mine, md5Checksum: 'md5-ok1', size: 10 });
   w.file('me-other', PCP + 'example-other.pdf', 'x', { ...mine, md5Checksum: 'md5-ot1', size: 11 });
   w.file('me-nolog', PCP + 'example-nolog.pdf', 'x', { ...mine, md5Checksum: 'md5-no1', size: 12 });
@@ -30,7 +26,6 @@ const setDry = (page, dry) => page.route('**/config.js', async (route) => {
   await route.fulfill({ response: res, body: (await res.text()) + '\nwindow.DASH_CONFIG.personalBin.dryRun = ' + dry + ';' });
 });
 const live = (page) => setDry(page, false);
-// Ledger slips the Rename step uploads (multipart POST); answered here, recorded for the test.
 function catchUploads(page) {
   const uploads = [];
   page.route(/googleapis\.com\/upload\/drive\/v3\/files/, async (route) => {
@@ -156,7 +151,6 @@ test.describe('Personal Drive bin (TidyUp Apps 3)', () => {
     for (const id of ['me-other', 'me-nolog', 'me-a', 'me-only', 'sh-a']) expect(guard.world.byId(id).trashed, id).toBeFalsy();
     const w = writes(guard.world);
     expect(w.map((c) => [c.method, c.path, c.auth])).toEqual([['PATCH', '/files/me-ok', BIN_TOKEN]]);
-    // The live re-check (GET of that file) happens before the move.
     const after = guard.world.calls.slice(n);
     const get = after.findIndex((c) => c.method === 'GET' && c.path === '/files/me-ok');
     const patch = after.findIndex((c) => c.method === 'PATCH');
@@ -195,7 +189,7 @@ test.describe('Personal Drive bin (TidyUp Apps 3)', () => {
     await open(page, { scan: true });
     await view(page).locator('[data-action="selectall"][data-group="qmark"]').click();
     await expect(view(page).locator('[data-action="qmark"]')).toHaveText('Rename these (1)');
-    await view(page).locator('[data-action="qmark"]').click(); // first press asks the work account for write access
+    await view(page).locator('[data-action="qmark"]').click();
     await expect.poll(() => page.evaluate(() => window.__GIS_CALLS.request)).toBeGreaterThan(2);
     await view(page).locator('[data-action="qmark"]').click();
     await expect(view(page).locator('[data-q-marked]')).toHaveText('Renamed 1.');
@@ -203,7 +197,7 @@ test.describe('Personal Drive bin (TidyUp Apps 3)', () => {
     expect(uploads).toHaveLength(1);
     expect(uploads[0].auth).toBe('Bearer FAKE-TEST-TOKEN');
     expect(uploads[0].body).toMatch(/"name":"AA_DELETE-LEDGER-ROWS_\d{4}-\d{2}-\d{2}-\d{4}_01\.csv"/);
-    const folder = await page.evaluate(() => window.DASH_CONFIG.canvaBin.folderId); // the CHANGES folder (ids live only in config.js)
+    const folder = await page.evaluate(() => window.DASH_CONFIG.canvaBin.folderId);
     expect(uploads[0].body).toContain('"parents":["' + folder + '"]');
     expect(uploads[0].body).toMatch(/"\d{4}-\d{2}-\d{2}","example-a\.pdf","me-a","exact copy in a shared drive \(md5 \+ size checked live before rename\)","dashboard Personal Drive rename","drive-personal"/);
     expect(guard.world.byId('me-a').name).toBe(PCP + 'example-a.pdf');
@@ -226,3 +220,4 @@ test.describe('Personal Drive bin (TidyUp Apps 3)', () => {
     await expect(view(page).locator('[data-qbin-block]')).toHaveCount(0);
   });
 });
+

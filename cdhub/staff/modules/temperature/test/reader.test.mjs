@@ -1,11 +1,8 @@
-// node --test cdhub/staff/modules/temperature/test/
-// The reader on drawn screens: every reading right, or "not read" (never a wrong number).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { screen } from './synth.mjs';
 const R = createRequire(import.meta.url)('../reader.js');
-// drawn screens: all digits one size with a decimal point, MAX top right, MIN bottom right
 const SYNTH = { tenths: 'any', max: { x: 0.48, y: 0.04, w: 0.5, h: 0.44 }, min: { x: 0.48, y: 0.52, w: 0.5, h: 0.44 } };
 
 const PAIRS = [['21.4', '14.2'], ['19.8', '9.6'], ['28.0', '26.3'], ['30.7', '11.1'], ['17.5', '5.9'], ['24.6', '18.3'], ['12.0', '-2.4'], ['26.9', '23.7'], ['11.1', '10.0'], ['35.2', '0.8']];
@@ -47,3 +44,4 @@ test('steady: a pair counts only after 3 frames agree', () => {
   assert.deepEqual(st.feed(ok), { max: '21.4', min: '14.2' });
   assert.equal(st.feed({ ok: false }), null); assert.equal(st.feed(ok), null);
 });
+

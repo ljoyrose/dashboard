@@ -1,27 +1,7 @@
-/* ---------------------------------------------------------------------------------------------------------------
- * One file store (Lisa 13 Nov 2026; DOGCARD plan AA_DOGCARD_2026-11-14-0055; STAFF agreed AA_STAFF_2026-11-14-0104).
- *   action 'file_add'  Who may: owner rule row file.who_may (pipe list of roles OWNER|STAFF and/or person:<code id>);
- *                      no row or blank = owner only (Lisa 13 Nov 2026: who may do X is an owner setting). Adds one BLD-files row: a photo or uploaded file (bytes stored in the
- *                      private folder named by Script Property FILES_FOLDER_ID) or a link (url only).
- *                      Returns {status, id}. What the file belongs to is a separate link row (link_add, decision C):
- *                      the page adds the gallery / main link after this save.
- * A file whose bytes are already stored (same sha256) is not stored twice: the existing row's id comes back with
- * already: true, so the page can link it again.
- * Limits and types are owner rule rows in BLD-breeding_rule, never fixed here:
- *   file.types      pipe list of mime types allowed for photo/upload (e.g. image/jpeg|image/png|application/pdf)
- *   file.max_bytes  largest file in bytes
- * With no file.types row a photo or upload is refused (links still work). The only fixed cap is the platform's request
- * size (BLD.LIMITS.MAX_FILE_B64).
- * Rows are never edited or deleted. set_on is the London day (S4.15); created_at is UTC; updated_at is blank on create.
- * set_by is the code's public id (sc-xxxxxx), not a name. A photo or upload must start with the bytes of the type it
- * claims (JPEG, PNG, GIF, WebP, PDF are checked; other allowed types are not).
- * Switch: TABLE_ON_files, OFF by default.
- * --------------------------------------------------------------------------------------------------------------- */
-DOGCARD_.files = { file: 'BLD-files.csv', on: 'files', idPrefix: 'fil', owner: false,
+DOGCARD_.files = { file: 'BLD-files.csv', on: 'files', idPrefix: 'fil', user: false,
   need: ['id', 'tenant_id', 'kind', 'drive_file_id', 'url', 'mime', 'name', 'size_bytes', 'taken_on', 'sha256', 'source', 'set_by', 'set_on', 'created_at', 'updated_at'] };
 var FILE_KINDS_ = ['photo', 'upload', 'link'];
 
-/** BLD-files is on the write list only while TABLE_ON_files is true. */
 function filesStoreFiles_() {
   return prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.files.on) === 'true' ? [DOGCARD_.files.file] : [];
 }
@@ -34,7 +14,6 @@ function filesFolder_() {
   catch (e) { throw err_('FOLDER_UNREACHABLE', 'The file store folder could not be opened. Check the Shared Drive folder id.'); }
 }
 
-/** The value of one rule row in force today (latest effective_from wins), or ''. */
 function fileRule_(key, day) {
   var rules, best = null, tenant = prop_(BLD.PROP.TENANT_ID);
   try { rules = store_read_('BLD-breeding_rule.csv', true); } catch (e) { return ''; }
@@ -47,14 +26,12 @@ function fileRule_(key, day) {
   return best ? String(best.value).trim() : '';
 }
 
-/** file.who_may in force today: roles (STAFF) and/or person:<code id>, pipe separated, added to the owner. Blank = owner only. */
 function fileMayAdd_(who, day) {
   var list = fileRule_('file.who_may', day).split('|').map(function (x) { return x.trim(); }).filter(String);
-  if (who.role === 'OWNER' || !list.length) return who.role === 'OWNER';   // the owner always may; the row widens it
+  if (who.role === 'USER' || !list.length) return who.role === 'USER';
   return list.some(function (x) { return x.toUpperCase() === who.role || (who.id && x === 'person:' + who.id); });
 }
 
-/** The first bytes match the claimed type, for the types with a known signature; others pass. */
 function fileBytesMatch_(bytes, mime) {
   var b = function (i) { return (bytes[i] + 256) % 256; };
   var ascii = function (i, s) { for (var k = 0; k < s.length; k++) if (b(i + k) !== s.charCodeAt(k)) return false; return true; };
@@ -69,7 +46,7 @@ function fileBytesMatch_(bytes, mime) {
 function sinkFileAdd_(req) {
   return sinkDogcard_(req, 'files', function (spec, f, who, now) {
     var errors = {}, today = todayLondon_(now);
-    if (!fileMayAdd_(who, today)) throw err_('NOT_ALLOWED', 'Your role is not allowed to add files. The owner can change this.');
+    if (!fileMayAdd_(who, today)) throw err_('NOT_ALLOWED', 'Your role is not allowed to add files. The user can change this.');
     var kind = String(f.kind || '').trim();
     if (FILE_KINDS_.indexOf(kind) < 0) errors.kind = 'Choose photo, file or link.';
     var takenOn = String(f.taken_on || '').trim();
@@ -129,3 +106,4 @@ function sinkFileAdd_(req) {
     return { status: 'saved', id: id, drive_file_id: driveId };
   });
 }
+

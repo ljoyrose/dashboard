@@ -59,27 +59,23 @@ LESSONS = [lesson('L01', 'absent', r'\bZQX-BANNED\b', control='ZQX-BANNED'),
            lesson('L03', 'max_chars', '100000', severity='WARN')]
 
 LEDGER = """# APP-A document (invented)
-### 3.7 Obligations ledger
-| Id | Type | Owner | Due | Status | Obligation | Note |
+| Id | Type | User | Due | Status | Obligation | Note |
 |---|---|---|---|---|---|---|
 | OB-X01 | PROMPT | CLAUDE | each prompt | RULE | A rule every prompt carries. | - |
-| OB-X02 | DATA | OWNER | P1 | OPEN | Data keyed in before P1. | - |
-| OB-X03 | DATA | OWNER | P2 session | WAITING | Data asked for before P2. | - |
+| OB-X02 | DATA | USER | P1 | OPEN | Data keyed in before P1. | - |
+| OB-X03 | DATA | USER | P2 session | WAITING | Data asked for before P2. | - |
 | OB-X04 | PROMPT | CLAUDE | later | OPEN | Not due at any send here. | - |
-## 4.0 Tables
 | Table | Purpose | Role gate |
 |---|---|---|
-| notes | invented notes | owner |
+| notes | invented notes | user |
 | tenants | invented tenants |  |
 """
 SNAGS = """# APP-A snags (invented)
-### 1. Home page (Home.tsx, store.ts)
 | Id | Snag | Fix | Where | Status | Cheap |
 |---|---|---|---|---|---|
 | A1 | **Enter saves twice** | guard the key | Home | open | yes |
 | A2 | Platform limit | none | Home | platform gap | no |
 | A3 | Already folded | x | Home | in P1 | yes |
-### 2. Other page (Other.tsx)
 | B1 | Other file only | x | Other | open | no |
 """
 ROADMAP = """| Id | What | Where |
@@ -162,7 +158,6 @@ class Base(unittest.TestCase):
         return draft
 
 
-# ---------------------------------------------------------------- data folder
 class DataDir(Base):
     def test_unset_exits(self):
         os.environ.pop('PRESEND_DATA', None)
@@ -187,7 +182,6 @@ class DataDir(Base):
         self.assertEqual(PL.DATA, self.d)
 
 
-# ---------------------------------------------------------------- lessons
 class Lessons(Base):
     def test_lessons_file_and_rows(self):
         self.assertIsNone(PL.lessons_file()); self.assertIsNone(PL.lessons())
@@ -290,7 +284,6 @@ class PresendSelftest(Base):
         self.assertEqual(PL.DATA, self.d)
 
 
-# ---------------------------------------------------------------- text-only pre-send checks
 class Ck56(Base):
     def test_no_pattern_file_not_run(self):
         self.assertEqual(PL.ck56(GOOD)[0], 'NOT RUN')
@@ -378,7 +371,6 @@ class OosClash(Base):
         self.assertEqual(PL.oos_clash(t)[0], 'PASS')
 
 
-# ---------------------------------------------------------------- checks that read the data folder
 class FoldIn(Base):
     def test_no_snags_file_not_run(self):
         st, why, out = PL.fold_in(GOOD, {'snags_file': 'data/none.md'}, {})
@@ -571,7 +563,6 @@ class AppRow(Base):
         self.assertIsNone(PL.app_row('A0001'))
 
 
-# ---------------------------------------------------------------- end to end
 class Presend(Base):
     def run_presend(self, draft, **k):
         return quiet(PL.presend, draft, now=NOW, **k)
@@ -659,7 +650,6 @@ class Stamp(Base):
         self.assertFalse(PL.verify(p, None))
 
 
-# ---------------------------------------------------------------- regression bundles
 BUNDLE = """Header text before the first case is ignored.
 
 === case one | expect: L01 FILESCOPE
@@ -711,7 +701,6 @@ class Regression(Base):
         self.assertEqual(bad, 2, out); self.assertIn("FALSE ALARM ['FILESCOPE', 'L01']", out)
 
 
-# ---------------------------------------------------------------- command line
 def run(script, *args, data=None, cwd=None):
     env = {k: v for k, v in os.environ.items() if k != 'PRESEND_DATA'}
     env['PYTHONDONTWRITEBYTECODE'] = '1'
@@ -767,7 +756,6 @@ class Cli(Base):
         self.assertEqual(run(LINT, '--regress', data=self.d).returncode, 1)
 
 
-# ---------------------------------------------------------------- inputs-gate.py
 GOOD_INPUTS = {'checked_at': '2030-01-05T12:00:00Z', 'app_updated_at': '2030-01-04T21:00:00Z',
                'brief_file_mtime': '2030-01-04T20:00:00Z', 'export_zip_at': '2030-01-05T11:00:00Z',
                'custom_instructions_read_at': '2030-01-05T11:05:00Z', 'project_brief_read_at': '2030-01-05T11:05:00Z',
@@ -836,3 +824,4 @@ class InputsGate(Base):
 
 if __name__ == '__main__':
     unittest.main()
+

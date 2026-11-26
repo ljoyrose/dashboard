@@ -1,5 +1,3 @@
-// Stage 4: live, down and SSL. Run: node --test tests/estate/status.test.js
-// Every name is invented (example.com, example.co.uk, .test). Today is pinned so dates never drift.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const S = require('../../estate/status.js');
@@ -165,3 +163,4 @@ test('every word the scanner writes is read back by the page as the same status'
     [{ code: 200, body: '<html>This domain is parked</html>' }, 'parked']];
   for (const [res, want] of cases) assert.equal(Core.statusOf({ live_status: S.classifyResponse(res).live_status }), want, JSON.stringify(res));
 });
+

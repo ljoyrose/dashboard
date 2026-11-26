@@ -1,5 +1,3 @@
-// Stage 11: alerts and suggested open-work rows. Run: node --test tests/estate/alerts.test.js
-// Rows are invented (tests/fixtures/estate/rows.js). Today is pinned so days never drift.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const E = require('../../estate/core.js');
@@ -112,3 +110,4 @@ test('openWorkRows: plain suggested rows, one per key and kind, never written', 
   assert.equal(out[0].priority, 'high');
   assert.equal(out[out.length - 1].priority, 'medium');
 });
+

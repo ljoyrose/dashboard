@@ -1,4 +1,3 @@
-// Each layout prints that many cards on a page, and the printed card keeps the on-screen fields.
 const { test, expect } = require('../support/test');
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
@@ -37,10 +36,10 @@ async function open(page) {
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }], version: 'test' } });
     const b = JSON.parse(route.request().postData());
-    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'OWNER' } } });
+    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'USER' } } });
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'x' } } });
   });
-  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-USER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
 }
 
@@ -53,7 +52,7 @@ async function pdfOf(page) {
   return { pages: pdfPages(buf), text: buf.toString('latin1') };
 }
 
-test('each layout prints that many cards a page, and the fields are on the page @regression', async ({ page }) => {
+test('t-cdhub-print-pages-spec-1', async ({ page }) => {
   await open(page);
   await expect(page.getByRole('button', { name: 'Print', exact: true })).toBeVisible();
   await page.evaluate(() => { window.__printed = 0; window.print = function () { window.__printed += 1; }; });
@@ -88,3 +87,4 @@ test('each layout prints that many cards a page, and the fields are on the page 
     }
   }
 });
+

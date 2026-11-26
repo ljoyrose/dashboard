@@ -1,4 +1,3 @@
-// TidyUp Apps stage 5: the app registry (CFG.tidyApps) and the Bin page's Other apps list. Pretend Drive only.
 const { test, expect } = require('../support/test');
 const fs = require('fs');
 const path = require('path');
@@ -69,3 +68,4 @@ test.describe('Bin page: Other apps', () => {
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 });
+

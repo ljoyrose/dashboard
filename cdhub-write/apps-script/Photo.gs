@@ -1,16 +1,3 @@
-/**
- * Dog photos for the CD Hub cards.
- *
- * The page sends one picture (the signed-in person's staff code, same as The round). This script,
- * running as the account that deployed it, stores the file in the Shared Drive folder named by
- * Script Property DOG_PHOTOS_FOLDER_ID and writes that file's id into the dog's `photo` cell.
- *
- * The subject table is BLD-subject.csv, read the same way as every other table here: a Google Sheet
- * uses its first tab (the tab name is not fixed and is not looked up), a CSV uses the file text.
- * The photo column is found by the header name `photo`, never by a column letter or a fixed position.
- *
- * Nothing here makes the file public. The folder id is never returned to the page.
- */
 
 var SUBJECT_FILE_ = 'BLD-subject.csv';
 var PHOTO_HEADER_ = 'photo';
@@ -24,10 +11,6 @@ function dogPhotoFolder_() {
   catch (e) { throw err_('FOLDER_UNREACHABLE', 'The dog photos folder could not be opened. Check the Shared Drive folder id.'); }
 }
 
-/**
- * Where the photo cell is. Returns {read, idx, col}. Refuses if the header has no `photo` column
- * or the dog id is not on this sheet. Does not write.
- */
 function subjectPhotoSlot_(subjectId) {
   var read = store_read_(SUBJECT_FILE_, true);
   var col = -1, h;
@@ -43,7 +26,6 @@ function subjectPhotoSlot_(subjectId) {
   return { read: read, idx: idx, col: col };
 }
 
-/** Replace only the photo cell of one subject row. Other cells, and every other row, stay as they were. */
 function store_setSubjectPhoto_(slot, fileId) {
   var read = slot.read, idx = slot.idx, col = slot.col, title = SUBJECT_FILE_;
   var row = [], h;
@@ -73,7 +55,7 @@ function sinkDogPhoto_(req) {
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
   var who = authSaver_(req);
-  if (who.role !== 'OWNER' && who.role !== 'STAFF') throw err_('NOT_ALLOWED', 'Your role is not allowed to add a photo.');
+  if (who.role !== 'USER' && who.role !== 'STAFF') throw err_('NOT_ALLOWED', 'Your role is not allowed to add a photo.');
   var cache = CacheService.getScriptCache();
   var cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
@@ -112,3 +94,4 @@ function sinkDogPhotoLocked_(req) {
   }
   return { status: 'saved', subject_id: subjectId, file_id: fileId };
 }
+

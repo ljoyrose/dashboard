@@ -16,14 +16,12 @@
   var PHOTO_ROLES = { main: 1, gallery: 1, evidence: 1 };
   var DOG_TABLES = { subjects: 1, subject: 1 };
 
-  /** The file as a Drive link: the row's url when it is https, else its Drive file id. */
   function fileUrl(f) {
     var u = String(f.url || '').trim(), id = String(f.drive_file_id || '').trim();
     if (/^https:\/\//i.test(u)) return u;
     return /^[A-Za-z0-9_-]{20,}$/.test(id) ? 'https://drive.google.com/file/d/' + id + '/view' : '';
   }
 
-  /** The owner's words for a type: the doc_type row with that code, else the code in plain words. */
   function typeLabel(types, role) {
     var t = (types || []).filter(function (r) { return String(r.code || '').trim() === role; })[0];
     if (t && String(t.label || '').trim()) return String(t.label).trim();
@@ -31,12 +29,11 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
-  /** The dog's documents open on v.today, newest first: {role, label, on, name, url}. */
   function forDog(v, dogId) {
     var files = {};
     (v.files || []).forEach(function (f) { files[f.id] = f; });
     var out = [];
-    var mine = {};                                               // table -> {id: row} of the dog's own records
+    var mine = {};
     function ownRecord(table, id) {
       if (!mine[table]) {
         mine[table] = {};
@@ -64,7 +61,6 @@
     return out.sort(function (a, b) { return (b.on || '').localeCompare(a.on || '') || a.label.localeCompare(b.label); });
   }
 
-  /** The Documents section for the dog card. Each line opens the file in Drive. */
   function html(v, dogId, icon) {
     var esc = v.esc, dmy = v.dmy, docs = forDog(v, dogId);
     var head = docs.length ? '<b>' + docs.length + '</b> document' + (docs.length !== 1 ? 's' : '') : '<span class="mut">no documents</span>';
@@ -80,3 +76,4 @@
 
   return { forDog: forDog, html: html, typeLabel: typeLabel };
 }));
+

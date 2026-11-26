@@ -27,7 +27,6 @@ const ALL = {
     },
   },
 };
-// A few views per page besides the first (every view of 7 hubs is also read by house-look.spec.js).
 const VIEWS = {
   home: ['map', 'drive', 'bin', 'changes'],
   money: ['now', 'money', 'dates', 'accountant'],
@@ -39,7 +38,6 @@ const VIEWS = {
   estate: ['home', 'shops', 'unchecked', 'access'],
 };
 
-// Runs in the page: every visible element that holds words (and svg <text>), with its type.
 function readType({ sizes, weights }) {
   const seen = (e) => { if (!e.getClientRects().length) return false; const s = getComputedStyle(e); if (s.visibility === 'hidden' || +s.opacity === 0) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const icon = (e) => e.closest('.ti, [class^="ti-"], .ico-font, canvas, img, video, svg:not(:has(text))') || (e.closest('svg') && !e.closest('text'));
@@ -58,14 +56,11 @@ function readType({ sizes, weights }) {
     if (!weights.includes(s.fontWeight)) bad.add('weight ' + s.fontWeight + ': ' + name(e));
     if (!/^"?lexend"?$/i.test(s.fontFamily.split(',')[0].trim())) bad.add('font ' + s.fontFamily.split(',')[0] + ': ' + name(e));
   }
-  // Headings are 18px; the hub name in the top bar is 18px.
   for (const h of document.querySelectorAll('h1, h2, h3, h4')) {
     if (!seen(h) || !(h.textContent || '').trim() || h.closest('.sr')) continue;
     const px = parseFloat(getComputedStyle(h).fontSize);
     if (px !== 18) bad.add('heading ' + px + 'px: ' + name(h));
   }
-  // Ringed numbers: a ringed box holding only a number is 14px, one size; 1 and 2 digits the same width; no fill. (Except a
-  // number in a group of 3, which is 18px like the rest of its group.)
   const rgbA = (c) => { const m = /rgba?\(([^)]+)\)/.exec(c); if (!m) return 1; const p = m[1].split(',').map(Number); return p.length > 3 ? p[3] : 1; };
   const rings = [];
   for (const e of document.querySelectorAll('body *')) {
@@ -75,9 +70,9 @@ function readType({ sizes, weights }) {
     let box = e, bs = s;
     const ringed = (x) => x.borderTopStyle !== 'none' && parseFloat(x.borderTopWidth) > 0 && rgbA(x.borderTopColor) > 0.3;
     if (!ringed(bs) && e.parentElement && e.parentElement.children.length === 1 && ringed(getComputedStyle(e.parentElement))) { box = e.parentElement; bs = getComputedStyle(box); }
-    if (!ringed(bs) || box.matches('button, summary, select, a.btn, a.lk, a.pill, a.chip, [role="button"]')) continue; // a button with a number on it is a button
+    if (!ringed(bs) || box.matches('button, summary, select, a.btn, a.lk, a.pill, a.chip, [role="button"]')) continue;
     const r = box.getBoundingClientRect();
-    if (r.width > 80 || r.height > 60) continue; // a card with a number in it, not a ring
+    if (r.width > 80 || r.height > 60) continue;
     const px = parseFloat(s.fontSize);
     // A number in a group of 3 (a hub Main's or a Dashboard tile's numbers) is 18px like its neighbours, ringed or not (the owner, 2 Nov:
     // "sizes in one group must match"); its ring is sized to it, so it is checked here and not with the 14px count rings.
@@ -94,7 +89,6 @@ test.describe('Type: one font, three weights, sizes 14 / 15 / 18 only (the owner
     for (const v of ['--fs-head: 18px', '--fs-figure: 18px', '--fs-body: 15px', '--fs-small: 14px', '--house-min: 14px']) expect(tok, 'tokens.css ' + v).toContain(v);
     for (const f of ['house.css', 'index.html', 'money/index.html', 'marketplace/index.html', 'studio/index.html', 'factory/index.html', 'cdhub/index.html', 'food/index.html', 'estate/index.html', 'toolkit.js']) {
       const t = fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-      // Only icons keep a px size of their own (an icon is not words).
       const px = [...t.matchAll(/([^{};]*)\{[^}]*?font-size:\s*(\d+)px/g)].filter((m) => !/\.ti\b|::?before|::?after|svg|\bi\b|\.ic\b/.test(m[1].split(',').pop())).map((m) => m[1].trim().slice(-40) + ' ' + m[2] + 'px');
       expect(px, f + ': words take their size from the tokens').toEqual([]);
       expect(t, f + ': no other font family').not.toMatch(/font-family:(?!\s*(var\(--house-font\)|inherit))[^;"'}]+/);
@@ -120,14 +114,12 @@ test.describe('Type: one font, three weights, sizes 14 / 15 / 18 only (the owner
           await go(page, v);
           await read(v);
         }
-        // The open More menu (bottom tabs) and the open Look menu (top bar).
         const more = page.locator('nav.house-tabs [data-house-more]').first();
         if (await more.isVisible().catch(() => false)) { await more.click(); await read('More menu'); await page.keyboard.press('Escape'); }
         const look = page.locator('#houseLookBtn');
         if (await look.isVisible().catch(() => false)) { await look.click(); await expect(page.locator('#houseLook')).toBeVisible(); await read('Look menu'); await page.keyboard.press('Escape'); }
         expect(words, 'the check read some words').toBeGreaterThan(20);
         expect(found).toEqual([]);
-        // Ringed numbers: 1 and 2 digits share one box (per kind: tab counts and the rest), at least 24px high so 14px fits.
         for (const kind of [true, false]) {
           const k = rings.filter((r) => r.tab === kind);
           const w = [...new Set(k.map((r) => r.w))], h = [...new Set(k.map((r) => r.h))];
@@ -139,3 +131,4 @@ test.describe('Type: one font, three weights, sizes 14 / 15 / 18 only (the owner
     }
   }
 });
+

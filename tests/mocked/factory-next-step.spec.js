@@ -1,4 +1,3 @@
-// JOB 32 Stage 1: each app card shows its next step and who it waits on, read from af-state.json (invented apps APP-A...).
 const { test, expect } = require('../support/test');
 const { build } = require('../fixtures/factory/state');
 const { add } = require('../fixtures/factory/next');
@@ -24,7 +23,7 @@ test.describe('Factory next step', () => {
   test('an app with no lines: its open decision is the next step', async ({ page, guard }) => {
     await card(page, guard, 'appb00001');
     await expect(page.locator('[data-next="step"]')).toHaveText('Next: Research merit OK?');
-    await expect(page.locator('[data-next="who"]')).toHaveText('Waits on: Lisa');
+    await expect(page.locator('[data-next="who"]')).toHaveText('Waits on: User');
   });
 
   test('nothing recorded: both say "not recorded" in grey words, inside the house read-only pill', async ({ page, guard }) => {
@@ -40,3 +39,4 @@ test.describe('Factory next step', () => {
     expect(st.nr).toBe(muted);
   });
 });
+

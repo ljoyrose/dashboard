@@ -101,3 +101,4 @@ test.describe('CD Hub: Compliance links and findings', () => {
     await expect(p.locator('a[data-dog-link]')).toBeVisible();
   });
 });
+

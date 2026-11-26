@@ -1,6 +1,4 @@
 const { tabClick } = require('../support/tabs');
-// JOB 34 (group A): Drives pages: paging, empty and missing drives, the picker's way back, Drive check downloads.
-// Pretend Google and Drive only. Every row and file is invented.
 const { test, expect } = require('../fixtures/job34/load');
 
 const signIn = async (page) => {
@@ -94,3 +92,4 @@ test.describe('Drives: Drive check download lists', () => {
     expect(body).toBe('path,size\n"sample-only-here.bin",2500\n');
   });
 });
+

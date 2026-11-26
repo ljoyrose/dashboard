@@ -42,7 +42,6 @@ def hit(row,text):
     f=flat(text)
     if k=='absent': return bool(re.search(p,f,re.I))
     if k=='absent_affirmed':
-        # the thing may be forbidden in the prompt ("do not rename...") but never asked for
         g=re.sub(r"\b(do not|don't|never|must not|no)\b[^.;:]*", ' ', f, flags=re.I)
         return bool(re.search(p,g,re.I))
     trig=row['trigger']
@@ -113,8 +112,6 @@ def regress(rows):
         bad+=len(miss)+len(extra)
     print(f'regress: {len(cases)} old prompts, {bad} misses'); return bad
 
-# ---------------------------------------------------------------- pre-send checks
-# CK56 pattern: CHECKS.csv CK56, kept with the data as data/CK56-PATTERN.txt (one line, a regex).
 def ck56_pattern():
     p=os.path.join(DATA,'data','CK56-PATTERN.txt') if DATA else ''
     return open(p,encoding='utf8').read().strip() if os.path.exists(p) else None
@@ -173,7 +170,6 @@ def file_scope(text,app):
         n=NUM.get(rr.group(1).lower(),int(rr.group(1)) if rr.group(1).isdigit() else -1)
         if n!=len(fence_s): msgs.append(f're-read list says {rr.group(1)} files, change list holds {len(fence_s)}')
     elif it: msgs.append('no "Re-read all N changed files" item, so the re-read list cannot be matched')
-    # a control named only by its kind ("Sign out buttons") reaches every file that holds one, unless the prompt pins it down
     work=' '.join(it)
     for fam in sorted({c[3] for c in controls(app) if c[3]}):
         pinned=re.search(r'Do not (edit|change|touch) any other[^.]*('+fam+')',work,re.I)
@@ -367,10 +363,10 @@ END OF PROMPT
 """
 CONTROL_APP={'ui_controls':'Log out@Header.tsx@the header@sign[- ]?out|log[- ]?out;Sign out@Home.tsx@the Home page@sign[- ]?out|log[- ]?out'}
 CONTROL_LEDGER="""### 3.7 Obligations ledger
-| Id | Type | Owner | Due | Status | Obligation | Note |
+| Id | Type | User | Due | Status | Obligation | Note |
 |---|---|---|---|---|---|---|
 | OB-X01 | PROMPT | CLAUDE | each prompt | RULE | A rule every prompt carries. | - |
-| OB-X02 | DATA | OWNER | P1 | OPEN | Data keyed in before P1. | - |
+| OB-X02 | DATA | USER | P1 | OPEN | Data keyed in before P1. | - |
 """
 def presend_selftest():
     """Controls for the pre-send checks, on invented text only: each must fire on a broken copy and stay quiet on the good one."""
@@ -417,3 +413,4 @@ if __name__=='__main__':
         opt=dict(zip(a[2::2],a[3::2])); now=ts(opt.get('--now'))
         sys.exit(0 if presend(a[1],opt.get('--meta'),opt.get('--app'),now)[0] else 1)
     sys.exit(1 if report(open(a[0],encoding='utf8').read(),rows,os.path.basename(a[0])) else 0)
+

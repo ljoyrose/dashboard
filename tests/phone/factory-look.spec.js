@@ -1,5 +1,3 @@
-// Factory on a phone (390 x 844): every view, no sideways scroll, 44px press targets, bottom tabs on screen with their
-// counts in flow beside the label (never over it), counts still the fixed 30 x 24 box (14px number). Pretend Google and Drive; invented data.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -77,10 +75,10 @@ test('Factory phone: Rooms opens with one calm row, the first room card within 2
   await expect(page.locator('.srow [data-action="factory"]')).toContainText(/Factory (on|off)/);
   await expect(page.locator('details.fdet')).not.toHaveAttribute('open', '');
   await expect(page.locator('[data-fx="app"]').first()).toBeHidden();
-  // Filter opens the chips, and the count on it says how many are on.
   await page.locator('#filterSum').click();
   await expect(page.locator('[data-fx="app"]').first()).toBeVisible();
   await page.locator('[data-fx="app"][data-val="links"]').click();
   await expect(page.locator('#nFilters')).toHaveText('1');
   await expect(page.locator('details.fdet')).toHaveAttribute('open', ''); // stays open after a redraw
 });
+

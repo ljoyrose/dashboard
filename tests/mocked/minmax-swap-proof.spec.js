@@ -20,7 +20,6 @@ function shotDir() {
 
 async function captureRound(page, mn, mx, msg, file) {
   await msg.evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'nearest' }));
-  // Keep the row clear of the sticky house footer so the warning is visible in the shot.
   await page.evaluate(() => {
     const foot = document.querySelector('.house-dock, footer, .next, #next');
     const h = foot ? foot.getBoundingClientRect().height : 80;
@@ -99,3 +98,4 @@ test.describe('Proof: min 22.0 and max 18.0 are the wrong way round', () => {
     fs.writeFileSync(path.join(dir, 'round-max-first-posts.json'), JSON.stringify(sent, null, 2));
   });
 });
+

@@ -1,5 +1,4 @@
 'use strict';
-// Visits part A (V9, 13 Nov 2026): visit types and visitor cards. Invented rows only.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const crypto = require('node:crypto');
@@ -19,14 +18,14 @@ function env(props, tagHeader) {
 }
 function post(e, action, fields, code) {
   n += 1;
-  const body = { v: 1, request_id: 'req-visit-' + String(n).padStart(4, '0'), code: code || e.codes.owner, action, fields };
+  const body = { v: 1, request_id: 'req-visit-' + String(n).padStart(4, '0'), code: code || e.codes.user, action, fields };
   return JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify(body) } }).getContent());
 }
 const rows = (e, f) => e.file(f)[0].content.trim().split(/\r?\n/).slice(1);
 const INSPECTOR = { type_key: 'inspector', name: 'Inspector', role_code: 'INSPECTOR', default_hours: '8', max_hours: '72',
   rights: 'view|review', lists: 'subject|microchip', fields: 'subject.name|microchip.chip_number:last4', record_jobs: '', record_counts: '' };
 
-test('grant_type_save: owner code only, behind TABLE_ON_visit; one row by header name', () => {
+test('grant_type_save: user code only, behind TABLE_ON_visit; one row by header name', () => {
   const off = env({ TABLE_ON_visit: '' });
   assert.equal(post(off, 'grant_type_save', INSPECTOR).code, 'TABLE_OFF');
   const e = env();
@@ -96,7 +95,6 @@ test('card_add: a fixed visit type needs the fixed_type_id column and a real typ
   assert.match(rows(e2, 'BLD-qr_tag.csv')[0], new RegExp(',Vet card,true,[^,]*,[^,]*,' + t + '$'));
 });
 
-// ---- Part B: grant_give / grant_end / grant_extend (London clock in tests: 15/10/26 23:30 BST)
 const LINK_H = 'id,tenant_id,code_id,label,ends,created_at,set_by,from_at,to_at,supersedes_id,grant_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,as_of_from,as_of_to,purpose_text,grant_basis,identity_assurance,id_checked_by,accompanied_by,retention_until,email_code,ended_at,ended_by,end_reason,tz,issued_by,delegation_id,updated_at';
 function benv(props, linkHeader) {
   const e = env(props, TAG_H + ',fixed_type_id');
@@ -136,7 +134,7 @@ test('grant_give (link): rows, code once, window from hours, capped by the type;
   assert.equal(L.ended_at, '');
   assert.deepEqual(rowsOf(e, 'BLD-grant_scope.csv', L.id).map((x) => [x.scope_item_type, x.disclosure_state]), [['subject', 'record']]);
   assert.deepEqual(rowsOf(e, 'BLD-grant_right_link.csv', L.id).map((x) => x.right_code), ['view', 'raise_finding']);
-  assert.equal(give(e, { grant_type_id: t, purpose_text: '' }).code, 'INVALID');   // a grant with no purpose is unreviewable
+  assert.equal(give(e, { grant_type_id: t, purpose_text: '' }).code, 'INVALID');
   assert.equal(give(e, { grant_type_id: t, hours: '100' }).code, 'INVALID');   // the type's max is 72
   const s = e.ctx.sinkRead_({ v: 1, action: 'read', code: r.result.code, table: 'subject' });
   assert.deepEqual(Array.from(s.fields), ['id', 'name', 'chip_number']);
@@ -211,15 +209,14 @@ test('grant_extend: moves the end on the row and the code; capped by the type; n
   assert.equal(x.ok, true, JSON.stringify(x));
   assert.equal(x.result.to_at, '2026-10-16T03:30:00Z');
   assert.equal(current(e, id).to_at, '2026-10-16T03:30:00Z');
-  assert.equal(links(e)[0].to_at, '2026-10-16T01:30:00Z');   // the first row keeps what was first granted
-  e.nowMs += 4 * 3600000;   // after the first end, before the new one
+  assert.equal(links(e)[0].to_at, '2026-10-16T01:30:00Z');
+  e.nowMs += 4 * 3600000;
   assert.equal(e.ctx.sinkRead_({ v: 1, action: 'read', code: r.result.code, table: 'subject' }).rows.length, 1);
   assert.equal(post(e, 'grant_extend', { grant_id: id, hours: '100', reason: 'x' }).code, 'INVALID');
   post(e, 'grant_end', { grant_id: id, reason: 'Done' });
   assert.equal(post(e, 'grant_extend', { grant_id: id, hours: '1', reason: 'x' }).code, 'ALREADY_ENDED');
 });
 
-// ---- Part C: grant_open and reads with a card tag
 const open = (e, f) => JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify(Object.assign({ v: 1, action: 'grant_open' }, f)) } }).getContent());
 const cardRead = (e, t, table) => JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify({ v: 1, action: 'read', t, table }) } }).getContent());
 
@@ -276,7 +273,7 @@ function denv() {
   return e;
 }
 const act = (e, action, cred, fields) => { n += 1; return JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify(Object.assign({ v: 1, request_id: 'req-visitor-' + String(n).padStart(4, '0'), action, fields }, cred)) } }).getContent()); };
-const addJob = (e, key) => { const r = hsave(e, hreq(e, { code: e.codes.owner, table: 'check_type', fields: { type_key: key, label: key, target: 'dog', effective_from: '2026-01-01' } })); assert.equal(r.ok, true, JSON.stringify(r)); return r.result.id; };
+const addJob = (e, key) => { const r = hsave(e, hreq(e, { code: e.codes.user, table: 'check_type', fields: { type_key: key, label: key, target: 'dog', effective_from: '2026-01-01' } })); assert.equal(r.ok, true, JSON.stringify(r)); return r.result.id; };
 
 test('grant_review: only with the review right, only while live, a review word on one of its lists; target must be its dog', () => {
   const e = denv();
@@ -329,17 +326,16 @@ test('grant_record: only jobs on the visit; through the normal check path; taken
   assert.equal(act(e, 'grant_record', { code: noRight.result.code }, { check_type_id: water, outcome: 'ok' }).code, 'NOT_ALLOWED');
 });
 
-// ---- // ---- Delegated admin (Delegate.gs): give_visit conferred by the owner, never implied by a role
 const DELEG_H = 'id,tenant_id,power,holder_person_id,holder_code_id,holder_sign_in_id,parent_id,depth_left,from_date,to_date,grant_type_ids,max_hours,rights,lists,fields,area_ids,subject_ids,end_others,extend_others,ended_at,ended_by,end_reason,end_issued,set_by,set_on,source,notes,created_at,updated_at';
 function genv() {
   const e = benv();
   e.addFile('BLD-delegation.csv', DELEG_H + '\r\n');
-  e.second = e.ctx.sinkIssueCode_('Sue Second', 'STAFF', 'owner@example.test');   // invented person
+  e.second = e.ctx.sinkIssueCode_('Sue Second', 'STAFF', 'user@example.test');   // invented person
   return e;
 }
 const delegRows = (e) => e.ctx.store_read_('BLD-delegation.csv', true).records;
 
-test('delegation: a staff code cannot give a visit until the owner confers give_visit; then only within its limits', () => {
+test('delegation: a staff code cannot give a visit until the user confers give_visit; then only within its limits', () => {
   const e = genv();
   const t = typeId(e), vet = typeId(e, { type_key: 'vet', name: 'Vet' });
   const asStaff = (over) => post(e, 'grant_give', Object.assign({ grant_type_id: t, person_name: 'Pat Example', rights: ['view'], fields: ['subject.name'], subject_ids: ['sub-test-a'], hours: '2', purpose_text: 'Contractor visit' }, over), e.codes.staff);
@@ -356,10 +352,10 @@ test('delegation: a staff code cannot give a visit until the owner confers give_
   assert.equal(asStaff({ hours: '5' }).code, 'INVALID');
   assert.equal(asStaff({ rights: ['view', 'review'] }).code, 'INVALID');
   assert.equal(asStaff({ fields: ['subject.sex'] }).code, 'INVALID');
-  assert.equal(asStaff({ fields: ['subject.chip_number:last4'] }).ok, true);   // the full column allows its last 4
+  assert.equal(asStaff({ fields: ['subject.chip_number:last4'] }).ok, true);
   assert.equal(asStaff({ subject_ids: ['sub-test-b'] }).code, 'INVALID');
   const all = asStaff({ subject_ids: [] });
-  assert.equal(all.result.dogs, 1);   // "all dogs" = all the dogs they may give
+  assert.equal(all.result.dogs, 1);
 });
 
 test('delegation: passing on is never wider or deeper; ending a row ends those below it and, if asked, their visits', () => {
@@ -373,14 +369,12 @@ test('delegation: passing on is never wider or deeper; ending a row ends those b
   const child = post(e, 'delegation_give', { power: 'give_visit', holder_code_id: sueId, parent_id: top, rights: 'view' }, e.codes.staff);
   assert.equal(child.ok, true, JSON.stringify(child));
   const c = delegRows(e).filter((r) => r.id === child.result.id)[0];
-  assert.equal(c.max_hours, '8');            // blank = no wider than the parent, written out
+  assert.equal(c.max_hours, '8');
   assert.equal(c.set_by, e.ids.staff);
-  // Sue cannot pass it on (depth 0), and cannot end her own row
   assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.ids.staff, parent_id: child.result.id }, e.second.code).code, 'NOT_ALLOWED');
   assert.equal(post(e, 'delegation_end', { id: child.result.id, reason: 'x' }, e.second.code).code, 'NOT_ALLOWED');
   const v = post(e, 'grant_give', { grant_type_id: t, person_name: 'Pat Example', rights: ['view'], fields: ['subject.name'], hours: '2', purpose_text: 'Contractor visit' }, e.second.code);
   assert.equal(v.ok, true, JSON.stringify(v));
-  // Sam (who gave Sue hers) cannot end Sue's visit without end_others
   assert.equal(post(e, 'grant_end', { grant_id: v.result.grant_id, reason: 'x' }, e.codes.staff).code, 'NOT_ALLOWED');
   const end = post(e, 'delegation_end', { id: top, reason: 'Role changed', end_issued: 'end' });
   assert.equal(end.ok, true, JSON.stringify(end));
@@ -406,3 +400,4 @@ test('delegation: from_date / to_date are whole London days; a visit given under
   e.nowMs = Date.parse('2026-10-17T09:00:00+01:00');
   assert.equal(asStaff('1').code, 'NOT_ALLOWED');   // the permission has ended
 });
+

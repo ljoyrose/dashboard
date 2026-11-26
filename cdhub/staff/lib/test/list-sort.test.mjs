@@ -51,3 +51,4 @@ test('as on file, an unknown id or a missing getter leaves the order alone and c
   assert.equal(S.sort(ROWS, 'due', {}).map((r) => r.n).join(''), 'bAcd');
   assert.notEqual(S.sort(ROWS, '', GET), ROWS);
 });
+

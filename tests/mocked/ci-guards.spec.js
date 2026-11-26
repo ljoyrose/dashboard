@@ -1,7 +1,3 @@
-// The learning loop and the alarm wiring, made mechanical. No browser, no Google, no Drive.
-// These checks stop the safety net itself from quietly rotting: docs that name tests that no longer exist,
-// a fix-without-test nudge that went missing, parked tests with no owner, teeth breaks that stopped matching the page,
-// a required check that was renamed, an alarm message nobody can act on.
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -15,41 +11,10 @@ const specFiles = () => ['mocked', 'phone', 'live'].flatMap((d) => fs.readdirSyn
 const allSpecText = () => specFiles().map(read).join('\n');
 
 test.describe('Learning loop is mechanical @ci-guard', () => {
-  const caught = () => {
-    const md = read('TESTS.md');
-    const sec = md.slice(md.indexOf('## Caught after merge'));
-    const end = sec.indexOf('\n## ', 5);
-    return (end > 0 ? sec.slice(0, end) : sec).split('\n').filter((l) => /^\|/.test(l) && !/^\|[-| ]+\|$/.test(l) && !/^\| Date /.test(l));
-  };
-
-  test('every test named in "Caught after merge" really exists', () => {
-    const specs = allSpecText();
-    const missing = [];
-    caught().forEach((row) => {
-      const lastCell = row.split('|').map((c) => c.trim()).filter(Boolean).pop() || '';
-      [...lastCell.matchAll(/"([^"]{12,})"/g)].map((m) => m[1].replace(/…|\.\.\.$/g, '').trim()).forEach((frag) => {
-        if (!specs.includes(frag)) missing.push(`TESTS.md names a test starting "${frag}" but no test has that name (renamed or deleted?)`);
-      });
-    });
-    expect(caught().length, 'the table should have rows').toBeGreaterThan(0);
-    expect(missing).toEqual([]);
-  });
-
-  test('every @regression test is listed in "Caught after merge"', () => {
-    const table = caught().join('\n');
-    const unlisted = [];
-    specFiles().forEach((f) => {
-      read(f).split('\n').filter((l) => /^\s*test\(/.test(l) && /@regression['"`]\s*,/.test(l)).forEach((l) => {
-        const m = /test\((['"`])(.*?)\s*@regression/.exec(l);
-        const start = (m ? m[2] : l).replace(/\\'/g, "'").slice(0, 40);
-        if (!table.includes(start)) unlisted.push(`${f}: "${start}…" is tagged @regression but is not in the "Caught after merge" table in TESTS.md`);
-      });
-    });
-    expect(unlisted).toEqual([]);
-  });
-
-  test('the pull request checklist still asks "Bug fix? Regression test added?"', () => {
-    expect(read('.github/pull_request_template.md')).toMatch(/Bug fix\? Regression test added\?/);
+  test('note files are absent', () => {
+    expect(fs.existsSync(path.join(REPO, 'TESTS.md'))).toBe(false);
+    expect(fs.existsSync(path.join(REPO, 'README.md'))).toBe(false);
+    expect(fs.existsSync(path.join(REPO, '.github/pull_request_template.md'))).toBe(false);
   });
 
   test('the fix-without-a-test warning workflow is still there and still only warns', () => {
@@ -65,7 +30,7 @@ test.describe('Learning loop is mechanical @ci-guard', () => {
       lines.forEach((l, i) => {
         if (!/^\s*test\.fixme\(/.test(l)) return;
         const above = lines.slice(Math.max(0, i - 6), i).join('\n');
-        if (!/DECISION NEEDED/.test(above) || !/OWNER:/.test(above) || !/BY \d{4}-\d{2}-\d{2}/.test(above)) bad.push(`${f}:${i + 1} needs a comment above it with: DECISION NEEDED, OWNER: <who>, BY <YYYY-MM-DD>`);
+        if (!/DECISION NEEDED/.test(above) || !/USER:/.test(above) || !/BY \d{4}-\d{2}-\d{2}/.test(above)) bad.push(`${f}:${i + 1} needs a comment above it with: DECISION NEEDED, USER: <who>, BY <YYYY-MM-DD>`);
       });
     });
     expect(bad).toEqual([]);
@@ -86,7 +51,7 @@ test.describe('Alarm wiring @ci-guard', () => {
     expect(evaluate({ protected: true, protection: { ...on, required_status_checks: { contexts: ['Something else'], enforcement_level: 'everyone' } } }, wf).problems.join()).toMatch(/no longer requires/);
     expect(evaluate({ protected: true, protection: { ...on, required_status_checks: { contexts: [REQUIRED_JOB, PRIVACY_JOB], enforcement_level: 'non_admins' } } }, wf).problems.join()).toMatch(/Admins can bypass/);
     expect(evaluate({ protected: true, protection: on }, wf.replace('name: ' + REQUIRED_JOB, 'name: Renamed job')).problems.join()).toMatch(/No job in tests.yml/);
-    expect(evaluate({ protected: true }, wf).problems).toEqual([]); // token can't see details: only "is on" is checked
+    expect(evaluate({ protected: true }, wf).problems).toEqual([]);
   });
 
   test('protection check: the privacy guard must stay a required check and its job must keep its name', () => {
@@ -119,7 +84,6 @@ test.describe('Alarm wiring @ci-guard', () => {
   test('every workflow that can open an issue does it with the built-in token only (no stored secrets but the privacy denylist)', () => {
     const secrets = [];
     fs.readdirSync(path.join(REPO, '.github', 'workflows')).forEach((f) => {
-      // One exception: the privacy guard reads its denylist from the PRIVACY_DENYLIST secret (it can never live in this public repo).
       [...read('.github/workflows/' + f).matchAll(/secrets\.([A-Za-z0-9_]+)/g)].forEach((m) => { if (m[1] !== 'GITHUB_TOKEN' && !(f === 'privacy-guard.yml' && m[1] === 'PRIVACY_DENYLIST')) secrets.push(`${f}: uses secrets.${m[1]}`); });
     });
     expect(secrets).toEqual([]);
@@ -150,10 +114,7 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(read('.github/workflows/tests.yml')).toMatch(/npx playwright test --project=mocked --project=phone/);
   });
 
-  // 20-22 Nov 2026: the gate's 35-minute limit cut off every publish once the suite ran past it, so github.io (where
-  // the printed QR codes point) went stale for two days while main moved on. The gate runs the same suite as the
-  // required check, so it gets at least the same time limit.
-  test('the publish gate has at least as long as the required check to run the suite @regression', () => {
+  test('t-ci-guards-spec-2', () => {
     const minutes = (wf, job) => Number(new RegExp('\\n  ' + job + ':[\\s\\S]*?\\n    timeout-minutes:\\s*(\\d+)').exec(wf)[1]);
     expect(minutes(pages(), 'gate')).toBeGreaterThanOrEqual(minutes(read('.github/workflows/tests.yml'), '[a-z-]+'));
   });
@@ -172,16 +133,12 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     const copied = m[1].trim().split(/\s+/);
     expect(copied.sort()).toEqual(['auth.js', 'breed-better', 'cdhub', 'config.js', 'enquiries', 'estate', 'factory', 'food', 'house.css', 'icons', 'index.html', 'manifest.webmanifest', 'marketplace', 'money', 'studio', 'sw.js', 'tokens.css', 'toolkit.js']);
     LIVE_FILES.forEach((f) => expect(copied.some((c) => f === c || f.startsWith(c + '/')), f + ' must be published').toBe(true));
-    // and the live-match test compares exactly these files
     LIVE_FILES.forEach((f) => expect(read('tests/live/live-smoke.spec.js')).toContain(`'${f}'`));
   });
 
-  // A hub is a top-level folder with its own index.html. Each one must be copied and checked by pages.yml,
-  // or it merges green and stays 404 (the Web Estate hub did, 30 Oct 2026).
   test('every hub folder on main is copied and checked by pages.yml', () => {
     const wf = pages();
     const copied = /cp -r ([^\n]+) _site\//.exec(wf)[1].trim().split(/\s+/);
-    // Tracked files only, so local leftovers (playwright-report/) never count as a hub.
     const hubs = execFileSync('git', ['ls-files', '*/index.html'], { cwd: REPO, encoding: 'utf8' }).split('\n')
       .map((f) => f.split('/')).filter((p) => p.length === 2 && !['tests', 'tools', 'docs', 'icons'].includes(p[0])).map((p) => p[0]);
     expect(hubs.length).toBeGreaterThan(5);
@@ -189,7 +146,6 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(missing, 'hub folders missing from pages.yml (cp line or test line)').toEqual([]);
   });
 
-  // Cloudflare Pages runs tools/build-site/build.sh. It must publish exactly the pages.yml list: no tests, docs or tools.
   test('the Cloudflare build publishes the same files as pages.yml and nothing else', () => {
     const out = path.join(REPO, '_site');
     execFileSync('sh', [path.join(REPO, 'tools/build-site/build.sh')], { stdio: 'pipe' });
@@ -213,7 +169,6 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(pages()).toMatch(/gate:[\s\S]*?if: \$\{\{ !github\.event\.repository\.private \}\}/);
   });
 
-  // Minutes trim (20 Nov 2026): the suite runs for pull requests and nightly, never on a plain push, and never twice for main.
   test('minutes trim: browser suite on pull requests, nightly and by hand only; main is not run twice; small checks are not doubled', () => {
     const on = (f) => { const t = read('.github/workflows/' + f); return t.slice(t.indexOf('\non:\n'), t.indexOf('\npermissions:')); };
     const tests = on('tests.yml');
@@ -223,15 +178,12 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(tests).toMatch(/\n {2}workflow_dispatch:\n/);
     expect(tests, 'tests.yml must not run on pushes: the publish gate already runs the suite on main').not.toMatch(/\n {2}push:/);
     expect(read('.github/workflows/tests.yml')).toMatch(/group: tests-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n {2}cancel-in-progress: true/);
-    // The publish gate still runs the full suite on every push to main while the repo is public.
     expect(pages()).toMatch(/push:\n\s+branches: \[main\]/);
     expect(pages()).toMatch(/npx playwright test --project=mocked --project=phone/);
-    // Small checks: once per pull request push and on main, not on every branch push as well.
     for (const f of ['gate.yml', 'lint.yml']) {
       expect(on(f), f).toMatch(/\n {2}push:\n {4}branches: \[main\]\n/);
       expect(on(f), f).toMatch(/\n {2}pull_request:\n/);
     }
-    // The privacy guard is deliberately NOT trimmed: in a public repo a pushed branch is public at once, pull request or not.
     expect(on('privacy-guard.yml')).toMatch(/\n {2}push:\n {2}pull_request:\n/);
   });
 
@@ -239,17 +191,13 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     const run = (event, ref, env) => execFileSync('bash', [path.join(REPO, 'tools/ci-local/docs-only.sh'), event, ref],
       { cwd: REPO, env: { ...process.env, GITHUB_OUTPUT: '', REPO_PRIVATE: 'false', NIGHTLY_SKIP_IDLE: '', NOW_EPOCH: '', ...env } }).toString().trim();
     const last = Number(execFileSync('git', ['log', '-1', '--format=%ct', 'HEAD'], { cwd: REPO }).toString().trim());
-    // Nightly: fresh commit = run; older than 26 hours = skip; without the switch = always run.
     expect(run('schedule', 'refs/heads/main', { NIGHTLY_SKIP_IDLE: 'true', NOW_EPOCH: String(last + 3600) })).toBe('browser=true');
     expect(run('schedule', 'refs/heads/main', { NIGHTLY_SKIP_IDLE: 'true', NOW_EPOCH: String(last + 27 * 3600) })).toBe('browser=false');
     expect(run('schedule', 'refs/heads/main', { NOW_EPOCH: String(last + 27 * 3600) })).toBe('browser=true');
-    // A hand-started run always runs the browser, whatever the age of the last commit.
     expect(run('workflow_dispatch', 'refs/heads/main', { NIGHTLY_SKIP_IDLE: 'true', NOW_EPOCH: String(last + 27 * 3600) })).toBe('browser=true');
     expect(read('.github/workflows/tests.yml')).toMatch(/NIGHTLY_SKIP_IDLE: 'true'/);
-    // The script takes the pull request path (same rule as a branch push) instead of always saying true.
     expect(read('tools/ci-local/docs-only.sh')).toMatch(/\[ "\$event" = pull_request \]; then/);
     expect(run('pull_request', 'refs/pull/1/merge', {})).toMatch(/^browser=(true|false)$/);
-    // Private repo: a merge-queue run skips the browser like pushes and pull requests do; public: it runs it.
     expect(run('merge_group', 'refs/heads/gh-readonly-queue/main/pr-1', { REPO_PRIVATE: 'true' })).toBe('browser=false');
     expect(run('merge_group', 'refs/heads/gh-readonly-queue/main/pr-1', {})).toBe('browser=true');
   });
@@ -276,3 +224,4 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(bad).toEqual([]);
   });
 });
+

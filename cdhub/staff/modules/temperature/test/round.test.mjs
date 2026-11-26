@@ -37,7 +37,7 @@ test('no thermometer rows yet: every room in use that day is listed', () => {
   assert.deepEqual(roundAreas(areas, [], '2026-11-11', NEED).map((x) => x.id), ['a1', 'a2', 'ac', 'f1', 'old']);
 });
 
-test('Lisa 11 Nov: the old thermometer is due up to and including 11 Nov, the new one from 12 Nov', () => {
+test('User 11 Nov: the old thermometer is due up to and including 11 Nov, the new one from 12 Nov', () => {
   const rows = [{ id: 't-old', name: '3A.2/3', area_id: 'old' }, { id: 't-new', name: '3A.1/2', area_id: 'a1' }];
   assert.deepEqual(roundAreas(areas, rows, '2026-11-11', NEED).map((x) => x.id), ['old']);
   assert.deepEqual(roundAreas(areas, rows, '2026-11-12', NEED).map((x) => x.id), ['a1']);
@@ -53,3 +53,4 @@ test('only places with a thermometer are on the round, in room order; two thermo
   assert.deepEqual(r.map((x) => x.label), ['3A.1/2 · T1', '3A.1/2 · T1 spare', '3A corridor']);
   assert.deepEqual(r.map((x) => x.thermometerId), ['t1', 't1b', 't3']);
 });
+

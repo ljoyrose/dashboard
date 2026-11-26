@@ -1,4 +1,3 @@
-// Factory checklist score + Factory docs strip (engine v2.5l, 21 Oct 2026). Pretend Google and Drive only; invented data.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -73,3 +72,4 @@ test.describe('Factory tab counts', () => {
     expect(st.col).toBe(st.ink);
   });
 });
+

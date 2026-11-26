@@ -45,13 +45,6 @@ function gone(row) {
   return kind === 'sold' || kind === 'owned_by_family' || kind === 'deceased' || cls === 'collected' || cls === 'deceased';
 }
 
-/**
- * @param {Array<Object>} register  [{dog_id, room_code}]
- * @param {Array<Object>} occupancy existing occupancy records
- * @param {Array<Object>} areas     area records (id, code)
- * @param {{tenant:string, date:string}} opts
- * @return {{rows:Array<Object>, report:Object, details:Array<{dog_id,result,note}>}}
- */
 function backfill(register, occupancy, areas, opts) {
   if (!opts || !/^ten-[A-Za-z0-9_.\-]+$/.test(opts.tenant || '')) throw new Error('--tenant is needed (e.g. ten-xxxx).');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(opts.date || '') || isNaN(Date.parse(opts.date))) throw new Error('--date must be a real date as YYYY-MM-DD.');
@@ -60,7 +53,6 @@ function backfill(register, occupancy, areas, opts) {
   const used = {};
   (occupancy || []).forEach((r) => { used[r.id] = true; });
 
-  // group the register by dog so a dog listed twice can be judged as a whole
   const wanted = {}, order = [];
   (register || []).forEach((r) => {
     const dog = String(r.dog_id || '').trim(), room = String(r.room_code || '').trim();
@@ -141,3 +133,4 @@ if (require.main === module) {
 }
 
 module.exports = { backfill, toCsv, main, HEADER };
+

@@ -1,17 +1,4 @@
 'use strict';
-/**
- * Practice run, one switch at a time (15 Nov 2026, "get all saving on"). Node harness only: a fake Drive, invented
- * rows and the harness's own invented codes. Nothing here touches the live script, sheet or properties.
- *
- * For every write path in the save inventory (tools/save-inventory.js), in a fresh environment with ONLY that path's
- * switch on:
- *   (a) one valid invented save lands, and only in the files that path is meant to write;
- *   (b) every other file is byte-for-byte unchanged (content checksums before/after);
- *   (c) a staff read of the written list with no field_visibility rows returns nothing;
- *   (d) a wrong code and a missing code are refused and nothing is written.
- * Also: the side-effect-free status (?status=1), adminCountQueued (no writes), the staff table staying refused, and
- * finding R2 (a queued occupancy_out row waits for the owner; fixed in PR 607).
- */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
@@ -21,7 +8,7 @@ const { standardEnv } = require('./harness');
 const fx = require('./fixtures');
 const inventory = require('../tools/save-inventory');
 
-const NOW = Date.UTC(2026, 10, 14, 10, 0, 0);   // 14 Nov 2026 10:00 London
+const NOW = Date.UTC(2026, 10, 14, 10, 0, 0);
 const T = fx.TENANT;
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 const PEND = 'BLD-_pending.csv';
@@ -40,7 +27,6 @@ const H = {
   code_register: 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by'
 };
 
-// ---------------------------------------------------------------- helpers
 function put(env, title, text) {
   const f = env.file(title);
   if (f.length) { f[0].content = text; f[0].sheet = undefined; } else env.addFile(title, text);
@@ -50,7 +36,6 @@ const header = (env, key) => put(env, env.ctx.TABLES[key].file, fx.headerOnly(en
 const rules = (env, rows) => put(env, 'BLD-breeding_rule.csv', lines(RULE_H, rows));
 const typeRow = `ct-1,${T},bowls,Bowls,area,false,,false,,,false,true,,true,2026-01-01,test,,,,,,,,none,,,,`;
 
-/** A fresh environment: saving on, every TABLE_ON_ switch off except `on`. */
 function fresh(on, props) {
   const p = Object.assign({ TABLE_ON_area_reading: '' }, props || {});
   (on || []).forEach((k) => { p['TABLE_ON_' + k] = 'true'; });
@@ -76,34 +61,30 @@ function post(env, body) {
 }
 const switchesOn = (env) => Object.keys(env.props).filter((k) => /^TABLE_ON_/.test(k) && env.props[k] === 'true').sort();
 
-// ---------------------------------------------------------------- one case per write path
-// id: the inventory row; on: switch keys turned on; body(env): the one valid save; writes: the files it may change;
-// role: 'staff' | 'owner' | 'guest'; read: READABLE key for check (c) (missing = the list cannot be read at all).
 const CASES = [
   { id: 'area_reading', on: ['area_reading'], role: 'staff', writes: ['BLD-area_reading.csv'], read: 'area_reading',
     body: () => ({ table: 'area_reading', action: 'add', fields: { area_id: 'area-t1', min_c: '19.5', max_c: '22.0' } }) },
   { id: 'guest_reading', on: ['guest_reading'], role: 'guest', writes: ['BLD-guest_reading.csv'], read: 'guest_reading',
     seed: (env) => put(env, 'BLD-guest_reading.csv', lines(H.guest_reading)),
     body: () => ({ table: 'guest_reading', action: 'add', fields: { area_id: 'area-t1', min_c: '19.5', max_c: '22.0' } }) },
-  { id: 'sensor_reading', on: ['sensor_reading'], role: 'owner', writes: ['BLD-sensor_reading.csv'], read: 'sensor_reading',
+  { id: 'sensor_reading', on: ['sensor_reading'], role: 'user', writes: ['BLD-sensor_reading.csv'], read: 'sensor_reading',
     seed: (env) => header(env, 'sensor_reading'),
     body: () => ({ table: 'sensor_reading', action: 'add', fields: { area_id: 'area-t1', day: '2026-11-13', min_c: '18.0', max_c: '23.0', samples: '96', source: 'invented sensor' } }) },
-  { id: 'thermometer', on: ['thermometer'], role: 'owner', writes: ['BLD-thermometer.csv'], read: 'thermometer',
+  { id: 'thermometer', on: ['thermometer'], role: 'user', writes: ['BLD-thermometer.csv'], read: 'thermometer',
     seed: (env) => header(env, 'thermometer'),
     body: () => ({ table: 'thermometer', action: 'add', fields: { name: 'Thermo 1', area_id: 'area-t1' } }) },
-  { id: 'requirement', on: ['requirement'], role: 'owner', writes: ['BLD-requirement.csv'], read: 'requirement',
+  { id: 'requirement', on: ['requirement'], role: 'user', writes: ['BLD-requirement.csv'], read: 'requirement',
     seed: (env) => header(env, 'requirement'),
     body: () => ({ table: 'requirement', action: 'add', fields: { need_type: 'temperature_log', target_table: 'area', target_id: 'area-t1', from_date: '2026-11-01' } }) },
-  { id: 'area_link', on: ['area_link'], role: 'owner', writes: ['BLD-area_link.csv'], read: 'area_link',
+  { id: 'area_link', on: ['area_link'], role: 'user', writes: ['BLD-area_link.csv'], read: 'area_link',
     seed: (env) => header(env, 'area_link'),
     body: () => ({ table: 'area_link', action: 'add', fields: { from_area_id: 'area-t1', to_area_id: 'area-t2', from_date: '2026-11-01' } }) },
-  { id: 'check_type', on: ['check_type'], role: 'owner', writes: ['BLD-check_type.csv'], read: 'check_type',
+  { id: 'check_type', on: ['check_type'], role: 'user', writes: ['BLD-check_type.csv'], read: 'check_type',
     seed: (env) => put(env, 'BLD-check_type.csv', lines(H.check_type)),
     body: () => ({ table: 'check_type', action: 'add', fields: { type_key: 'bowls', label: 'Bowls', target: 'area', effective_from: '2026-11-01' } }) },
-  { id: 'check_field', on: ['check_field'], role: 'owner', writes: ['BLD-check_field.csv'], read: 'check_field',
+  { id: 'check_field', on: ['check_field'], role: 'user', writes: ['BLD-check_field.csv'], read: 'check_field',
     seed: (env) => { put(env, 'BLD-check_type.csv', lines(H.check_type, [typeRow])); put(env, 'BLD-check_field.csv', lines(H.check_field)); },
     body: () => ({ table: 'check_field', action: 'add', fields: { type_key: 'bowls', field_key: 'water', label: 'Water', kind: 'text', effective_from: '2026-11-01' } }) },
-  // check_value has no add permission of its own: it is only written inside a check_log save, so check_log is on as well.
   { id: 'check_value', on: ['check_value', 'check_log'], role: 'staff', writes: ['BLD-check_log.csv', 'BLD-check_value.csv'], read: 'check_value',
     seed: (env) => {
       put(env, 'BLD-check_type.csv', lines(H.check_type, [typeRow]));
@@ -123,10 +104,10 @@ const CASES = [
       put(env, 'BLD-check_log.csv', lines('id,tenant_id,check_type_id,item_id', [`clg-1,${T},ct-pat,itm-1`]));
     },
     body: () => ({ table: 'readings', action: 'add', fields: { kind_id: 'rk-earth', item_id: 'itm-1', check_log_id: 'clg-1', value: '0.05', limit_id: 'rl-earth', taken_at: '2026-11-14T09:30:00+00:00', how_entered: 'typed', source: 'staff' } }) },
-  { id: 'items', on: ['items'], role: 'owner', writes: ['BLD-items.csv'], read: 'items',
+  { id: 'items', on: ['items'], role: 'user', writes: ['BLD-items.csv'], read: 'items',
     seed: (env) => { header(env, 'items'); put(env, 'BLD-item_kinds.csv', lines('id,tenant_id,kind_key,label,source,set_by,set_on', [`ik-1,${T},appliance,Appliance,test,,`])); },
     body: () => ({ table: 'items', action: 'add', fields: { item_no: '01', name: 'Kettle', kind_key: 'appliance' } }) },
-  { id: 'item_kinds', on: ['item_kinds'], role: 'owner', writes: ['BLD-item_kinds.csv'], read: 'item_kinds',
+  { id: 'item_kinds', on: ['item_kinds'], role: 'user', writes: ['BLD-item_kinds.csv'], read: 'item_kinds',
     seed: (env) => header(env, 'item_kinds'),
     body: () => ({ table: 'item_kinds', action: 'add', fields: { kind_key: 'appliance', label: 'Appliance' } }) },
   { id: 'occupancy', on: ['occupancy'], role: 'staff', writes: ['BLD-occupancy.csv'], read: 'occupancy',
@@ -136,25 +117,25 @@ const CASES = [
   { id: 'area_access', on: ['area_access'], role: 'staff', writes: ['BLD-area_access.csv'], read: 'area_access',
     seed: (env) => header(env, 'area_access'),
     body: () => ({ table: 'area_access', action: 'add', fields: { area_id: 'area-t1', access_type: 'free' } }) },
-  { id: 'qr_tag', on: ['qr_tag'], role: 'owner', writes: ['BLD-qr_tag.csv'], read: 'qr_tag',
+  { id: 'qr_tag', on: ['qr_tag'], role: 'user', writes: ['BLD-qr_tag.csv'], read: 'qr_tag',
     seed: (env) => header(env, 'qr_tag'),
     body: () => ({ table: 'qr_tag', action: 'add', fields: { tag: 'TAG-0001', kind: 'area', ref_id: 'area-t1' } }) },
   { id: 'occupancy_check', on: ['occupancy_check'], role: 'staff', writes: ['BLD-occupancy_check.csv'], read: 'occupancy_check',
     body: () => ({ table: 'occupancy_check', action: 'add', fields: { dog_ids: 'sub-test-a' } }) },
-  { id: 'breeding_rule', on: ['breeding_rule'], role: 'owner', writes: ['BLD-breeding_rule.csv'], read: 'breeding_rule',
+  { id: 'breeding_rule', on: ['breeding_rule'], role: 'user', writes: ['BLD-breeding_rule.csv'], read: 'breeding_rule',
     seed: (env) => rules(env, []),
     body: () => ({ table: 'breeding_rule', action: 'add', fields: { rule_key: 'practice.example', value: '1', effective_from: '2026-11-01' } }) },
-  { id: 'person', on: ['person'], role: 'owner', writes: [PEND],
+  { id: 'person', on: ['person'], role: 'user', writes: [PEND],
     body: () => ({ table: 'person', action: 'add', fields: { full_name: 'Invented Buyer' } }) },
-  { id: 'household', on: ['household'], role: 'owner', writes: [PEND], seed: (env) => header(env, 'household'),
+  { id: 'household', on: ['household'], role: 'user', writes: [PEND], seed: (env) => header(env, 'household'),
     body: () => ({ table: 'household', action: 'add', fields: { name: 'Invented household', primary_person_id: 'per-test-1', stage: 'enquiry' } }) },
-  { id: 'household_member', on: ['household_member'], role: 'owner', writes: [PEND],
+  { id: 'household_member', on: ['household_member'], role: 'user', writes: [PEND],
     seed: (env) => { put(env, 'BLD-household.csv', lines('id,tenant_id,name,primary_person_id,stage', [`hh-1,${T},Invented household,per-test-1,enquiry`])); header(env, 'household_member'); },
     body: () => ({ table: 'household_member', action: 'add', fields: { household_id: 'hh-1', person_id: 'per-test-1' } }) },
-  { id: 'subject_owner', on: ['subject_owner'], role: 'owner', writes: [PEND],
-    seed: (env) => { put(env, 'BLD-household.csv', lines('id,tenant_id,name,primary_person_id,stage', [`hh-1,${T},Invented household,per-test-1,enquiry`])); header(env, 'subject_owner'); },
-    body: () => ({ table: 'subject_owner', action: 'add', fields: { subject_id: 'sub-test-a', person_id: 'per-test-1', household_id: 'hh-1', role: 'assigned' } }) },
-  { id: 'sale', on: ['sale'], role: 'owner', writes: [PEND],
+  { id: 'subject_user', on: ['subject_user'], role: 'user', writes: [PEND],
+    seed: (env) => { put(env, 'BLD-household.csv', lines('id,tenant_id,name,primary_person_id,stage', [`hh-1,${T},Invented household,per-test-1,enquiry`])); header(env, 'subject_user'); },
+    body: () => ({ table: 'subject_user', action: 'add', fields: { subject_id: 'sub-test-a', person_id: 'per-test-1', household_id: 'hh-1', role: 'assigned' } }) },
+  { id: 'sale', on: ['sale'], role: 'user', writes: [PEND],
     seed: (env) => { put(env, 'BLD-household.csv', lines('id,tenant_id,name,primary_person_id,stage', [`hh-1,${T},Invented household,per-test-1,enquiry`])); header(env, 'sale'); },
     body: () => ({ table: 'sale', action: 'add', fields: { subject_id: 'sub-test-a', person_id: 'per-test-1', household_id: 'hh-1' } }) },
   { id: 'weighing', on: ['weighing'], role: 'staff', writes: ['BLD-weight.csv'], read: 'weight',
@@ -163,28 +144,28 @@ const CASES = [
   { id: 'vaccination', on: ['vaccination'], role: 'staff', writes: ['BLD-vaccination.csv'],
     seed: (env) => put(env, 'BLD-vaccination.csv', lines(H.vaccination)),
     body: () => ({ action: 'vaccination', fields: { subject_id: 'sub-test-a', given_on: '2026-11-01', product: 'Invented vaccine' } }) },
-  { id: 'dog_details', on: ['dog_details'], role: 'owner', writes: ['BLD-subject.csv'], read: 'subject',
+  { id: 'dog_details', on: ['dog_details'], role: 'user', writes: ['BLD-subject.csv'], read: 'subject',
     body: () => ({ action: 'dog_details', fields: { subject_id: 'sub-test-a', name: 'Test A renamed' } }) },
-  { id: 'subject_create', on: ['subject_create'], role: 'owner', writes: ['BLD-subject.csv', 'BLD-subject_status.csv'], read: 'subject',
+  { id: 'subject_create', on: ['subject_create'], role: 'user', writes: ['BLD-subject.csv', 'BLD-subject_status.csv'], read: 'subject',
     seed: (env) => {
       put(env, 'BLD-subject.csv', lines('id,tenant_id,name,sex,dob,species,kind,source,neuter_status,breed,coat_type,coat_colour_id,coat_pattern_id,nose_pigment_id,birth_litter_id,size_band',
         [`sub-test-a,${T},Test A,Female,2020-01-01,dog,adult,test,entire,,,,,,,`]));
       put(env, 'BLD-species.csv', lines('id,tenant_id,code,common_name,adult_female_word,adult_male_word,young_word,active', [`sp-dog,${T},dog,dog,Female,Male,puppy,yes`]));
     },
     body: () => ({ action: 'subject_create', fields: { name: 'Invented Dog', sex: 'Male', species: 'dog', kind: 'adult', dob: '2024-01-01' } }) },
-  { id: 'subject_link', on: ['subject_link'], role: 'owner', writes: ['BLD-subject_link.csv'], read: 'subject_link',
+  { id: 'subject_link', on: ['subject_link'], role: 'user', writes: ['BLD-subject_link.csv'], read: 'subject_link',
     seed: (env) => { put(env, 'BLD-subject_link.csv', lines(H.subject_link)); rules(env, [`r1,${T},link_kind.bff,BFFs,2026-01-01,test,,,,`]); },
     body: () => ({ action: 'subject_link', fields: { subject_id: 'sub-test-a', other_subject_id: 'sub-test-b', kind: 'bff' } }) },
-  { id: 'files', on: ['files'], role: 'owner', writes: ['BLD-files.csv'], props: { FILES_FOLDER_ID: 'FOLDER-FILES' }, outside: 1,
+  { id: 'files', on: ['files'], role: 'user', writes: ['BLD-files.csv'], props: { FILES_FOLDER_ID: 'FOLDER-FILES' }, outside: 1,
     seed: (env) => { put(env, 'BLD-files.csv', lines(H.files)); rules(env, [`r1,${T},file.types,image/png,2026-01-01,test,,,,`, `r2,${T},file.max_bytes,5000,2026-01-01,test,,,,`]); },
     body: () => ({ action: 'file_add', fields: { kind: 'photo', mime: 'image/png', name: 'one.png', data_base64: PNG } }) },
-  { id: 'links', on: ['links'], role: 'owner', writes: ['BLD-links.csv'], read: 'links',
+  { id: 'links', on: ['links'], role: 'user', writes: ['BLD-links.csv'], read: 'links',
     seed: (env) => {
       put(env, 'BLD-links.csv', lines(H.links)); put(env, 'BLD-files.csv', lines('id,tenant_id,name', [`fil-1,${T},one.jpg`]));
       rules(env, [`r1,${T},link_kind.gallery,Photos,2026-01-01,test,,,,`]);
     },
     body: () => ({ action: 'link_add', fields: { from_table: 'subject', from_id: 'sub-test-a', to_table: 'files', to_id: 'fil-1', role: 'gallery' } }) },
-  { id: 'score_save', on: ['score_assessment'], role: 'owner', writes: ['BLD-score_assessment.csv', 'BLD-score_line.csv'],
+  { id: 'score_save', on: ['score_assessment'], role: 'user', writes: ['BLD-score_assessment.csv', 'BLD-score_line.csv'],
     seed: (env) => {
       put(env, 'BLD-score_assessment.csv', lines('id,tenant_id,subject_id,scheme_id,period,verdict,points_earned,points_available,points_unverified,unknown_count,status,calculated_at,calculated_by,replaces_id'));
       put(env, 'BLD-score_line.csv', lines('id,tenant_id,assessment_id,criterion_id,label_then,evidence_table,evidence_record_id,answer_then,points,points_max,gate_outcome,unknown_reason,judged_at,judged_by,rule_version_then'));
@@ -192,17 +173,15 @@ const CASES = [
     },
     body: () => ({ action: 'score_save', fields: { subject_id: 'sub-test-a', scheme_id: 'sch-test', period: '2026-10-01', verdict: 'unverified',
       points_earned: '0', points_available: '10', lines: [{ criterion_id: 'c-test', label_then: 'Test', points_max: '10', unknown_reason: 'no_record' }] } }) },
-  // dog_photo has no TABLE_ON switch: it is "on" when SAVE_ENABLED and DOG_PHOTOS_FOLDER_ID are set (Risks found, R1).
   { id: 'dog_photo', on: [], role: 'staff', writes: ['BLD-subject.csv'], read: 'subject', props: { DOG_PHOTOS_FOLDER_ID: 'FOLDER-PHOTOS' }, outside: 1,
     seed: (env) => put(env, 'BLD-subject.csv', lines('id,tenant_id,name,photo', [`sub-test-a,${T},Test A,`])),
     body: () => ({ action: 'dog_photo', fields: { subject_id: 'sub-test-a', mime: 'image/png', image_base64: PNG } }) }
 ];
 
-// Paths that are not a code-signed POST. Each still has a test below or in its own suite.
 const MANUAL = {
-  check_setting: 'owner check settings, dated rows, floors in tests/check-settings.test.js',
+  check_setting: 'user check settings, dated rows, floors in tests/check-settings.test.js',
   retention_setting: 'how long check records are kept, at least 6 years (tests/check-settings.test.js)',
-  code_register: 'owner page (Google sign-in, not a code): exercised below with the harness owner session',
+  code_register: 'user page (Google sign-in, not a code): exercised below with the harness user session',
   code_vaults: 'sealed text only, made in the browser from the vault password (tests/code-vault.test.js and the code-vault browser specs); a practice row would need a real sealed value',
   staff: 'proposed table: refused whatever its switch says (tested below)',
   parties: 'proposed table (BLD schema v2, 15 Nov 2026): refused whatever its switch says (tests/schema-v2.test.js)',
@@ -215,16 +194,16 @@ const MANUAL = {
   product_dose_bands: 'proposed table (BLD schema v2, 15 Nov 2026): refused whatever its switch says (tests/schema-v2.test.js)',
   certificate_kinds: 'proposed table (BLD schema v2, 15 Nov 2026): refused whatever its switch says (tests/schema-v2.test.js)',
   certificates: 'proposed table (BLD schema v2, 15 Nov 2026): refused whatever its switch says (tests/schema-v2.test.js)',
-  owner_edit: 'owner page (Google sign-in); covered by tests/sink.test.js and tests/area-link.test.js',
+  user_edit: 'user page (Google sign-in); covered by tests/sink.test.js and tests/area-link.test.js',
   record_edit: 'edit / archive / delete with a code, OFF (RECORD_EDIT_ON); covered by tests/area-link.test.js',
-  approve: 'owner page (Google sign-in); applies a queued row (tests/sink.test.js); R2 test below',
-  inspector: 'owner page (Google sign-in) plus inspector reads; covered by tests/inspect-link.test.js',
+  approve: 'user page (Google sign-in); applies a queued row (tests/sink.test.js); R2 test below',
+  inspector: 'user page (Google sign-in) plus inspector reads; covered by tests/inspect-link.test.js',
   backup: 'editor timer; copies only, never the live files (tests/sink.test.js)',
   create_empty: 'editor Run with ALLOW_CREATE; makes header-only files only (tests/sink.test.js)'
 };
 
 function codeFor(env, role) {
-  if (role === 'owner') return env.codes.owner;
+  if (role === 'user') return env.codes.user;
   if (role === 'guest') return env.guest || (env.guest = env.ctx.adminAddGuestCode());
   return env.codes.staff;
 }
@@ -243,7 +222,6 @@ CASES.forEach((c) => {
     assert.deepEqual(switchesOn(env), c.on.map((k) => 'TABLE_ON_' + k).sort());
     const code = codeFor(env, c.role);
 
-    // (d) wrong code and missing code: refused, nothing written anywhere
     const s0 = sums(env), o0 = outside(env);
     const bad = post(env, Object.assign(c.body(env), { code: 'ZZZZZZZZZZ' }));
     assert.equal(bad.ok, false); assert.equal(bad.code, 'BAD_CODE', JSON.stringify(bad));
@@ -251,13 +229,11 @@ CASES.forEach((c) => {
     assert.equal(none.ok, false); assert.equal(none.code, 'NO_CODE', JSON.stringify(none));
     assert.deepEqual(changed(s0, sums(env)), []); assert.equal(outside(env), o0);
 
-    // (a) one valid save lands, (b) only in the files this path writes
     const r = post(env, Object.assign(c.body(env), { code }));
     assert.equal(r.ok, true, c.id + ': ' + JSON.stringify(r));
     assert.deepEqual(changed(s0, sums(env)), c.writes.slice().sort());
     assert.equal(outside(env) - o0, c.outside || 0);
 
-    // (c) reads grant nothing extra: READ_ENABLED on, no field_visibility rows, a staff read gets no rows
     env.props.READ_ENABLED = 'true';
     put(env, 'BLD-field_visibility.csv', fx.VIS_HEADER + '\r\n');
     const s1 = sums(env);
@@ -270,14 +246,14 @@ CASES.forEach((c) => {
   });
 });
 
-test('practice run: code_register (owner page) writes only the register and its queue note; not signed in = nothing', () => {
+test('practice run: code_register (user page) writes only the register and its queue note; not signed in = nothing', () => {
   const env = fresh(['code_register']);
   put(env, 'BLD-code_register.csv', lines(H.code_register));
   const s0 = sums(env), reg0 = env.props.STAFF_REGISTRY;
   env.email = 'someone@example.test';
   assert.equal(env.ctx.ui_issueCode('Invented Person', 'STAFF').ok, false);
   assert.deepEqual(changed(s0, sums(env)), []); assert.equal(env.props.STAFF_REGISTRY, reg0);
-  env.email = 'owner@example.test';
+  env.email = 'user@example.test';
   const r = env.ctx.ui_issueCode('Invented Person', 'STAFF');
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.deepEqual(changed(s0, sums(env)), [PEND, 'BLD-code_register.csv'].sort());
@@ -288,19 +264,17 @@ test('practice run: the staff table stays refused, even with TABLE_ON_staff, and
   put(env, 'BLD-staff.csv', fx.headerOnly(fx.STAFF_HEADER));
   const s0 = sums(env);
   const fields = { person_id: 'per-test-1', role: 'STAFF', employment: 'part_time', started_on: '2026-11-01' };
-  const r = post(env, { table: 'staff', action: 'add', code: env.codes.owner, fields });
+  const r = post(env, { table: 'staff', action: 'add', code: env.codes.user, fields });
   assert.equal(r.code, 'FILE_NOT_ALLOWED');
   assert.deepEqual(changed(s0, sums(env)), []);
-  // if it is ever moved into TABLES it is off until TABLE_ON_staff is 'true'
   const env2 = fresh([]);
   put(env2, 'BLD-staff.csv', fx.headerOnly(fx.STAFF_HEADER));
   env2.ctx.TABLES.staff = env2.ctx.PROPOSED_TABLES.staff;
-  assert.equal(post(env2, { table: 'staff', action: 'add', code: env2.codes.owner, fields }).code, 'TABLE_OFF');
+  assert.equal(post(env2, { table: 'staff', action: 'add', code: env2.codes.user, fields }).code, 'TABLE_OFF');
 });
 
 test('status=1: no side effects (no waiting move applied, no file written) and every switch by name, never a value', () => {
   const env = fresh(['occupancy'], { DOG_PHOTOS_FOLDER_ID: 'FOLDER-PHOTOS', TABLE_ON_files: 'true' });
-  // a waiting room move that a plain GET would apply
   assert.equal(post(env, { table: 'occupancy', action: 'add', code: env.codes.staff, fields: { subject_id: 'sub-test-e', area_id: 'area-t1' } }).ok, true);
   const q = { event_id: 'evt-x', pending_id: 'pnd-x', event: 'queued', at: '2026-11-14T10:00:00+00:00', by: 'Sam Staff', role: 'STAFF',
     target_file: 'BLD-occupancy.csv', kind: 'new', row_id: 'occ-x', corrects_id: '', note: '',
@@ -314,20 +288,19 @@ test('status=1: no side effects (no waiting move applied, no file written) and e
   assert.ok(st.tables.some((t) => t.key === 'occupancy' && t.on === true));
   const by = Object.fromEntries(st.switches.map((s) => [s.name, s]));
   ['TABLE_ON_weighing', 'TABLE_ON_vaccination', 'TABLE_ON_dog_details', 'TABLE_ON_subject_create', 'TABLE_ON_subject_link', 'TABLE_ON_files',
-    'TABLE_ON_links', 'TABLE_ON_code_register', 'TABLE_ON_staff', 'DOG_PHOTOS_FOLDER_ID', 'FILES_FOLDER_ID', 'OWNER_EDIT_ENABLED'].forEach((k) => assert.ok(by[k], k));
+    'TABLE_ON_links', 'TABLE_ON_code_register', 'TABLE_ON_staff', 'DOG_PHOTOS_FOLDER_ID', 'FILES_FOLDER_ID', 'USER_EDIT_ENABLED'].forEach((k) => assert.ok(by[k], k));
   assert.equal(by.TABLE_ON_files.on, true); assert.equal(by.TABLE_ON_links.on, false);
   assert.equal(by.DOG_PHOTOS_FOLDER_ID.set, true); assert.equal(by.FILES_FOLDER_ID.set, false);
   const text = JSON.stringify(st);
-  ['FOLDER-PHOTOS', 'FOLDER-TEST', env.props.CODE_SALT, 'owner@example.test', T].forEach((v) => assert.equal(text.indexOf(v), -1, 'leaked a value'));
-  // a plain GET still applies the waiting move, as before
+  ['FOLDER-PHOTOS', 'FOLDER-TEST', env.props.CODE_SALT, 'user@example.test', T].forEach((v) => assert.equal(text.indexOf(v), -1, 'leaked a value'));
   env.ctx.doGet({ parameter: {} });
   assert.ok(env.text('BLD-occupancy.csv').includes('occ-x'));
 });
 
 test('adminCountQueued: counts waiting rows per file and state, and writes nothing', () => {
   const env = fresh(['person', 'household', 'occupancy_out']);
-  assert.equal(post(env, { table: 'person', action: 'add', code: env.codes.owner, fields: { full_name: 'Invented One' } }).ok, true);
-  assert.equal(post(env, { table: 'person', action: 'add', code: env.codes.owner, fields: { full_name: 'Invented Two' } }).ok, true);
+  assert.equal(post(env, { table: 'person', action: 'add', code: env.codes.user, fields: { full_name: 'Invented One' } }).ok, true);
+  assert.equal(post(env, { table: 'person', action: 'add', code: env.codes.user, fields: { full_name: 'Invented Two' } }).ok, true);
   assert.equal(post(env, { table: 'occupancy_out', action: 'add', code: env.codes.staff, fields: { subject_id: 'sub-test-a', off_site_kind: 'temporary' } }).ok, true);
   const s0 = sums(env), w0 = env.writes.length;
   const c = env.ctx.adminCountQueued();
@@ -335,19 +308,17 @@ test('adminCountQueued: counts waiting rows per file and state, and writes nothi
   assert.equal(c.total, 3);
   assert.equal(c.byFile['BLD-person.csv'], 2); assert.equal(c.byFile['BLD-occupancy.csv'], 1);
   assert.equal(c.byState.queued, 3);
-  assert.equal(c.moves, 0);   // the occupancy_out row waits for the owner: see R2
+  assert.equal(c.moves, 0);   // the occupancy_out row waits for the user: see R2
 });
 
-// R2 (Risks found, fixed in PR 607): occupancy_out shares BLD-occupancy.csv with occupancy, but
-// applyWaitingOccupancyMoves_ now skips rows that are not a room move, so a queued "dog left" row waits for the owner.
 test('R2: a queued occupancy_out row is not applied by a plain GET', () => {
   const env = fresh(['occupancy', 'occupancy_out']);
   const r = post(env, { table: 'occupancy_out', action: 'add', code: env.codes.staff, fields: { subject_id: 'sub-test-a', off_site_kind: 'sold' } });
   assert.equal(r.ok, true, JSON.stringify(r)); assert.equal(r.result.status, 'queued');
   const before = env.text('BLD-occupancy.csv');
   assert.ok(!before.includes(r.result.id));
-  env.ctx.doGet({ parameter: {} });   // a plain status GET, no owner involved
-  assert.equal(env.text('BLD-occupancy.csv'), before, 'the out-move waits for the owner');
+  env.ctx.doGet({ parameter: {} });
+  assert.equal(env.text('BLD-occupancy.csv'), before, 'the out-move waits for the user');
   assert.ok(!env.text(PEND).includes('script:apply-direct-occupancy'));
 });
 
@@ -358,3 +329,4 @@ test('the inventory document table matches the code', () => {
   const text = fs.readFileSync(path.join(dir, doc), 'utf8');
   assert.equal(inventory.splice(text), text, 'run node tools/save-inventory.js --write ' + doc);
 });
+

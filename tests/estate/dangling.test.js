@@ -1,5 +1,3 @@
-// Stage 15: dangling-record / takeover check. Run: node --test tests/estate/dangling.test.js
-// Every host is invented (example.com style). Platform hostnames are the platforms' own public suffixes.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const D = require('../../estate/dangling.js');
@@ -114,3 +112,4 @@ test('report only: no alert or reason tells anyone to delete a record', () => {
   const text = JSON.stringify([r, D.alerts([r])]);
   assert.doesNotMatch(text, /delete|remove|retire/i);
 });
+

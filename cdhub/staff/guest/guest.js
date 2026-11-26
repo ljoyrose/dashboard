@@ -1,8 +1,3 @@
-/*!
- * Guest page (inspector): temperatures only. It reads the room list and writes guest readings, nothing else.
- * The script decides what a guest code may do and when it expires. Guest readings go to their own list,
- * so they can never satisfy or overwrite a due staff reading.
- */
 (function () {
   'use strict';
   var KEY = 'bld.guest.code', TABLE = 'guest_reading';
@@ -20,7 +15,7 @@
   function ask(note) {
     screen.textContent = '';
     screen.appendChild(h('h1', { text: 'Guest temperatures' }));
-    if (!save.getScriptUrlSet()) { screen.appendChild(h('p', { class: 'sub', text: 'Please ask the owner to set up this page for you.' })); return; }
+    if (!save.getScriptUrlSet()) { screen.appendChild(h('p', { class: 'sub', text: 'Please ask the user to set up this page for you.' })); return; }
     screen.appendChild(h('p', { class: 'sub', text: note || 'Type the guest code you were given.' }));
     var input = h('input', { class: 'inp', type: 'password', autocomplete: 'off', 'aria-label': 'Guest code', placeholder: 'Guest code' }), msg = h('p', { class: 'msg bad', role: 'status' });
     screen.appendChild(input);
@@ -32,7 +27,7 @@
     screen.appendChild(msg);
   }
   function show(fail, fresh) {
-    var req = [];   // need rows (room.in_use): a retired room is hidden after its last day
+    var req = [];
     save.checkStatus().then(function () { return save.read('requirement'); }).then(function (q) { req = q.ok ? q.rows : []; return save.read('area'); }).then(function (r) {
       if (!r.ok) {
         if (!fresh) { store(''); save.clearCode(); ask(r.code === 'BAD_CODE' ? 'That guest code has expired or was switched off.' : r.message); return; }
@@ -49,8 +44,6 @@
       });
     });
   }
-  // The staff page's room temperature screen (camera read or typed), if it is there; else the plain typed form.
-  // Either way guestSave sends every reading to guest_reading.
   function withTemperature(done) {
     if (window.BLDTemperature) { done(); return; }
     var s = document.createElement('script'), once = false;
@@ -63,3 +56,4 @@
   var code = stored();
   if (code && save.getScriptUrlSet()) { save.setCode(code, false); show(function () {}, ''); } else ask();
 }());
+

@@ -29,3 +29,4 @@ test('no rule row for a kind: it still shows, under its own key; no rows at all:
   assert.deepEqual(L.forDog([], rules, 'a', '2026-11-13'), []);
   assert.deepEqual(L.kinds(rules, '2026-11-13').map((k) => k.label), ['BFFs', 'Fren.']);
 });
+

@@ -1,17 +1,4 @@
 #!/usr/bin/env node
-// gate.mjs - App Factory gate checker (E16 rebuild). Node >= 18, no dependencies.
-//
-//   node tools/gate/gate.mjs --card <card.json> --to <transition>   PASS / FAIL / WAITS-LISA per required gate
-//   node tools/gate/gate.mjs --list                                 print the unified gate list and open conflicts
-//   node tools/gate/gate.mjs --selftest                             run the built-in control cases
-//   node tools/gate/gate.mjs --dry-run ...                          same output, but always exits 0
-//   optional: --data <gates.json>  --json
-//
-// Exit code: 0 only when every required gate is PASS. Anything else (FAIL, WAITS-LISA, bad input) exits 1.
-// A gate with an OPEN conflict reports WAITS-LISA and is never auto-passed. Only data (a conflict's status) changes that.
-// A transition may require a whole gate ("LOCK") or one phase of a phased gate ("LEAK:DESIGN"). A gate with "required": false
-// is not a gate yet and is never evaluated. A verdict outside a gate's set, or in its invalid_verdicts, is FAIL.
-// The card is a JSON file with invented or real card data. Nothing here reads or writes any register.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -19,15 +6,12 @@ import { dirname, join } from 'node:path';
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_DATA = join(HERE, 'gates.unified.json');
 
-// Underscores and spaces fold together, so "Leak design" and "Leak_design" are one name.
 const norm = (s) => String(s).toLowerCase().replace(/→/g, '->').replace(/[_\s]+/g, ' ').trim();
 
-/** Read and parse the gate data JSON file (default: gates.unified.json beside this script). */
 export function loadData(path = DEFAULT_DATA) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
-// Every name a card might use for a gate (framework name, id, GATES.csv / GATE-LOG alias) -> canonical id.
 export function aliasMap(data) {
   const map = new Map();
   for (const g of data.gates) {
@@ -36,19 +20,16 @@ export function aliasMap(data) {
   return map;
 }
 
-/** Normalise a transition name: lower case, arrows as '->', no spaces around the arrow. */
 export function normTransition(t) {
   return norm(t).replace(/\s*->\s*/g, '->');
 }
 
-// Card keys of phased gates (e.g. Leak_design) -> "GATE:PHASE" requirement id.
 function phaseKeyMap(data) {
   const map = new Map();
   for (const g of data.gates) for (const p of g.phases || []) map.set(norm(p.card_key), `${g.id}:${p.id}`);
   return map;
 }
 
-// Resolve one entry of a transition's requires list into an evaluable gate, or null when it is not required.
 function resolveRequirement(req, data) {
   const [gid, phaseId] = req.split(':');
   const gate = data.gates.find((g) => g.id === gid);
@@ -70,12 +51,11 @@ function isOpen(id, data) {
   return !!c && c.status === 'OPEN';
 }
 
-// Evaluate one gate for one card. Returns { gate, status: PASS|FAIL|WAITS-LISA, reasons: [] }.
 export function evalGate(gate, entry, data) {
   const out = (status, ...reasons) => ({ gate: gate.id, status, reasons });
   if (gate.phased_error) return out('FAIL', 'requirement names a phased gate without a valid phase');
   const open = openConflictsFor(gate, data);
-  if (open.length) return out('WAITS-LISA', `open conflict ${open.join(', ')} - Lisa must rule before this gate can pass`);
+  if (open.length) return out('WAITS-USER', `open conflict ${open.join(', ')} - User must rule before this gate can pass`);
   if (!entry || typeof entry !== 'object') return out('FAIL', 'no verdict recorded on the card for this gate');
   const verdict = typeof entry.verdict === 'string' ? entry.verdict.trim() : '';
   if (!verdict) return out('FAIL', 'verdict missing');
@@ -84,9 +64,8 @@ export function evalGate(gate, entry, data) {
   }
   const waits = gate.waits_verdicts && Object.keys(gate.waits_verdicts).find((k) => norm(k) === norm(verdict));
   if (waits && gate.waits_verdicts[waits].some((id) => isOpen(id, data))) {
-    return out('WAITS-LISA', `verdict "${verdict}" is outside the agreed set (conflict ${gate.waits_verdicts[waits].join(', ')})`);
+    return out('WAITS-USER', `verdict "${verdict}" is outside the agreed set (conflict ${gate.waits_verdicts[waits].join(', ')})`);
   }
-  // SCREEN-style verdicts may carry codes: "FAIL:CODE1,CODE2"
   const base = verdict.split(':')[0].trim();
   const match = gate.verdict_set.find((v) => norm(v) === norm(base));
   if (!match) return out('FAIL', `verdict "${verdict}" is not in this gate's set (${gate.verdict_set.join(' / ')})`);
@@ -97,15 +76,14 @@ export function evalGate(gate, entry, data) {
       return out('FAIL', 'GO WITH CONDITIONS needs a dated entry in the Conditions Register (conditions missing)');
     }
   }
-  if (gate.guard_type === 'Lisa stamp') {
+  if (gate.guard_type === 'User stamp') {
     const by = norm(entry.stamped_by || '');
-    const allowed = ['lisa', gate.stamp_exception].filter(Boolean);
+    const allowed = ['user', gate.stamp_exception].filter(Boolean);
     if (!allowed.includes(by)) return out('FAIL', `a ${gate.id} stamp must be given by ${allowed.join(' or ')}, not "${entry.stamped_by ?? 'nobody'}"`);
   }
   return out('PASS', `verdict ${match}`);
 }
 
-// Evaluate a card against one transition. Returns { transition, result, rows, universal }.
 export function evalCard(card, toRaw, data) {
   const t = data.transitions.find((x) => normTransition(x.id) === normTransition(toRaw));
   if (!t) {
@@ -123,7 +101,7 @@ export function evalCard(card, toRaw, data) {
   const entries = new Map();
   for (const [name, entry] of Object.entries(card.gates || {})) {
     const id = phaseKeys.get(norm(name)) || aliases.get(norm(name));
-    if (id) entries.set(id, entry); // later alias for the same gate overwrites; last one wins
+    if (id) entries.set(id, entry);
   }
   const rows = t.requires
     .map((req) => ({ req, gate: resolveRequirement(req, data) }))
@@ -136,11 +114,10 @@ export function evalCard(card, toRaw, data) {
     return { gate: u.id, status: 'PASS', reasons: ['0 outstanding'] };
   });
   const all = [...rows, ...universal];
-  const result = all.some((r) => r.status === 'FAIL') ? 'FAIL' : all.some((r) => r.status === 'WAITS-LISA') ? 'WAITS-LISA' : 'PASS';
+  const result = all.some((r) => r.status === 'FAIL') ? 'FAIL' : all.some((r) => r.status === 'WAITS-USER') ? 'WAITS-USER' : 'PASS';
   return { transition: t.id, label: t.label, result, rows, universal };
 }
 
-/** Format one card report as plain text: a header, one line per gate check, then the overall result. */
 export function formatReport(rep) {
   const lines = [`TRANSITION ${rep.transition}  ${rep.label}`];
   for (const r of [...rep.rows, ...rep.universal]) lines.push(`  ${r.status.padEnd(10)} ${r.gate.padEnd(8)} ${r.reasons.join('; ')}`);
@@ -148,19 +125,17 @@ export function formatReport(rep) {
   return lines.join('\n');
 }
 
-/** Format the gate list as plain text: counts, one line per gate, then the open conflicts. */
 export function formatList(data) {
   const lines = [`${data.gates.length} gates, ${data.transitions.length} transitions, ${data.conflicts.length} conflicts`, ''];
   for (const g of data.gates) {
     const open = openConflictsFor(g, data);
-    lines.push(`${g.id.padEnd(8)} ${g.guard_type.padEnd(11)} ${String(g.transition).slice(0, 28).padEnd(28)} ${g.confidence.padEnd(4)} ${open.length ? 'WAITS-LISA ' + open.join(',') : ''}`.trimEnd());
+    lines.push(`${g.id.padEnd(8)} ${g.guard_type.padEnd(11)} ${String(g.transition).slice(0, 28).padEnd(28)} ${g.confidence.padEnd(4)} ${open.length ? 'WAITS-USER ' + open.join(',') : ''}`.trimEnd());
   }
   lines.push('', 'Open conflicts:');
   for (const c of data.conflicts.filter((x) => x.status === 'OPEN')) lines.push(`  ${c.id}  ${c.title}`);
   return lines.join('\n');
 }
 
-// A copy of the data with one synthetic OPEN conflict (CX) holding BASE. Used to keep the WAITS-LISA path tested.
 export function withOpenConflict(data) {
   const d = structuredClone(data);
   d.conflicts.push({ id: 'CX', status: 'OPEN', title: 'synthetic open conflict (test only)', blocks_gates: ['BASE'] });
@@ -168,19 +143,18 @@ export function withOpenConflict(data) {
   return d;
 }
 
-// Control cases (rule: every check runs its own control). Returns [{name, ok, detail}].
 export function selftest(data) {
   const good = {
     ck45_pending: 0,
     ck50_open_obligations: 0,
-    gates: { Lock: { verdict: 'GO', stamped_by: 'lisa' } },
+    gates: { Lock: { verdict: 'GO', stamped_by: 'user' } },
   };
   const cases = [
     ['clean card passes LOCK', () => evalCard(good, '3->4', data).result === 'PASS'],
     ['dirty card (no verdict) FAILS', () => evalCard({ ...good, gates: {} }, '3->4', data).result === 'FAIL'],
     ['wrong stamper FAILS', () => evalCard({ ...good, gates: { Lock: { verdict: 'GO', stamped_by: 'claude' } } }, '3->4', data).result === 'FAIL'],
     ['outstanding CK45 FAILS', () => evalCard({ ...good, ck45_pending: 2 }, '3->4', data).result === 'FAIL'],
-    ['open conflict WAITS, never passes (synthetic conflict on BASE)', () => evalCard({ ...good, gates: { 'Base 2->3': { verdict: 'GO', stamped_by: 'lisa' } } }, '2->3', withOpenConflict(data)).result === 'WAITS-LISA'],
+    ['open conflict WAITS, never passes (synthetic conflict on BASE)', () => evalCard({ ...good, gates: { 'Base 2->3': { verdict: 'GO', stamped_by: 'user' } } }, '2->3', withOpenConflict(data)).result === 'WAITS-USER'],
     ['leak POST FAIL stops 7->8', () => evalCard({ ...good, gates: { Leak_monitor: { verdict: 'CLEAR' }, Leak_post: { verdict: 'FAIL' }, Live: { verdict: 'PASS' } } }, '7->8', data).result === 'FAIL'],
     ['all three leak phases + Live let 7->8 pass', () => evalCard({ ...good, gates: { Leak_monitor: { verdict: 'CLEAR' }, Leak_post: { verdict: 'PASS' }, Live: { verdict: 'PASS' } } }, '7->8', data).result === 'PASS'],
     ['unknown transition is rejected', () => { try { evalCard(good, '9->10', data); return false; } catch (e) { return e.code === 'BAD_TRANSITION'; } }],
@@ -208,10 +182,6 @@ function parseArgs(argv) {
 
 const USAGE = 'usage: gate.mjs --card <file.json> --to <transition> | --list | --selftest   [--dry-run] [--json] [--data <gates.json>]';
 
-/**
- * Command-line entry point. Parses arguments, runs --list, --selftest or a card check,
- * and returns the exit code (0 on success; --dry-run forces 0 after a run).
- */
 export function main(argv, io = { out: (s) => process.stdout.write(s + '\n'), err: (s) => process.stderr.write(s + '\n') }) {
   let exit = 1;
   try {
@@ -250,3 +220,4 @@ export function main(argv, io = { out: (s) => process.stdout.write(s + '\n'), er
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   process.exitCode = main(process.argv.slice(2));
 }
+

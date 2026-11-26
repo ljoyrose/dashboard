@@ -1,6 +1,3 @@
-// TidyUp Apps stage 1: the Bin page's Canva card. Pretend Drive only; every title and id below is invented.
-// The page never calls Canva. It reads CANVA-BIN-STATE.json, writes ledger slips and CANVA-BIN-REQUEST_ files, and only
-// with dryRun off and after a confirm.
 const { test, expect } = require('../support/test');
 const fs = require('fs');
 const path = require('path');
@@ -19,7 +16,7 @@ const state = (main, book) => JSON.stringify({ v: 1, accounts: {
   main: { generated: '2026-10-30T13:15:00.000Z', zz_bin_folder: null, items: main },
   book: { generated: '2026-10-30T13:15:00.000Z', zz_bin_folder: 'FAEXAMPLEBIN1', items: book || [] }
 } });
-const slipRow = (id, label, modified, pages) => `2026-10-30,"ZZ_DELETE_Example","${id}","Canva ZZ_BIN (bot move), then Canva trash by Lisa (30 days); check: modified=${modified}; pages=${pages}",dashboard Canva card,canva-${label}`;
+const slipRow = (id, label, modified, pages) => `2026-10-30,"ZZ_DELETE_Example","${id}","Canva ZZ_BIN (bot move), then Canva trash by User (30 days); check: modified=${modified}; pages=${pages}",dashboard Canva card,canva-${label}`;
 const slip = (rows) => 'date,old_name,file_id,merged_into,agent,surface\n' + rows.join('\n') + '\n';
 
 const setup = async (page, guard, { main, book, rows = [], dry = true } = {}) => {
@@ -140,3 +137,4 @@ test.describe('Bin: Canva card (TidyUp Apps 1)', () => {
     await expect(card(page).locator('[data-action="canvamove"]')).toHaveCount(0);
   });
 });
+

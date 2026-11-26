@@ -12,7 +12,6 @@ const REG = [
   { id: 'cr-2', code_id: 'sc-bbbbbb', who: 'Another Pretend', role: 'STAFF', from_date: '2026-10-02', to_date: '', ended_by: '' }
 ];
 
-// rows sealed by the real library in a browser, with the invented password
 async function sealed(page) {
   await page.goto('cdhub/');
   await page.addScriptTag({ url: 'staff/lib/code-vault.js' });
@@ -30,7 +29,7 @@ async function setup(page, o) {
       if (b.table === 'code_vaults' && o.vault === null) return route.fulfill({ headers: CORS, json: { ok: false, code: 'FILE_NOT_ALLOWED', message: 'not known' } });
       if (b.table === 'permission' && !o.perm) return route.fulfill({ headers: CORS, json: { ok: false, code: 'FILE_NOT_ALLOWED', message: 'not known' } });
       const rows = { code_register: REG, code_vaults: o.vault || [], permission: o.perm || [] }[b.table] || [];
-      return route.fulfill({ headers: CORS, json: { ok: true, result: { rows, role: o.role || 'OWNER', name: 'Pretend Owner' } } });
+      return route.fulfill({ headers: CORS, json: { ok: true, result: { rows, role: o.role || 'USER', name: 'Pretend User' } } });
     }
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'cv-1' } } });
   });
@@ -102,7 +101,6 @@ test.describe('Codes vault page', () => {
     const add = bodies.filter((b) => b.action === 'add');
     expect(add.length).toBe(1);
     expect(add[0].fields.code_id).toBe('sc-bbbbbb');
-    // the typed code goes only to the check, never into a save; the password goes nowhere
     expect(posts.filter((p) => p.includes('OTHERCODE4')).map((p) => JSON.parse(p).action)).toEqual(['code_check']);
     expect(posts.filter((p) => p.includes(PW))).toEqual([]);
     await page.locator('tr', { hasText: 'Another Pretend' }).getByRole('button', { name: 'Show' }).click();
@@ -119,10 +117,10 @@ test.describe('Codes vault page', () => {
     await expect(page.locator('#vPw')).toBeVisible();
   });
 
-  test('who may open is an owner setting: default owner only; a role row lets staff in; a person row "no" keeps an owner out', async ({ page }) => {
+  test('who may open is an user setting: default user only; a role row lets staff in; a person row "no" keeps an user out', async ({ page }) => {
     await setup(page, { vault: [], role: 'STAFF' });
     await page.goto('cdhub/staff/vault/');
-    await expect(page.locator('#screen')).toContainText('Only people the owner allows can open the vault.');
+    await expect(page.locator('#screen')).toContainText('Only people the user allows can open the vault.');
 
     await page.unrouteAll();
     await setup(page, { vault: [], role: 'STAFF', perm: [{ id: 'p1', role_code: 'STAFF', person_id: '', table_name: 'code_vault', action: 'open', allowed: 'yes', from_date: '2026-01-01', to_date: '' }] });
@@ -130,9 +128,9 @@ test.describe('Codes vault page', () => {
     await expect(page.locator('#screen')).toContainText('Forgotten password');
 
     await page.unrouteAll();
-    await setup(page, { vault: [], role: 'OWNER', perm: [{ id: 'p2', role_code: 'OWNER', person_id: '', table_name: 'code_vault', action: 'open', allowed: 'no', from_date: '2026-01-01', to_date: '' }] });
+    await setup(page, { vault: [], role: 'USER', perm: [{ id: 'p2', role_code: 'USER', person_id: '', table_name: 'code_vault', action: 'open', allowed: 'no', from_date: '2026-01-01', to_date: '' }] });
     await page.goto('cdhub/staff/vault/');
-    await expect(page.locator('#screen')).toContainText('Only people the owner allows');
+    await expect(page.locator('#screen')).toContainText('Only people the user allows');
   });
 
   test('before the save script knows the vault list, the page says so', async ({ page }) => {
@@ -151,3 +149,4 @@ test.describe('Codes vault page', () => {
     expect(await page.evaluate(() => [...document.scripts].every((s) => s.src && new URL(s.src).origin === location.origin))).toBe(true);
   });
 });
+

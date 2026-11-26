@@ -1,8 +1,3 @@
-// Web Estate Hub, Stage 17 (I1): address-level mail map. ONE ROW PER ADDRESS, not per domain.
-// Pure: no network, no Drive, no DOM. Real addresses live only in the private sheet; this module only processes
-// the rows it is given. Nothing here changes DNS, a registrar, a forward or a mailbox.
-// Inputs: A) forwarding rows from a registrar export (alias -> forward to), B) per-domain estate rows (MX),
-// C) login rows { address, service }. Reuses estate/mail.js for MX host words.
 (function (root, factory) {
   'use strict';
   var mail = (typeof module === 'object' && module.exports) ? require('./mail.js') : root.EstateMail;
@@ -13,10 +8,9 @@
   'use strict';
 
   var VERSION = '1.0.0';
-  var MAX_HOPS = 8; // a chain longer than this is cut and read as unknown
+  var MAX_HOPS = 8;
   var EMPTY_TEXT = 'Registrar export needed';
 
-  // Header aliases, compared after lower-casing and folding spaces, _ and - to one space.
   var FROM = ['alias', 'mailbox', 'from', 'source', 'address', 'email', 'forward from', 'forwarding address', 'alias email'];
   var TO = ['forward to', 'forwards to', 'forwarded to', 'destination', 'to', 'target', 'forward', 'forward address', 'recipient'];
   var DOMAIN = ['domain', 'domain name', 'url or domain', 'host', 'key'];
@@ -38,7 +32,6 @@
   function fold(k) { return String(k == null ? '' : k).trim().toLowerCase().replace(/[\s_-]+/g, ' '); }
   function str(v) { return (v == null || typeof v === 'object') ? '' : String(v).trim(); }
 
-  // Rows may be objects (any header case) or arrays of arrays with a header row first. Anything else is dropped.
   function objects(rows) {
     if (!Array.isArray(rows)) return [];
     var list = rows.filter(function (r) { return r && typeof r === 'object'; });
@@ -74,8 +67,6 @@
   }
   function isAddr(a) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a); }
 
-  // One MX value (mail.js object, provider word, 'present · word' label or a host name) -> its kind.
-  // 'forwarder' | 'mailbox' | 'none' | '' (not known).
   function mxKind(mx) {
     if (mx && typeof mx === 'object') {
       if (mx.forwarding) return 'forwarder';
@@ -91,7 +82,6 @@
     return info.forwarding ? 'forwarder' : 'mailbox';
   }
 
-  // Provider word for a mailbox host (Google Workspace, SiteGround, ...) via mail.js when the value is a host name.
   function mxInfo(s) {
     if (/^[a-z0-9.-]+\.[a-z]{2,}\.?$/i.test(s) && M && M.mxHost) {
       var r = M.mxHost({ Answer: [{ type: 15, data: '10 ' + s }] });
@@ -104,8 +94,6 @@
     return mxInfo(str(mx).replace(/^present\s*·\s*/i, '')).word;
   }
 
-  // Registrar export rows -> { address: [targets] }. An alias with no @ takes the row's domain column.
-  // '*' or '@domain' is a catch-all for that domain. A cell may list several targets (comma or semicolon).
   function forwardMap(forwardRows) {
     var map = {};
     objects(forwardRows).forEach(function (o) {
@@ -154,7 +142,6 @@
     return n ? { empty: false, text: '' } : { empty: true, text: EMPTY_TEXT };
   }
 
-  // One address -> its map row.
   function resolve(addr, fmap, dmap, logins, exportGiven) {
     var path = [addr], cur = addr, risks = [], reason = '', kind, landsAt, also = [];
     var stop = '';
@@ -200,7 +187,6 @@
     return row;
   }
 
-  // forwardRows, domainRows, loginRows -> one row per address (forward sources first, in export order, then logins).
   function build(forwardRows, domainRows, loginRows) {
     var fmap = forwardMap(forwardRows), dmap = domainMap(domainRows), logins = loginMap(loginRows);
     var exportGiven = Object.keys(fmap).length > 0;
@@ -213,7 +199,6 @@
     return order.map(function (a) { return resolve(a, fmap, dmap, logins, exportGiven); });
   }
 
-  // rows -> [{ key, kind: 'mailmap', level, text }] (alerts.js shape). One per risk; red first, row order kept.
   function alerts(rows) {
     var out = [];
     (Array.isArray(rows) ? rows : []).forEach(function (r) {
@@ -242,3 +227,4 @@
     alerts: alerts
   };
 });
+

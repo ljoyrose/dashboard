@@ -6,19 +6,16 @@ const { test, expect } = require('../support/test');
 const c27 = require('../support/cdhub27');
 
 test.use({ viewport: { width: 390, height: 800 } });
-// The staff page asks for optional helper files (404), and the FAIL cases make the browser log the failed save.
 test.beforeEach(async ({ allowedConsole }) => { allowedConsole.push(/404/, /500/, /ERR_FAILED/); });
 
 const NO_REACH = 'No answer yet. It is kept on this phone and sent again by itself, so do not type it again.';
 const card = (page, name) => page.locator('.cards .card', { has: page.locator('.nm', { hasText: new RegExp('^(✓ )?' + name + '$') }) });
-// The words on a card change from time to time (Done 08:05, a tick, a date style). What must hold is the state:
-// a card is done (class tg-done) or it is not, and its line carries the reading.
 const DONE = /(^|\s)tg-done(\s|$)/;
 
 async function round(page, opts) {
   await page.clock.setFixedTime(c27.NOW);
   const script = await c27.staffScript(page, opts);
-  if (opts && opts.tables) opts.tables(script.tables);   // a test may change the invented rows before the page reads them
+  if (opts && opts.tables) opts.tables(script.tables);
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto('cdhub/staff/#m/temperature');
@@ -27,12 +24,11 @@ async function round(page, opts) {
 }
 const openRoom = async (page, name) => { await card(page, name).click(); await expect(page.getByRole('heading', { name })).toBeVisible(); };
 const typeReading = async (page, max, min) => {
-  await expect(page.getByLabel('MAX')).toBeVisible();   // the MAX and MIN boxes are open at once (18 Nov 2026); there is no "Type it" step any more
+  await expect(page.getByLabel('MAX')).toBeVisible();
   await page.getByLabel('MAX').fill(max);
   await page.getByLabel('MIN').fill(min);
 };
 const save = (page) => page.getByRole('button', { name: 'Save', exact: true });
-// The three buttons under the room list, by the words they have carried (they were renamed on 14 Nov 2026).
 const EARLIER = /^(Earlier|Add earlier reading)$/, REPORT = /^(Report|Year report)$/, IMPORT = /^(Import|Sensor CSV|Load readings file)$/;
 
 test.describe('The Round: the room list', () => {
@@ -41,10 +37,10 @@ test.describe('The Round: the room list', () => {
     await expect(page.locator('#screen .sub').first()).toContainText('Morning');
     const names = (await page.locator('.cards .card .nm').allTextContents()).map((t) => t.replace(/^✓ /, ''));
     expect(names).toEqual(['Room 1 · Room 1 door', 'Room 1 · Room 1 window', 'Room 2', 'Room 3', 'Room 4', 'Room 5', 'Room 6']);
-    const lines = await page.locator('.cards .card').allTextContents();   // the whole card: its name and its state line
+    const lines = await page.locator('.cards .card').allTextContents();
     [0, 1, 5, 6].forEach((i) => expect(lines[i]).toContain('Due'));
     expect(lines[2]).toContain('12.5–18.0');
-    expect(lines[3]).toContain('15.0–28.5');   // too warm is a cooling action, not "Outside" (the one temperature rule, 16 Nov 2026); too cold is tested below
+    expect(lines[3]).toContain('15.0–28.5');
     expect(lines[4]).toContain('Room empty');
     for (const [name, done] of [['Room 2', true], ['Room 3', true], ['Room 4', true], ['Room 5', false], ['Room 6', false]]) {
       if (done) await expect(card(page, name)).toHaveClass(DONE); else await expect(card(page, name)).not.toHaveClass(DONE);
@@ -66,7 +62,7 @@ test.describe('The Round: the room list', () => {
     }
     await page.getByRole('button', { name: '← Home' }).click();
     await expect(page.getByRole('heading', { name: 'The Board' })).toBeVisible();
-    await page.locator('[data-module="temperature"]').click();   // Home's Temps card starts the round again
+    await page.locator('[data-module="temperature"]').click();
     await expect(page.getByRole('heading', { name: 'Room temperatures' })).toBeVisible();
     expect(errors).toEqual([]);
   });
@@ -83,13 +79,11 @@ test.describe('The Round: recording a reading', () => {
     expect(script.sent).toHaveLength(1);
     expect(script.sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'ar-5', thermometer_id: 'thm-5', max_c: '18.5', min_c: '12.0', read_method: 'typed', period_start: '2026-03-10T00:00:00+00:00' } });
     expect(script.sent[0].code).toBe(c27.CODE);
-    // the tick does not wait for CLR pressed (PR 473): going back now already shows it
     await page.getByRole('button', { name: '← Rooms' }).click();
     await expect(card(page, 'Room 5')).toHaveClass(DONE);
     await expect(card(page, 'Room 5')).toContainText('12.0–18.5');
-    // and the finish button does the same from the saved screen
     await openRoom(page, 'Room 6');
-    await typeReading(page, '25.0', '24.0');   // inside the room limit (10.0 to 26.0): the room is judged on the adult row, the puppy row is for the bed spot
+    await typeReading(page, '25.0', '24.0');
     await save(page).click();
     await page.getByRole('button', { name: 'CLR pressed' }).click();
     await expect(page.getByRole('heading', { name: 'Room temperatures' })).toBeVisible();
@@ -114,7 +108,6 @@ test.describe('The Round: recording a reading', () => {
       await page.getByRole('button', { name: '← Rooms' }).click();
       await expect(card(page, 'Room 5')).not.toHaveClass(DONE);
       await expect(card(page, 'Room 5')).toContainText('Due');
-      // when the script works again, the same reading saves and ticks
       script.mode.save = 'ok';
       await openRoom(page, 'Room 5');
       await typeReading(page, '18.5', '12.0');
@@ -148,7 +141,7 @@ test.describe('The Round: recording a reading', () => {
     const { script } = await round(page);
     await openRoom(page, 'Room 6');
     await page.getByLabel('Room empty').check();
-    await expect(page.getByText('Dogs are recorded in this room.')).toBeVisible();   // it warns: the list has dogs here
+    await expect(page.getByText('Dogs are recorded in this room.')).toBeVisible();
     await save(page).click();
     await expect(page.locator('.tg-clr')).toContainText('✓ Saved');
     await expect(page.getByText('Now press CLR on the thermometer.')).toHaveCount(0);
@@ -173,8 +166,6 @@ test.describe('The Round: recording a reading', () => {
     expect(script.sent).toHaveLength(0);
   });
 
-  // One temperature rule (Temps A, 16 Nov 2026; staff/lib/temp-judge.js): below the room limit is outside the limit; above it
-  // is a cooling action. Both ask what was done; only the cold one is marked Outside on the card.
   test('below the limit: it asks what was done, will not save without it, and the card says Outside', async ({ page }) => {
     const { script } = await round(page);
     await openRoom(page, 'Room 5');
@@ -212,7 +203,7 @@ test.describe('The Round: recording a reading', () => {
     const { script, errors } = await round(page);
     await openRoom(page, 'Room 5');
     await page.getByRole('button', { name: 'Read with camera' }).click();
-    await expect(page.getByLabel('MAX')).toBeVisible({ timeout: 15000 });   // no camera here: the typing boxes open instead
+    await expect(page.getByLabel('MAX')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('#screen .msg').filter({ hasText: /camera|Camera|Type/ }).first()).toBeVisible();
     await page.getByLabel('MAX').fill('18.5');
     await page.getByLabel('MIN').fill('12.0');
@@ -232,14 +223,14 @@ test.describe('The Round: the buttons under the list', () => {
     await expect(page.getByRole('heading', { name: /earlier reading/i })).toBeVisible();
     await page.getByLabel('Day').fill('2026-03-10');
     await page.getByLabel('Day').dispatchEvent('change');
-    await expect(page.locator('#screen .msg.bad')).toBeVisible();          // today is turned away: that is the round
+    await expect(page.locator('#screen .msg.bad')).toBeVisible();
     await expect(page.locator('.cards .card')).toHaveCount(0);
     await page.getByLabel('Day').fill('2026-03-08');
     await page.getByLabel('Day').dispatchEvent('change');
     await expect(page.locator('.cards .card .nm').first()).toBeVisible();
     await card(page, 'Room 5').click();
     await expect(page.locator('#screen .sub').filter({ hasText: /Earlier reading/ })).toContainText('Morning');
-    await expect(page.getByRole('button', { name: 'Read with camera' })).toHaveCount(0);   // an earlier day is typed, never read by camera
+    await expect(page.getByRole('button', { name: 'Read with camera' })).toHaveCount(0);
     await page.getByLabel('MAX').fill('18.0');
     await page.getByLabel('MIN').fill('11.5');
     script.mode.save = 'fail';
@@ -252,7 +243,7 @@ test.describe('The Round: the buttons under the list', () => {
     expect(script.sent[script.sent.length - 1].fields).toMatchObject({ area_id: 'ar-5', period_start: '2026-03-08T00:00:00+00:00', read_method: 'photo' });
     await page.getByRole('button', { name: 'Done' }).click();
     await expect(card(page, 'Room 5')).toHaveClass(DONE);
-    await page.getByLabel('Morning or afternoon').selectOption('pm');                     // the other half of the day is its own list
+    await page.getByLabel('Morning or afternoon').selectOption('pm');
     await expect(card(page, 'Room 5')).not.toHaveClass(DONE);
     await page.getByRole('button', { name: '← Rooms' }).click();
     await expect(page.getByRole('heading', { name: 'Room temperatures' })).toBeVisible();
@@ -308,14 +299,13 @@ test.describe('The Round: scan and move', () => {
     script.mode.save = 'fail';
     await limited.click();
     await expect(page.locator('#screen .msg').first()).toHaveText(NO_REACH);
-    await expect(free).toHaveAttribute('aria-pressed', 'true');           // not changed: the save did not land
+    await expect(free).toHaveAttribute('aria-pressed', 'true');
     script.mode.save = 'ok';
     await limited.click();
     await expect(page.locator('#screen .msg').first()).toContainText('Flap saved as limited.');
-    await expect(limited).toHaveAttribute('aria-pressed', 'true');        // the lit button follows the save that landed
+    await expect(limited).toHaveAttribute('aria-pressed', 'true');
     await expect(free).toHaveAttribute('aria-pressed', 'false');
     expect(script.sent[script.sent.length - 1]).toMatchObject({ table: 'area_access', fields: { area_id: 'ar-2', access_type: 'limited' } });
-    // Temperature: the round puts the scanned room first; a room still due opens straight at its reading
     await page.getByRole('button', { name: 'Temperature' }).click();
     await expect(page.locator('.cards .card').first()).toContainText('Room 2');
     await expect(page.locator('.cards .card').first()).toContainText('You scanned this');
@@ -328,7 +318,6 @@ test.describe('The Round: scan and move', () => {
   });
 
   test('a dog card after a room sign moves the dog there: OK says moved, FAIL says not saved', async ({ page }) => {
-    // Room 2 has a space here: Dog A12 is taken out of the invented rows before the page reads them
     const { script, errors } = await round(page, { tables: (t) => { t.occupancy = t.occupancy.filter((r) => r.subject_id !== 'sub-a12'); } });
     await scan(page, 'ROOMAAAB');
     await expect(page.getByRole('heading', { name: 'Room 2', exact: true })).toBeVisible();
@@ -342,21 +331,19 @@ test.describe('The Round: scan and move', () => {
     await scan(page, 'DOGAAAAD');
     await expect(page.locator('#screen .msg.good').first()).toContainText('Dog A04: moved.');
     expect(script.sent[script.sent.length - 1]).toMatchObject({ table: 'occupancy', fields: { subject_id: 'sub-a04', area_id: 'ar-2' } });
-    await scan(page, 'ROOMAAAB');                                          // the room again, then the same card: it is not moved twice
-    await expect(page.locator('.cards .card .nm')).toHaveText(['Dog A04', 'Dog A05', 'Dog A06']);   // the moved dog is in the room's list at once, in name order
+    await scan(page, 'ROOMAAAB');
+    await expect(page.locator('.cards .card .nm')).toHaveText(['Dog A04', 'Dog A05', 'Dog A06']);
     await scan(page, 'DOGAAAAD');
     await expect(page.locator('#screen .msg.good').first()).toHaveText('Already recorded in Room 2.');
-    expect(script.sent.filter((b) => b.table === 'occupancy')).toHaveLength(2);   // the failed try and the one that landed
-    // Take this dog out of its room: needs a reason, then saves
+    expect(script.sent.filter((b) => b.table === 'occupancy')).toHaveLength(2);
     await page.getByText('Take this dog out of its room').click();
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.getByText('Choose why.')).toBeVisible();
     await page.getByLabel('Why is this dog leaving').selectOption('temporary');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(page.locator('details .msg')).toHaveClass(/(^|\s)good(\s|$)/);   // a landed save: the green line with the tick, who and when
+    await expect(page.locator('details .msg')).toHaveClass(/(^|\s)good(\s|$)/);
     await expect(page.locator('details .msg')).toContainText('✓');
     expect(script.sent.filter((b) => b.table === 'occupancy_out')).toHaveLength(1);
-    // Finished this room ends the filling and goes Home
     await page.goto('cdhub/staff/#scan');
     await expect(page.getByRole('heading', { name: 'Filling Room 2' })).toBeVisible();
     await page.getByRole('button', { name: 'Finished this room' }).click();
@@ -372,7 +359,7 @@ test.describe('The Round: scan and move', () => {
     await expect(page.locator('#screen .sub').first()).toContainText('3 of 3 now.');
     await scan(page, 'DOGAAAAK');                                          // Dog A10
     await expect(page.getByText('⚠ Over the licence limit')).toBeVisible();
-    expect(script.sent).toHaveLength(0);                                   // nothing is saved by the scan alone
+    expect(script.sent).toHaveLength(0);
     await page.getByRole('button', { name: 'Save with this reason' }).click();
     expect(script.sent).toHaveLength(0);                                   // and nothing without a reason
     await page.locator('#screen input[type="text"], #screen textarea').first().fill('Sample reason: short stay while a room is cleaned');
@@ -390,12 +377,11 @@ test.describe('The Round: scan and move', () => {
   });
 });
 
-// Overseer 22 Nov 2026: after a move the screen still showed the old room until a full reload (a long wait).
 test.describe('Scan and move: the move shows at once, with no read again', () => {
   const scan = async (page, tag) => { await page.goto('cdhub/staff/#mv/' + tag); };
   const reads = (page) => { const r = []; page.on('request', (q) => { if (q.method() === 'POST') { try { const b = JSON.parse(q.postData() || '{}'); if (String(b.action).indexOf('read') === 0) r.push(b.table || (b.tables || []).join(',') || b.action); } catch (e) { /* not JSON */ } } }); return r; };
 
-  test('a saved move shows the dog in its new room and out of the old one, with no read of the lists @regression', async ({ page }) => {
+  test('t-cdhub-round-spec-1', async ({ page }) => {
     const { script } = await round(page, { tables: (t) => { t.occupancy = t.occupancy.filter((r) => r.subject_id !== 'sub-a12'); } });
     await scan(page, 'ROOMAAAB');
     await expect(page.getByRole('heading', { name: 'Room 2', exact: true })).toBeVisible();
@@ -403,13 +389,13 @@ test.describe('Scan and move: the move shows at once, with no read again', () =>
     await scan(page, 'DOGAAAAD');                                          // Dog A04, from Room 1
     await expect(page.locator('#screen .msg.good').first()).toContainText('Dog A04: moved.');
     await expect(page.locator('[data-last-room]')).toHaveText('Last recorded in Room 2');
-    script.tables.occupancy.length = occBefore;                            // a later read would not have it: the screen must not need one
-    await scan(page, 'ROOMAAAA');                                          // Room 1: the dog has gone from it
+    script.tables.occupancy.length = occBefore;
+    await scan(page, 'ROOMAAAA');
     await expect(page.getByRole('heading', { name: 'Room 1', exact: true })).toBeVisible();
     await expect(page.locator('.cards .card .nm', { hasText: 'Dog A04' })).toHaveCount(0);
-    await scan(page, 'ROOMAAAB');                                          // Room 2: the dog is in its list
+    await scan(page, 'ROOMAAAB');
     await expect(page.locator('.cards .card .nm', { hasText: 'Dog A04' })).toHaveCount(1);
-    expect(seen.filter((x) => /occupancy|subject|area,/.test(x) && x !== 'qr_tag')).toEqual([]);   // the dogs and rooms were not read again
+    expect(seen.filter((x) => /occupancy|subject|area,/.test(x) && x !== 'qr_tag')).toEqual([]);
   });
 
   test('a refused move puts the dog back and says Not saved with the reason', async ({ page }) => {
@@ -432,3 +418,4 @@ test.describe('Scan and move: the move shows at once, with no read again', () =>
     expect(seen).toEqual(['occupancy']);
   });
 });
+

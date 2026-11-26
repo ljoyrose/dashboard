@@ -41,18 +41,14 @@ DRIVE_RES = [
     re.compile(r"(?<![A-Za-z0-9_-])0A[A-Za-z0-9_-]{17}(?![A-Za-z0-9_-])"),  # shared drive id
     re.compile(r"(?i)\b(?:docs|drive)\.google\.com/[^\s'\"<>`]*?[A-Za-z0-9_-]{25,}"),  # Docs / Drive link with an id
 ]
-# Made-up ids in tests and samples say so (1SAMPLE..., 1FAKEFAKE...): not flagged.
 FIXTURE_ID = re.compile(r"SAMPLE|FAKE")
-# Invented fixtures (test and fixture files only; see the note at the top).
 FIXTURE_PATHS = ["tests/*", "*/tests/*", "fixtures/*", "*/fixtures/*", "*.spec.js", "*.test.js", "*.test.mjs", "test_*.py", "*/test_*.py"]
 ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 FIXTURE_ID_LOOSE = re.compile(r"SAMPLE|FAKE|TEST|EXAMPLE|DUMMY|INVENTED|([A-Za-z0-9_-]{1,4})\1{5,}|(?i:"
                               + "|".join(ALPHABET[i:i + 8] for i in range(len(ALPHABET) - 7)) + ")")
 FIXTURE_MAIL = re.compile(r"@(?:[a-z0-9-]+\.)*(?:example\.(?:com|net|org)|example|test|invalid)$")
 FIXTURE_PHONE = re.compile(r"^(?:1234567890|\d{4}0{6})$")
-# UK numbers: 0 or +44, then 10 national digits starting 1, 2, 3 or 7; spaces, dashes, (0) allowed.
 PHONE_RE = re.compile(r"(?<![\w+.])(\+44[\s-]?(?:\(0\)[\s-]?)?|0)([1237](?:[\s-]?\d){9})(?![\w.])")
-# Ofcom's ranges reserved for fiction (07700 900xxx, 020 7946 0xxx, 0113 496 0xxx ...): safe for tests and samples.
 FICTION_RE = re.compile(r"^(7700900|11[3-8]4960|1[2-6]14960|2079460|1632960|3069990)")
 BLOCKED_PATHS = ["*/data/*", "data/*", "*/sends/*", "*/runs/*", "*/outbox/*", "*/regression/*",
                  "*PROMPT-REGRESSION-SET*", "*PROMPT-LESSONS*.csv", "*.pyc", "*/__pycache__/*",
@@ -258,3 +254,4 @@ def main(argv):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
+

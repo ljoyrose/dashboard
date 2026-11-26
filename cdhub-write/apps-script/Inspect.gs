@@ -1,32 +1,7 @@
-/**
- * INSPECTOR LINKS (Breed Better, 12 Nov 2026). A time-boxed, read-only link an inspector opens with no login.
- * Lisa decides, per link, which dogs and which fields it shows ("its for the breeder to decide what the inspector sees").
- *
- * How it holds together:
- *   - The link is an ordinary code in the staff registry with role INSPECTOR, an end date (expires_at, as a visitor code)
- *     and the id of its link row. It ends by itself; Stop is the usual revoke. An unreadable end date counts as ended.
- *   - It can never save: sinkHandle_ refuses it before anything else.
- *   - What it can READ comes ONLY from the link's own rows, never from BLD-field_visibility.csv (that file stays read-only
- *     for this script, and stays Lisa's):
- *         BLD-inspect_link_subject   the dogs, one row each, with from_date / to_date (blank to_date = no end)
- *         BLD-inspect_link_field     the columns, one row per list and column; redaction '' or 'last4'
- *     No rows = nothing. Only the lists in INSPECT.LISTS, and never a score list, whatever the rows say.
- *   - Every inspector read is logged in BLD-inspect_access (link, code id, list, how many rows, when), never the code.
- *     If the log cannot be written, the read is refused.
- *   - Only the owner (signed in on the approval page) makes, lists and stops links. The code is shown ONCE, to the owner,
- *     and is never logged or stored except as the one-way hash in the registry.
- */
 var ROLE_INSPECTOR = 'INSPECTOR';
 
 var INSPECT = {
   LINK_FILE: 'BLD-inspect_link.csv',
-  // V9 (13 Nov 2026), the Regulatory-Core DisclosureGrant (map in AA_ACCESS_2026-11-13-1535): from_at / to_at (S4.15
-  // addition 14 Nov, UTC; Lisa: "now for a specific time or scheduled date time from to"); as_of_from / as_of_to
-  // the data period. A row is never edited: an extension or a revoke is a NEW row whose supersedes_id names the row it
-  // replaces; the current row is the one nothing points at. Child rows and the code or card stay on the ROOT row's id.
-  // What a visit may see and do are rows (grant_scope, grant_right_link), not columns. inspect_link = the grant. Old 7-column files still read.
-  // issued_by = the code id that gave it, or 'owner'; delegation_id = the BLD-delegation row it was given under (Delegate.gs).
-  // Old 7-column files still read.
   LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'created_at', 'set_by', 'from_at', 'to_at', 'supersedes_id',
     'grant_type_id', 'person_id', 'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'as_of_from', 'as_of_to', 'purpose_text',
     'grant_basis', 'identity_assurance', 'id_checked_by', 'accompanied_by', 'retention_until', 'email_code', 'ended_at', 'ended_by',
@@ -34,7 +9,6 @@ var INSPECT = {
   SCOPE_FILE: 'BLD-grant_scope.csv',
   SCOPE_COLUMNS: ['id', 'tenant_id', 'grant_id', 'scope_item_type', 'disclosure_state', 'depth_limit', 'withhold_basis', 'from_date', 'to_date',
     'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
-  // the Regulatory-Core disclosure states; only 'record' shows rows so far, the rest read as withheld until defined
   DISCLOSURE_STATES: ['withheld', 'existing_only', 'summary', 'record', 'record_and_evidence'],
   RIGHT_FILE: 'BLD-grant_right_link.csv',
   RIGHT_COLUMNS: ['id', 'tenant_id', 'grant_id', 'right_code', 'scope_summary', 'counts_due', 'from_date', 'to_date', 'source', 'set_by',
@@ -46,24 +20,19 @@ var INSPECT = {
   FIELD_COLUMNS: ['id', 'tenant_id', 'link_id', 'table_name', 'field_name', 'redaction'],
   ACCESS_FILE: 'BLD-inspect_access.csv',
   ACCESS_COLUMNS: ['id', 'tenant_id', 'link_id', 'code_id', 'table_name', 'rows', 'at'],
-  // the lists a link may show, and the column on each that names the dog
   LISTS: { subject: 'id', subject_status: 'subject_id', health_screen: 'subject_id', fit_to_breed: 'subject_id', litter: 'dam_subject_id', microchip: 'subject_id',
-           area_reading: '', check_log: '' },   // 18 Nov 2026: room and site records (INSPECT_SITE), not one dog's
+           area_reading: '', check_log: '' },
   REDACTIONS: ['', 'last4'],
-  // how long a link lasts is NOT here: rule rows external.default_hours.<role> and external.max_hours.<role> (externalRule_)
   MAX_DOGS: 200,
   MAX_FIELDS: 200,
   MAX_LABEL: 80
 };
 
-/** The inspector page's address (Script Property INSPECT_PAGE_URL), or '' if not set or not https. The code goes after a #. */
 function inspectPageUrl_() {
   var u = String(prop_(BLD.PROP.INSPECT_PAGE_URL) || '').trim();
   return /^https:\/\/[^\s#?]+$/.test(u) ? u : '';
 }
 
-/** The Save deployment's id (Script Property INSPECT_SCRIPT_ID, the part between /macros/s/ and /exec). Not secret.
- *  An inspector's phone has no saved Script URL, so the link carries it: <page>#s=<id>&c=<code>. */
 function inspectScriptId_() {
   var s = String(prop_(BLD.PROP.INSPECT_SCRIPT_ID) || '').trim();
   return /^[A-Za-z0-9_-]{10,}$/.test(s) ? s : '';
@@ -71,7 +40,6 @@ function inspectScriptId_() {
 
 function inspectFiles_() { return [INSPECT.LINK_FILE, INSPECT.SUBJECT_FILE, INSPECT.FIELD_FILE, INSPECT.ACCESS_FILE, INSPECT.SCOPE_FILE, INSPECT.RIGHT_FILE]; }
 
-/** The current row of every grant, keyed by its ROOT id (follow supersedes_id forward; the current row has no successor). */
 function linkCurrent_(records, tenant) {
   var next = {}, out = {};
   records.forEach(function (r) { if ((!tenant || r.tenant_id === tenant) && r.supersedes_id) next[r.supersedes_id] = r; });
@@ -84,7 +52,6 @@ function linkCurrent_(records, tenant) {
   return out;
 }
 
-/** The header a link file must have, or null if the title is not one of them. */
 function inspectHeader_(title) {
   if (title === INSPECT.LINK_FILE) return INSPECT.LINK_COLUMNS;
   if (title === INSPECT.SUBJECT_FILE) return INSPECT.SUBJECT_COLUMNS;
@@ -95,7 +62,6 @@ function inspectHeader_(title) {
   return null;
 }
 
-/** Read one link file; missing or the wrong columns means links are not set up, so nothing is shown. */
 function inspectRead_(title) {
   var f = store_read_(title, false);
   var v1 = f && title === INSPECT.LINK_FILE && sameHeader_(f.header, INSPECT.LINK_COLUMNS_V1);
@@ -105,14 +71,12 @@ function inspectRead_(title) {
   return f;
 }
 
-/** A list a link may show? Never a score list, whatever anyone ticks. */
 function inspectListOk_(key) {
   if (typeof key !== 'string' || /^score_/.test(key)) return false;
   if (!Object.prototype.hasOwnProperty.call(INSPECT.LISTS, key) || !Object.prototype.hasOwnProperty.call(READABLE, key)) return false;
   return !/^score_/.test(READABLE[key].vis) && !/^BLD-score_/.test(READABLE[key].file);
 }
 
-/** Is London day `day` inside from..to (both included; blank = open)? */
 function inspectCovers_(r, day) {
   var from = String(r.from_date || ''), to = String(r.to_date || '');
   if (from && !isRealDate_(from)) return false;
@@ -120,9 +84,6 @@ function inspectCovers_(r, day) {
   return (!from || from <= day) && (!to || day <= to);
 }
 
-/* 15 Nov 2026 (FTB): a list whose key is also a job (a check_type type_key, e.g. fit_to_breed) shows that job's saved records
-   as well as any rows in its own older file. Only these columns are made, so how a record was entered and who typed it stay
-   the owner's. valid_until = the day done + every_days on the job row the record was saved against (the rule then). */
 var INSPECT_JOB_COLUMNS = ['id', 'tenant_id', 'subject_id', 'done_on', 'outcome', 'note', 'valid_until'];
 
 function inspectJobRows_(key, tenant) {
@@ -143,11 +104,6 @@ function inspectJobRows_(key, tenant) {
   });
 }
 
-/* 18 Nov 2026 (CD Hub demo, Lisa: "The inspector can see temperature logs, daily health checks, bowl and cleaning records").
-   Temperatures and job records belong to a room or the whole site, so they are not cut down to the link's dogs, except that a
-   job record about one dog shows only if that dog is on the link. The owner still ticks the columns, and may set the link's
-   data_from_date / data_to_date to limit the days. Newest first; a corrected record shows only as its correction. Readable
-   names are added (room, job, dog) so the inspector never sees an internal id on its own. */
 var INSPECT_SITE = {
   area_reading: { dateCols: ['taken_at', 'period_start'], extra: ['room'] },
   check_log: { dateCols: ['happened_at', 'taken_at'], extra: ['job', 'room', 'dog'] }
@@ -155,13 +111,12 @@ var INSPECT_SITE = {
 
 function inspectRowDay_(r, cols) {
   for (var i = 0; i < cols.length; i++) {
-    var d = String(r[cols[i]] || '').slice(0, 10);   // saved in London time, so this is the London day
+    var d = String(r[cols[i]] || '').slice(0, 10);
     if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
   }
   return '';
 }
 
-/** A room or site list with its readable names added, newest first, corrected records left out. null = no file. */
 function inspectSiteData_(key, tenant) {
   var f = store_read_(READABLE[key].file, false);
   if (!f) return null;
@@ -172,11 +127,9 @@ function inspectSiteData_(key, tenant) {
   };
   var room = names(READABLE.area.file, 'name'), job = key === 'check_log' ? names(READABLE.check_type.file, 'label') : {};
   var dog = key === 'check_log' ? names(READABLE.subject.file, 'name') : {};
-  var dam = key === 'check_log' ? names(READABLE.litter.file, 'dam_subject_id') : {};   // a litter's mum, to scope its pups' records
+  var dam = key === 'check_log' ? names(READABLE.litter.file, 'dam_subject_id') : {};
   var replaced = {};
   f.records.forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = true; });
-  // a temperature on a day an owner row (BLD-requirement, need_type room.empty) says the room was empty is left out,
-  // as the staff pages do (TEMPS, 18 Nov 2026)
   var empty = [];
   if (key === 'area_reading') {
     var q = store_read_(READABLE.requirement.file, false);
@@ -203,7 +156,6 @@ function inspectSiteData_(key, tenant) {
   return { header: header, records: recs };
 }
 
-/** The rows a list shows: its own file, plus the job's records when the key is also a job. null = neither exists. */
 function inspectListData_(key, tenant) {
   var f = store_read_(READABLE[key].file, false), jobs = inspectJobRows_(key, tenant);
   if (!jobs) return f;
@@ -212,10 +164,6 @@ function inspectListData_(key, tenant) {
   return { header: header, records: (f ? f.records : []).concat(jobs) };
 }
 
-/**
- * An inspector's read. Called by sinkRead_ once the code is known to be a live INSPECTOR code.
- * Returns the same shape as a staff read, plus `ends` (the link's end, London time).
- */
 function inspectSinkRead_(req, who, now) {
   var key = typeof req.table === 'string' ? req.table : '';
   var denied = err_('NOT_ALLOWED', 'This link does not show that list.');
@@ -227,14 +175,13 @@ function inspectSinkRead_(req, who, now) {
 
   var links = inspectRead_(INSPECT.LINK_FILE).records;
   var link = links.filter(function (r) {
-    if (r.tenant_id !== tenant || r.supersedes_id) return false;              // the root row: children and the code hang on it
-    if (who.card) return r.id === who.link_id && !!r.card_tag_id;             // a visitor card (Visit.gs)
+    if (r.tenant_id !== tenant || r.supersedes_id) return false;
+    if (who.card) return r.id === who.link_id && !!r.card_tag_id;
     return who.id && r.code_id === who.id && (!who.link_id || r.id === who.link_id);
   })[0];
   if (!link) throw denied;
   var current = linkCurrent_(links, tenant)[link.id] || link;
   if (String(current.ended_at || '')) throw err_('WINDOW', 'This visit has ended.');
-  // scope rows (V9): when a visit has any, a list shows only if its row is in force today and 'record'; none = an older link
   var scope = store_read_(INSPECT.SCOPE_FILE, false), scoped = false, shown = false;
   if (scope && sameHeader_(scope.header, INSPECT.SCOPE_COLUMNS)) {
     scope.records.forEach(function (r) {
@@ -268,7 +215,6 @@ function inspectSinkRead_(req, who, now) {
   if (!fields.length) throw denied;
   if (!site) {
     if (data.header.indexOf(subjCol) < 0) throw denied;
-    // the column naming the dog always comes too (an internal id, never redacted), so the page can put each dog's rows together
     if (fields.indexOf(subjCol) < 0) fields.unshift(subjCol);
     cols[subjCol] = '';
   }
@@ -283,8 +229,6 @@ function inspectSinkRead_(req, who, now) {
     var r = data.records[i];
     if (hasTenantCol && r.tenant_id !== tenant) continue;
     if (site) {
-      // a record about one dog: only the link's dogs. A litter's record: only if its mum, or that pup, is on the link
-      // (an unknown litter is never shown).
       if (r.litter_id) { if (!(r.subject_id && dogs[r.subject_id]) && !(r.__dam && r.__dam !== r.litter_id && dogs[r.__dam])) continue; }
       else if (r.subject_id && !dogs[r.subject_id]) continue;
       if ((dFrom || dTo) && (!r.__day || (dFrom && r.__day < dFrom) || (dTo && r.__day > dTo))) continue;
@@ -312,16 +256,11 @@ function inspectSinkRead_(req, who, now) {
   };
 }
 
-/** The end of London day `ymd` as a London time with its offset, e.g. 2026-11-19T23:59:59Z. */
 function inspectEndOfDay_(ymd) {
   var noon = londonIso_(new Date(Date.parse(ymd + 'T12:00:00Z')));
   return ymd + 'T23:59:59' + noon.slice(19);
 }
 
-/**
- * OWNER: what can be ticked. Dogs (id, name, archived = their latest status row has ended or says Archived/Retired/Left)
- * and, per list, the columns that exist in its file. No values are returned apart from dog names.
- */
 function sinkInspectChoices_() {
   var tenant = prop_(BLD.PROP.TENANT_ID), today = todayLondon_(new Date());
   var subj = store_read_(READABLE.subject.file, false), stat = store_read_(READABLE.subject_status.file, false);
@@ -347,12 +286,6 @@ function sinkInspectChoices_() {
   };
 }
 
-/**
- * OWNER: make a link. spec = {label, ends: 'YYYY-MM-DD' (blank = today + 7), subjects: [subject ids],
- * fields: {list: ['column', {field: 'chip_number', redaction: 'last4'}, ...]}}.
- * Writes the dog rows, the field rows and the link row, and only THEN the code, so a half-made link can never be opened.
- * Returns the code ONCE, for the owner page to show with a Copy button. It is not logged.
- */
 function sinkInspectMake_(spec, adminEmail) {
   var bad = function (field, msg) { var e = {}; e[field] = msg; return err_('INVALID', msg, { fields: e }); };
   if (!spec || typeof spec !== 'object' || Array.isArray(spec)) throw err_('BAD_REQUEST', 'That request was not understood.');
@@ -398,7 +331,6 @@ function sinkInspectMake_(spec, adminEmail) {
     });
   });
   if (!fieldRows.length) throw bad('fields', 'Tick at least one field.');
-  // 18 Nov 2026: optional first and last day of records shown (temperatures and job records); blank = all
   var dataFrom = String(spec.data_from_date || '').trim(), dataTo = String(spec.data_to_date || '').trim();
   if (dataFrom && !isRealDate_(dataFrom)) throw bad('data_from_date', 'That date was not understood.');
   if (dataTo && !isRealDate_(dataTo)) throw bad('data_to_date', 'That date was not understood.');
@@ -407,8 +339,8 @@ function sinkInspectMake_(spec, adminEmail) {
 
   return withLock_(function () {
     var L = inspectRead_(INSPECT.LINK_FILE), S = inspectRead_(INSPECT.SUBJECT_FILE), F = inspectRead_(INSPECT.FIELD_FILE);
-    inspectRead_(INSPECT.ACCESS_FILE);   // the visit log must exist before a link can be opened
-    var linkId = newId_('ilk', now), codeId = newCodeId_(), endsAt = win.ends_at, by = adminEmail || 'owner';
+    inspectRead_(INSPECT.ACCESS_FILE);
+    var linkId = newId_('ilk', now), codeId = newCodeId_(), endsAt = win.ends_at, by = adminEmail || 'user';
     var v1 = sameHeader_(L.header, INSPECT.LINK_COLUMNS_V1);
     if (v1 && win.later) throw bad('starts_at', 'A link that opens later needs the from_at and to_at columns in BLD-inspect_link. Ask STAFF to add them.');
     if (v1 && (dataFrom || dataTo)) throw bad('data_from_date', 'Limiting the days needs the as_of_from and as_of_to columns in BLD-inspect_link. Ask STAFF to add them.');
@@ -428,12 +360,12 @@ function sinkInspectMake_(spec, adminEmail) {
     for (var i = 0; i < 16; i++) code += alphabet.charAt(parseInt(raw.substr(i * 2, 2), 16) % alphabet.length);
     var reg = registry_();
     reg[hashCode_(code, salt)] = { id: codeId, who: 'Inspector - ' + label, role: ROLE_INSPECTOR, active: true, added: londonIso_(now), starts_at: win.starts_at, expires_at: endsAt, link_id: linkId };
-    setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));   // the link works from this line on
+    setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));
     return { link_id: linkId, code_id: codeId, code: code, ends: endsAt, starts_at: win.starts_at, ends_at: win.ends_at, dogs: subjects.length, fields: fieldRows.length };
   });
 }
 
-/** OWNER: every link, newest first, with its state. Ended and stopped links stay listed as a record of what was shown. */
+/** list links */
 function sinkInspectLinks_() {
   var tenant = prop_(BLD.PROP.TENANT_ID), reg = registry_(), byId = {}, h;
   for (h in reg) if (Object.prototype.hasOwnProperty.call(reg, h) && reg[h].id) byId[reg[h].id] = reg[h];
@@ -454,7 +386,7 @@ function sinkInspectLinks_() {
   }).reverse();
 }
 
-/** OWNER: stop a link now (the usual revoke on its code; the link rows stay as the record). */
+/** stop a link */
 function sinkInspectStop_(linkId, adminEmail, reason) {
   var tenant = prop_(BLD.PROP.TENANT_ID);
   reason = String(reason == null ? '' : reason).trim();
@@ -465,14 +397,12 @@ function sinkInspectStop_(linkId, adminEmail, reason) {
   if (!link) throw err_('NOT_FOUND', 'That link was not found.');
   return withLock_(function () {
     var out = revokeCodeCore_(link.code_id, adminEmail, reason), now = new Date();
-    // a V9 file also gets the revoke as a new row (never an edit); an old 7-column file keeps only the code switch-off
     var L2 = inspectRead_(INSPECT.LINK_FILE);
-    if (sameHeader_(L2.header, INSPECT.LINK_COLUMNS)) linkSupersede_(L2, link.id, { ended_at: utcIso_(now), ended_by: adminEmail || 'owner', end_reason: reason }, now);
+    if (sameHeader_(L2.header, INSPECT.LINK_COLUMNS)) linkSupersede_(L2, link.id, { ended_at: utcIso_(now), ended_by: adminEmail || 'user', end_reason: reason }, now);
     return out;
   });
 }
 
-/** Write a NEW row replacing the grant's current row: a copy with `changes` and supersedes_id = the current row. */
 function linkSupersede_(L, rootId, changes, now) {
   var tenant = prop_(BLD.PROP.TENANT_ID), cur = linkCurrent_(L.records, tenant)[rootId];
   if (!cur) throw err_('NOT_FOUND', 'That visit was not found.');
@@ -482,23 +412,12 @@ function linkSupersede_(L, rootId, changes, now) {
   var v = {};
   L.header.forEach(function (h) { v[h] = cur[h] == null ? '' : String(cur[h]); });
   for (var k in changes) if (Object.prototype.hasOwnProperty.call(changes, k)) v[k] = changes[k];
-  v.id = id; v.supersedes_id = cur.id; v.created_at = utcIso_(now);   // S4.2: UTC
+  v.id = id; v.supersedes_id = cur.id; v.created_at = utcIso_(now);
   store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return v[h] == null ? '' : v[h]; })], L);
   return v;
 }
 
-/* ---------------------------------------------------------------------------------------------------------------
- * Outside-access windows (V9, 13 Nov 2026). One shape for every outsider (inspector, guest, later vet and auditor):
- *   {hours: N}                     from now, for N hours (an unannounced visit)
- *   {until: 'HH:MM'}               from now until that time today
- *   {starts_at, ends_at}           'YYYY-MM-DDTHH:MM' London, set in advance; the code says "Opens ..." until then
- *   {ends: 'YYYY-MM-DD'}           the old shape: from now to the end of that day
- *   nothing                        the external.default_hours.<role> rule row, if there is one
- * The longest is the external.max_hours.<role> rule row in force today (BLD-breeding_rule, the shared rule list).
- * No row = no default, and no cap beyond what the owner sets. Nothing about length is fixed in this file.
- * --------------------------------------------------------------------------------------------------------------- */
 
-/** A whole or decimal number of hours from the rule row external.<name>.<role> in force on `day`, or null. */
 function externalRule_(name, role, day) {
   var key = 'external.' + name + '.' + String(role || '').toLowerCase(), best = null, val = null, rules;
   try { rules = store_read_('BLD-breeding_rule.csv', false); } catch (e) { return null; }
@@ -515,17 +434,15 @@ function externalRule_(name, role, day) {
   return val;
 }
 
-/** London 'YYYY-MM-DDTHH:MM' to a time in ms, or NaN. */
 function londonLocalMs_(s) {
   var m = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})$/.exec(String(s || '').trim());
   if (!m || !isRealDate_(m[1]) || +m[2] > 23 || +m[3] > 59) return NaN;
   var guess = Date.parse(m[1] + 'T' + m[2] + ':' + m[3] + ':00Z');
   var off = londonIso_(new Date(guess)).slice(19);                      // '+01:00' or 'Z'/'+00:00'
   var ms = Date.parse(m[1] + 'T' + m[2] + ':' + m[3] + ':00' + (off === 'Z' ? 'Z' : off));
-  return londonIso_(new Date(ms)).slice(0, 16) === m[1] + 'T' + m[2] + ':' + m[3] ? ms : NaN;   // a time that does not exist (clocks go forward) is refused
+  return londonIso_(new Date(ms)).slice(0, 16) === m[1] + 'T' + m[2] + ':' + m[3] ? ms : NaN;
 }
 
-/** Work out a window from the owner's request. Returns {startMs, endMs, starts_at, ends_at, later}. */
 function externalWindow_(spec, role, now, bad, typeHours) {
   typeHours = typeHours || {};
   var nowMs = now.getTime(), today = todayLondon_(now), startMs = nowMs, endMs, H = 3600000;
@@ -545,7 +462,7 @@ function externalWindow_(spec, role, now, bad, typeHours) {
     endMs = externalMs_(ea);
     if (isNaN(startMs)) throw bad('starts_at', 'Choose the date and time it opens.');
     if (isNaN(endMs)) throw bad('ends_at', 'Choose the date and time it ends.');
-    if (startMs < nowMs) startMs = nowMs;                                  // a start already passed means from now
+    if (startMs < nowMs) startMs = nowMs;
     if (endMs <= startMs) throw bad('ends_at', 'The end must be after the start.');
   } else if (endsDay) {
     if (!isRealDate_(endsDay)) throw bad('ends', 'Choose the last day the link works.');
@@ -563,29 +480,26 @@ function externalWindow_(spec, role, now, bad, typeHours) {
   return { startMs: startMs, endMs: endMs, starts_at: londonIso_(new Date(startMs)), ends_at: londonIso_(new Date(endMs)), later: startMs > nowMs + 60000 };
 }
 
-/** The longest a window may last: the lower of the visit type's max_hours and the external.max_hours.<role> row, or null. */
 function externalMax_(role, day, typeMax) {
   var rule = externalRule_('max_hours', role, day), t = Number(typeMax);
   if (t > 0 && (rule === null || t < rule)) return t;
   return rule;
 }
 
-/** A start or end time: London 'YYYY-MM-DDTHH:MM', or a full ISO time with its offset (as the hub sends). NaN if neither. */
 function externalMs_(s) {
   s = String(s || '').trim();
   if (ISO_DT_RE_.test(s)) return Date.parse(s);
   return londonLocalMs_(s);
 }
 
-/** A code whose window has not opened yet? (starts_at in the future) */
 function externalNotYet_(entry) {
   var s = Date.parse(entry.starts_at || '');
   return !isNaN(s) && new Date().getTime() < s;
 }
 
-/** '2 Mar 2026 14:05' London, for messages (one date format everywhere, Lisa 13 Nov 2026; never DD/MM/YY). */
 function externalShow_(iso) {
   var ms = Date.parse(iso || ''); if (isNaN(ms)) return '';
   var t = londonIso_(new Date(ms)), mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return (+t.slice(8, 10)) + ' ' + mon[+t.slice(5, 7) - 1] + ' ' + t.slice(0, 4) + ' ' + t.slice(11, 16);
 }
+

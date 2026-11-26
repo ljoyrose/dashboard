@@ -1,10 +1,5 @@
-// One place for the dashboard's settings. None of these are secrets: the client id is the public
-// Google sign-in id, and the rest are Drive folder/file ids and web addresses.
-// Change an id here and all three pages (and the tests) follow it.
 (function (root) {
   'use strict';
-  // One list for shared drives the dashboard must never read, list, search or bin.
-  // Match by id or by the drive's name. The name is the shared-drive title.
   var EXCLUDED = [
     { id: '0AEf6v2sKb4FrUk9PVA', name: 'Karen - SHARED' }
   ];
@@ -12,9 +7,7 @@
     clientId: '135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com',
     scopes: {
       read: 'https://www.googleapis.com/auth/drive.readonly',
-      // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
       write: 'https://www.googleapis.com/auth/drive',
-      // Personal Drive page only: a second, look-only sign-in. Its token stays in memory and is never used for work calls.
       personal: 'https://www.googleapis.com/auth/drive.metadata.readonly'
     },
     // Private settings file (the loader is at the bottom of this file). After Google sign-in the dashboard looks in Drive
@@ -26,10 +19,7 @@
       dryRun: true,
       fileName: 'DASH_CONFIG.json'
     },
-    // Ids only, derived from cleanup.excludedDrives. Kept so older checks still find them.
     excludedDrives: EXCLUDED.map(function (d) { return d.id; }),
-    // Allow-list and excluded drives live together. An empty allow-list means every
-    // shared drive except the excluded list. My Drive bins only what the signed-in person owns.
     cleanup: {
       excludedDrives: EXCLUDED,
       sharedDriveAllowIds: []
@@ -42,9 +32,6 @@
       surface: 'drive-personal',
       dryRun: false
     },
-    // TidyUp Apps stage 5: one row per app outside Drive and Dropbox. status: 'bot-and-browser' | 'bot-capable' |
-    // 'browser-only' | 'nothing'. how = the only tidy route allowed; never = API actions no bot may call for that app.
-    // Archive or trash only, never a permanent delete. No emails or ids here. The Bin page lists these under Other apps.
     tidyApps: [
       { app: 'Canva', status: 'bot-and-browser', how: 'The tidy bot moves marked designs to a bin folder; you empty it in Canva (kept 30 days).', never: ['delete', 'trash by bot'] },
       { app: 'Gmail', status: 'bot-capable', how: 'Nothing marked yet. A bot may archive or trash only.', never: ['delete_label', 'delete'] },
@@ -68,10 +55,8 @@
       ledgerFileId: '1oIQz2HR86iL8ZuJQdKaUeEplNj0mG9GY', // RR_DELETE-LEDGER, file_id column
       cfFolderId: '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A',
       readFirstId: '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L',
-      dbxFolderId: '0AEqV6Ky2jpmDUk9PVA', // Drive folder holding DROPBOX-TOTALS.json
+      dbxFolderId: '0AEqV6Ky2jpmDUk9PVA',
       dbxTotalsName: 'DROPBOX-TOTALS.json',
-      // Bin page Log: the tidy engines' run history (RUN-LOG.csv, written by the private repo; columns in index.html
-      // above loadRunLog and in README.md). Placeholder: empty until the folder exists. Empty = "No runs logged yet".
       runLogFolderId: '',
       runLogName: 'RUN-LOG.csv'
     },
@@ -87,13 +72,9 @@
     cdhub: {
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
       folderName: '*01 SLA Inspections / BLD-app-tables',
-      // ?demo=1 on CD Hub reads this folder instead: pretend job records for demos and videos, never licence records.
       demoFolderId: '1W3axz-_p85ctrn2ZvBYn_Yi8T9-MoaZd',
       readingsSheetId: '1utmtG6V2q4kLQT15LtHg_AyncNObeBSyXyV86MaV8o0', // BLD-outdoor_temp readings sheet
-      // The save script's /exec address. Left empty on purpose (this site is public): the hub reads it after sign-in from
-      // BLD-save-webapp.json in the folder above ({"url": "..."}), so a phone only needs the staff code once.
       saveScriptUrl: '',
-      // Puppy enquiries may queue BLD rows (person, household, owner, sale) only when this is true. Off: the button is hidden and nothing is sent.
       enquiriesWrites: false
     },
     // Marketplace page: the "Marketplace" tab of RR_OPEN-WORK (filled by the RR_MKT-ENGINE Apps Script). Taps write only the
@@ -105,15 +86,12 @@
       bookId: '1Lags6XfdNhvxwxGNgEKwfoosHr6ci9rzG-QXulgCfxU', // RR_FOOD (RR_DDF folder)
       live: false
     },
-    // Studio page (studio/): asset hub. Reads studio-state.json from logsFolderId (written by the STUDIO-ENGINE Apps Script);
-    // until it exists the page shows built-in example data and sends nothing. Clicks drop one request file into requestsFolderId.
     studio: {
-      rootFolderId: '1zY7WMtfw_w5GioaoQlyEKkew-0dYZLvQ', // RR_Studio (shared drive "7 - Purple - Assets Ideas")
-      logsFolderId: '1Yq9ELzfAE27sxD1k3_KYEDCSz5BzmcdI', // holds studio-state.json
-      requestsFolderId: '13KclIUhOej1bmoQznfbrUiHtoab-FnDV', // the page writes request JSON files here
-      inboxFolderId: '1poaewHMRwrOcXwXa0PrMZhnmhyn66BzL', // Ideas > Inbox - drop files here
+      rootFolderId: '1zY7WMtfw_w5GioaoQlyEKkew-0dYZLvQ',
+      logsFolderId: '1Yq9ELzfAE27sxD1k3_KYEDCSz5BzmcdI',
+      requestsFolderId: '13KclIUhOej1bmoQznfbrUiHtoab-FnDV',
+      inboxFolderId: '1poaewHMRwrOcXwXa0PrMZhnmhyn66BzL',
       stateFile: 'studio-state.json',
-      // Owned tools list (Tools page): read with the signed-in token only. The tool data lives in the sheet, never in this repo.
       ownedTools: { sheetId: '1iwlUFBeFOAUxlHlr8FsCIxpmhqSWzq3038OEDN-Zfz8', tab: 'OWNED_TOOLS' }, // STUDIO-CONTROL sheet, Owned Tools tab
       live: false
     },
@@ -153,10 +131,10 @@
     marketplace: {
       openWorkId: '1ShYbYmY8W-MEWqm9kHFsIcS5uR4b2SG00uXle_yL76U', // RR_OPEN-WORK (00 AI Commons)
       tab: 'Marketplace',
-      listingsFileId: '1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW', // RR_LISTINGS.csv: read only, for the second photo on "Same item?" cards
+      listingsFileId: '1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW',
       wakeFolderId: '',
       wakeFile: 'MKT-WAKE-WEBAPP.json',
-      ideasRequestsFolderId: '1cd3vZwUYB0pNFUTQzSOMkYwuOeATG7Rv', // Drive folder for Product ideas request files (MKT-IDEA-REQ-*.json). Empty = the Add idea form will not send.
+      ideasRequestsFolderId: '1cd3vZwUYB0pNFUTQzSOMkYwuOeATG7Rv',
       live: false
     },
     // Puppy Enquiries Hub (enquiries/): reads the private RR_ENQUIRIES sheet (filled by the enquiries engine) with the owner's
@@ -166,20 +144,16 @@
       requestsFolderId: '',
       live: false
     },
-    // App Factory page (factory/): reads af-state.json from logsFolderId (written by AF-ENGINE); writes request files into
-    // requestsFolderId. The Idea Form is the front door (AF-ENGINE writes the card and the ClickUp task).
     factory: {
       logsFolderId: '1e04LM9qA2lXpy63Qfcd7x9HEEjhsMj9k',
       requestsFolderId: '1Z1Iuc_rRFq7cy12ELM0seZ-onpCSfDQ2',
       ideaFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSfzzTnlyNWeXzFEz9NfYxNXsCFN6KwV8RxFyIRTJZ-WrH15nw/viewform'
     },
-    // Bin guard (Apps Script, owned by the business account). Restores binned items that are not ZZ_DELETE_/ZZ_SUPERSEDED_
-    // into 00 CHECK. The web app is domain-only, so its address is not needed by anyone outside the business domain.
     binGuard: {
-      checkFolderId: '1o7ag4AndYA20h7aOmPsm0x69q3f2PqaZ', // LD > *00 Current > 00 CHECK
-      homeFolderId: '1HKAMkAER7ft-xMJYUQGzi_v6jV-3vQwk', // LD > *00 Current: the web app writes its address file here when first opened
+      checkFolderId: '1o7ag4AndYA20h7aOmPsm0x69q3f2PqaZ',
+      homeFolderId: '1HKAMkAER7ft-xMJYUQGzi_v6jV-3vQwk',
       webAppFile: 'BIN-GUARD-WEBAPP.json',
-      webAppUrl: '' // optional: paste the /exec address here instead. Left empty, the page reads it from webAppFile.
+      webAppUrl: ''
     },
     // Projects Hub (Apps Script web app in the private projects-hub repo). the owner OK'd the address here (1 Nov 2026): it
     // grants nothing on its own; Google limits the web app to her Workspace and the hub lets in only its EDITORS list.
@@ -193,11 +167,11 @@
       webAppUrl: 'https://script.google.com/a/macros/puppyclassroom.com/s/AKfycbx42JNrRiolxbf5JJEqnOwXy_GgYelx-6GKhQaNuQMyUsTW5e89P2VZBANP_yGSOxgj/exec'
     },
     money: {
-      owner: 'lisa@puppyclassroom.com',
+      user: 'user@puppyclassroom.com',
       driveId: '0AE4lOsGSf-cXUk9PVA',
       folders: {
-        index: '1wB3t6ScV6mnbKpXU6UBjnMvToUt_A7rj', // 0.1 - Index
-        ops: '115saDuLMClWZVfzIYTn2fN-BjPWijgBm', // 4 - Ops, the one that holds CHECK-LOG
+        index: '1wB3t6ScV6mnbKpXU6UBjnMvToUt_A7rj',
+        ops: '115saDuLMClWZVfzIYTn2fN-BjPWijgBm',
         accountant: '1yBTSQKXDue6gRkfLD3g6FVOIHfFnt7kQ',
         factory: '1GkoMTMmH7B_zQvq5-DY_7KUYJzTAJKB1',
         drop: '10-HE-oa3eY9cHMAn5_gWHK9GFnNcqdKe'
@@ -206,50 +180,31 @@
   };
 })(typeof window !== 'undefined' ? window : this);
 
-// ---- Private settings loader (DASH_CONFIG.json on Drive) --------------------------------------------------------------
-// The settings above are the fallback and keep working on their own. After Google sign-in this block looks in Drive for
-// ONE file named privateConfig.fileName and, when it is found and trusted, can use its values in place of the ones above.
-// No file, a broken file, a slow answer or no sign-in = the values above, exactly as before.
-// Safety rails (tests: tests/mocked/private-config-rails.spec.js and private-config.spec.js):
-//  - Trusted file only: owned by the signed-in person, or kept in a shared drive that Google limits to its own domain.
-//    A file somebody else shared in is ignored. Two trusted files = neither is used.
-//  - It may only fill in ids, Google addresses, the owner address and names that already have a place above. It can never
-//    change the sign-in id, the permissions asked for, the Google API addresses, or any live / dryRun switch.
-//  - Never-read drives can be added, never removed. An empty value never replaces a filled one.
-//  - privateConfig.dryRun true = find and check the file, change nothing (DashConfigLoader.status() says what it found).
-//    In dry run, and whenever there is no usable file, nothing at all is kept in this browser.
-//  - Nothing is written to the console and no value is ever shown: status() gives counts and setting names only.
-// With dryRun false the checked values are kept in this browser (cleared on sign-out) so the next page load starts with
-// them, and the page reloads once when they differ from what it started with (never while someone is typing or tapping).
 (function (root) {
   'use strict';
   var CFG = root.DASH_CONFIG;
   if (!CFG) return;
   var CACHE_KEY = 'ljr-dash-private-config', RELOAD_KEY = CACHE_KEY + '-reload';
   var TTL_MS = 15 * 60 * 1000, RETRY_MS = 60 * 1000, TIMEOUT_MS = 8000, MAX_BYTES = 65536;
-  // Fixed before anything can be overridden: the loader only ever talks to the Google Drive API address written above.
   var API = String((CFG.urls && CFG.urls.driveApi) || 'https://www.googleapis.com/drive/v3');
   var BUILT_IN = JSON.stringify(CFG); // the settings exactly as written above
 
   var ID_RE = /^[A-Za-z0-9_-]{1,128}$/, TEXT_RE = /^[^\u0000-\u001f\u007f]{1,200}$/, EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}$/;
   var URL_RE = /^https:\/\/(docs\.google\.com|script\.google\.com|drive\.google\.com|forms\.gle)\/[^\s\\]{0,1900}$/;
-  // Settings a Drive file can never change, whatever it says.
   var NEVER = /^(clientId|scopes|privateConfig|tidyApps|personalBin|excludedDrives)(\.|$)|^urls\.(files|drives|driveApi)$|^actionsMinutes\.usageUrl$/;
 
   function isObj(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
   function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
 
-  /** What sort of value a setting holds: 'id', 'email', 'url' or 'text'. '' = a Drive file may not change it. */
   function kindOf(path, key) {
     if (NEVER.test(path)) return '';
     if (/^money\.folders\.[^.]+$/.test(path) || /Id$/.test(key)) return 'id';
-    if (path === 'money.owner') return 'email';
+    if (path === 'money.user') return 'email';
     if (path === 'urls.moveSheet' || /Url$/.test(key)) return 'url';
     if (/(Name|File)$/.test(key) || key === 'tab') return 'text';
     return '';
   }
 
-  /** True when v is a filled-in, well-formed value of that sort. */
   function okValue(kind, v) {
     if (typeof v !== 'string') return false;
     if (kind === 'id') return ID_RE.test(v);
@@ -259,8 +214,6 @@
     return false;
   }
 
-  /** Works out what a private settings object may change in `base`. Changes nothing.
-   *  Returns { set: [{ path, value }], drives: [{ id, name }], skipped: [{ path, why }] }. */
   function plan(base, over) {
     var out = { set: [], drives: [], skipped: [] };
     function skip(path, why) { if (out.skipped.length < 100) out.skipped.push({ path: String(path).slice(0, 80), why: why }); }
@@ -292,7 +245,6 @@
     return out;
   }
 
-  /** Puts a plan's values into `base`. Returns how many settings changed. */
   function apply(base, p) {
     var changed = 0;
     p.set.forEach(function (s) {
@@ -310,7 +262,6 @@
     return changed;
   }
 
-  // The checked values as a small settings object (what is kept in this browser between page loads).
   function keep(p) {
     var o = {};
     p.set.forEach(function (s) {
@@ -321,7 +272,6 @@
     if (p.drives.length) { if (!own(o, 'cleanup')) o.cleanup = {}; o.cleanup.excludedDrives = p.drives; }
     return o;
   }
-  // The full settings a page would run on with these private values ('' or null = the settings above alone).
   function effective(values) {
     var base = JSON.parse(BUILT_IN);
     if (values) apply(base, plan(base, values));
@@ -333,7 +283,6 @@
   var api = { plan: plan, apply: apply, status: status, refresh: function () { return Promise.resolve(status()); }, ready: Promise.resolve(status()) };
   root.DashConfigLoader = api;
 
-  // Tests and tools load this file without a browser: the checks above still work there, nothing below runs.
   if (!root.document || typeof root.fetch !== 'function' || typeof root.addEventListener !== 'function') return;
   var SET = isObj(CFG.privateConfig) ? CFG.privateConfig : {};
   if (SET.enabled !== true) return;
@@ -346,7 +295,6 @@
   function readCache() {
     try { var c = JSON.parse((local && local.getItem(CACHE_KEY)) || 'null'); return isObj(c) && typeof c.at === 'number' ? c : null; } catch (e) { return null; }
   }
-  // Only checked values are ever kept. No file (or dry run) = nothing kept, so the sign-in stays the one thing in this browser.
   function writeCache(at, values) {
     try {
       if (!local) return;
@@ -358,12 +306,11 @@
     try { if (session) session.removeItem(RELOAD_KEY); } catch (e2) {}
   }
 
-  // Start of the page: with dryRun off, the values checked on an earlier visit go in before any page code reads a setting.
   var startedWith = null;
   if (!DRY) {
     var kept = readCache();
     if (kept && isObj(kept.values)) {
-      var p0 = plan(CFG, kept.values); // checked again every time, so a changed browser store cannot get past the rails
+      var p0 = plan(CFG, kept.values);
       st.inUse = apply(CFG, p0);
       startedWith = keep(p0);
       st.state = 'in-use'; st.values = p0.set.length; st.drives = p0.drives.length;
@@ -380,7 +327,6 @@
       return r;
     });
   }
-  // A file is trusted when the signed-in person owns it (My Drive), or it sits in a shared drive limited to its own domain.
   function trusted(f, tok, signal) {
     if (!f.driveId) return Promise.resolve(f.ownedByMe === true);
     if (!ID_RE.test(String(f.driveId))) return Promise.resolve(false);
@@ -424,7 +370,6 @@
     root.addEventListener(ev, function () { touched = true; }, { capture: true, passive: true });
   });
 
-  // The new values are kept for the next page load; the page reloads now only when nobody is using it and only once per change.
   function settle(values) {
     var want = effective(values);
     if (want === runningOn) { st.pendingReload = false; return; }
@@ -437,8 +382,6 @@
     root.location.reload();
   }
 
-  /** Looks for the private settings file now. One look per page load, and not again within 15 minutes of values being
-   *  kept (force true looks anyway). Resolves with status(). Never rejects. */
   function refresh(force) {
     if (busy) return busy;
     var tok = token();
@@ -452,7 +395,6 @@
     touched = false;
     st.state = 'checking';
     function failed(state) {
-      // Whatever was in use stays in use, and is checked again in a minute rather than on every page load.
       st.state = before === 'in-use' ? 'in-use' : state;
       var old = readCache();
       if (old && old.values) writeCache(Date.now() - TTL_MS + RETRY_MS, old.values);
@@ -461,7 +403,7 @@
       if (res.state !== 'found') {
         st.values = 0; st.drives = 0; st.wouldChange = 0; st.skipped = [];
         if (res.state === 'absent') { st.state = 'absent'; writeCache(Date.now(), null); if (!DRY) settle(null); }
-        else failed(res.state); // untrusted or ambiguous: nothing is used, and what was in use is left alone
+        else failed(res.state);
         return;
       }
       return readFile(res.file, tok, ctl.signal).then(function (json) {
@@ -486,7 +428,6 @@
   }
   api.refresh = refresh;
 
-  // auth.js says when this tab's saved sign-in changes. Signing out forgets the kept values.
   root.addEventListener('dash-auth-change', function () {
     var signedOut = false;
     try { signedOut = !!root.DashAuth && !root.DashAuth.read(); } catch (e) {}
@@ -498,3 +439,4 @@
     if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', go); else go();
   });
 })(typeof window !== 'undefined' ? window : this);
+

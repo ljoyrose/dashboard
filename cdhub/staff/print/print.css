@@ -100,7 +100,6 @@
  .sheet.dogs.per1 .dcard .name{font-size:48px}.sheet.dogs.per1 .dcard .dtop{grid-template-columns:1fr 62mm}
  .sheet.dogs.per1 .dcard dt{font-size:16px}.sheet.dogs.per1 .dcard dd{font-size:28px}.sheet.dogs.per1 .dcard .szb{font-size:30px;padding:4mm}
  .sheet.dogs.per1 .dcard .chipline{font-size:20px}.sheet.dogs.per1 .dcard .chipline b{font-size:36px}
- /* two a page: name across the top, facts and photo, the size block, the chip; the QR on the right */
  .sheet.dogs.per2 .dcard{height:132mm;border-radius:0;border-width:0 0 1px;border-bottom-style:dashed;display:inline-grid;grid-template-columns:1fr 62mm;grid-template-rows:auto 1fr auto auto;grid-template-areas:"name name" "top code" "size code" "chip tag";align-content:space-evenly;column-gap:8mm;padding:5mm 6mm}
  .sheet.dogs.per2 .dcard .name{grid-area:name;font-size:40px}.sheet.dogs.per2 .dcard .dtop{grid-area:top;grid-template-columns:1fr 55mm}
  .sheet.dogs.per2 .dcard .szb{grid-area:size;font-size:22px}.sheet.dogs.per2 .dcard .code{grid-area:code;align-self:center;height:62mm}
@@ -127,7 +126,6 @@
  .sheet.dogs.per2 .vcard .photo{width:88mm;height:88mm;aspect-ratio:1}
  .sheet.dogs.per2 .vcard .szb{width:100%;height:18mm;padding:2mm 4mm;justify-content:center}.sheet.dogs.per2 .vcard .szb b{font-size:30px}
  .sheet.dogs.per2 .vcard .code{width:62mm;height:62mm;align-self:end;justify-self:center;overflow:visible}
- /* 62 mm of black squares; the white quiet zone spills onto the white card round it (8 mm clear above, to the tile) */
  .sheet.dogs.per2 .vcard .code svg{width:calc(100% * var(--qz,1));height:auto;margin:calc(50% - 50% * var(--qz,1))}
  .sheet.dogs.per2 .vcard .chipline b{font-size:32px}
  .sheet.dogs.per1 .dcard.vcard{width:100%;height:265mm;margin:0;padding:8mm;column-gap:8mm;row-gap:6mm;grid-template-columns:98mm 1fr;grid-template-rows:auto 24mm 68mm auto;grid-template-areas:"name facts" "photo size" "photo code" "chip chip";align-content:start;break-after:page;page-break-after:always}
@@ -135,7 +133,6 @@
  .sheet.dogs.per1 .vcard .name{font-size:52px}.sheet.dogs.per1 .vcard .facts dd{font-size:26px}.sheet.dogs.per1 .vcard .facts dt{font-size:15px}
  .sheet.dogs.per1 .vcard .photo{width:98mm;height:98mm}.sheet.dogs.per1 .vcard .szb{height:24mm;justify-content:center}.sheet.dogs.per1 .vcard .szb b{font-size:40px}
  .sheet.dogs.per1 .vcard .code{width:68mm;height:68mm;align-self:end;justify-self:center}.sheet.dogs.per1 .vcard .chipline b{font-size:40px}
- /* 4 per A4: name, facts and the Size tile across; photo and QR side by side; chip at the foot */
  .sheet.dogs.per4 .dcard.vcard{width:calc(50% - 2mm);height:129mm;margin:0 0 4mm;padding:3mm 4mm;column-gap:4mm;row-gap:2mm;grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto auto auto;grid-template-areas:"name name" "facts facts" "size size" "photo code" "chip chip";align-content:space-between}
  .sheet.dogs.per4 .vcard .name{font-size:24px}.sheet.dogs.per4 .vcard .facts{grid-template-columns:auto auto}.sheet.dogs.per4 .vcard .facts dt{font-size:9px}.sheet.dogs.per4 .vcard .facts dd{font-size:14px}
  .sheet.dogs.per4 .vcard .szb{padding:1mm 3mm}.sheet.dogs.per4 .vcard .szb .lab{font-size:8px}.sheet.dogs.per4 .vcard .szb b{font-size:18px}
@@ -145,7 +142,6 @@
  .sheet.dogs.per2 .dcard.vcard.icard{grid-template-rows:auto minmax(18mm,1fr) 66mm;grid-template-areas:"name name" "photo facts" "photo code"}
  .sheet.dogs.per1 .dcard.vcard.icard{grid-template-rows:auto minmax(24mm,auto) 68mm;grid-template-areas:"name name" "photo facts" "photo code"}
  .sheet.dogs.per2 .vcard.icard .photo{width:88mm;height:88mm}
- /* room cards follow the same page count as the other types */
  .sheet.rooms .rcard{display:inline-flex;vertical-align:top;box-sizing:border-box;width:100%;margin:0;font-size:16px;overflow:visible;border-radius:0;border-width:0;justify-content:flex-start;padding:5mm 6mm;break-inside:avoid}
  .sheet.rooms.per1 .rcard{height:auto;min-height:250mm;break-after:page;page-break-after:always}
  .sheet.rooms.per1 .rcard:last-child{break-after:auto;page-break-after:auto}
@@ -165,7 +161,6 @@
  .sheet.rooms .rcard .tag{font-size:9px}
 }
 
-/* item cards (print any item, 15 Nov 2026): the field picker; the card itself uses the dog card layout */
 .picks{border:1px solid #C7C0B4;border-radius:10px;margin:8px 0;padding:8px 12px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}.picks legend{font-weight:600}.picks .fpick{display:inline-flex;align-items:center;gap:4px;min-height:44px}
 /* the pick list (the owner 22 Nov 2026): which cards print; never printed itself (noprint) */
 .pick:empty{display:none}
@@ -173,3 +168,4 @@
 .pick-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}.pick-n{margin-right:auto}
 .pick-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px 12px}
 .pick-item{display:flex;gap:6px;align-items:center;min-height:32px}
+

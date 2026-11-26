@@ -1,5 +1,3 @@
-// Do page, "Standing approvals" card: the Drive queue of blocked agent actions, ticked in bulk.
-// Pretend Drive only; every name below is made up.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
 
@@ -45,7 +43,6 @@ test.describe('Do page: Standing approvals card', () => {
     });
     await page.goto('./#/do');
     await signIn(page);
-    // The pretend sign-in already holds the full Drive scope, so the write goes straight through.
     const card = page.locator('#dqCard');
     await card.locator('li[data-dq-row="2"] input[type="checkbox"]').check();
     await expect(card.locator('[data-action="dqapprove"]')).toContainText('Approve ticked (1)');
@@ -60,3 +57,4 @@ test.describe('Do page: Standing approvals card', () => {
     expect(guard.world.calls.filter((c) => c.method === 'PATCH' && c.path.indexOf(IDS.doQueue) >= 0)).toHaveLength(0);
   });
 });
+

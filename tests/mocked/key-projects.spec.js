@@ -1,4 +1,3 @@
-// Home screen: the hub tiles (were Key projects & docs). One tap each, on a phone-sized screen.
 const { test, expect } = require('../support/test');
 const fs = require('fs');
 const path = require('path');
@@ -15,7 +14,6 @@ const TILES = [
   ['Marketplace', 'marketplace/', true],
   ['Studio', 'studio/', true],
 ];
-// As shipped: config.js may hold the Projects Hub address; its tile (with its 3 numbers) then comes first.
 const PH = require('../support/world').IDS.projectsHub;
 const SHIPPED = PH ? [['Projects', PH, true]].concat(TILES) : TILES;
 
@@ -34,7 +32,6 @@ test.describe('Home: hub tiles (were Key projects & docs)', () => {
     const res = await page.goto('./');
     expect(res.status()).toBe(200);
 
-    // Signed out: the links are not drawn at all, only the sign-in card.
     await expect(page.locator('#hubTiles')).toHaveCount(0);
     await expect(page.locator('#move-link')).toBeHidden();
     await expect(page.locator('.hubtile')).toHaveCount(0);
@@ -48,7 +45,6 @@ test.describe('Home: hub tiles (were Key projects & docs)', () => {
     await expect(block).toBeVisible();
     await expect(page.locator('#key-projects')).toHaveCount(0);
 
-    // MOVE: one link, in More.
     const move = page.locator('#houseMore #move-link');
     await expect(move).toHaveAttribute('href', MOVE);
     await expect(move).toHaveAttribute('target', '_blank');
@@ -119,3 +115,4 @@ test.describe('Home: hub tiles (were Key projects & docs)', () => {
     });
   }
 });
+

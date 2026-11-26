@@ -11,7 +11,6 @@ const HEADER = ['tool', 'licence_tier_and_codes', 'agency_white_label', 'used_fo
   'review_count', 'ai_share_used_week', 'ai_unused_premium_images', 'ai_higher_spec_runs', 'ai_outputs_in_drive',
   'ai_outputs_waiting_review', 'ai_right_first_time', 'logo_url'];
 
-// One row from a short object; every other column blank.
 function row(o) { return HEADER.map((h) => (o[h] == null ? '' : String(o[h]))); }
 
 function values(now = Date.now(), extra = []) {
@@ -36,9 +35,10 @@ function values(now = Date.now(), extra = []) {
       review_file_id: 'EXAMPLE-ID-7', review_count: '1' }),
     row({ tool: 'Example Tool I', tool_key: 'example-i', group: 'Comms', plan_or_tier: 'Half row', period: 'month', verified: 'VERIFIED', last_updated: d(-2) }), // no status: tile fails closed
     row({ tool: 'Example Tool J', tool_key: 'example-j', group: 'AI', plan_or_tier: 'Old plan', period: 'month', status: 'expired', verified: 'VERIFIED', last_updated: d(-2) }), // ended: no tile
-    row({ tool: 'Example Tool K', tool_key: 'example-k', group: 'AI', period: 'month', status: 'live', verified: 'VERIFIED', last_updated: d(-2) }), // no plan: not a paid tool, no tile
+    row({ tool: 'Example Tool K', tool_key: 'example-k', group: 'AI', period: 'month', status: 'live', verified: 'VERIFIED', last_updated: d(-2) }),
     row({ tool: '', tool_key: 'example-blank', group: 'AI', status: 'live' }) // no name: skipped
   ].concat(extra.map(row));
 }
 
 module.exports = { HEADER, row, values, iso };
+

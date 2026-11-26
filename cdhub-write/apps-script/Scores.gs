@@ -1,15 +1,3 @@
-/**
- * Saved dated scores (15 Nov 2026, DRAFT names from Breed Better THE-DOCUMENT Stage 4; gate PENDING; OV11 for Lisa).
- *
- *   action 'score_save'  keeps what the Breed Better page worked out for ONE animal on ONE date: one
- *                        BLD-score_assessment row and one BLD-score_line row per line, in the same save.
- *
- * Scores are still worked out when the page loads; a saved score is the record of what it said then, so a later
- * rule or record change never rewrites the past. Nothing is edited or deleted: saving again for the same animal and
- * scheme adds a new assessment whose replaces_id points at the one before.
- * Owner only. Both files need their headers (made by Lisa); the switch TABLE_ON_score_assessment covers both and is
- * OFF until Lisa says go. Rows follow STANDARD S4 as far as the draft names allow: _at UTC, _by paired.
- */
 var SCORES_ = {
   on: 'score_assessment',
   file: 'BLD-score_assessment.csv', idPrefix: 'sca',
@@ -40,7 +28,7 @@ function sinkScoreSave_(req) {
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
   var who = authStaff_(req.code);
-  if (who.role !== 'OWNER') throw err_('NOT_ALLOWED', 'Only the owner can save a score.');
+  if (who.role !== 'USER') throw err_('NOT_ALLOWED', 'Only the user can save a score.');
   var cache = CacheService.getScriptCache(), cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
   var f = req.fields && typeof req.fields === 'object' ? req.fields : {};
@@ -111,7 +99,6 @@ function scoreSaveNow_(f, who, now) {
     points_earned: head.points_earned, points_available: head.points_available, points_unverified: head.points_unverified,
     unknown_count: head.unknown_count, status: 'saved', calculated_at: stamp, calculated_by: who.id || who.who,
     replaces_id: before ? before.id : '' };
-  // lines first: an assessment row only ever exists with its lines
   var lids = {}; lread.records.forEach(function (r) { lids[r.id] = 1; });
   clean.forEach(function (o, i) {
     var lid = SCORES_.lineIdPrefix + '-' + id.slice(SCORES_.idPrefix.length + 1) + '-' + (i + 1);
@@ -124,3 +111,4 @@ function scoreSaveNow_(f, who, now) {
   store_append_(SCORES_.file, read.header, read.header.map(function (h) { return a[h] == null ? '' : String(a[h]); }), read);
   return { status: 'saved', id: id, lines: clean.length, replaces_id: a.replaces_id, at: stamp };
 }
+

@@ -30,17 +30,17 @@ async function open(page, tables, posts) {
     if (posts) posts.push(body);
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'pretend-' + posts.length } } });
   });
-  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-USER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
   await page.getByRole('button', { name: 'Item cards' }).click();
 }
 const card = (page, id) => page.locator('.icard[data-item="' + id + '"]');
 
 test.describe('Print any item: the item card', () => {
-  test('default fields, each under its label; the name has no label; one card per item; the existing tag is reused @regression', async ({ page }) => {
+  test('t-cdhub-print-item-card-spec-1', async ({ page }) => {
     const posts = [];
     await open(page, world(), posts);
-    await expect(page.locator('.icard')).toHaveCount(2);                                   // a correction row is the same item
+    await expect(page.locator('.icard')).toHaveCount(2);
     const ext = card(page, 'itm-1');
     await expect(ext.locator('.name')).toHaveText('Pretend Extinguisher (moved)');        // the latest row's values
     await expect(ext.locator('dt')).toHaveText(['Item number', 'Type', 'Make', 'Model', 'Serial number', 'Expires on']);
@@ -52,19 +52,19 @@ test.describe('Print any item: the item card', () => {
     expect(posts.filter((p) => p.table === 'qr_tag')).toHaveLength(0);                    // both items already have tags
   });
 
-  test('the owner\'s print.fields rows choose the fields; one item type can differ; the newest row in force wins', async ({ page }) => {
+  test('the user\'s print.fields rows choose the fields; one item type can differ; the newest row in force wins', async ({ page }) => {
     await open(page, world({ breeding_rule: [
       { rule_key: 'print.fields.item', value: 'item_no|serial_no', effective_from: '2026-01-01', source: 'Pretend' },
       { rule_key: 'print.fields.item', value: 'item_no|make|size', effective_from: '2026-11-01', source: 'Pretend' },
       { rule_key: 'print.fields.item', value: 'note', effective_from: '2099-01-01', source: 'Pretend' },
       { rule_key: 'print.fields.item.kettle', value: 'serial_no', effective_from: '2026-11-01', source: 'Pretend' },
       { rule_key: 'print.label.size', value: 'Weight', effective_from: '2026-11-01', source: 'Pretend' }] }));
-    await expect(card(page, 'itm-1').locator('dt')).toHaveText(['Item number', 'Make']);   // size is blank on the latest row
+    await expect(card(page, 'itm-1').locator('dt')).toHaveText(['Item number', 'Make']);
     await expect(card(page, 'itm-2').locator('dt')).toHaveText(['Serial number']);
-    await expect(page.locator('.picks .fpick').filter({ hasText: 'Weight' })).toHaveCount(1);   // the owner's label
+    await expect(page.locator('.picks .fpick').filter({ hasText: 'Weight' })).toHaveCount(1);
   });
 
-  test('a field choice made on the page is used at once and can be saved as a dated owner rule row', async ({ page }) => {
+  test('a field choice made on the page is used at once and can be saved as a dated user rule row', async ({ page }) => {
     const posts = [];
     await open(page, world(), posts);
     const picks = page.locator('.picks');
@@ -79,7 +79,7 @@ test.describe('Print any item: the item card', () => {
     expect(rule.fields.effective_from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  test('an item with no code gets one saved first, then printed (owner code)', async ({ page }) => {
+  test('an item with no code gets one saved first, then printed (user code)', async ({ page }) => {
     const posts = [];
     await open(page, world({ qr_tag: [{ tag: 'AAAAAAAA', kind: 'item', ref_id: 'itm-1', active: 'true' }] }), posts);
     await expect(page.locator('.icard')).toHaveCount(2);
@@ -95,12 +95,13 @@ test.describe('Print any item: the item card', () => {
     await page.emulateMedia({ media: 'print' });
     const mm = 96 / 25.4;
     const boxes = await page.locator('.icard').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height));
-    boxes.forEach((hgt) => expect(hgt / mm).toBeLessThanOrEqual(148.5));                 // two fit on one 297 mm page
+    boxes.forEach((hgt) => expect(hgt / mm).toBeLessThanOrEqual(148.5));
     const qr = await card(page, 'itm-1').locator('.code svg').boundingBox();
     expect(Math.min(qr.width, qr.height) / mm).toBeGreaterThanOrEqual(60);
-    const fit = await page.evaluate(() => { const st = [...document.styleSheets].flatMap((s) => { try { return [...s.cssRules]; } catch (e) { return []; } }).map((r) => r.cssText).join('\n');   // a font sheet from another site cannot be read
+    const fit = await page.evaluate(() => { const st = [...document.styleSheets].flatMap((s) => { try { return [...s.cssRules]; } catch (e) { return []; } }).map((r) => r.cssText).join('\n');
       return /\.dcard \.photo img\s*\{[^}]*object-fit:\s*cover/.test(st); });
     expect(fit).toBe(true);
     await expect(page.locator('.picks')).toBeHidden();                                    // the picker never prints
   });
 });
+

@@ -1,11 +1,6 @@
-// PHONE SUBSET. Pixel-sized screen (390 x 844). Deliberately small: it does NOT repeat the desktop suite.
-// For each of the three pages: it loads, the menu works, nothing unexpected in the browser's error log
-// (the shared guard in tests/support/test.js does that on every test), and nothing scrolls sideways.
-// Google sign-in and Drive are pretend here too.
 const { test, expect } = require('../support/test');
 const { tabClick, openView } = require('../support/tabs');
 
-// Sideways scroll = the page is wider than the screen. 1px of slack for rounding.
 const noSidewaysScroll = async (page, where) => {
   const w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, body: document.body.scrollWidth, screen: window.innerWidth }));
   expect(w.doc, `${where}: page is ${w.doc}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
@@ -65,7 +60,7 @@ test.describe('Phone: CD Hub house look', () => {
       expect(short, id + ': controls under 44px').toEqual([]);
     }
     const rows = await page.evaluate(() => new Set([...document.querySelectorAll('#nav .ht')].map((b) => Math.round(b.getBoundingClientRect().top))).size);
-    expect(rows, 'bottom tabs: one row (Lisa\'s tab picks, 2 Nov)').toBe(1);
+    expect(rows, 'bottom tabs: one row (User\'s tab picks, 2 Nov)').toBe(1);
     expect(Math.round((await page.locator('header').boundingBox()).height), 'top bar height').toBe(56);
     await expect(page.locator('#moreBtn')).toHaveCount(0);
     await expect(page.locator('#backHome')).toBeVisible();
@@ -77,7 +72,7 @@ test.describe('Phone: Marketplace', () => {
   test('loads, signs in, every tab works, no sideways scroll, every button 44px, tab counts a dot at the icon\'s top right', async ({ page }) => {
     const ago = new Date(Date.now() - 5 * 60000).toISOString();
     const rows = [
-      ['RM|1', 'remove', 'Clothes', 'Sample jacket with a long title that wraps onto a second line on a phone screen', JSON.stringify({ platform: 'Vinted', price: '£18.00', url: 'https://www.vinted.co.uk/items/1', owner: 'CY' }), ago],
+      ['RM|1', 'remove', 'Clothes', 'Sample jacket with a long title that wraps onto a second line on a phone screen', JSON.stringify({ platform: 'Vinted', price: '£18.00', url: 'https://www.vinted.co.uk/items/1', user: 'CY' }), ago],
       ['PO|1', 'post', 'Clothes', 'Sample jumper', JSON.stringify({ platform: 'ebay', parcel_id: 'L-07', courier: 'Evri', shelf: 'B2', post_by: '2026-10-20' }), ago],
       ['GO|1', 'go', 'Treats', 'Sample treats', JSON.stringify({ price: '£12.00' }), ago],
     ];
@@ -85,7 +80,6 @@ test.describe('Phone: Marketplace', () => {
     expect((await page.goto('marketplace/')).status()).toBe(200);
     await noSidewaysScroll(page, 'signed out');
     await page.locator('#view [data-action="signin"]').click();
-    // The "Needs you: N" line is now the Needs you heading on the hub Main (2 Nov), with its count.
     await expect(page.locator('#view [data-hm="needs"] h3 a')).toHaveAttribute('aria-label', 'Needs you: 3. Open Do');
     for (const key of ['do', 'decide', 'reply', 'insights', 'me']) {
       await tabClick(page, `#tabs a[data-nav="${key}"]`);
@@ -124,7 +118,6 @@ test.describe('Phone: Money Hub', () => {
 
 test.describe('Phone: GA Hub', () => {
   test('loads, signs in, every tab works, no sideways scroll, controls 44px tall', async ({ page }) => {
-    // Pretend Sheets with one invented row per tab (no real orders or names).
     await page.route(/^https:\/\/sheets\.googleapis\.com\//, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valueRanges: [
       { values: [['PRICE-SAMPLE', 'price', 'Products', 'Sample price change', '{}', new Date().toISOString()]] },
       { values: [['order_no', 'source', 'status', 'check', 'profit_est'], ['9001', 'Shopify', 'Placed', 'Not at GA', '8']] },
@@ -134,8 +127,8 @@ test.describe('Phone: GA Hub', () => {
     expect((await page.goto('food/')).status()).toBe(200);
     await noSidewaysScroll(page, 'signed out');
     await page.locator('#view [data-action="signin"]').click();
-    await expect(page.locator('#view [data-hub-main]')).toBeVisible(); // Main is the hub Main (2 Nov)
-    for (const key of ['orders', 'invoices', 'products', 'do', 'review', 'ga', 'home']) { // Do + Review: the cards and growth moved off Main
+    await expect(page.locator('#view [data-hub-main]')).toBeVisible();
+    for (const key of ['orders', 'invoices', 'products', 'do', 'review', 'ga', 'home']) {
       await tabClick(page, `nav.tabs a[data-nav="${key}"]`);
       await expect(page.locator(`nav.tabs a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
       await noSidewaysScroll(page, key);
@@ -144,3 +137,4 @@ test.describe('Phone: GA Hub', () => {
     }
   });
 });
+

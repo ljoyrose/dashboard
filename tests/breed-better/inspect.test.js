@@ -56,3 +56,4 @@ test('litters read as x of the breeder\'s own limit row, with the count in the l
   };
   assert.deepStrictEqual(I.build(res, '2026-11-13')[0].litters, { n: 3, limit: 4, last: '2 Mar 2026', recent: 2 });
 });
+

@@ -1,7 +1,3 @@
-/* Marketplace "Product ideas" page code. Loaded on demand (only when Ideas is opened) together with ideas.js, so the hub's
- * first load stays small. The hub passes in what it owns (rows, helpers, sign-in); nothing here touches anything else.
- * Items to SELL; not the App Factory. Contract: docs/marketplace-ideas/CONTRACT.md. Cards are made by the engine from ONE
- * request file the form writes; this page only reads them and writes answer cells. */
 window.MktIdeasPage = function (C) {
   'use strict';
   var detail = C.detail, shown = C.shown, waiting = C.waiting, esc = C.esc, emptyCard = C.emptyCard, linkBtn = C.linkBtn, factsOf = C.factsOf, moneyLines = C.moneyLines,
@@ -47,7 +43,6 @@ window.MktIdeasPage = function (C) {
     var s = DashAuth.valid(); if (s && WRITE && DashAuth.hasScope(s, WRITE)) return go();
     pendingAsk = go; C.auth().requestWrite(WRITE);
   }
-  // ONE request file per idea, nothing else is written. The id is made once per send.
   function ideaSend() {
     if (ideaBusy) return;
     var v = IDEAS.validateIntake(ideaForm); ideaErr = v.errors; ideaNote = '';
@@ -64,7 +59,7 @@ window.MktIdeasPage = function (C) {
     });
   }
   var GATE_NAMES = { gate1: 'Gate 1 · Research', gate2: 'Gate 2 · Test plan', gate3: 'Gate 3 · Launch and monitor' };
-  function gateBlock(v) {   // free-form: words, a list of words, or label: words
+  function gateBlock(v) {
     if (Array.isArray(v)) return '<ul class="asks">' + v.map(function (x) { return '<li>' + esc(typeof x === 'object' ? JSON.stringify(x) : x) + '</li>'; }).join('') + '</ul>';
     if (v && typeof v === 'object') return factsOf(Object.keys(v).map(function (k) { return [k.replace(/_/g, ' '), typeof v[k] === 'object' ? JSON.stringify(v[k]) : v[k]]; }));
     return '<p class="what">' + esc(v) + '</p>';
@@ -96,7 +91,6 @@ window.MktIdeasPage = function (C) {
   }
   function ideaAnswer(key, v, note) { var r = find(key); if (!r) return; if (v === 'Go' && !IDEAS.goReady(detail(r)).ok) return banner('Not ready for New stock yet.'); return answer(r, v, note); }
 
-  /** One tap on a button or link the hub did not handle. Returns true when it was an Ideas tap. */
   function click(t, a) {
     if (a === 'ideasend') { ideaSend(); return true; }
     if (t.hasAttribute('data-ifilter')) { ideaFilter = t.getAttribute('data-ifilter'); render(); return true; }
@@ -106,11 +100,8 @@ window.MktIdeasPage = function (C) {
     if (t.hasAttribute('data-ideaundo')) { t.disabled = true; answer(find(t.getAttribute('data-ideaundo')), '', ''); return true; }
     return false;
   }
-  /** Typing in the Add idea form: keep the words, clear that box's error. */
   function input(e) { var f = e.target.getAttribute && e.target.getAttribute('data-iform'); if (f) { ideaForm[f] = e.target.value; if (ideaErr[f]) { delete ideaErr[f]; var er = document.getElementById('if-' + f + '-e'); if (er) er.remove(); e.target.removeAttribute('aria-invalid'); } } }
-  /** True while a Drive write permission is being asked for (the hub then skips its spreadsheet-scope check). */
   function pendingWrite() { return !!pendingAsk; }
-  /** The hub got a fresh sign-in token: carry on the send that was waiting for the Drive permission. */
   function onToken() {
     if (!pendingAsk) return;
     var go = pendingAsk; pendingAsk = null;
@@ -118,3 +109,4 @@ window.MktIdeasPage = function (C) {
   }
   return { page: function () { return C.view() === 'ideas' ? pageIdeas() : pageIdea(); }, click: click, input: input, pendingWrite: pendingWrite, onToken: onToken };
 };
+

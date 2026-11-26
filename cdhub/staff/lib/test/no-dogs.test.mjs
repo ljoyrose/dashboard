@@ -1,4 +1,3 @@
-// Places where dogs are not placed (overseer 12 Nov 2026): a dated room.no_dogs need row, never a word in code. Invented rows.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -33,3 +32,4 @@ test('room.no_overnight: dogs can still be placed, but overnight cabins leave it
   assert.equal(O.takesDogs(T.area[1], '2026-11-12', req), false);
   assert.equal(O.takesOvernight(T.area[1], '2026-11-12', req), false);
 });
+

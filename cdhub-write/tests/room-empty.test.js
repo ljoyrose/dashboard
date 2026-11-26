@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
-const NOW = Date.UTC(2026, 10, 12, 10, 0, 0);   // 12 Nov 2026
+const NOW = Date.UTC(2026, 10, 12, 10, 0, 0);
 const env1 = (props) => standardEnv({ nowMs: NOW, props: props || {} });
 
 const send = (env, fields) => save(env, req(env, { code: env.codes.staff, fields: Object.assign({ area_id: 'area-t1', period_start: '2026-11-11T08:00:00Z' }, fields) }));
@@ -86,3 +86,4 @@ test('the page check (bld-save.js, both copies) follows the same rule, so a blan
     assert.equal(v({ room_empty: 'no', min_c: '18.0', max_c: '22.0' }).ok, false, p);
   });
 });
+

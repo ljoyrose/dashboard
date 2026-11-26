@@ -1,9 +1,3 @@
-/*!
- * BLDChecks - the staff screen for rows-based checks (feeding, medicine, cleaning...).
- * Every check on this screen comes from BLD-check_type rows the owner entered: nothing here names a check.
- * Works on its own (checks.html) or inside another page: BLDChecks.mount(element, bldSave, {type: 'feeding'}).
- * Saves through BLDSave, which holds the code and the Script URL. No data, code or URL is stored in this file.
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.BLDChecks = factory();
@@ -18,14 +12,13 @@
       subject_id: { type: 'text', label: 'Dog' },
       item: { type: 'text', label: 'What' },
       amount: { type: 'text', label: 'Amount' },
-      outcome: { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded', 'note', 'part_done'], required: true, label: 'Outcome' },   // note = a note added to a job already done
+      outcome: { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded', 'note', 'part_done'], required: true, label: 'Outcome' },
       note: { type: 'text', label: 'Note' },
       note_for_id: { type: 'text', label: 'Note for' }
     }
   };
   var OUTCOMES = [['ok', 'Done, all fine'], ['concern', 'Done, with a concern'], ['not_done', 'Not done']];
 
-  /** The checks in force today: for each type_key, the row with the latest effective_from on or before today. */
   function currentTypes(rows, today) {
     var best = {};
     (rows || []).forEach(function (r) {
@@ -33,7 +26,7 @@
       if (!best[r.type_key] || r.effective_from > best[r.type_key].effective_from) best[r.type_key] = r;
     });
     return Object.keys(best).map(function (k) { return best[k]; })
-      .filter(function (r) { return r.active !== 'false' && r.target !== 'litter' && r.target !== 'item' && String(r.type_key).indexOf('round.') !== 0; })   // litter jobs open from a litter card's code; round.* rows are written by the Round itself, never a job
+      .filter(function (r) { return r.active !== 'false' && r.target !== 'litter' && r.target !== 'item' && String(r.type_key).indexOf('round.') !== 0; })
       .sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); });
   }
 
@@ -48,7 +41,6 @@
     };
   }
 
-  /** What this check needs before it can be sent. The server knows only the general rules, so these live here. */
   function checkEntry(type, entry) {
     var e = {}, a = askedFields(type);
     if (type.target === 'area' && !entry.area_id) e.area_id = 'Choose the room.';
@@ -75,7 +67,6 @@
     return new Intl.DateTimeFormat('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London'), year: 'numeric', month: '2-digit', day: '2-digit' }).format(now || new Date());
   }
 
-  /** The dogs on site now, A-Z: the same list as The Board, so dogs that have left are not offered. */
   function onSite(t) {
     if (typeof BLDOccupancy === 'undefined') return t.subject || [];
     return BLDOccupancy.dailyList(t).dogs.map(function (d) { return { id: d.id, name: d.label }; })
@@ -83,10 +74,9 @@
   }
   function register(save) { if (!save.TABLES.check_log) save.TABLES.check_log = CHECK_LOG; }
 
-  /** Draw the form. opts.type = a type_key to open that check directly (from a QR code). Returns a promise. */
   function mount(host, save, opts) {
     opts = opts || {};
-    var doc = host.ownerDocument;
+    var doc = host.userDocument;
     register(save);
     host.textContent = '';
     host.classList.add('bs');
@@ -101,7 +91,7 @@
       return save.readMany(['check_type', 'area', 'subject', 'occupancy', 'subject_status', 'requirement'], ['subject', 'occupancy', 'subject_status', 'requirement']).then(function (all) {
         if (!all.ok) { msg.textContent = all.message; return { ok: false, reason: 'read' }; }
         var types = currentTypes(all.tables.check_type, londonToday(opts.now));
-        if (!types.length) { msg.textContent = 'No checks have been set up yet. Ask Lisa.'; return { ok: false, reason: 'none' }; }
+        if (!types.length) { msg.textContent = 'No checks have been set up yet. Ask User.'; return { ok: false, reason: 'none' }; }
         draw(host, save, types, (all.tables.area || []).filter(function (a) { return typeof BLDOccupancy === 'undefined' || BLDOccupancy.inUse(a, londonToday(opts.now), all.tables.requirement); }), onSite(all.tables), opts.type, msg);
         return { ok: true, types: types.length };
       });
@@ -109,7 +99,7 @@
   }
 
   function draw(host, save, types, areas, dogs, startKey, msg) {
-    var doc = host.ownerDocument, requestId = null, type = null;
+    var doc = host.userDocument, requestId = null, type = null;
     var form = make(doc, 'form', 'bs-card'), inputs = {}, errs = {}, rows = {};
 
     function field(name, label, control) {
@@ -160,7 +150,6 @@
     }
 
     inputs.check.addEventListener('change', function () { choose(inputs.check.value); });
-    // changing anything makes it a new entry, so a retry only re-uses the reference while the entry is unchanged
     form.addEventListener('input', function (ev) { if (ev.target !== inputs.check) requestId = null; });
     form.addEventListener('submit', function (ev) {
       ev.preventDefault();
@@ -190,3 +179,4 @@
 
   return { mount: mount, currentTypes: currentTypes, askedFields: askedFields, checkEntry: checkEntry, register: register, CHECK_LOG: CHECK_LOG };
 }));
+

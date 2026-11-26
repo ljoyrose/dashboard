@@ -1,6 +1,3 @@
-// TidyUp stage 5 done-test: the Bin page in the job file's section 8 order, in plain words.
-// Needs you now · Ready to bin · Check · Not ready yet · Already in the bin · Log · Dropbox.
-// Pretend Drive only; every id below is made up.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
 
@@ -47,7 +44,6 @@ test.describe('Bin page: section 8 order and plain words (stage 5)', () => {
     await expect(page.locator('#sweepCard > summary h3')).toHaveText('Ready to bin');
     await expect(page.locator('#needsNow')).toContainText('2 files ready for you to approve');
     await expect(page.locator('#needsNow')).toContainText('0 problems');
-    // The old index strip and Permission card are gone.
     await expect(page.locator('#view nav[aria-label="Bin index"]')).toHaveCount(0);
     await expect(page.locator('#view [data-fold="access"]')).toHaveCount(0);
     await expect(page.locator('#view [data-action="grantwrite"]')).toHaveCount(0);
@@ -132,7 +128,6 @@ test.describe('Bin page: section 8 order and plain words (stage 5)', () => {
     await openBin(page, guard);
     await page.locator('#sweepCard li:has([title="ZZ_DELETE_ready.txt"]) input').check();
     await page.locator('#sweepCard li:has([title="' + PCP + 'old-invoice.pdf"]) input').check();
-    // The note under the button matches the confirm once a Work My Drive file is ticked.
     await expect(page.locator('#sweepCard')).toContainText('Goes to the Drive bin. You can get it back for 30 days.');
     const btn = page.locator('#sweepCard [data-action="sweep"]');
     await btn.click();
@@ -175,3 +170,4 @@ test.describe('Bin page: section 8 order and plain words (stage 5)', () => {
     await expect(card.locator('.note.fail')).toHaveCount(0);
   });
 });
+

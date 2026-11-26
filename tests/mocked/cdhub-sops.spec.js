@@ -1,7 +1,3 @@
-// CD Hub SOPs (Stage A + S2 + file types): bottom tab, Assocs under More, name labels,
-// colour, frequency, category and role filters, and the labelled type icons with the format legend.
-// The seed is the public index only. It has no form addresses, so a row with a form says the form is not on the hub yet.
-// A row shows a type icon only when its type is already one of the 21. other, sheet and sds stay unmapped.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -13,7 +9,7 @@ const TYPES = path.resolve(__dirname, '..', '..', 'cdhub', 'asset-types.json');
 const ICONS = path.resolve(__dirname, '..', '..', 'cdhub', 'asset-type-icons.svg');
 const rows = () => JSON.parse(fs.readFileSync(SEED, 'utf8'));
 const typeCfg = () => JSON.parse(fs.readFileSync(TYPES, 'utf8'));
-const label = (r) => r.short_name;   // the colour is the card's line and the frequency sits underneath
+const label = (r) => r.short_name;
 
 const signIn = async (page) => {
   await expect(page.locator('#signinbtn')).toBeEnabled();
@@ -68,7 +64,7 @@ test('the public seed is 49 name rows and carries no form address', () => {
   expect(byName['Signs/Posters Index']).toMatchObject({ colour: 'Purple', frequency: 'Ongoing', category: 'Signs & posters', role: 'all_staff' });
   expect(byName['Pest Checks']).toMatchObject({ category: 'Daily care & premises', role: 'all_staff' });
   expect(byName['Pest Control']).toMatchObject({ category: 'Daily care & premises', role: 'kennel_staff' });
-  for (const name of ['Whelping', 'Puppy Handover', 'Socialisation', 'Puppy Packs']) {
+  for (const name of ['Whelping', 'Puppy Handover', 'Socialization', 'Puppy Packs']) {
     expect(byName[name].frequency, name).toBe('Per litter');
   }
   for (const old of ['Breeding Schedule', 'Monthly Care', 'Monthly Clean', 'Annual Care', 'Parasite Control']) {
@@ -103,7 +99,6 @@ test('#/sops lists all 49 labels; colour and frequency filters and search work',
   await expect(page.locator('#soprows details.sopgrp')).toHaveCount(groups.length);
   const yellow = rows().filter((r) => r.colour === 'Yellow').length;
   await expect(page.locator('#soprows details.sopgrp[data-group="Yellow"] > summary')).toHaveText('Yellow \u2013 operations ' + yellow);
-  // a section folds and stays folded when a card opens
   await page.locator('#soprows details.sopgrp[data-group="Yellow"] > summary').click();
   await expect(page.locator('#soprows details.sopgrp[data-group="Yellow"] [data-sop]').first()).toBeHidden();
   await page.locator('#soprows [data-sop-open]').first().click();
@@ -132,7 +127,7 @@ test('#/sops lists all 49 labels; colour and frequency filters and search work',
 
   await page.locator('#sopfr').selectOption('Per litter');
   const litter = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
-  expect(litter.slice().sort()).toEqual(['Puppy Handover', 'Puppy Packs', 'Socialisation', 'Whelping']);
+  expect(litter.slice().sort()).toEqual(['Puppy Handover', 'Puppy Packs', 'Socialization', 'Whelping']);
 
   await page.locator('#sopclr').click();
   await page.locator('#sopfr').selectOption('Breeding');
@@ -268,8 +263,7 @@ test('each SOP is a card with its colour as a 3px full-height line; the search b
   const card = page.locator('#soprows [data-sop="Care Rounds"]');
   await expect(card.locator('.t')).toHaveText('Daily: Care Rounds');
   const look = await card.evaluate((e) => { const s = getComputedStyle(e), b = getComputedStyle(e, '::before'); return { left: s.borderLeftWidth, bar: b.borderLeftWidth, same: b.borderLeftColor !== s.borderTopColor, radius: parseFloat(s.borderTopLeftRadius) > 0 }; });
-  // Every line is 1px (house look); the colour is the house bar (house.css 10), 3px down the whole left edge, curved.
-  expect(look).toEqual({ left: '1px', bar: '3px', same: true, radius: true });  // same = the bar is its own colour, not the card line
+  expect(look).toEqual({ left: '1px', bar: '3px', same: true, radius: true });
   await page.locator('#sopq').focus();
   expect(await page.locator('#sopq').evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
 });
@@ -447,7 +441,6 @@ test('other and sheet are not remapped; a real type code keeps its icon and the 
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
 });
 
-// The wording is private and lives in a Drive file read after sign-in. These tests use made-up text.
 const CARD_FILE = 'BLD-sop_cards.json';
 const CARDS = {
   source: 'test',
@@ -574,3 +567,4 @@ test('phone width: an open SOP stays on the screen and every target is 44px', as
   const line = await sopBody(page, 'Care Rounds').evaluate((e) => getComputedStyle(e).borderLeftWidth);
   expect(line).toBe('3px');
 });
+

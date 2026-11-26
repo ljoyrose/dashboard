@@ -1,4 +1,3 @@
-// Room card size comes from area_value. With no capacity rows, counts come from the space rules and that size.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -11,7 +10,7 @@ const POSTER = [];
   Object.keys(p).forEach((sz) => POSTER.push({ rule_key: `space.${mode}.mum_with_pups.${sz}.1`, value: String(p[sz]), effective_from: '2026-01-01' }));
 });
 
-test('room card prints the area size @regression', async ({ page }) => {
+test('t-cdhub-print-room-size-spec-1', async ({ page }) => {
   fs.mkdirSync('/opt/cursor/artifacts', { recursive: true });
   await P.openCards(page, (t) => {
     t.area.forEach((a) => { a.area_value = '16.3'; a.area_unit_id = 'u-m2'; });
@@ -30,3 +29,4 @@ test('room card prints the area size @regression', async ({ page }) => {
   await expect(card.locator('[data-k="pups"] small')).toHaveText('S/M/L');
   await card.screenshot({ path: path.join('/opt/cursor/artifacts', 'room-card.png') });
 });
+

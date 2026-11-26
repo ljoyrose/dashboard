@@ -1,8 +1,3 @@
-// HEADER CONTRACT. No browser, no Google, no Drive.
-// tests/contract/expected-headers.json lists the COLUMN NAMES each Drive file should have (names only, no values).
-// These checks make sure the pages, the sample files and that list all still agree, so a renamed column
-// cannot slip through just because the pretend Drive can never rename anything.
-// To check your REAL files too, run the local script: node tests/contract/check-real-headers.js <folder> (see TESTS.md).
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('@playwright/test');
@@ -16,7 +11,7 @@ test.describe('Header contract: expected column names @contract', () => {
   test('Money: the sample files have exactly the expected columns', () => {
     const problems = [];
     for (const [name, e] of Object.entries(EXPECTED.money)) {
-      if (name.includes('*')) continue; // Xero files: key column only, no sample
+      if (name.includes('*')) continue;
       problems.push(...compareHeader(name, e, headerOf(text('mon/' + name), e.key)));
     }
     expect(problems).toEqual([]);
@@ -66,24 +61,22 @@ test.describe('Header contract: expected column names @contract', () => {
         (e.read || []).filter((c) => !readsColumn(src, c)).forEach((c) => lost.push(`${group} ${name}: the page no longer reads "${c}"`));
       }
     }
-    // If this fails: either a column was renamed (update the page, the sample file and expected-headers.json together)
-    // or the page was reworked on purpose (rebuild the list with tests/contract/make-expected.js and review the diff).
     expect(lost).toEqual([]);
   });
 });
 
 test.describe('Header contract: the comparison itself works', () => {
-  const E = { key: 'id', columns: ['id', 'subject', 'owner'] };
+  const E = { key: 'id', columns: ['id', 'subject', 'user'] };
   test('a renamed column is reported as missing plus new', () => {
-    const p = compareHeader('X.csv', E, ['id', 'subject', 'owner_name']);
-    expect(p.join('\n')).toMatch(/"owner" no longer in the file/);
-    expect(p.join('\n')).toMatch(/new column "owner_name"/);
+    const p = compareHeader('X.csv', E, ['id', 'subject', 'user_name']);
+    expect(p.join('\n')).toMatch(/"user" no longer in the file/);
+    expect(p.join('\n')).toMatch(/new column "user_name"/);
   });
   test('a different order is reported', () => {
-    expect(compareHeader('X.csv', E, ['subject', 'id', 'owner']).join()).toMatch(/different order/);
+    expect(compareHeader('X.csv', E, ['subject', 'id', 'user']).join()).toMatch(/different order/);
   });
   test('the header is found below the "CURRENT: n rows held" line, and a hidden start-of-file marker is ignored', () => {
-    expect(headerOf('﻿CURRENT: 1 rows held 2026-03-09\nid,subject,owner\nR1,a,b\n', 'id')).toEqual(['id', 'subject', 'owner']);
+    expect(headerOf('﻿CURRENT: 1 rows held 2026-03-09\nid,subject,user\nR1,a,b\n', 'id')).toEqual(['id', 'subject', 'user']);
   });
   test('no header at all is reported, never passed', () => {
     expect(compareHeader('X.csv', E, headerOf('nothing,here\n1,2\n', 'id')).join()).toMatch(/could not find a header/);
@@ -94,3 +87,4 @@ test.describe('Header contract: the comparison itself works', () => {
     expect(readsColumn('rows.map(r => r.due_date)', 'due_on')).toBe(false);
   });
 });
+

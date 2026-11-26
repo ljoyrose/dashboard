@@ -23,11 +23,12 @@ test('with no start row the hub opens on Main', async ({ page, guard }) => {
   await expect(page.locator('#main')).toHaveAttribute('data-view', 'map');
 });
 
-test('nav.start.OWNER = 4 opens Records (Dogs) with its sub-menu; an address still wins', async ({ page, guard }) => {
-  setFile(guard.world, 'BLD-breeding_rule.csv', HEAD + 's1,t,nav.start.OWNER,4,2026-01-01,Pretend setting,,,\n');
+test('nav.start.USER = 4 opens Records (Dogs) with its sub-menu; an address still wins', async ({ page, guard }) => {
+  setFile(guard.world, 'BLD-breeding_rule.csv', HEAD + 's1,t,nav.start.USER,4,2026-01-01,Pretend setting,,,\n');
   await signIn(page);
   await expect(page.locator('#main')).toHaveAttribute('data-view', 'dogs');
   await expect(page.locator('#chips')).toBeVisible();
   await page.evaluate(() => { location.hash = '#/compliance'; });
   await expect(page.locator('#main')).toHaveAttribute('data-view', 'compliance');
 });
+

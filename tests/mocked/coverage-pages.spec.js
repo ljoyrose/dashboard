@@ -1,6 +1,3 @@
-// Stage 9 done-test: Dropbox, iCloud and Mac are look-only Drives sub-menu pages. Each opens with one purpose line,
-// lights its own pill, has no bin, move or rename button, and says "No report yet" (neutral) until its engine
-// writes a dry-run report. Any action stays in Bin.
 const { test, expect } = require('../support/test');
 const { IDS, FIX } = require('../support/world');
 const { tabClick } = require('../support/tabs');
@@ -12,7 +9,6 @@ const PAGES = [
   ['iCloud', 'drives/icloud', 'icloud'],
   ['Mac', 'drives/mac', 'mac'],
 ];
-// Same names as REPORT_NAMES in index.html.
 const REPORTS = { icloud: 'ICLOUD-REPORT.json', mac: 'MAC-REPORT.json' };
 const ACTIONS = ['pcpmark', 'pcpbin', 'selectall', 'clearpick', 'sweep', 'usbmark', 'pcpscan', 'usbscan'];
 
@@ -29,7 +25,6 @@ const lookOnly = async (view) => {
   await expect(view.locator('button:not(.house-fold)')).toHaveCount(0);
   await expect(view.locator('.btn.danger')).toHaveCount(0);
   await expect(view.locator('input[type="checkbox"]')).toHaveCount(0);
-  // The only button-styled link is "← Dashboard".
   await expect(view.locator('a.btn')).toHaveCount(1);
   await expect(view.locator('a.btn')).toHaveText('← Dashboard');
   await expect(view.locator('a.btn, button:not(.house-fold)')).not.toHaveText(/\b(bin|move|rename|delete)\b/i);
@@ -56,7 +51,7 @@ test.describe('Stage 9: Dropbox, iCloud and Mac pages (look only)', () => {
       await expect(card).not.toHaveClass(/\bfailed\b/);
       await expect(card.locator('.note.fail')).toHaveCount(0);
       await expect(card.locator('[data-bin-pointer]')).toHaveText('Anything to tidy is done in Bin.');
-      await expect(v.locator('a[href="#/bin"]')).toHaveCount(0); // Bin keeps its one way in (the tab)
+      await expect(v.locator('a[href="#/bin"]')).toHaveCount(0);
       await lookOnly(v);
       expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
     });
@@ -74,7 +69,6 @@ test.describe('Stage 9: Dropbox, iCloud and Mac pages (look only)', () => {
     await expect(card).toContainText('Nothing was renamed or moved.');
     await expect(card.locator('[data-no-report]')).toHaveCount(0);
     await lookOnly(page.locator('#view'));
-    // The delete steps stay in Bin.
     await tabClick(page, '#mainNav a[data-nav="bin"]');
     await expect(page.locator('#dropboxCard')).toContainText('Waiting to delete: 12 files (3.5 GB)');
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
@@ -97,3 +91,4 @@ test.describe('Stage 9: Dropbox, iCloud and Mac pages (look only)', () => {
     });
   }
 });
+

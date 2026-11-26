@@ -28,7 +28,6 @@
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
 <style>
-  /* House look, the same as food/ and studio/: colours from ../tokens.css only, Lexend 400/600, 1px lines, one radius. */
   :root { --rose: var(--house-risk); --rose-tint: var(--house-risk-tint); --amber: var(--house-soon); --amber-tint: var(--house-soon-tint);
     --green: var(--house-ok); --green-tint: var(--house-ok-tint); }
   * { box-sizing: border-box; }
@@ -160,7 +159,6 @@
     }).catch(function (e) { banner('Could not load: ' + e.message); });
   }
   function opts() { return { folderId: E.requestsFolderId, token: token }; }
-  // One tap: send the request file (nothing in example mode), then show the result at once from the page's own copy.
   function tap(built, done) {
     if (!built || !built.ok) return banner((built && built.error) || 'Nothing to send.');
     Req.send(opts(), built).then(function (r) {
@@ -225,7 +223,6 @@
   function monthName(m) { var d = new Date(m + '-01T12:00:00Z'); return isNaN(d) ? m : d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/\bSept\b/, 'Sep'); }
   function rateCell(r) { var t = Core.pct(r); return '<td class="n' + (r == null ? ' nodata' : '') + '" data-rate>' + t + '</td>'; }
   function hoursText(h) { return h == null ? 'no data' : h < 48 ? h + ' h' : Math.round(h / 24 * 10) / 10 + ' days'; }
-  // One month: each step with its count and the share of the step before; lost, junk, adult-dog sale, reply time.
   function monthTable(m) {
     var r = m.total, x = m.rates;
     return '<table class="rtab" data-month="' + esc(m.month) + '"><thead><tr><th>Step</th><th class="n">Count</th><th class="n">Of step before</th></tr></thead><tbody>' +
@@ -262,7 +259,6 @@
           }).join('') + '</ul>' : '') + '</div>';
       }).join('');
   }
-  // Stage 15: alerts, worked out from the tabs on every read (Core.alertsView). Shown here only: nothing is written.
   var ALERT_LABEL = { 'hot-no-reply': 'Hot, no reply', 'blank-run': 'Engine', 'contact-blocked': 'Contact rule', 'call-no-prep': 'Call soon',
     'pup-no-offer': 'Pup, no offer', 'balance-overdue': 'Balance overdue', 'source-silent': 'Source silent' };
   function alertsCard(list) {
@@ -376,7 +372,6 @@
   function onHash() { route = Core.filtersFromHash(location.hash); if (['home', 'today', 'list', 'litters', 'add', 'results', 'e'].indexOf(route.view) < 0) route.view = 'home'; render(); window.scrollTo(0, 0); }
   window.addEventListener('hashchange', onHash);
 
-  /* ---------- sign-in: the shared DashAuth, as on every hub (example mode too: the house gate locks the page) ---------- */
   {
     auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE,
       onToken: function (resp) {
@@ -393,3 +388,4 @@
 </script>
 </body>
 </html>
+

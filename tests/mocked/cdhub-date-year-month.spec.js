@@ -18,3 +18,4 @@ test('Date formats: year-month passes, a day-month-year date still fails', async
   expect(r.bad).toEqual(['weight.performed_on (1, e.g. 02/03/2026)']);
   expect(r.month).toEqual([true, false, false, false]);
 });
+

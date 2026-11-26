@@ -1,8 +1,3 @@
-/*!
- * BLDJobsView - what the hub shows from BLD-check_type and BLD-check_log rows: done, due and late per job, per SOP and per
- * licence source, and each dog's or room's history. Nothing here names a job. Needs BLDDue. Reads and draws only.
- * A record says someone saved it; "opened from tag" says which screen they used, not that anyone was there.
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(root.BLDDue || require('../cdhub-write/records/due.js'));
   else root.BLDJobsView = factory(root.BLDDue);
@@ -14,9 +9,8 @@
   var OUTCOME = { ok: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', note: 'note', part_done: 'part done' };
   var memo = null;
 
-  /** One line per job in force: how many of its dogs or rooms are late, due or fine, and when it was last done. */
   function summary(v) {
-    var litters = v.litters || [];   // only the litters the caller counts as current (a row decides; none = no litter jobs counted)
+    var litters = v.litters || [];
     function mix(rows) { var n = 0; (rows || []).forEach(function (r, i) { n = (n + i + String(r.performed_on || r.given_on || r.fitted_on || r.moved_in || r.moved_out || r.state || r.from_date || r.value || '').length * 13) % 1000003; }); return n; }
     var recN = v.records ? Object.keys(v.records).map(function (k) { return k + ':' + ((v.records[k] || []).length) + ':' + mix(v.records[k]); }).join(',') : '';
     var key = v.today + '|' + (v.visits || []).length + '|' + (v.rules || []).length + '|' + (v.links || []).length + '|' + v.logs.length + '|' + v.types.map(function (t) { return t.id; }).join(',') + '|' + (v.dogs || []).length + '|' + (v.subjects || []).length + '|' + (v.occupancy || []).length + ':' + mix(v.occupancy) + '|' + (v.statuses || []).length + ':' + mix(v.statuses) + '|' + recN + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
@@ -39,10 +33,8 @@
     var groups = function (d) { return Due.groupsOf(v.links, d.id, v.today); };
     add(here.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: groups(d), dob: d.dob || '' }; }), v.logs);
     add(v.areas.map(function (a) { return areaTarget(a, here); }), v.logs);
-    add(litters.map(function (l) { return { litter_id: l.id, born: l.dob || l.born_on || '' }; }), v.logs);   // born: for jobs due by the litter's age
-    add([{ dogs: here.map(function (d) { return dogOne(v, d); }), litters: litters }], v.logs);   // a whole-site job about subjects is done once every one on site that day has a line
-    /* every job in force is listed (NAV live check 21 Nov 2026), also one with nothing to count today: a litter job with no
-       current litter, a Problem-button job (target optional). Its last record is still shown. */
+    add(litters.map(function (l) { return { litter_id: l.id, born: l.dob || l.born_on || '' }; }), v.logs);
+    add([{ dogs: here.map(function (d) { return dogOne(v, d); }), litters: litters }], v.logs);
     var keyOf = Due.familyKeyOf ? Due.familyKeyOf(v.types, v.today) : {}, lastOf = {};
     v.types.forEach(function (t) { if (!keyOf[t.id]) keyOf[t.id] = t.type_key; });
     v.logs.forEach(function (l) {
@@ -75,14 +67,12 @@
     return list;
   }
 
-  /** Totals for each licence source the owner typed on the job rows. */
   function bySource(rows) {
     var m = {};
     rows.forEach(function (r) { var s = r.source || ''; var x = m[s] = m[s] || { source: s, jobs: 0, late: 0, due: 0 }; x.jobs++; x.late += r.late; x.due += r.due; });
     return Object.keys(m).sort().map(function (k) { return m[k]; });
   }
 
-  /** The owner's name for a part of the day (row job.day_part.<code>.label in force that day); no row = the code. */
   function partLabel(v, code, day) {
     var best = null;
     (v.rules || []).forEach(function (r) { if (r.rule_key === 'job.day_part.' + code + '.label' && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
@@ -106,19 +96,17 @@
     if (!how) return '';
     var best = null;
     (v.rules || []).forEach(function (r) { if (r.rule_key === 'job.how.' + how + '.label' && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
-    if (!best) return LATE_HOW[how] && !showLate(v, day) ? '' : (HOW[how] || '');   // an owner's own label row for it still shows
+    if (!best) return LATE_HOW[how] && !showLate(v, day) ? '' : (HOW[how] || '');
     var w = String(best.value || '').trim();
     return /^off$/i.test(w) ? '' : w;
   }
 
-  /** The file a record's link points at, as a Drive link: the file row's url when it is https, else its Drive file id. */
   function fileUrl(f) {
     var u = String(f.url || '').trim(), id = String(f.drive_file_id || '').trim();
     if (/^https:\/\//i.test(u)) return u;
     return /^[A-Za-z0-9_-]{20,}$/.test(id) ? 'https://drive.google.com/file/d/' + id + '/view' : '';
   }
 
-  /** Files linked to each record (v.links rows from check_log to files, any role, link not ended), keyed by record id. */
   function filesByLog(v) {
     var files = {}, out = {};
     (v.files || []).forEach(function (f) { files[f.id] = f; });
@@ -130,7 +118,6 @@
     return out;
   }
 
-  /** Records for one dog ({subject_id}), one room ({area_id}) or one litter ({litter_id}), newest first. A corrected record gives way to its correction. */
   function history(v, target) {
     var byId = {}, replaced = {}, docs = filesByLog(v);
     v.types.forEach(function (t) { byId[t.id] = t; });
@@ -158,10 +145,8 @@
     }).sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
   }
 
-  /** Best to worst: fewest late, then fewest due, then SOP and name. */
   function bestFirst(a, b) { return a.late - b.late || a.due - b.due || String(a.sop).localeCompare(String(b.sop)) || String(a.label).localeCompare(String(b.label)); }
 
-  /** Compliance: done, due and late per job, best to worst. Each number opens the SOP it belongs to (v.sopHref). */
   function complianceHtml(v, pill) {
     var e = v.esc, rows = summary(v).slice().sort(bestFirst), late = rows.reduce(function (n, r) { return n + r.late; }, 0);
     var open = v.fold ? v.fold('jobs') : ' open';
@@ -178,7 +163,7 @@
     var seenNote = {};
     notes.forEach(function (l) { var k = l.note; if (seenNote[k]) return; seenNote[k] = 1;
       var lateOn = showLate(v, v.today || String(l.taken_at || '').slice(0, 10));
-      h += '<p class="note" data-owner-note>Owner\u2019s note: ' + e(l.note) + (l.taken_at && lateOn ? ' <span class="mut">(entered ' + e(v.dmy ? v.dmy(String(l.taken_at).slice(0, 10)) : String(l.taken_at).slice(0, 10)) + (l.taken_by ? ' by ' + e(l.taken_by) : '') + ')</span>' : '') + '</p>'; });
+      h += '<p class="note" data-user-note>User\u2019s note: ' + e(l.note) + (l.taken_at && lateOn ? ' <span class="mut">(entered ' + e(v.dmy ? v.dmy(String(l.taken_at).slice(0, 10)) : String(l.taken_at).slice(0, 10)) + (l.taken_by ? ' by ' + e(l.taken_by) : '') + ')</span>' : '') + '</p>'; });
     h += '<p class="mut">From saved records. Counts are dogs, rooms or litters.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>SOP</th><th>job</th><th>done</th><th>due</th><th>late</th><th>last</th></tr></thead><tbody>'
       + rows.map(function (r) {
         var sop = r.sop ? (v.sopHref ? '<a href="' + e(v.sopHref(r.sop)) + '">' + e(r.sop) + '</a>' : e(r.sop)) : '—';
@@ -195,7 +180,6 @@
     return h + '</details></section>';
   }
 
-  /** How often, in words, from the job row's every_days: 365 = every 12 months, 14 = every 2 weeks; null = as needed. */
   function everyWords(n) {
     if (!n) return 'as needed';
     if (n === 1) return 'daily';
@@ -205,19 +189,15 @@
     return 'every ' + n + ' days';
   }
 
-  /** The job's timing in the owner's own words (its frequency, e.g. "Daily and when dirty"), else from every_days. */
   function timing(r) { return r.frequency || everyWords(r.every_days); }
-  /** Why a job has nothing to count today: no current litter, or it is recorded from the Problem button. */
   var NONE_NOW = { no_litter: 'no litter now', problem: 'Problem button' };
 
-  /** The job row in force today for a type_key, or null. */
   function typeInForce(v, key) {
     var list = Due.jobsInForce(v.types || [], v.today);
     for (var i = 0; i < list.length; i++) if (list[i].type_key === key) return list[i];
     return null;
   }
   function yes(v) { return String(v).toLowerCase() === 'true'; }
-  /** A London wall-clock date and time as a UTC ISO time. Noon is the earlier-day default. */
   function londonIso(date, time) {
     var p = String(date || '').split('-').map(Number), q = String(time || '12:00').split(':').map(Number);
     if (p.length < 3 || !(p[0] > 0)) return '';
@@ -227,7 +207,6 @@
     f.forEach(function (x) { g[x.type] = Number(x.value); });
     return new Date(guess - (Date.UTC(g.year, g.month - 1, g.day, g.hour, g.minute) - guess)).toISOString();
   }
-  /** Put the chosen day on a tap. Today keeps the real time. An earlier day is noon London, and confirm_unusual so an old day is kept. */
   function applyDay(fields, day, today, now) {
     if (day && day > today) return false;
     if (!day || day === today) { if (now) fields.happened_at = now; return true; }
@@ -237,7 +216,6 @@
     fields.confirm_unusual = 'yes';
     return true;
   }
-  /** Due, late, or never recorded. A job with no litter on site has nothing to record. */
   function needsRecord(r) {
     if (!r || r.none_now === 'no_litter') return false;
     if (r.due || r.late) return true;
@@ -267,10 +245,6 @@
     for (var i = 0; i < list.length; i++) if (list[i].type_key === key) return list[i];
     return null;
   }
-  /**
-   * Who still needs this check recorded: dogs, rooms, litters, or one whole-site line.
-   * A dog job (target dog) is listed dog by dog. Board > Jobs never shows those, and has no Select all for them.
-   */
   function dueItems(v, t) {
     var dogs = dogsNow(v), areas = v.areas || [], litters = v.litters || [];
     function dogItem(d) { return { kind: 'dog', id: d.id, area_id: d.area_id || d.areaId || '', label: d.name || d.label || d.id }; }
@@ -307,10 +281,6 @@
     if (t.target === 'optional') return [{ kind: 'site', id: '', label: t.label || 'This check' }];
     return [];
   }
-  /**
-   * Dogs, rooms or litters this job can be recorded against, including ones already done.
-   * due is true when that one is still late, due or never recorded. A whole-site line is a single site item.
-   */
   function pickList(v, t) {
     if (!t) return [];
     var dogs = dogsNow(v), areas = v.areas || [], litters = v.litters || [];
@@ -358,13 +328,11 @@
     if (t.target === 'optional') return [{ kind: 'site', id: '', label: t.label || 'This check', due: true }];
     return [];
   }
-  /** A dog, room or litter job needs the same chooser the Board opens before it saves. A whole-site line does not. */
   function needsPick(t) {
     if (!t) return false;
     if (Due.perDogSite(t) || Due.perDogRoom(t)) return true;
     return t.target === 'dog' || t.target === 'area' || t.target === 'litter' || t.target === 'either';
   }
-  /** What a save still needs, in the same words as the staff check form. */
   function gaps(type, entry) {
     var e = {};
     if (type.target === 'area' && !entry.area_id) e.area_id = 'Choose the room.';
@@ -376,11 +344,6 @@
     if (yes(type.note_required) && !entry.note) e.note = (type.note_label || 'A note') + ' is needed.';
     return e;
   }
-  /**
-   * The check_log saves for the ticked rows. Dog and room jobs are one add each (subject_id or area_id).
-   * A litter job sends litter_id and no subject_id. A whole-site job about dogs is one add_site.
-   * how_recorded is tapped, or site_tap for a whole-site line. happened_at is the real time. Never a paper catch-up.
-   */
   function savePlans(v, key, picked, extra, now) {
     var t = typeInForce(v, key);
     if (!t) return { error: 'That check is not set up.' };
@@ -413,12 +376,6 @@
     }
     return { plans: plans };
   }
-  /**
-   * The save a tap on The Board, Jobs, sends for this job. Whole-site lines are one add_site
-   * (how_recorded site_tap). A dog, room or litter line is one add (how_recorded tapped), and a
-   * room job about dogs is one add_site for the ticked dogs in that room. Today uses the real time.
-   * An earlier day is noon Europe/London. taken_by is stamped by the save from the signed-in user.
-   */
   function tapPlans(v, key, picked, extra, day, now) {
     var t = typeInForce(v, key);
     if (!t) return { error: 'That check is not set up.' };
@@ -485,7 +442,6 @@
   function dayInput(e, attr, key, today, label) {
     return '<input type="date" ' + attr + '="' + e(key) + '" max="' + e(today || '') + '" value="' + e(today || '') + '" aria-label="Day done: ' + e(label) + '">';
   }
-  /** Tick rows for a dog, room or litter chooser. Due ones start ticked, except a whole-site job about dogs (those start clear, as on the Board). */
   function choiceHtml(e, attr, allAttr, key, items, precheck) {
     var ticks = items.map(function (p) {
       var on = precheck(p) ? ' checked' : '';
@@ -494,7 +450,6 @@
     var all = items.length > 1 ? '<button type="button" class="btn quiet" ' + allAttr + '="' + e(key) + '">Select all</button>' : '';
     return all + ticks;
   }
-  /** Date plus a tick on each Jobs row. Dog, room and litter jobs keep a chooser, hidden until the tick is pressed. */
   function rowDoneHtml(v, row) {
     var e = v.esc, t = typeInForce(v, row.key);
     if (!t) return '';
@@ -510,7 +465,6 @@
       + '<button type="button" class="btn" data-job-done="' + e(row.key) + '" aria-label="Done: ' + e(row.label) + '">\u2713</button></div>'
       + pick + '<p class="mut" data-job-msg="' + e(row.key) + '" role="status">' + flash + '</p>';
   }
-  /** Record / Done under a job. Due dogs or rooms start ticked. When none are due, the same control stays so an earlier day can still be recorded. */
   function recordHtml(v, row) {
     var e = v.esc, t = typeInForce(v, row.key);
     if (!t) return '';
@@ -559,3 +513,4 @@
 
   return { summary: summary, everyWords: everyWords, timing: timing, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml, needsRecord: needsRecord, dueItems: dueItems, pickList: pickList, savePlans: savePlans, tapPlans: tapPlans, londonIso: londonIso, recordHtml: recordHtml };
 }));
+

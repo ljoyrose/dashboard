@@ -31,7 +31,6 @@ const PAGES = {
 const CONTROLS = 'a[href], button, summary, input:not([type="hidden"]), textarea, select, [role="button"], [role="tab"], [role="switch"], [role="menuitem"], [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
 const TYPING = 'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="range"]), textarea, select, [contenteditable="true"]';
 
-// Runs in the page: what a state may change, read off one element.
 function readOne(e) {
   const s = getComputedStyle(e), r = e.getBoundingClientRect(), p = (e.parentElement || e).getBoundingClientRect();
   return {
@@ -40,7 +39,6 @@ function readOne(e) {
     shadow: s.boxShadow, border: ['Top', 'Right', 'Bottom', 'Left'].map((k) => s['border' + k + 'Width'] + ' ' + s['border' + k + 'Style']).join('/'),
   };
 }
-// The problems between a resting read and a state read.
 function judge(rest, now, typing) {
   const bad = [];
   if (now.box !== rest.box) bad.push('moves (' + rest.box + ' > ' + now.box + ')');
@@ -54,8 +52,6 @@ function judge(rest, now, typing) {
   return bad;
 }
 
-// Runs in the page: keyboard-focus every interactive element in turn (focus-visible, as after a Tab); returns each resting and
-// focused read, one per kind of control (tag and classes), so one bad rule is one line, not a hundred.
 function focusAll() {
   const read = (e) => {
     const s = getComputedStyle(e), r = e.getBoundingClientRect(), p = (e.parentElement || e).getBoundingClientRect();
@@ -69,7 +65,6 @@ function focusAll() {
   const seen = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility === 'visible'; };
   const out = [];
   for (const e of document.querySelectorAll(CONTROLS)) {
-    // A skip link is meant to appear on focus (it rests off screen): its move is the point.
     if (!seen(e) || e.disabled || e.matches('.skip, .skip-link')) continue;
     const typing = e.matches(TYPING);
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -86,22 +81,19 @@ for (const [hub, P] of Object.entries(PAGES)) {
   test.describe(hub, () => {
     for (const W of [1280, 390]) {
       test(`${W}: focus and hover keep one 1px line inside (no ring outside, no 2px, no shadow, nothing moves)`, async ({ page, guard }) => {
-        test.setTimeout(480_000);   // every control on every view; the shared Mac is slow under a full run
+        test.setTimeout(480_000);
         await page.setViewportSize({ width: W, height: W > 600 ? 900 : 844 });
         await setLook(page, { bg: 'warm', mode: 'device', scheme: 'light' });
         await P.open(page, guard);
         const bad = [], hovered = new Set();
         for (const v of P.views) {
           await go(page, v);
-          // A key press first, so programmatic focus counts as keyboard focus (:focus-visible), as a Tab would.
           await page.keyboard.press('Shift');
           const kinds = new Set();
           for (const f of await page.evaluate(`(${focusAll.toString().replace('CONTROLS', JSON.stringify(CONTROLS)).replace('TYPING', JSON.stringify(TYPING))})()`)) {
             const b = judge(f.rest, f.now, f.typing);
             if (b.length && !kinds.has(f.kind + b.join())) { kinds.add(f.kind + b.join()); bad.push(`#/${v} ${f.what}: focus ${b.join(', ')}`); }
           }
-          // Hover: one of each kind of control (tag and classes) on the page, on the first view that shows it: hover rules go by kind,
-          // and once per kind keeps the suite inside the CI time limit.
           const picks = await page.evaluate((done) => {
             document.querySelectorAll('[data-hl]').forEach((e) => e.removeAttribute('data-hl'));
             const kinds = new Map();
@@ -135,3 +127,4 @@ for (const [hub, P] of Object.entries(PAGES)) {
     }
   });
 }
+

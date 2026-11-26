@@ -1,30 +1,15 @@
-/* ---------------------------------------------------------------------------------------------------------------
- * VISITS (external access, V9, 13 Nov 2026; API agreed with ADMIN in AA_VISIT-API_2026-11-13-2034 + STAFF reply 2055).
- * Part A: the owner's visit types and visitor cards. Both OWNER code only, behind one switch TABLE_ON_visit (OFF).
- *
- *   action 'grant_type_save'  Adds one BLD-grant_type row (a PRESET, copied into the grant's rows at give time). A type is
- *                             never changed in place: the same type_key again is a new version with a later (or same-day,
- *                             later-saved) from_date; to_date ends it. Nothing is fixed here:
- *                             the hub offers suggested rows for the owner to save or change.
- *   action 'card_add'         Adds one BLD-qr_tag row of kind visitor_card. The card's tag is random (about 128 bits) and
- *                             is returned ONCE for printing. The file keeps only 'sha256:<hex>' of it, so anyone who can
- *                             read qr_tag cannot use a card. A scan only opens a page; it never proves anyone was there.
- * --------------------------------------------------------------------------------------------------------------- */
 var VISIT_ = {
   ON: 'visit',
   TYPE_FILE: 'BLD-grant_type.csv',
   TYPE_COLUMNS: ['id', 'tenant_id', 'type_key', 'name', 'role_code', 'default_hours', 'max_hours', 'rights', 'lists', 'fields',
     'data_years', 'record_jobs', 'record_counts', 'email_code', 'needs_id_check', 'terms_id', 'from_date', 'to_date',
-    'set_by', 'set_on', 'source', 'grant_basis', 'created_at', 'updated_at'],   // S4: grant_basis = the default basis (blank = voluntary)
+    'set_by', 'set_on', 'source', 'grant_basis', 'created_at', 'updated_at'],
   TAG_FILE: 'BLD-qr_tag.csv',
   TAG_NEED: ['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by'],
   CARD_KIND: 'visitor_card',
   FINDING_FILE: 'BLD-finding.csv',
-  // the live finding columns a review fills, plus the six V9 appends; other columns are left blank, found by name
   FINDING_NEED: ['id', 'tenant_id', 'authority', 'raised_on', 'wording_as_given', 'finding_kind', 'outcome_id',
     'target_table', 'target_id', 'sign_in_id', 'grant_id', 'created_at', 'updated_at'],
-  // the GrantRight codes this script can carry out (Regulatory-Core); which ones a visit gets is the owner's choice.
-  // raise_finding is shown as "Review". BLD-grant_right holds their labels.
   RIGHTS: ['view', 'raise_finding', 'print', 'export', 'record'],
   KEY_RE: /^[a-z][a-z0-9_]{1,39}$/,
   JOB_RE: /^[a-z0-9][a-z0-9_.\-]{0,59}$/,
@@ -32,24 +17,21 @@ var VISIT_ = {
   ROLE_RE: /^[A-Z][A-Z_]{1,29}$/
 };
 
-/** 'review' (the earlier word) is the right raise_finding. */
 function visitRightCode_(s) { s = String(s == null ? '' : s).trim(); return s === 'review' ? 'raise_finding' : s; }
 
 function visitOn_() { return prop_(BLD.PROP.TABLE_ON_PREFIX + VISIT_.ON) === 'true'; }
 function visitFiles_() { return visitOn_() ? [VISIT_.TYPE_FILE, VISIT_.FINDING_FILE].concat(delegFiles_()) : []; }
 
-/** Shared entry for OWNER visit actions: switches, owner code, repeat-tap guard, one lock. */
-function sinkVisitOwner_(req, fn, holderOk) {
+function sinkVisitUser_(req, fn, holderOk) {
   if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off.');
   if (!req || typeof req !== 'object') throw err_('BAD_REQUEST', 'That request was not understood.');
   if (!visitOn_()) throw err_('TABLE_OFF', 'Visits are switched off.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
   var who = authStaff_(req.code), f = req.fields && typeof req.fields === 'object' ? req.fields : {}, deleg = null;
-  if (who.role !== 'OWNER') {
-    // Delegate.gs: a role never implies this; only a live give_visit row the owner conferred (or one passed on under it)
+  if (who.role !== 'USER') {
     if (holderOk) deleg = delegFor_(who, 'give_visit', String(f.delegation_id || '').trim(), new Date().getTime());
-    if (!deleg) throw err_('NOT_ALLOWED', 'Only the kennel owner, or someone she has allowed, can do this.');
+    if (!deleg) throw err_('NOT_ALLOWED', 'Only the kennel user, or someone she has allowed, can do this.');
   }
   var cache = CacheService.getScriptCache(), cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
@@ -58,7 +40,6 @@ function sinkVisitOwner_(req, fn, holderOk) {
   return result;
 }
 
-/** A pipe list from an array or 'a|b' text: trimmed, no blanks, no repeats, each must pass `ok`. null = a bad item. */
 function visitList_(v, ok, max) {
   var arr = Array.isArray(v) ? v : String(v == null ? '' : v).split('|'), out = [];
   for (var i = 0; i < arr.length; i++) {
@@ -83,19 +64,16 @@ function visitRead_(file, need) {
   return read;
 }
 
-/** The rows of one table for this tenant. */
 function visitMine_(read) {
   var tenant = prop_(BLD.PROP.TENANT_ID);
   return read.records.filter(function (r) { return !tenant || !r.tenant_id || r.tenant_id === tenant; });
 }
 
-/** A dated row is in force on `day` when from_date <= day <= to_date (blank to_date = open). Blank from_date = always. */
 function grantRowOn_(r, day) {
   var from = String(r.from_date || ''), to = String(r.to_date || '');
   return (!from || from <= day) && (!to || to >= day);
 }
 
-/** The grant type version in force on `day` for a type_key: from_date <= day <= to_date, latest from_date then created_at. */
 function grantTypeInForce_(rows, key, day) {
   var best = null;
   rows.forEach(function (r) {
@@ -105,7 +83,6 @@ function grantTypeInForce_(rows, key, day) {
   return best;
 }
 
-/** The check_type version in force on `day` for a type_key (latest effective_from <= day, then latest set_at). */
 function visitTypeInForce_(rows, key, day) {
   var best = null;
   rows.forEach(function (r) {
@@ -116,7 +93,7 @@ function visitTypeInForce_(rows, key, day) {
 }
 
 function sinkVisitTypeSave_(req) {
-  return sinkVisitOwner_(req, function (f, who, now) {
+  return sinkVisitUser_(req, function (f, who, now) {
     var errors = {}, today = todayLondon_(now);
     var key = String(f.type_key || '').trim();
     if (!VISIT_.KEY_RE.test(key)) errors.type_key = 'A short key in small letters, e.g. inspector.';
@@ -168,18 +145,16 @@ function sinkVisitTypeSave_(req) {
   });
 }
 
-/** A card tag: 26 characters from a 31-letter alphabet (about 128 bits), no look-alikes. */
 function visitCardTag_() {
   var alphabet = 'abcdefghjkmnpqrstuvwxyz23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), tag = '';
   for (var i = 0; i < 26; i++) tag += alphabet.charAt(parseInt(raw.substr(i * 2, 2), 16) % alphabet.length);
   return 'vc' + tag;
 }
 
-/** What qr_tag keeps for a card: never the tag itself. */
 function visitCardHash_(tag) { return 'sha256:' + textHash_(String(tag)); }
 
 function sinkCardAdd_(req) {
-  return sinkVisitOwner_(req, function (f, who, now) {
+  return sinkVisitUser_(req, function (f, who, now) {
     var errors = {};
     var label = dogcardText_(f.label, 'label', errors, 40);
     if (!label && !errors.label) errors.label = 'Give the card a label, e.g. Visitor 3.';
@@ -202,16 +177,6 @@ function sinkCardAdd_(req) {
   });
 }
 
-/* ---------------------------------------------------------------------------------------------------------------
- * Part B: give, end and extend a visit. A visit is a Regulatory-Core DisclosureGrant: one BLD-inspect_link row (V9 header)
- * plus its dog rows, field rows, BLD-grant_scope rows (one per list: disclosure_state) and BLD-grant_right_link rows
- * (view, raise_finding, print, export, and one 'record' row per job with counts_due). Names: AA_V9-NAMES_2026-11-13-2140. Map: AA_ACCESS_2026-11-13-1535 "Map onto Regulatory-Core".
- *   - A LINK visit gets a fresh code (registry role INSPECTOR, so it can only read what its own rows allow, never save
- *     through the staff path). The code is returned ONCE with the page url; it is never logged or stored.
- *   - A CARD visit gets no code: the printed card's tag opens it while its window is live (part C).
- *   - Rows are never edited. End and extend write a NEW link row with supersedes_id; children stay on the ROOT row's id.
- *   - purpose_text is required ("a grant with no purpose is unreviewable").
- * --------------------------------------------------------------------------------------------------------------- */
 function visitLinkRead_() {
   var L = store_read_(INSPECT.LINK_FILE, true);
   if (!sameHeader_(L.header, INSPECT.LINK_COLUMNS)) {
@@ -220,13 +185,11 @@ function visitLinkRead_() {
   return L;
 }
 
-/** The type row by id (a specific version), for this tenant. */
 function visitTypeById_(id) {
   var rows = visitMine_(visitRead_(VISIT_.TYPE_FILE, VISIT_.TYPE_COLUMNS));
   return rows.filter(function (r) { return r.id === id; })[0] || null;
 }
 
-/** A visit's state from its CURRENT row: 'ended' (revoked or past to_at), 'opens' (not yet) or 'live'. */
 function visitState_(r, nowMs) {
   if (String(r.ended_at || '')) return 'ended';
   var end = Date.parse(r.to_at || '') || Date.parse(inspectEndOfDay_(String(r.ends || '')));
@@ -235,7 +198,6 @@ function visitState_(r, nowMs) {
   return !isNaN(start) && nowMs < start ? 'opens' : 'live';
 }
 
-/** fields ['table.col', 'table.col:last4'] to field rows [list, col, redaction]; each list must be one a link may show. */
 function visitFieldRows_(fields, bad) {
   var out = [], seen = {}, cache = {};
   (fields || []).forEach(function (s) {
@@ -257,7 +219,7 @@ function visitFieldRows_(fields, bad) {
 function visitEvent_(now, who, kind, linkId, note) {
   try {
     appendPendingEvent_({ event_id: newId_('evt', now), pending_id: 'visit-' + linkId, event: kind, at: londonIso_(now), by: who.who,
-      role: who.role || 'OWNER', kind: 'visit', row_id: linkId, note: String(note || '').slice(0, 200), result: kind });
+      role: who.role || 'USER', kind: 'visit', row_id: linkId, note: String(note || '').slice(0, 200), result: kind });
     return true;
   } catch (e) { Logger.log('Visit ' + kind + ' ' + linkId + ' not logged: ' + (e && e.message)); return false; }
 }
@@ -269,7 +231,6 @@ function visitReason_(f, errors, need, name) {
   return r;
 }
 
-/** A value that must be a code in BLD-status_label group `group` (blank = `dflt`). No rows = only the default. */
 function visitLabelCode_(v, group, dflt, errors, name) {
   v = String(v == null ? '' : v).trim() || dflt;
   if (v === dflt) return v;
@@ -279,7 +240,6 @@ function visitLabelCode_(v, group, dflt, errors, name) {
   return v;
 }
 
-/** The scope and right rows of a grant (root id) in force on `day`: {lists, rights, jobs: {type_key: counts_due}}. */
 function visitGrant_(rootId, day) {
   var tenant = prop_(BLD.PROP.TENANT_ID), out = { lists: [], rights: [], jobs: {} };
   var sc = store_read_(INSPECT.SCOPE_FILE, false), rt = store_read_(INSPECT.RIGHT_FILE, false);
@@ -295,7 +255,7 @@ function visitGrant_(rootId, day) {
 }
 
 function sinkVisitGive_(req) {
-  return sinkVisitOwner_(req, function (f, who, now, deleg) {
+  return sinkVisitUser_(req, function (f, who, now, deleg) {
     var errors = {}, bad = function (field, msg) { var e = {}; e[field] = msg; return err_('INVALID', msg, { fields: e }); };
     var tenant = prop_(BLD.PROP.TENANT_ID), salt = prop_(BLD.PROP.SALT);
     if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
@@ -357,7 +317,7 @@ function sinkVisitGive_(req) {
 
     var L = visitLinkRead_(), S = inspectRead_(INSPECT.SUBJECT_FILE), F = inspectRead_(INSPECT.FIELD_FILE);
     var SC = inspectRead_(INSPECT.SCOPE_FILE), RT = inspectRead_(INSPECT.RIGHT_FILE);
-    inspectRead_(INSPECT.ACCESS_FILE);   // the visit log must exist before a visit can be opened
+    inspectRead_(INSPECT.ACCESS_FILE);
     if (cardId) {
       var tags = visitMine_(visitRead_(VISIT_.TAG_FILE, VISIT_.TAG_NEED));
       var card = tags.filter(function (r) { return r.id === cardId && r.kind === VISIT_.CARD_KIND; })[0];
@@ -377,8 +337,8 @@ function sinkVisitGive_(req) {
       if (busy) throw err_('CARD_IN_USE', 'That card already has a visit at that time. End it first or choose another card.', { duplicate_of: busy });
     } else if (!salt) throw err_('NOT_SET_UP', 'Run adminSetup first.');
 
-    var linkId = newId_('ilk', now), codeId = cardId ? '' : newCodeId_(), fromDay = todayLondon_(now);   // rows start the day given; the window itself gates use
-    var fromAt = utcIso_(new Date(win.startMs)), toAt = utcIso_(new Date(win.endMs)), made = utcIso_(now);   // S4.2: stored in UTC
+    var linkId = newId_('ilk', now), codeId = cardId ? '' : newCodeId_(), fromDay = todayLondon_(now);
+    var fromAt = utcIso_(new Date(win.startMs)), toAt = utcIso_(new Date(win.endMs)), made = utcIso_(now);
     store_appendMany_(INSPECT.SUBJECT_FILE, INSPECT.SUBJECT_COLUMNS, subjects.map(function (s, i) {
       return [linkId + '-s' + (i + 1), tenant, linkId, s, '', ''];
     }), S);
@@ -399,7 +359,7 @@ function sinkVisitGive_(req) {
       set_by: who.who, from_at: fromAt, to_at: toAt, supersedes_id: '', grant_type_id: typeId, person_id: personId,
       visitor_name: name, organisation: org, card_tag_id: cardId, as_of_from: dFrom, as_of_to: dTo, purpose_text: purpose,
       grant_basis: basis, identity_assurance: assurance, retention_until: keep, email_code: '',
-      issued_by: deleg ? who.id : 'owner', delegation_id: deleg ? deleg.row.id : '' };
+      issued_by: deleg ? who.id : 'user', delegation_id: deleg ? deleg.row.id : '' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
     var out = { status: 'saved', grant_id: linkId, person_id: personId, from_at: fromAt, to_at: toAt, dogs: subjects.length,
       fields: fieldRows.length, email_sent: false };
@@ -409,7 +369,7 @@ function sinkVisitGive_(req) {
       var reg = registry_();
       reg[hashCode_(code, salt)] = { id: codeId, who: 'Visitor - ' + label, role: ROLE_INSPECTOR, active: true, added: londonIso_(now),
         starts_at: win.starts_at, expires_at: win.ends_at, link_id: linkId };
-      setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));   // the link works from this line on
+      setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));
       var page = inspectPageUrl_(), sid = inspectScriptId_();
       out.code = code;
       out.url = page && sid ? page + '#s=' + sid + '&c=' + code : '';
@@ -419,7 +379,6 @@ function sinkVisitGive_(req) {
   }, true);
 }
 
-/** A holder's visit must sit inside their delegation: type, rights, lists, fields, jobs. Throws INVALID naming what is wider. */
 function visitWithin_(lim, type, rights, lists, fieldRows, jobs) {
   var wider = {};
   if (lim.grant_type_ids !== null) {
@@ -433,7 +392,6 @@ function visitWithin_(lim, type, rights, lists, fieldRows, jobs) {
   if (Object.keys(wider).length) throw err_('INVALID', 'You cannot give more than you hold.', { fields: wider });
 }
 
-/** A holder's dogs: inside subject_ids and (by their room now) area_ids. "All dogs" means all the dogs they may give. */
 function visitDogsWithin_(lim, subjects, all, tenant, bad) {
   var inArea = null;
   if (lim.area_ids !== null) {
@@ -446,7 +404,6 @@ function visitDogsWithin_(lim, subjects, all, tenant, bad) {
   return subjects;
 }
 
-/** The grant's root and current rows, or throws NOT_FOUND. */
 function visitCurrentRow_(L, rootId) {
   var tenant = prop_(BLD.PROP.TENANT_ID);
   var root = L.records.filter(function (r) { return r.id === rootId && r.tenant_id === tenant && !r.supersedes_id; })[0];
@@ -455,7 +412,7 @@ function visitCurrentRow_(L, rootId) {
 }
 
 function sinkVisitEnd_(req) {
-  return sinkVisitOwner_(req, function (f, who, now, deleg) {
+  return sinkVisitUser_(req, function (f, who, now, deleg) {
     var errors = {}, linkId = String(f.grant_id || '').trim(), reason = visitReason_(f, errors, true);
     if (!ID_RE_.test(linkId)) errors.grant_id = 'Say which visit to end.';
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
@@ -473,7 +430,7 @@ function sinkVisitEnd_(req) {
 }
 
 function sinkVisitExtend_(req) {
-  return sinkVisitOwner_(req, function (f, who, now, deleg) {
+  return sinkVisitUser_(req, function (f, who, now, deleg) {
     var errors = {}, linkId = String(f.grant_id || '').trim(), reason = visitReason_(f, errors, true);
     if (!ID_RE_.test(linkId)) errors.grant_id = 'Say which visit to change.';
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
@@ -510,13 +467,6 @@ function sinkVisitExtend_(req) {
   }, true);
 }
 
-/* ---------------------------------------------------------------------------------------------------------------
- * Part C: a visitor opens a visit with a link code (c) or a printed card's tag (t). No staff code.
- *   - grant_open says whether the visit is live, opens later, has ended, or (a card) is free. A free or ended visit
- *     shows nothing else. A wrong code or tag counts toward the same lock-out as a wrong staff code.
- *   - read with t: a card visit reads exactly as a link visit does (its own rows), only while live; outside its window
- *     the answer is WINDOW. A scan opens a page; it never proves anyone was there.
- * --------------------------------------------------------------------------------------------------------------- */
 var CARD_TAG_RE_ = /^vc[a-z2-9]{26}$/;
 
 function visitBadTag_() {
@@ -524,7 +474,6 @@ function visitBadTag_() {
   return err_('BAD_CODE', 'That card or link was not recognised.');
 }
 
-/** The card's qr_tag row for a scanned tag, or throws BAD_CODE. */
 function visitCard_(t) {
   if (authBlocked_()) throw err_('TOO_MANY_TRIES', 'Too many wrong codes recently. Try again in a few minutes.');
   t = String(t || '').trim();
@@ -537,7 +486,6 @@ function visitCard_(t) {
   return card;
 }
 
-/** The card's live grant, else the next to open, else null: {root, cur}. */
 function visitForCard_(L, cardId, nowMs) {
   var tenant = prop_(BLD.PROP.TENANT_ID), cur = linkCurrent_(L.records, tenant), live = null, next = null;
   Object.keys(cur).forEach(function (root) {
@@ -550,7 +498,6 @@ function visitForCard_(L, cardId, nowMs) {
   return live || next;
 }
 
-/** For a read with t: the visitor as sinkRead_ needs it, only while the card's visit is live. */
 function visitCardWho_(t, now) {
   var card = visitCard_(t), L = inspectRead_(INSPECT.LINK_FILE), nowMs = now.getTime();
   var g = visitForCard_(L, card.id, nowMs);
@@ -559,7 +506,6 @@ function visitCardWho_(t, now) {
   return { who: 'Visitor - ' + g.cur.label, role: ROLE_INSPECTOR, id: 'card:' + card.id, link_id: g.root, ends: g.cur.to_at || '', card: true };
 }
 
-/** check_type rows in force today for these type_keys, picked columns only. */
 function visitJobs_(keys, today) {
   if (!keys.length) return [];
   var ct = store_read_('BLD-check_type.csv', false);
@@ -577,7 +523,6 @@ function visitJobs_(keys, today) {
   return out;
 }
 
-/** Review words: BLD-status_label rows in group 'review', each with a level green / amber / red (none fixed here). */
 function visitReviewWords_() {
   var sl = store_read_('BLD-status_label.csv', false);
   if (!sl || sl.header.indexOf('group') < 0) return [];
@@ -618,17 +563,7 @@ function sinkVisitOpen_(req) {
   };
 }
 
-/* ---------------------------------------------------------------------------------------------------------------
- * Part D: a visitor reviews (right raise_finding) or records (right record), only while live and only if granted.
- *   - grant_review adds one BLD-finding row (finding_kind review). outcome_id is a review word: a BLD-status_label code
- *     in group 'review'. target_table is one of the visit's lists; target_id (optional) must be a row of a dog on it.
- *     A finding is never edited; the owner's reply will be a finding_response row (later).
- *   - grant_record adds one check_log row through the ordinary staff-check path (same checks, same repeat guard), for a
- *     job the visit has a 'record' right row for. taken_by is always 'grant:<root id>'; grant_id names the grant and
- *     counts_due is copied from that right row at save time. The jobs screen counts it only when true (due.js).
- * --------------------------------------------------------------------------------------------------------------- */
 
-/** The visitor, their grant's root id and current row, and its rights, from a link code (code) or a card tag (t). */
 function visitLive_(req, now) {
   var who = req.t ? visitCardWho_(req.t, now) : authStaff_(req.code);
   if (who.role !== ROLE_INSPECTOR || !who.link_id) throw err_('NOT_ALLOWED', 'Only a visitor can do this.');
@@ -693,7 +628,6 @@ function sinkVisitRecord_(req) {
     Object.keys(spec.input).forEach(function (k) { if (f[k] !== undefined) fields[k] = f[k]; });
     var who = { who: 'grant:' + v.root, role: ROLE_INSPECTOR, id: '' };
     var counts = v.grant.jobs[typeRow.type_key];
-    // the same spec, stamped with the visit and whether it counts as done (as granted now; later changes do not alter it)
     var vspec = Object.create(spec);
     vspec.stamp = function (row, ctx) { spec.stamp(row, ctx); row.grant_id = v.root; row.counts_due = counts ? 'true' : 'false'; };
     var out = sinkProcess_(vspec, { action: 'add', fields: fields, values: f.values }, who, now, now.getTime());
@@ -701,3 +635,4 @@ function sinkVisitRecord_(req) {
     return out;
   });
 }
+

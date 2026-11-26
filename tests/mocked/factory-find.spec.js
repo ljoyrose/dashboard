@@ -8,7 +8,7 @@ const { tabClick } = require('../support/tabs');
 const { build } = require('../fixtures/factory/state');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'factory', 'index.html'), 'utf8');
-const LOGS = require('../support/world').IDS.factoryLogs; // the Drive folder the page reads af-state.json from
+const LOGS = require('../support/world').IDS.factoryLogs;
 
 async function open(page, guard, hash, { sent, change } = {}) {
   const state = build(Date.now());
@@ -27,7 +27,7 @@ const chip = (page, fx, val) => page.locator(`#view [data-fx="${fx}"][data-val="
 const panel = async (page) => { await page.locator('#filtersBtn').click(); await expect(page.locator('.fpanel')).toBeVisible(); };
 
 test.describe('Factory find bar', () => {
-  test('a send named Links · P5 sits under its app Sample Links, two clicks from Do @regression', async ({ page, guard }) => {
+  test('t-factory-find-spec-1', async ({ page, guard }) => {
     await open(page, guard, '#/do');
     await chip(page, 'app', 'links').click();
     await expect(page).toHaveURL(/#\/do\?app=links$/);
@@ -50,7 +50,7 @@ test.describe('Factory find bar', () => {
     await expect(box).toBeFocused(); // typing keeps the cursor
     await box.fill('sample links');
     await expect(row(page, '869fk9d1r')).toBeVisible();
-    await box.fill('rig pedigree'); // room name + words in the title
+    await box.fill('rig pedigree');
     await expect(rows(page)).toHaveCount(1);
     await expect(row(page, 'wrk000002')).toBeVisible();
   });
@@ -67,7 +67,7 @@ test.describe('Factory find bar', () => {
   });
 
   test('kind chips: Send, Test, Fix, Decide, Research', async ({ page, guard }) => {
-    await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
+    await open(page, guard, '#/me/all');
     await chip(page, 'kind', 'send').click();
     await expect(rows(page)).toHaveCount(2);
     await chip(page, 'kind', 'send').click();
@@ -136,7 +136,7 @@ test.describe('Factory find bar', () => {
   });
 
   test('sort: Flag, Date, Oldest and Newest change the order', async ({ page, guard }) => {
-    await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
+    await open(page, guard, '#/me/all');
     await expect(rows(page).first()).toHaveAttribute('data-row', 'wrk000001'); // Me = newest first
     await panel(page);
     await chip(page, 'sort', 'age').click();
@@ -186,7 +186,6 @@ test.describe('Factory find bar', () => {
     await expect(rows(page)).toHaveCount(4);
   });
 
-  // House look (28 Oct): a friendly empty state in plain words with a green-ring check, never a "0" in a ring.
   test('nothing found: plain words with a green-ring check, and Clear', async ({ page, guard }) => {
     await open(page, guard, '#/decide?q=zzzz');
     const box = page.locator('[data-empty]');
@@ -203,7 +202,7 @@ test.describe('Factory find bar', () => {
     await expect(page.locator('#nMe')).toHaveText('7');
     await expect(rows(page)).toHaveCount(7);
     await expect(page.locator('#view .appcard').first()).toHaveAttribute('data-app', 'vet-converter');
-    await expect(page.locator('.appcard[data-app="links"] .crow')).toHaveCount(2); // a decision and a send, one card
+    await expect(page.locator('.appcard[data-app="links"] .crow')).toHaveCount(2);
     await expect(page.locator('.appcard[data-app="links"] [data-act="yes"]')).toBeVisible();
     await expect(page.locator('.appcard[data-app="links"] [data-act="done"]')).toBeVisible();
   });
@@ -250,7 +249,6 @@ test.describe('Factory find bar', () => {
   });
 });
 
-// Copy on a Sends card only when the checks before a paid send are written on the task (APPFACT E11, E14, E15, E16).
 test.describe('Factory send gate', () => {
   const send = (st, id) => st.lists.sends.find((t) => t.id === id);
   const hm = (ts) => new Date(ts).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -261,7 +259,7 @@ test.describe('Factory send gate', () => {
     const info = page.locator('[data-sendinfo="869fk9d1r"]');
     await expect(info).toContainText('Happy Hour: active');
     await expect(info).toContainText('AFTER SEND YOU MUST');
-    await expect(info).toContainText('Lisa available: 16:00');
+    await expect(info).toContainText('User available: 16:00');
     await expect(info).toContainText('Class: CURRENT TEN:1');
   });
 
@@ -271,7 +269,6 @@ test.describe('Factory send gate', () => {
     await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Class/);
   });
 
-  // Pre-send checker stamp (Presend Checker Landing, 30 Oct 2026): Copy needs "presend: READY sha256:<hash> <today>" and the text's hash must match.
   const PROMPT_DOC = '1SAMPLEpromptDocId00000000000';
   const PROMPT_TEXT = 'Invented prompt text for the gate test.\nTHE WORK.\n1. Do one invented thing.\n';
   const sha = (x) => require('crypto').createHash('sha256').update(x, 'utf8').digest('hex');
@@ -307,7 +304,7 @@ test.describe('Factory send gate', () => {
 
   test('good stamp: READY, dated today, hash of the trimmed text (as the checker writes it): Copy copies it', async ({ page, guard }) => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-    guard.world.file(PROMPT_DOC, 'prompt-sample.md', PROMPT_TEXT + '\n\n', { mimeType: 'text/markdown' }); // blank lines at the end never break the match
+    guard.world.file(PROMPT_DOC, 'prompt-sample.md', PROMPT_TEXT + '\n\n', { mimeType: 'text/markdown' });
     await open(page, guard, '#/item/869fk9d1r', { change: (st) => stamp(st, 'presend: READY sha256:' + sha(PROMPT_TEXT.trim()) + ' ' + today()) });
     await page.locator('[data-copy="869fk9d1r"]').click();
     await expect(page.locator('[data-copy="869fk9d1r"]')).toContainText('Copied');
@@ -352,21 +349,19 @@ test.describe('Factory send gate', () => {
 
   test('a leak or security send needs "the owner available"; the owner\'s Do lines for the app are linked', async ({ page, guard }) => {
     await open(page, guard, '#/item/869fk9d1r', { change: (st) => {
-      const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/\nLisa available:[^\n]*/, '');
-      st.lists.work.push({ ...st.lists.work[0], id: 'wrk000009', name: 'Sample Links · Be there for the leak tests', tags: ['who-lisa', 'app-869fjxpc2'], due: null });
+      const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/\nUser available:[^\n]*/, '');
+      st.lists.work.push({ ...st.lists.work[0], id: 'wrk000009', name: 'Sample Links · Be there for the leak tests', tags: ['who-user', 'app-869fjxpc2'], due: null });
     } });
-    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Lisa available/);
+    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/User available/);
     await expect(page.locator('[data-sendinfo="869fk9d1r"] a[href="#/item/wrk000009"]')).toBeVisible();
   });
 });
 
-// Selected and focus (house look, 28 Oct 2026, replaces the 20 Oct "single line" rule): a selected chip is the same 1px line
-// drawn inside (outline 1px, offset -1px, nothing moves); a selected bottom tab only widens its colour bar (no ring); keyboard focus is a 1px ink line inside.
 test.describe('Factory selected and focus lines', () => {
   const st = (loc) => loc.evaluateAll((els) => els.map((e) => { const c = getComputedStyle(e); return { w: c.outlineWidth, s: c.outlineStyle, o: c.outlineOffset, shadow: c.boxShadow }; }));
   const selected = async (loc) => { const all = await st(loc); expect(all.length).toBeGreaterThan(0); all.forEach((x) => { expect(x).toEqual({ w: '1px', s: 'solid', o: '-1px', shadow: 'none' }); }); };
 
-  test('after clicking a tab and a chip: selected chips wear the 1px inside line, the tab only its wider bar; focus is 2px @regression', async ({ page, guard }) => {
+  test('t-factory-find-spec-2', async ({ page, guard }) => {
     await open(page, guard, '#/do');
     await tabClick(page, 'nav.tabs a[data-nav="me"]');
     const tab = page.locator('nav.tabs a[aria-current="page"]');
@@ -397,3 +392,4 @@ test.describe('Factory selected and focus lines', () => {
     await selected(page.locator('#view .ch.on'));
   });
 });
+

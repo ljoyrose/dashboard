@@ -1,7 +1,3 @@
-// A pretend studio-state.json for the Studio page (invented brands, assets and tools; no real names, prices or people).
-// Shape: see the comment at the top of studio/index.html. Times are relative to `now`, so the page sees fresh data.
-// v0.2: groups, playbooks, packs, kits, bricks, styles (frameworks, voices, looks), formats, sources and gaps.
-// Group, framework, look and format ids match the rows STUDIO-ENGINE v0.2 seeds, so the engine harness can reuse this file.
 (function (root) {
   function build(now) {
     now = now || Date.now();
@@ -9,35 +5,33 @@
     var iso = function (o) { return new Date(now + o).toISOString(); };
     var day = function (o) { return new Date(now + o * D).toISOString().slice(0, 10); };
     var a = function (o) {
-      return Object.assign({ accountId: 'acc-owner', brandIds: ['sb-north'], productId: null, projectName: 'Sample project', type: 'pdf', recipe: 'Sample recipe', size: 'M', stage: 1, who: 'claude', fit: 'AUTO',
+      return Object.assign({ accountId: 'acc-user', brandIds: ['sb-north'], productId: null, projectName: 'Sample project', type: 'pdf', recipe: 'Sample recipe', size: 'M', stage: 1, who: 'claude', fit: 'AUTO',
         evergreen: true, dated: false, eventDate: null, provider: 'Claude', cost: 0, rating: null, reviewLink: '', docLink: '', version: 1, priority: null, updated: iso(-D), flags: [], gate: null,
         kitId: null, groupId: 'grp-dogs', playbookId: null, outcome: null, frameworkId: null, voiceId: null, lookId: null, formatIds: [], language: '', length: '',
         masterId: null, purpose: null, test: null, result: null, sourceIds: [] }, o);
     };
     return {
       generated_at: iso(-60e3),
-      studio: { on: true, mode: 'TEST', budgetMonth: 50, spentMonth: 20, autoGates: true, lisaCap: 5,
-        // Bot maker loop (engine v0.2.24): invented settings; the folder id is a placeholder and never shown.
+      studio: { on: true, mode: 'TEST', budgetMonth: 50, spentMonth: 20, autoGates: true, userCap: 5,
         maker: { claimMinutes: 45, pieceCapGBP: 2, autoApprove: true, aiDisclosure: 'Sample disclosure line', inProgressFolderId: 'sample-in-progress-folder' } },
       health: { lastRun: iso(-10 * 60e3), jobs: [{ job: 'syncState', result: 'OK', last: iso(-10 * 60e3), note: 'sample' }] },
-      accounts: [{ id: 'acc-owner', name: 'Sample owner', kind: 'owner', role: 'owner', emails: ['owner@example.test'], protect: '', protectEffective: 'no' },
+      accounts: [{ id: 'acc-user', name: 'Sample user', kind: 'user', role: 'user', emails: ['user@example.test'], protect: '', protectEffective: 'no' },
         { id: 'acc-client', name: 'Sample client', kind: 'client', role: 'client', emails: [], protect: '', protectEffective: 'yes' }],
-      groups: [{ id: 'grp-dogs', name: 'Dogs' }, { id: 'grp-apps', name: 'Apps' }, { id: 'grp-services', name: 'Client services' }, { id: 'grp-lisa', name: 'Lisa' }],
+      groups: [{ id: 'grp-dogs', name: 'Dogs' }, { id: 'grp-apps', name: 'Apps' }, { id: 'grp-services', name: 'Client services' }, { id: 'grp-user', name: 'User' }],
       products: [
-        { id: 'sp-course', accountId: 'acc-owner', brandId: 'sb-north', name: 'Sample course', type: 'course', protect: '', protectEffective: 'no' },
+        { id: 'sp-course', accountId: 'acc-user', brandId: 'sb-north', name: 'Sample course', type: 'course', protect: '', protectEffective: 'no' },
         { id: 'sp-client', accountId: 'acc-client', brandId: 'sb-client', name: 'Sample client book', type: 'book', protect: '', protectEffective: 'yes' }
       ],
       brands: [
-        { id: 'sb-north', accountId: 'acc-owner', name: 'Sample Brand North', colour: 7, stage: 'Running', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }, { name: 'Email list', ok: false }], groupId: 'grp-dogs', voiceId: 'vo-warm', lookId: 'look-combination', kit: { canvaKitId: null, canvaKitUrl: null, font: null, colours: ['#A570D1'], fontHeading: 'Lexend', fontBody: null, logoIds: [], logo: 'https://www.example.com/north-logo.png', voice: null, designRoute: null, website: 'https://www.example.com/north' } },
-        { id: 'sb-south', accountId: 'acc-owner', name: 'Sample Brand South', colour: 6, stage: 'Tech set-up', setupChecklist: [{ name: 'Name checked', ok: true }], groupId: 'grp-dogs', voiceId: null, lookId: null, kit: { canvaKitId: null, canvaKitUrl: null, font: null, colours: [], fontHeading: null, fontBody: null, logoIds: [], logo: null, voice: null, designRoute: null, website: null } },
+        { id: 'sb-north', accountId: 'acc-user', name: 'Sample Brand North', colour: 7, stage: 'Running', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }, { name: 'Email list', ok: false }], groupId: 'grp-dogs', voiceId: 'vo-warm', lookId: 'look-combination', kit: { canvaKitId: null, canvaKitUrl: null, font: null, colours: ['#A570D1'], fontHeading: 'Lexend', fontBody: null, logoIds: [], logo: 'https://www.example.com/north-logo.png', voice: null, designRoute: null, website: 'https://www.example.com/north' } },
+        { id: 'sb-south', accountId: 'acc-user', name: 'Sample Brand South', colour: 6, stage: 'Tech set-up', setupChecklist: [{ name: 'Name checked', ok: true }], groupId: 'grp-dogs', voiceId: null, lookId: null, kit: { canvaKitId: null, canvaKitUrl: null, font: null, colours: [], fontHeading: null, fontBody: null, logoIds: [], logo: null, voice: null, designRoute: null, website: null } },
         { id: 'sb-client', accountId: 'acc-client', name: 'Sample Client Brand', colour: 5, stage: 'Launch', setupChecklist: [], groupId: 'grp-services', voiceId: null, lookId: null, kit: { canvaKitId: null, canvaKitUrl: null, font: null, colours: [], fontHeading: null, fontBody: null, logoIds: [], logo: null, voice: null, designRoute: null, website: null } }
       ],
       assets: [
         a({ id: 'sa-rev1', title: 'Sample checklist PDF', productId: 'sp-course', stage: 7, reviewLink: 'https://drive.google.com/file/d/1SAMPLEreviewDoc00000000000/view', updated: iso(-H),
           kitId: 'kit-lead', outcome: 'attract', frameworkId: 'fw-pas', formatIds: ['fmt-a4'], language: 'en-GB', sourceIds: ['src-1'],
-          // Stage 5 (engine v0.2.24): the playbook steps copied onto this piece, and whether its approve gate passes by itself.
           tasks: [{ n: 1, step: 'Draft the checklist', who: 'claude', fit: 'AUTO', status: 'done' }, { n: 2, step: 'Check the facts', who: 'grok', fit: 'AUTO', status: 'skipped' },
-            { n: 3, step: 'Lay out the pages', who: 'engine', fit: 'AUTO', status: 'open' }, { n: 4, step: 'Read it through', who: 'lisa', fit: 'HAND', status: 'open' }],
+            { n: 3, step: 'Lay out the pages', who: 'engine', fit: 'AUTO', status: 'open' }, { n: 4, step: 'Read it through', who: 'user', fit: 'HAND', status: 'open' }],
           autoGate: { gate: 'approve', auto: false, why: 'Cost is over your cap' } }),
         a({ id: 'sa-rev2', title: 'Sample welcome email', brandIds: ['sb-south'], type: 'email', stage: 7, updated: iso(-2 * H),
           kitId: 'kit-email', outcome: 'keep', frameworkId: 'fw-hso', formatIds: ['fmt-email-header'], masterId: 'sa-lib', purpose: 'refresh', test: 'ab-welcome',
@@ -45,28 +39,27 @@
         a({ id: 'sa-make', title: 'Sample webclass slides', brandIds: ['sb-north', 'sb-south'], type: 'slides', stage: 5, size: 'L', evergreen: false, dated: true, eventDate: day(14),
           kitId: 'kit-webclass', playbookId: 'pb-launch', outcome: 'convert', frameworkId: 'fw-webinar', formatIds: ['fmt-youtube', 'fmt-reel'],
           claim: { by: 'grok', at: iso(-H) }, flags: ['check-wait'] }),
-        a({ id: 'sa-gate', title: 'Sample lead magnet', brandIds: ['sb-south'], type: 'lead', stage: 3, who: 'lisa', fit: 'HAND', gate: { question: 'Lock the spec?', at: iso(-3 * H) } }),
-        a({ id: 'sa-hand', title: 'Sample social graphic', type: 'social', stage: 4, who: 'lisa', fit: 'HAND', size: 'S', flags: ['needs-input'], kitId: 'kit-social', formatIds: ['fmt-fb-feed'] }),
+        a({ id: 'sa-gate', title: 'Sample lead magnet', brandIds: ['sb-south'], type: 'lead', stage: 3, who: 'user', fit: 'HAND', gate: { question: 'Lock the spec?', at: iso(-3 * H) } }),
+        a({ id: 'sa-hand', title: 'Sample social graphic', type: 'social', stage: 4, who: 'user', fit: 'HAND', size: 'S', flags: ['needs-input'], kitId: 'kit-social', formatIds: ['fmt-fb-feed'] }),
         a({ id: 'sa-lib', title: 'Sample puppy pack', brandIds: ['sb-south'], type: 'pack', stage: 8, version: 3, rating: 5 }),
         a({ id: 'sa-test', title: 'TEST-Sample logbook', type: 'logbook', stage: 2, who: 'engine' }),
         a({ id: 'sa-client', accountId: 'acc-client', title: 'Sample client ebook', brandIds: ['sb-client'], productId: 'sp-client', type: 'ebook', stage: 2, groupId: 'grp-services',
           kitId: 'kit-social', formatIds: ['fmt-fb-feed'] })
       ],
       ideas: [
-        a({ id: 'si-1', title: 'Sample ebook idea', type: 'ebook', stage: 0, who: 'lisa' })
+        a({ id: 'si-1', title: 'Sample ebook idea', type: 'ebook', stage: 0, who: 'user' })
       ],
       playbooks: [
         { id: 'pb-launch', name: 'Sample launch playbook', outcome: 'convert', steps: [{ kind: 'pack', id: 'pk-funnel', text: 'Sample webclass funnel' }, { kind: 'kit', id: 'kit-email', text: 'Sample email kit' }, { kind: 'action', id: null, text: 'Post the replay link' }], notes: '' },
         { id: 'pb-grow', name: 'Sample list builder', outcome: 'attract', steps: [{ kind: 'kit', id: 'kit-lead', text: 'Sample lead magnet kit' }, { kind: 'kit', id: 'kit-social', text: 'Sample social post kit' }], notes: '' },
-        // Engine v0.2.24: a playbook code, and who does each step and how (AUTO or by hand). Invented.
         { id: 'pb-app-launch', code: 'P1', name: 'Example app launch pack', outcome: 'deliver', notes: '', steps: [
-          { kind: 'action', id: null, text: 'Agree the brief', who: 'lisa', fit: 'HAND' },
+          { kind: 'action', id: null, text: 'Agree the brief', who: 'user', fit: 'HAND' },
           { kind: 'action', id: null, text: 'Write the store listing', who: 'claude', fit: 'AUTO' },
           { kind: 'kit', id: 'kit-pet-card', text: 'Example pet card', who: 'claude', fit: 'AUTO' },
           { kind: 'action', id: null, text: 'Make the launch images', who: 'grok', fit: 'AUTO' },
-          { kind: 'action', id: null, text: 'Check the legal line', who: 'lisa', fit: 'HAND' },
+          { kind: 'action', id: null, text: 'Check the legal line', who: 'user', fit: 'HAND' },
           { kind: 'action', id: null, text: 'File the parts', who: 'engine', fit: 'AUTO' },
-          { kind: 'action', id: null, text: 'Post the launch', who: 'lisa', fit: 'HAND' },
+          { kind: 'action', id: null, text: 'Post the launch', who: 'user', fit: 'HAND' },
           { kind: 'action', id: null, text: 'Say thank you', who: null, fit: null }] }
       ],
       packs: [
@@ -116,10 +109,8 @@
         { capability: 'video-reformat', format: 'fmt-youtube', ratio: '16:9', reason: 'no owned tool can do video-reformat at 16:9', assetIds: ['sa-make'] },
         { capability: 'video-reformat', format: 'fmt-reel', ratio: '9:16', reason: 'no owned tool can do video-reformat at 9:16', assetIds: ['sa-make'] }
       ],
-      // VAT (engine v0.2.18): rates edited in the Sheet; how prices show by default.
       vatRates: [{ country: 'GB', name: 'United Kingdom', rate: 20, checked: day(-28), source: '' }, { country: 'IE', name: 'Ireland', rate: 23, checked: day(-28), source: '' }],
       priceShow: 'ex',
-      // Comments (engine: COMMENTS tab): two threads per item, never mixed. "team" is internal; "client" is what the client sees.
       comments: [
         { id: 'cm-1', assetId: 'sa-client', thread: 'team', by: 'Team member', role: 'team', text: 'Check the cover crop before it goes out.', at: iso(-3 * H) },
         { id: 'cm-2', assetId: 'sa-client', thread: 'client', by: 'Client contact', role: 'client', text: 'Could we try the blue cover?', at: iso(-2 * H) },
@@ -131,3 +122,4 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = { build: build };
   else root.STUDIO_FIXTURE = build;
 })(this);
+

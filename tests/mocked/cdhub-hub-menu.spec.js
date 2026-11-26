@@ -27,7 +27,7 @@ const row = (k, v, from = '2026-01-01', to = '') => ({ rule_key: k, value: Strin
 
 test.describe('CD Hub menu: layout from rows', () => {
   test('no nav rows: the starting layout Compliance, Records, People, reported as not set', () => {
-    const L = nav().layout({ rows: [], iso: '2026-11-14', role: 'OWNER' });
+    const L = nav().layout({ rows: [], iso: '2026-11-14', role: 'USER' });
     expect(L.tabs).toEqual(['compliance', 'ops', 'people']);
     expect(L.set).toBe(false);
     expect(L.on.money).toBeUndefined();
@@ -36,22 +36,22 @@ test.describe('CD Hub menu: layout from rows', () => {
 
   test('role rows set the bar order; a person row wins over the role; at most 3', () => {
     const H = nav();
-    const rows = [row('nav.on.sales', 1), row('nav.tab.OWNER.sales', 1), row('nav.tab.OWNER.ops', 2), row('nav.tab.OWNER.compliance', 3), row('nav.tab.OWNER.people', 4),
+    const rows = [row('nav.on.sales', 1), row('nav.tab.USER.sales', 1), row('nav.tab.USER.ops', 2), row('nav.tab.USER.compliance', 3), row('nav.tab.USER.people', 4),
       row('nav.tab.person.person-9.people', 1)];
-    expect(H.layout({ rows, iso: '2026-11-14', role: 'OWNER' }).tabs).toEqual(['sales', 'ops', 'compliance']);
-    expect(H.layout({ rows, iso: '2026-11-14', role: 'OWNER', person: 'person-9' }).tabs).toEqual(['people']);
+    expect(H.layout({ rows, iso: '2026-11-14', role: 'USER' }).tabs).toEqual(['sales', 'ops', 'compliance']);
+    expect(H.layout({ rows, iso: '2026-11-14', role: 'USER', person: 'person-9' }).tabs).toEqual(['people']);
   });
 
   test('a section switched off is hidden from the bar and More; Money shows only once switched on; rows judged on the day', () => {
     const H = nav();
     const rows = [row('nav.on.people', 0), row('nav.on.money', 1, '2026-12-01'), row('nav.on.ops', 0, '2026-01-01', '2026-06-30')];
-    const nov = H.layout({ rows, iso: '2026-11-14', role: 'OWNER' });
+    const nov = H.layout({ rows, iso: '2026-11-14', role: 'USER' });
     expect(nov.tabs).toEqual(['compliance', 'ops']);
     expect(nov.on.people).toBeUndefined();
     expect(nov.on.money).toBeUndefined();
-    const dec = H.layout({ rows, iso: '2026-12-02', role: 'OWNER' });
+    const dec = H.layout({ rows, iso: '2026-12-02', role: 'USER' });
     expect(dec.on.money).toBe(true);
-    expect(H.layout({ rows, iso: '2026-03-01', role: 'OWNER' }).tabs).toEqual(['compliance']);   // ops off in its dated window
+    expect(H.layout({ rows, iso: '2026-03-01', role: 'USER' }).tabs).toEqual(['compliance']);   // ops off in its dated window
   });
 
   test('a view a bar tab opens is not repeated under More; every other view keeps its button', () => {
@@ -64,11 +64,11 @@ test.describe('CD Hub menu: layout from rows', () => {
   });
 });
 
-test('hub: owner rows move Sales onto the bar and switch People off; old routes still open', async ({ page, guard }) => {
+test('hub: user rows move Sales onto the bar and switch People off; old routes still open', async ({ page, guard }) => {
   setFile(guard.world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n'
-    + 'n1,t,nav.tab.OWNER.sales,1,2026-01-01,Pretend setting,,,\nn2,t,nav.tab.OWNER.compliance,2,2026-01-01,Pretend setting,,,\n'
+    + 'n1,t,nav.tab.USER.sales,1,2026-01-01,Pretend setting,,,\nn2,t,nav.tab.USER.compliance,2,2026-01-01,Pretend setting,,,\n'
     + 'n3,t,nav.on.people,0,2026-01-01,Pretend setting,,,\n'
-    + 'n4,t,nav.view.enquiries,1,2026-01-01,Pretend setting,,,\nn5,t,nav.view.litters,1,2026-01-01,Pretend setting,,,\n');   // both start hidden; this owner has them on
+    + 'n4,t,nav.view.enquiries,1,2026-01-01,Pretend setting,,,\nn5,t,nav.view.litters,1,2026-01-01,Pretend setting,,,\n');
   await page.goto('cdhub/');
   await signIn(page);
   await expect(page.locator('#nav > button.ht[data-section] .htl')).toHaveText(['Main', 'Sales', 'Compliance']);
@@ -80,3 +80,4 @@ test('hub: owner rows move Sales onto the bar and switch People off; old routes 
   await page.evaluate(() => { location.hash = '#/today'; });
   await expect(page.locator('#nav button[data-section="main"]')).toHaveAttribute('aria-current', 'page');
 });
+

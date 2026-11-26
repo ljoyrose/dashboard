@@ -1,6 +1,3 @@
-// Studio page (28 Oct 2026): the asset hub shell. Example data until the engine writes studio-state.json;
-// the real state renders; tabs, find bar, Review write-back with Undo, Tools warnings, phone width, dark mode, text size.
-// Pretend Google and Drive only; the data is tests/fixtures/studio/state.js (invented) or the page's own example.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -11,8 +8,8 @@ const { build } = require('../fixtures/studio/state');
 const ctx = { window: {} };
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8'), ctx);
-const ST = ctx.window.DASH_CONFIG.studio; // folder ids and file name come from config.js, so the tests follow a change there
-const NOW = new Date('2026-10-28T10:10:00'); // fixed clock: the Undo window (until the engine's next run) is then known
+const ST = ctx.window.DASH_CONFIG.studio;
+const NOW = new Date('2026-10-28T10:10:00');
 const TABS = ['me', 'decide', 'do', 'line', 'ideas', 'assets', 'review', 'brands', 'library', 'kits', 'tools', 'new'];
 const KIT_SUBS = ['kits/playbooks', 'kits/packs', 'kits/kits', 'kits/bricks', 'kits/styles', 'kits/formats'];
 const UPLOAD = /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files/;
@@ -29,9 +26,8 @@ async function open(page, guard, hash, { state = true, change } = {}) {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
-  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
 }
-// Pretend Drive upload: records each request file and adds it to the pretend Drive, so Undo (PATCH trashed) can find it.
 async function uploads(page, guard) {
   const got = [];
   await page.route(UPLOAD, (route) => {
@@ -44,17 +40,14 @@ async function uploads(page, guard) {
   return got;
 }
 const rows = (page) => page.locator('#view .crow');
-// Calm rows (28 Oct 2026): chips, preview and small tools sit in the item's details, opened from its title.
 const details = async (page, id) => {
   const d = page.locator(`[data-more="${id}"]`);
-  if (await page.locator('#fpanel').count()) await page.keyboard.press('Escape'); // the Filter panel would cover the rows
+  if (await page.locator('#fpanel').count()) await page.keyboard.press('Escape');
   if (!(await d.count())) await page.locator(`.crow[data-row="${id}"] .ttl`).first().click();
   await expect(d).toBeVisible();
   return d;
 };
-// The find bar is one row (Search · Filter · Sort); every filter group sits in the Filter panel.
 const openFilters = async (page) => { await page.locator('#filtersBtn').click(); await expect(page.locator('#fpanel')).toBeVisible(); };
-// Old tab names are now pages under the five bottom tabs (Me, Decide, Do, Line, Kits): open them by address.
 const go = async (page, key) => { await page.evaluate((k) => { location.hash = '#/' + k; }, key); await expect(page.locator('#view')).toHaveAttribute('data-view', key.split('/')[0]); };
 const NAV = { me: 'me', decide: 'decide', do: 'do', line: 'line', ideas: 'line', assets: 'line', review: 'decide', brands: 'kits', library: 'line', kits: 'kits', tools: 'kits', new: 'line' };
 const noSidewaysScroll = async (page, where) => {
@@ -71,13 +64,12 @@ test.describe('Studio page', () => {
     await expect(page.locator('#stamp')).toHaveText('TEST');
     await expect(page.locator('#enginePill')).toContainText('Off');
     await go(page, 'brands');
-    await expect(page.locator('[data-brandcard]')).toHaveCount(3); // two owner brands, one client brand
+    await expect(page.locator('[data-brandcard]')).toHaveCount(3);
     await expect(page.locator('[data-brandcard="ex-a"]')).toContainText('Example Brand A');
     await go(page, 'review');
     await expect(page.locator('[data-act="approve"]').first()).toBeDisabled();
     await go(page, 'new');
     await expect(page.locator('[data-action="sendidea"]')).toBeDisabled();
-    // Read by folder + exact name, and never written to in example mode.
     expect(guard.world.calls.some((c) => c.query.includes(`'${ST.logsFolderId}' in parents`) && c.query.includes(`name = '${ST.stateFile}'`))).toBe(true);
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
@@ -97,7 +89,6 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-sect="gate"] .crow[data-row="sa-gate"]')).toContainText('Lock the spec?');
     await go(page, 'do');
     await expect(page.locator('[data-sect="hand"] .crow[data-row="sa-hand"]')).toBeVisible();
-    // TEST items stay out of lists and counts until the TEST switch is on.
     await go(page, 'assets');
     await expect(page.locator('.crow[data-row="sa-test"]')).toHaveCount(0);
     await page.locator('#filtersBtn').click();
@@ -160,13 +151,12 @@ test.describe('Studio page', () => {
     expect(got).toHaveLength(1);
     expect(got[0].meta.parents).toEqual([ST.requestsFolderId]);
     expect(got[0].meta.name).toMatch(/^approve-\d+\.json$/);
-    expect(got[0].body).toMatchObject({ kind: 'approve', assetId: 'sa-rev1', accountId: 'acc-owner' });
+    expect(got[0].body).toMatchObject({ kind: 'approve', assetId: 'sa-rev1', accountId: 'acc-user' });
     expect(got[0].body.by).toMatch(/@/);
     await expect(page.locator('.subnav a[data-sub="review"] .cnt')).toHaveText('1');
     await r.locator('[data-undo]').click();
     await expect(r.locator('[data-act="approve"]')).toBeVisible();
     expect(guard.world.byId('req-1').trashed).toBe(true);
-    // Redo needs a note; it goes in the same request file.
     await r.locator('[data-panel="redo"]').click();
     await r.locator('#note-sa-rev1').fill('Shorter intro');
     await r.locator('#note-sa-rev1').press('Enter');
@@ -189,10 +179,10 @@ test.describe('Studio page', () => {
     await page.locator('[data-pick="provider"][data-val="Gemini"]').click();
     await page.locator('[data-action="sendidea"]').click();
     await expect(page).toHaveURL(/#\/ideas$/);
-    expect(got[1].body).toMatchObject({ kind: 'idea', accountId: 'acc-owner', name: 'Sample guide idea', brandIds: ['sb-south'], type: 'ebook', provider: 'Gemini', evergreen: true });
+    expect(got[1].body).toMatchObject({ kind: 'idea', accountId: 'acc-user', name: 'Sample guide idea', brandIds: ['sb-south'], type: 'ebook', provider: 'Gemini', evergreen: true });
   });
 
-  test('accounts: owner and client kept apart; Account chips filter; an idea cannot mix two accounts', async ({ page, guard }) => {
+  test('accounts: user and client kept apart; Account chips filter; an idea cannot mix two accounts', async ({ page, guard }) => {
     await open(page, guard, '#/assets');
     const acct = (v) => page.locator(`#view [data-fx="acct"][data-val="${v}"]`);
     await openFilters(page);
@@ -217,16 +207,16 @@ test.describe('Studio page', () => {
   });
 
   test('one account only: no Account chips', async ({ page, guard }) => {
-    await open(page, guard, '#/assets', { change: (s) => { s.accounts = s.accounts.slice(0, 1); s.brands = s.brands.slice(0, 2); s.assets = s.assets.filter((a) => a.accountId === 'acc-owner'); } });
+    await open(page, guard, '#/assets', { change: (s) => { s.accounts = s.accounts.slice(0, 1); s.brands = s.brands.slice(0, 2); s.assets = s.assets.filter((a) => a.accountId === 'acc-user'); } });
     await expect(rows(page)).toHaveCount(5);
     await openFilters(page);
     await expect(page.locator('#view [data-frow="acct"]')).toHaveCount(0);
   });
 
-  test('example data shows the owner and one client account apart', async ({ page, guard }) => {
+  test('example data shows the user and one client account apart', async ({ page, guard }) => {
     await open(page, guard, '#/assets', { state: false });
     await openFilters(page);
-    await expect(page.locator('#view [data-fx="acct"][data-val="ex-owner"]')).toContainText('Example owner');
+    await expect(page.locator('#view [data-fx="acct"][data-val="ex-user"]')).toContainText('Example user');
     await expect(page.locator('#view [data-fx="acct"][data-val="ex-client"]')).toContainText('Example client');
     await expect(page.locator('.crow[data-row="ex-8"]')).toBeVisible();
   });
@@ -329,7 +319,6 @@ test.describe('Studio page', () => {
     }
   });
 
-  /* ---------- v0.2: groups, kits, styles, formats, variants, sources, tools by capability, gaps, Done, set-up ticks ---------- */
   test('group chips: Dogs and Client services filter Assets, the address carries it; Group shows on brand cards; hidden with one group', async ({ page, guard }) => {
     await open(page, guard, '#/assets');
     const grp = (v) => page.locator(`#view [data-fx="grp"][data-val="${v}"]`);
@@ -433,7 +422,7 @@ test.describe('Studio page', () => {
     expect(got).toHaveLength(1);
     expect(got[0].meta.name).toMatch(/^idea-\d+\.json$/);
     expect(got[0].body).toMatchObject({
-      kind: 'idea', accountId: 'acc-owner', name: 'Sample reel brief', brandIds: ['sb-north'], type: 'social',
+      kind: 'idea', accountId: 'acc-user', name: 'Sample reel brief', brandIds: ['sb-north'], type: 'social',
       groupId: 'grp-dogs', playbookId: 'pb-grow', outcome: 'attract', kitId: 'kit-social', frameworkId: 'fw-hso', voiceId: 'vo-warm', lookId: 'look-wordmark',
       formatIds: ['fmt-reel', 'fmt-fb-feed'], language: 'en-GB', length: '30s', masterId: 'sa-rev1', purpose: 'rebrand',
       sources: [{ kind: 'link', url: 'https://www.youtube.com/watch?v=sample', rights: 'inspiration' }, { kind: 'upload', fileName: 'sketch.jpg', rights: 'own' }]
@@ -463,7 +452,7 @@ test.describe('Studio page', () => {
     expect(got).toHaveLength(1);
     expect(got[0].meta.name).toMatch(/^tool-\d+\.json$/);
     expect(got[0].meta.parents).toEqual([ST.requestsFolderId]);
-    expect(got[0].body).toMatchObject({ kind: 'tool', accountId: 'acc-owner', product: 'Sample reel tool', capabilities: ['video-reformat', 'video-captions'], fit: 'BANNED:client',
+    expect(got[0].body).toMatchObject({ kind: 'tool', accountId: 'acc-user', product: 'Sample reel tool', capabilities: ['video-reformat', 'video-captions'], fit: 'BANNED:client',
       outputs: ['fmt-reel'], allowance: 30, unit: 'min', period: 'month', costPerUnit: 0.5, audit: 'https://example.com/audit' });
     expect(got[0].body.by).toMatch(/@/);
   });
@@ -497,7 +486,7 @@ test.describe('Studio page', () => {
     await expect(r.locator('[data-undo]')).toBeVisible();
     expect(got).toHaveLength(1);
     expect(got[0].meta.name).toMatch(/^done-\d+\.json$/);
-    expect(got[0].body).toMatchObject({ kind: 'done', assetId: 'sa-hand', accountId: 'acc-owner', creditsUsed: { product: 'Sample image tool', units: 3 } });
+    expect(got[0].body).toMatchObject({ kind: 'done', assetId: 'sa-hand', accountId: 'acc-user', creditsUsed: { product: 'Sample image tool', units: 3 } });
   });
 
   test('Brands: ticking a set-up item writes one check request and shows at once', async ({ page, guard }) => {
@@ -511,7 +500,7 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-brandcard="sb-north"] .sect .cnt')).toHaveText('3/3');
     await expect.poll(() => got.length).toBe(1);
     expect(got[0].meta.name).toMatch(/^check-\d+\.json$/);
-    expect(got[0].body).toMatchObject({ kind: 'check', accountId: 'acc-owner', brandId: 'sb-north', item: 'Email list', ok: true });
+    expect(got[0].body).toMatchObject({ kind: 'check', accountId: 'acc-user', brandId: 'sb-north', item: 'Email list', ok: true });
   });
 
   test('hardening: a javascript: link is made dead, and a double tap on Approve writes one file', async ({ page, guard }) => {
@@ -534,7 +523,7 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-sect="review"] .crow')).toHaveCount(2);
   });
 
-  test('clients: Ask on a client item writes ask (sent by the owner account); Deliver on a client library item; owner items have neither; chips show', async ({ page, guard }) => {
+  test('clients: Ask on a client item writes ask (sent by the user account); Deliver on a client library item; user items have neither; chips show', async ({ page, guard }) => {
     const got = await uploads(page, guard);
     await open(page, guard, '#/assets', { change: (s) => {
       const c = s.assets.filter((a) => a.id === 'sa-client')[0];
@@ -549,7 +538,7 @@ test.describe('Studio page', () => {
     await r.locator('#askq-sa-client').fill('Which cover photo do you prefer?');
     await r.locator('#askq-sa-client').press('Enter');
     await expect(r.locator('[data-sent]')).toBeVisible();
-    expect(got[0].body).toMatchObject({ kind: 'ask', assetId: 'sa-client', accountId: 'acc-owner', question: 'Which cover photo do you prefer?' });
+    expect(got[0].body).toMatchObject({ kind: 'ask', assetId: 'sa-client', accountId: 'acc-user', question: 'Which cover photo do you prefer?' });
     await go(page, 'library');
     const d = page.locator('.crow[data-row="sa-client-done"]');
     const dd = await details(page, 'sa-client-done');
@@ -557,7 +546,7 @@ test.describe('Studio page', () => {
     await expect(dd.locator('[data-chip="delivery"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/1SAMPLEout/view');
     await d.locator('[data-act="deliver"]').click();
     await expect(d.locator('[data-sent]')).toBeVisible();
-    expect(got[1].body).toMatchObject({ kind: 'deliver', assetId: 'sa-client-done', accountId: 'acc-owner' });
+    expect(got[1].body).toMatchObject({ kind: 'deliver', assetId: 'sa-client-done', accountId: 'acc-user' });
   });
 
   test('results: Add results on a library item checks channel and numbers, then writes one result request; the results chip shows totals', async ({ page, guard }) => {
@@ -574,7 +563,7 @@ test.describe('Studio page', () => {
     await r.locator('.rform [type="submit"]').click();
     await expect(r.locator('[data-sent]')).toBeVisible();
     expect(got).toHaveLength(1);
-    expect(got[0].body).toMatchObject({ kind: 'result', accountId: 'acc-owner', channel: 'facebook', date: '2026-10-28', views: 350, sales: 1 });
+    expect(got[0].body).toMatchObject({ kind: 'result', accountId: 'acc-user', channel: 'facebook', date: '2026-10-28', views: 350, sales: 1 });
     expect(got[0].body.clicks).toBeUndefined();
   });
 
@@ -586,7 +575,6 @@ test.describe('Studio page', () => {
         { id: 'LS-X', name: 'Other company', kind: 'brand website', entity: 'Other Ltd', brandIds: ['sb-other'], status: 'live' }];
       const g = s.assets.filter((a) => a.id === 'sa-gate')[0]; g.brandIds = ['sb-north']; g.legal = { entity: 'Sample Ltd', setId: null };
     } });
-    // On Decide the item's details open beside the list, so the Where tools and their chips are found by the item's id.
     await expect(page.locator('[data-sect="gate"] .crow[data-row="sa-gate"]')).toBeVisible();
     const where = async () => (await details(page, 'sa-gate')).locator('[data-panel="where"]').click();
     const chip = (f, v) => page.locator(`[data-set="${f}"][data-id="sa-gate"]` + (v ? `[data-val="${v}"]` : ''));
@@ -620,7 +608,6 @@ test.describe('Studio page', () => {
     await go(page, 'review');
     const r = page.locator('.crow[data-row="sa-rev1"]');
     await expect(r.locator('.pthumb img')).toHaveAttribute('src', /thumbnail\?id=1SAMPLEthumb/); // the card shows the real preview
-    // Every row has a 44×44 thumb with its format word; without an image it is a line drawing of the format.
     for (const th of await page.locator('#view .crow .pthumb').all()) {
       const b = await th.locator('svg, img').boundingBox();
       expect([Math.round(b.width), Math.round(b.height)]).toEqual([44, 44]);
@@ -647,7 +634,7 @@ test.describe('Studio page', () => {
     await r.locator('#pwords-sa-make').fill('4000');
     await r.locator('#pname-sa-make').press('Enter');
     await expect.poll(() => got.length).toBe(1);
-    expect(got[0].body).toMatchObject({ kind: 'part', parentId: 'sa-make', accountId: 'acc-owner', name: 'Chapter 3: settling in', order: 2, targetWords: 4000 });
+    expect(got[0].body).toMatchObject({ kind: 'part', parentId: 'sa-make', accountId: 'acc-user', name: 'Chapter 3: settling in', order: 2, targetWords: 4000 });
     await expect(r.locator('[data-act="assemble"]')).toHaveCount(0);
   });
 
@@ -665,7 +652,7 @@ test.describe('Studio page', () => {
     await expect(g).toContainText('Draft version 2 of the chapter prompt');
     await g.locator('[data-sug][data-val="accepted"]').click();
     await expect.poll(() => got.length).toBe(2);
-    expect(got[1].body).toMatchObject({ kind: 'suggestion', id: 'sg-1', status: 'accepted', accountId: 'acc-owner' });
+    expect(got[1].body).toMatchObject({ kind: 'suggestion', id: 'sg-1', status: 'accepted', accountId: 'acc-user' });
     await expect(page.locator('[data-suggest="sg-1"]')).toHaveCount(0);
   });
 
@@ -723,7 +710,6 @@ test.describe('Studio page', () => {
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
-  /* ---------- Clear board look (28 Oct 2026): columns per stage, Board/List switch, Look menu ---------- */
   test('board: Line has a column per stage that scrolls inside itself; details open on the right; the page itself does not scroll', async ({ page, guard }) => {
     await open(page, guard, '#/line');
     await expect(page.locator('.bwrap[data-board="line"]')).toBeVisible(); // desktop starts on Board
@@ -732,16 +718,13 @@ test.describe('Studio page', () => {
     await expect(page.locator('.col[data-stage="5"] .col-head')).toContainText('Make');
     await expect(rows(page)).toHaveCount(6);
     for (const c of await page.locator('.col-list').all()) await expect(c).toHaveCSS('overflow-y', 'auto');
-    // One even 1px border round each column; the stage colour is a short tab inside the head, clear of the corners.
     await expect(page.locator('.col[data-stage="5"]')).toHaveCSS('border-top-width', '1px');
     await expect(page.locator('.col[data-stage="5"]')).toHaveCSS('overflow', 'hidden');
     await expect(page.locator('.col[data-stage="5"] .col-head')).toHaveCSS('box-shadow', 'none');
-    // Stage colour: a small upright 3×18 bar left of "Step N:" (Links dashboard cards use 3px), no top tab.
     expect(await page.locator('.col[data-stage="5"] .col-head').evaluate((e) => getComputedStyle(e, '::before').content)).toBe('none');
     const sb = await page.locator('.col[data-stage="5"] .col-head .sbar').boundingBox(), slab = await page.locator('.col[data-stage="5"] .col-head .lab').boundingBox();
     expect([Math.round(sb.width), Math.round(sb.height)]).toEqual([3, 18]);
     expect(sb.x).toBeLessThan(slab.x);
-    // One spacing step: 16px from the head line to the first card, 12px to the sides, between cards, between columns, and inside cards.
     const gaps = await page.evaluate(() => {
       const r = (e) => e.getBoundingClientRect(), cols = [...document.querySelectorAll('.col')], two = cols.find((c) => c.querySelectorAll('.col-list .crow').length >= 2) || null;
       const c = cols.find((x) => x.querySelector('.col-list .crow')), list = c.querySelector('.col-list'), card = list.querySelector('.crow'), head = c.querySelector('.col-head');
@@ -751,11 +734,9 @@ test.describe('Studio page', () => {
       return out;
     });
     expect(gaps).toMatchObject({ top: 16, side: 12, right: 12, cols: 12, pad: '12px' });
-    // An empty column is one short "Empty" line, not a tall blank; full columns keep the full height.
     const empty = page.locator('.col.col-empty').first(), full = page.locator('.col:not(.col-empty)').first();
     for (const part of ['.col-head', '.col-list', '.col-foot']) expect((await empty.locator(part).boundingBox()).width, part + ' spans the column').toBeGreaterThan(270);
     await expect(empty.locator('.col-list')).toHaveText('Nothing waiting.');
-    // Friendly empty state: a small green ring with a tick and plain words.
     const tick = await empty.locator('.okempty').evaluate((e) => { const c = getComputedStyle(e, '::before'); return [c.content, c.borderTopWidth, c.borderTopColor === c.color]; });
     expect(tick.slice(0, 2)).toEqual(['"✓"', '1px']);
     await go(page, 'decide');
@@ -773,29 +754,25 @@ test.describe('Studio page', () => {
     const h = await page.evaluate(() => ({ doc: document.documentElement.scrollHeight, screen: innerHeight }));
     expect(h.doc, 'the page should not scroll up and down on a desktop board').toBeLessThanOrEqual(h.screen + 1);
     const r = page.locator('.crow[data-row="sa-make"]');
-    // Brand on its own small line above the title; the title is the title only.
     await expect(r.locator('.bline .bn')).toHaveText('Sample Brand North');
     await expect(r.locator('.ttl')).toHaveText('Sample webclass slides');
     expect((await r.locator('.bline').boundingBox()).y).toBeLessThan((await r.locator('.ttl').boundingBox()).y);
     await r.locator('.ttl').click();
     await expect(page.locator('.side[data-side="sa-make"] .kv')).toContainText('Stage');
-    // Details sit straight on the white panel: no grey box; rows split by a 1px line, none above the first.
     const box = await page.locator('.side .panel').evaluate((e) => { const c = getComputedStyle(e); return [c.backgroundColor, c.borderTopStyle]; });
     expect(box).toEqual(['rgba(0, 0, 0, 0)', 'none']);
     await expect(page.locator('.side .kv dt').first()).toHaveCSS('border-top-style', 'none');
     await expect(page.locator('.side .kv dt').nth(1)).toHaveCSS('border-top-width', '1px');
     await expect(r).toHaveClass(/\bsel\b/);
-    await expect(r.locator('.panel')).toHaveCount(0); // not under the card on a desktop
-    // Hover and selected never move or resize anything; stage names are ink (colour only in the ring and the top line).
+    await expect(r.locator('.panel')).toHaveCount(0);
     const other = page.locator('.crow[data-row="sa-gate"]');
     await other.scrollIntoViewIfNeeded();
     const box0 = await other.boundingBox();
     await other.hover();
     expect(await other.boundingBox()).toEqual(box0);
-    expect(await other.evaluate((e) => { const c = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return { s: c.outlineStyle, grey: c.backgroundColor === hov }; }), 'hover = the pale grey fill, no line (Lisa, 12 Nov 2026)').toEqual({ s: 'none', grey: true });
+    expect(await other.evaluate((e) => { const c = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return { s: c.outlineStyle, grey: c.backgroundColor === hov }; }), 'hover = the pale grey fill, no line (User, 12 Nov 2026)').toEqual({ s: 'none', grey: true });
     const lab = await page.locator('.col[data-stage="5"] .col-head .lab').evaluate((e) => getComputedStyle(e).color);
     expect(lab).toBe(await page.evaluate(() => getComputedStyle(document.body).color));
-    // Keyboard focus is a 1px ink line inside, never the browser blue.
     await page.locator('[data-vmode="list"]').focus();
     await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
     const ring = await page.evaluate(() => { const e = document.activeElement, c = getComputedStyle(e); return { o: c.outlineColor, w: c.outlineWidth, off: c.outlineOffset, ink: getComputedStyle(document.body).color }; });
@@ -804,7 +781,6 @@ test.describe('Studio page', () => {
     expect(ring.off).toBe('-1px');
     await page.locator('.side [aria-label="Close details"]').click();
     await expect(page.locator('.side')).toHaveCount(0);
-    // Bottom tabs: no ring; the colour bar above the label grows on the selected tab and on hover, and nothing moves.
     const cur = page.locator('nav.tabs a[data-nav="line"]'), me = page.locator('nav.tabs a[data-nav="me"]');
     await expect(cur).toHaveCSS('outline-style', 'none');
     await expect(cur).toHaveCSS('box-shadow', 'none');
@@ -815,7 +791,6 @@ test.describe('Studio page', () => {
     await expect(me.locator('.bar')).toHaveCSS('width', '40px');
     await expect(me).toHaveCSS('outline-style', 'none');
     expect(await me.boundingBox()).toEqual(tb);
-    // Decide keeps its sections as columns.
     await go(page, 'decide');
     await expect(page.locator('.bwrap[data-board="decide"] .col[data-sect="gate"] .crow[data-row="sa-gate"]')).toBeVisible();
     await expect(page.locator('.col[data-sect="review"] .crow')).toHaveCount(2);
@@ -828,7 +803,7 @@ test.describe('Studio page', () => {
     await expect(page.locator('#view .card.appcard').first()).toBeVisible();
     await page.reload(); // still signed in (saved token)
     await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
-    if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
+    if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
     await expect(page.locator('[data-vmode="list"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.bwrap')).toHaveCount(0);
     await go(page, 'decide');
@@ -854,8 +829,8 @@ test.describe('Studio page', () => {
     await r.locator('.ttl').click();
     await expect(r.locator('.panel .kv')).toContainText('Stage');
     await expect(page.locator('.side')).toHaveCount(0);
-    await expect(r.locator('.panel')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)'); // no grey box under the card either
-    for (const id of ['#lookBtn', '#refreshBtn', '#newBtn']) await expect(page.locator(id)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)'); // the top bar's icon buttons sit on the dark frame
+    await expect(r.locator('.panel')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    for (const id of ['#lookBtn', '#refreshBtn', '#newBtn']) await expect(page.locator(id)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await noSidewaysScroll(page, 'line board with details open');
     // Tab counts sit in the top-right corner of the tab, clear of the label; the selected line is 40px on the phone too (the owner's tab picks, 2 Nov).
     const tab = page.locator('nav.tabs a[data-nav="me"]'), tb = await tab.boundingBox(), nb = await tab.locator('.n').boundingBox(), lb = await tab.locator('.htl').boundingBox();
@@ -879,7 +854,7 @@ test.describe('Studio page', () => {
     expect(await bg('nav.tabs a')).toBe('rgb(255, 254, 251)'); // card
     const band = await page.locator('nav.tabs').boundingBox();
     expect(band.x).toBe(0);
-    expect(band.width).toBe(page.viewportSize().width); // edge to edge on a desktop, like the top bar
+    expect(band.width).toBe(page.viewportSize().width);
     const gap = await page.evaluate(() => { const d = document.querySelector('.top h1 .dot').getBoundingClientRect(), a = document.querySelector('.top h1 a'), r = document.createRange(); r.selectNodeContents(a); const t = Array.from(r.getClientRects()).pop(); return Math.round(t.left - d.right); });
     expect(gap, 'dot to "Studio"').toBe(8);
     const worst = await page.evaluate(() => {
@@ -903,7 +878,7 @@ test.describe('Studio page', () => {
     expect(await bg('header')).toBe('rgb(51, 71, 91)'); // #33475B
     expect(await bg('nav.tabs')).toBe('rgb(64, 85, 105)'); // #405569
     await page.locator('#lookMenu [data-look="mode"][data-val="dark"]').click();
-    expect(await bg('header')).toBe('rgb(36, 50, 63)'); // #24323F, still a frame in dark mode
+    expect(await bg('header')).toBe('rgb(36, 50, 63)');
   });
 
   test('find bar is one row: Search · Filter · Sort; the panel holds the groups; chips remove filters; focus and typing are kept', async ({ page, guard }) => {
@@ -912,7 +887,7 @@ test.describe('Studio page', () => {
     expect((await bar.boundingBox()).height, 'one row, no taller than 44px').toBeLessThanOrEqual(44);
     await expect(page.locator('#view [data-frow]')).toHaveCount(0); // no stacked filter rows
     await expect(page.locator('#view [data-f="fq"]')).toHaveAttribute('placeholder', 'Search');
-    await expect(page.locator('#filtersBtn')).toContainText('Filter'); // words, so it never shows empty if the icons fail
+    await expect(page.locator('#filtersBtn')).toContainText('Filter');
     await expect(page.locator('#sortBtn')).toContainText('Sort');
     await openFilters(page);
     await expect(page.locator('#filtersBtn')).toHaveAttribute('aria-expanded', 'true');
@@ -931,13 +906,11 @@ test.describe('Studio page', () => {
     await expect(page).not.toHaveURL(/brand=/);
     await page.locator('.achip[data-fxoff="type"]').click();
     await expect(rows(page)).toHaveCount(6);
-    // Typing in Search: the page redraws on every letter but the box keeps its focus and text.
     await page.locator('#view [data-f="fq"]').click();
     await page.keyboard.type('webclass', { delay: 20 });
     await expect(page.locator('#view [data-f="fq"]')).toBeFocused();
     await expect(page.locator('#view [data-f="fq"]')).toHaveValue('webclass');
     await expect(rows(page)).toHaveCount(1);
-    // Sort opens its own small panel; Done and a click outside close the Filter panel.
     await page.locator('#sortBtn').click();
     await page.locator('#sortpanel [data-fx="sort"][data-val="name"]').click();
     await expect(page.locator('#sortBtn')).toContainText('Sort: Name');
@@ -947,7 +920,6 @@ test.describe('Studio page', () => {
     await openFilters(page);
     await page.locator('h1').click();
     await expect(page.locator('#fpanel')).toHaveCount(0);
-    // Phone: the row wraps, the panel is a sheet above the bottom tabs, and nothing scrolls sideways.
     await page.setViewportSize({ width: 390, height: 844 });
     await noSidewaysScroll(page, 'find bar on the phone');
     await openFilters(page);
@@ -974,9 +946,8 @@ test.describe('Studio page', () => {
       const st = await el.evaluate((e) => { const c = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return { s: c.outlineStyle, grey: c.backgroundColor === hov }; });
       expect(st, `${k} hover`).toEqual({ s: 'none', grey: true });
       expect(await el.boundingBox(), `${k} must not move`).toEqual(b0);
-      if (k === 'pill') { await page.mouse.move(0, 400); await page.keyboard.press('Escape'); } // close the Filter panel so it covers nothing
+      if (k === 'pill') { await page.mouse.move(0, 400); await page.keyboard.press('Escape'); }
     }
-    // Meaning-coloured buttons rest on their own colour line and keep it; hover is the same pale grey fill, no coloured line.
     await page.locator('#filtersBtn').hover();
     expect(await page.locator('#filtersBtn').evaluate((e) => getComputedStyle(e).backgroundColor)).not.toBe(await page.locator('#sortBtn').evaluate((e) => getComputedStyle(e).backgroundColor));
     await go(page, 'review');
@@ -988,7 +959,7 @@ test.describe('Studio page', () => {
     const ys = await yes.evaluate((e) => { const c = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
       return { s: c.outlineStyle, b: c.borderTopColor, bg: c.backgroundColor, hov }; });
     expect(ys.s, 'no coloured line on hover').toBe('none');
-    expect(ys.b).not.toBe(ink); // rests on its green line and keeps it on hover
+    expect(ys.b).not.toBe(ink);
     expect(ys.bg, 'the pale grey fill on hover').toBe(ys.hov);
     expect(ys.bg).not.toBe(yRest);
     expect(await yes.boundingBox()).toEqual(y0);
@@ -996,7 +967,6 @@ test.describe('Studio page', () => {
     const ns = await no.evaluate((e) => { const c = getComputedStyle(e); return { s: c.outlineStyle, b: c.borderTopColor }; });
     expect(ns.s, 'no coloured line on hover').toBe('none'); expect(ns.b).not.toBe(ink); // rose resting line kept
     await go(page, 'line');
-    // Selected: the pale grey fill plus a 1px line in the quiet control grey, never ink.
     await page.mouse.move(0, 0);
     const sel = await page.locator('.subnav a[aria-current="page"]').evaluate((e) => { const c = getComputedStyle(e), p = document.createElement('span'); p.style.color = 'var(--house-press)'; p.style.background = 'var(--hov)'; e.parentElement.appendChild(p);
       const ps = getComputedStyle(p), r = [c.outlineWidth, c.outlineColor === ps.color, c.backgroundColor === ps.backgroundColor]; p.remove(); return r; });
@@ -1020,7 +990,6 @@ test.describe('Studio page', () => {
     // Rose = late only (the owner's sweep, 3 Nov 2026: a rose count is read out as "N late"): rose edge (--ljr-2) when one is late, else grey.
     const late = await page.locator('nav.tabs #nMe').evaluate((e) => e.classList.contains('need'));
     expect(need).toMatchObject({ b: '1px solid', bc: late ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)', bg: 'rgba(0, 0, 0, 0)', w: '600' }); // never a fill
-    // Steps are words, not ringed numbers: the only ringed number in a column head is its count.
     await expect(page.locator('.col[data-stage="5"] .col-head .step')).toHaveText('Step 5:');
     await expect(page.locator('.col[data-stage="5"] .col-head .cnt')).toHaveAttribute('aria-label', /^\d+ items$/);
     await expect(page.locator('.col-head .num')).toHaveCount(0);
@@ -1040,7 +1009,6 @@ test.describe('Studio page', () => {
     expect(cur).toMatchObject({ w: '1px', color: ink });
     expect(fut).toMatchObject({ w: '1px', bg: 'rgba(0, 0, 0, 0)' });
     await expect(page.locator('.stage.c')).toHaveCSS('font-weight', '600');
-    // Nothing small is a solid stage colour: every marker's fill is lighter than its own ring colour.
     const solid = await page.evaluate(() => {
       const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number), k = /^color\(/.test(c) ? 255 : 1; return (m[3] === 0) ? 999 : (m[0] + m[1] + m[2]) * k; };
       const bad = [];
@@ -1061,7 +1029,6 @@ test.describe('Studio page', () => {
     for (const sel of ['.col-head .cnt:not(:empty)', '.subnav .cnt:not(:empty)']) expect(await h(sel), sel).toBe(24); // counts: one fixed size, the 24px read size (0 shows none)
     expect(await h('nav.tabs #nLine'), 'tab count').toBe(24); // the corner ring on the bottom tabs, holding a 14px number (the owner's pick A, 2 Nov)
     for (const sel of ['#newBtn', '#fpanel [data-fx]', '#filtersBtn', '#sortBtn', '.subnav a', '[data-vmode="list"]', '.crow .ico', '.crow .btn', '#enginePill']) expect(await h(sel), sel).toBe(36);
-    // One corner radius (12px) on everything; circles only for status dots.
     const r = (sel) => page.locator(sel).first().evaluate((e) => getComputedStyle(e).borderTopLeftRadius);
     for (const sel of ['.col', '.col-list .crow', '#fpanel', '#newBtn', '#fpanel [data-fx]', '.subnav a', 'nav.tabs a', '.fbar .sbox', '.crow .tag', '.pthumb svg']) expect(await r(sel), sel).toBe('12px');
     expect(await r('.col-head .cnt:not(:empty)')).toBe('12px');
@@ -1095,7 +1062,7 @@ test.describe('Studio page', () => {
     await expect(t).toHaveCSS('-webkit-line-clamp', '2');
     const lines = await t.evaluate((e) => Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight)));
     expect(lines).toBe(2);
-    expect(await t.evaluate((e) => e.scrollHeight > e.clientHeight)).toBe(true); // the rest is cut, not lost: the panel shows it
+    expect(await t.evaluate((e) => e.scrollHeight > e.clientHeight)).toBe(true);
   });
 
   test('dark mode (device and Look › Dark): today\'s board, frame, panels, counts, steps and menus read clearly; rings and lines show', async ({ page, guard }) => {
@@ -1145,7 +1112,7 @@ test.describe('Studio page', () => {
     await page.keyboard.press('Escape');
     await tour('Look › Dark');
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator('#lookBtn').click();   // the phone's Look menu (it now also holds Sign out)
+    await page.locator('#lookBtn').click();
     await expect(page.locator('#lookMenu [data-house-menu-signout]')).toBeVisible();
     await check('Look › Dark, phone Look menu');
   });
@@ -1203,7 +1170,7 @@ test.describe('Studio page', () => {
     // Main is the house Main (the owner, 2 Nov 2026); the old three (On track / Needs you / Overdue) open from the top of Do, and the
     // fuller late-first, "–" and empty cases are in hub-main-studio.spec.js. This checks Main with the real sample state.
     await open(page, guard, '#/me');
-    await expect(page.locator('#view .hello'), 'no greeting (Lisa, 2 Nov: no unnecessary words)').toHaveCount(0);
+    await expect(page.locator('#view .hello'), 'no greeting (User, 2 Nov: no unnecessary words)').toHaveCount(0);
     const nums = page.locator('[data-hm="nums"] a.hm-n');
     await expect(nums.locator('.hm-l')).toHaveText(['Approve', 'Due Today', 'Sold']);
     await expect(nums.nth(0).locator('.hm-v')).toHaveText('2'); // the two pieces waiting at Review
@@ -1248,11 +1215,11 @@ test.describe('Studio page', () => {
     const d = await details(page, 'sa-make');
     const panel = page.locator('.side .kv');
     await expect(panel).toContainText('In this step5 days · stuck?');
-    await expect(panel).toContainText('Brand ownerOwn brand');
+    await expect(panel).toContainText('Brand userOwn brand');
     await expect(panel).toContainText('With');
     await expect(page.locator('.crow[data-row="sa-make"] .l1 .selmark')).toHaveText('✓');
     const tt = await page.locator('.crow[data-row="sa-make"] .ttl').boundingBox(), mk = await page.locator('.crow[data-row="sa-make"] .selmark').boundingBox();
-    expect(mk.x - (tt.x + tt.width)).toBeLessThan(12); // the tick sits right after the title text
+    expect(mk.x - (tt.x + tt.width)).toBeLessThan(12);
     void d;
   });
 
@@ -1265,7 +1232,6 @@ test.describe('Studio page', () => {
       const bad = await page.evaluate(() => {
         const press = getComputedStyle(document.documentElement).getPropertyValue('--press').trim();
         const hex = (h) => { const m = h.replace('#', '').match(/../g).map((x) => parseInt(x, 16)); return 'rgb(' + m.join(', ') + ')'; };
-        // The control line, or a meaning button's own colour line (yes green, no rose: --house-ok / --house-risk, 3:1 on a card).
         const col = (v) => { const d = document.createElement('i'); d.style.color = 'var(' + v + ')'; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
         const ok = [hex(press), col('--house-ok'), col('--house-risk')];
         const out = [];
@@ -1288,7 +1254,6 @@ test.describe('Studio page', () => {
       });
       expect(bad, key).toEqual([]);
     }
-    // The resting line on pressables is at least 3:1 against the page, warm and cool.
     const pressContrast = () => page.evaluate(() => {
       const rgb = (c) => { if (c.startsWith('#')) return c.slice(1).match(/../g).map((x) => parseInt(x, 16)); return c.match(/[\d.]+/g).slice(0, 3).map(Number); };
       const lum = ([r, g, b]) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
@@ -1299,7 +1264,6 @@ test.describe('Studio page', () => {
     await page.evaluate(() => document.documentElement.classList.add('look-cool'));
     expect(await pressContrast(), 'cool').toBeGreaterThanOrEqual(3);
     await page.evaluate(() => document.documentElement.classList.remove('look-cool'));
-    // Read-only things never hover; pressables always do.
     await go(page, 'line');
     for (const sel of ['.col-head .cnt:not(:empty)', '.crow .dpill', '.crow [data-chip="need"]']) {
       const el = page.locator(sel).first(); if (!(await el.count())) continue;
@@ -1349,9 +1313,8 @@ test.describe('Studio page', () => {
     await c.locator('textarea').fill('Use the second photo.');
     await c.locator('button[type="submit"]').click();
     await expect.poll(() => got.length).toBe(1);
-    expect(got[0].body).toMatchObject({ kind: 'comment', assetId: 'sa-client', thread: 'team', text: 'Use the second photo.', accountId: 'acc-owner' }); // the owner's account, even on a client item
+    expect(got[0].body).toMatchObject({ kind: 'comment', assetId: 'sa-client', thread: 'team', text: 'Use the second photo.', accountId: 'acc-user' });
     await expect(c.locator('.cthread .cm.pend')).toContainText('Use the second photo.');
-    // The client thread: every comment labelled, the warning above the box, and the team's own note is not there.
     await c.locator('[data-ctab="client"]').click();
     await expect(c).toHaveAttribute('data-thread', 'client');
     await expect(c.locator('.cthread .cm')).toHaveCount(2);
@@ -1364,7 +1327,6 @@ test.describe('Studio page', () => {
     await c.locator('button[type="submit"]').click();
     await expect.poll(() => got.length).toBe(2);
     expect(got[1].body).toMatchObject({ kind: 'comment', thread: 'client' });
-    // An own-brand item has the Team thread only.
     await details(page, 'sa-make');
     await expect(page.locator('[data-comments="sa-make"] [data-ctab="client"]')).toHaveCount(0);
     void d;
@@ -1421,9 +1383,8 @@ test.describe('Studio page', () => {
     await f.locator('[data-lf="link"]').fill('');
     await f.locator('[data-action="libsend"]').click();
     await expect.poll(() => got.length).toBe(1);
-    expect(got[0].body).toMatchObject({ kind: 'library', accountId: 'acc-owner', table: 'kits', op: 'new', fields: { name: 'Sample launch kit', type: 'email', brickIds: ['br-hook'], link: '' } });
+    expect(got[0].body).toMatchObject({ kind: 'library', accountId: 'acc-user', table: 'kits', op: 'new', fields: { name: 'Sample launch kit', type: 'email', brickIds: ['br-hook'], link: '' } });
     await expect(page.locator('[data-libform]')).toHaveCount(0);
-    // Edit a playbook: the form starts from what is there.
     await go(page, 'kits/playbooks');
     const pb = page.locator('[data-playbook]').first(), pid = await pb.getAttribute('data-playbook');
     await pb.locator('[data-libedit]').click();
@@ -1437,13 +1398,12 @@ test.describe('Studio page', () => {
     await ef.locator('[data-lf="steps"]').fill('Draft the hook; then the offer');
     await ef.locator('[data-action="libsend"]').click();
     await expect(ef.locator('[data-lfq="steps"] .ferr')).toHaveText('No ; in a step (one step per line)');
-    await expect(ef.locator('[data-lfq="status"]')).toBeVisible(); // status (live / archived / retired) on edit only
+    await expect(ef.locator('[data-lfq="status"]')).toBeVisible();
     await ef.locator('[data-lf="steps"]').fill('Draft the hook');
     await ef.locator('[data-lf="name"]').fill(name0 + ' v2');
     await ef.locator('[data-action="libsend"]').click();
     await expect.poll(() => got.length).toBe(2);
     expect(got[1].body).toMatchObject({ kind: 'library', table: 'playbooks', op: 'edit', id: pid, fields: { name: name0 + ' v2', steps: ['Draft the hook'] } });
-    // Bricks have their own tab; the Suggest box sends a pending suggestion.
     await go(page, 'kits/bricks');
     await expect(page.locator('[data-brick="br-hook"]')).toContainText('Sample hook line');
     await page.locator('[data-libnew="bricks"]').click();
@@ -1464,8 +1424,8 @@ test.describe('Studio page', () => {
     await sg.locator('textarea').fill('Add a short call-to-action brick for emails.');
     await sg.locator('button[type="submit"]').click();
     await expect.poll(() => got.length).toBe(4);
-    expect(got[3].body).toMatchObject({ kind: 'libsuggest', accountId: 'acc-owner', table: 'bricks', text: 'Add a short call-to-action brick for emails.' });
-    await expect(sg.locator('[data-libsent]')).toHaveText('Suggested · waiting for Lisa');
+    expect(got[3].body).toMatchObject({ kind: 'libsuggest', accountId: 'acc-user', table: 'bricks', text: 'Add a short call-to-action brick for emails.' });
+    await expect(sg.locator('[data-libsent]')).toHaveText('Suggested · waiting for User');
   });
 
   test('library: Kit and Pack prices switch between ex and inc VAT; the form works out the other figure; VAT rates are listed', async ({ page, guard }) => {
@@ -1477,10 +1437,9 @@ test.describe('Studio page', () => {
     await expect(line).toHaveText('£120 inc VAT · 3 days');
     await page.locator('[data-pshow="both"]').click();
     await expect(line).toHaveText('£100 ex · £120 inc VAT · 3 days');
-    expect(await page.evaluate(() => localStorage.getItem('st-pshow'))).toBe('both'); // this viewer's choice, kept in the browser
+    expect(await page.evaluate(() => localStorage.getItem('st-pshow'))).toBe('both');
     await page.reload();
     await expect(page.locator('[data-kit="kit-lead"] [data-price]')).toHaveText('£100 ex · £120 inc VAT · 3 days');
-    // The form: price, ex / inc, and a live line with the other figure at the home rate.
     await page.locator('[data-kit="kit-lead"] [data-libedit]').click();
     const f = page.locator('[data-libform="kits"]');
     await expect(f.locator('[data-lf="price"]')).toHaveValue('100');
@@ -1506,7 +1465,6 @@ test.describe('Studio page', () => {
     await expect.poll(() => got.length).toBe(2);
     expect(Object.keys(got[1].body.fields)).not.toContain('price'); // optional: left out when empty
     expect(Object.keys(got[1].body.fields)).not.toContain('priceBasis');
-    // VAT rates: read-only, under Kits › Brands.
     await go(page, 'brands');
     await expect(page.locator('[data-vatrates]')).toContainText('United Kingdom · home');
     await expect(page.locator('[data-vatrates]')).toContainText('20%');
@@ -1514,7 +1472,7 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-vatrates] input, [data-vatrates] button')).toHaveCount(0);
   });
 
-  test('ownership: client material and source files in the details send one rights request; client material is never reused', async ({ page, guard }) => {
+  test('holding: client material and source files in the details send one rights request; client material is never reused', async ({ page, guard }) => {
     const got = await uploads(page, guard);
     await open(page, guard, '#/assets', { change: (s) => { s.assets.filter((a) => a.stage === 8)[0].clientMaterial = 'yes'; } });
     const d = await details(page, 'sa-client');
@@ -1523,12 +1481,11 @@ test.describe('Studio page', () => {
     await expect(r.locator('[data-rset="sourceRights"][data-val="kept"]')).toHaveAttribute('aria-pressed', 'true');
     await r.locator('[data-rset="clientMaterial"][data-val="true"]').click();
     await expect.poll(() => got.length).toBe(1);
-    expect(got[0].body).toMatchObject({ kind: 'rights', accountId: 'acc-owner', assetId: 'sa-client', clientMaterial: 'yes', sourceRights: 'kept' });
+    expect(got[0].body).toMatchObject({ kind: 'rights', accountId: 'acc-user', assetId: 'sa-client', clientMaterial: 'yes', sourceRights: 'kept' });
     await expect(page.locator('.crow[data-row="sa-client"] [data-chip="client-only"]')).toHaveText('Client-only · never reused');
     await page.locator('[data-rights="sa-client"] [data-rset="sourceRights"][data-val="sold"]').click();
     await expect.poll(() => got.length).toBe(2);
     expect(got[1].body).toMatchObject({ kind: 'rights', assetId: 'sa-client', clientMaterial: 'yes', sourceRights: 'sold' });
-    // A library item marked as client material cannot be reused; the reason shows.
     await go(page, 'library');
     const lib = page.locator('#view .crow').first();
     await expect(lib.locator('[data-noreuse]')).toBeDisabled();
@@ -1566,18 +1523,16 @@ test.describe('Studio page', () => {
     await expect(box.locator('[data-tick="Approved"]')).toHaveText('Approved ✓');
     await expect(box.locator('[data-tick="Paid"]')).toHaveText('Paid ✗');
     await expect(box.locator('[data-disc="yes"]')).toHaveAttribute('aria-pressed', 'true'); // AI note on by default
-    await expect(page.locator('#view')).not.toContainText('SHOULD-NEVER-SHOW'); // the final file's link never shows before release
+    await expect(page.locator('#view')).not.toContainText('SHOULD-NEVER-SHOW');
     await box.locator('[data-paid="yes"]').click();
     await expect.poll(() => got.length).toBe(1);
-    expect(got[0].body).toMatchObject({ kind: 'paid', accountId: 'acc-owner', assetId: 'sa-client-done', paid: 'yes' });
+    expect(got[0].body).toMatchObject({ kind: 'paid', accountId: 'acc-user', assetId: 'sa-client-done', paid: 'yes' });
     await expect(page.locator('.crow[data-row="sa-client-done"] [data-act="deliver"]')).toBeVisible(); // paid: delivery opens
-    // A protected proof still in progress: chip on the card, reminder in the details.
     await go(page, 'assets');
     await expect(page.locator('.crow[data-row="sa-client"] [data-chip="proof"]')).toHaveText('Proof · view only');
     await details(page, 'sa-client');
     await expect(page.locator('[data-delivery="sa-client"] [data-chip="lowres"]')).toHaveText('Low-res + watermark');
     await expect(page.locator('[data-delivery="sa-client"] [data-watermark]')).toHaveText('Add Studio watermark layer');
-    // Switches (engine v0.2.19): AI note and item protection go in a rights request on their own; project and account in a protect request.
     const box2 = page.locator('[data-delivery="sa-client"]');
     await box2.locator('[data-disc="no"]').click();
     await expect.poll(() => got.length).toBe(2);
@@ -1589,7 +1544,7 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-delivery="sa-client"] [data-protect-eff]')).toHaveText('Off · set here');
     await page.locator('[data-delivery="sa-client"] [data-pprot="sp-client"][data-val="yes"]').click();
     await expect.poll(() => got.length).toBe(4);
-    expect(got[3].body).toMatchObject({ kind: 'protect', accountId: 'acc-owner', target: 'project', id: 'sp-client', protect: 'yes' });
+    expect(got[3].body).toMatchObject({ kind: 'protect', accountId: 'acc-user', target: 'project', id: 'sp-client', protect: 'yes' });
     await expect(page.locator('[data-projprot="sp-client"]')).toContainText('account default: Protected');
     await go(page, 'brands');
     const acc = page.locator('[data-accounts] [data-account="acc-client"]');
@@ -1615,33 +1570,31 @@ test.describe('Studio page', () => {
     expect(got[0].body).toMatchObject({ kind: 'library', table: 'kits', op: 'new', fromAssetId: id });
   });
 
-  for (const role of ['team', 'owner']) test(`signed in as the ${role}: requests carry that account; ${role === 'team' ? 'owner-only controls are switched off with "Owner only"' : 'nothing is switched off'}`, async ({ page, guard }) => {
+  for (const role of ['team', 'user']) test(`signed in as the ${role}: requests carry that account; ${role === 'team' ? 'user-only controls are switched off with "User only"' : 'nothing is switched off'}`, async ({ page, guard }) => {
     const got = await uploads(page, guard);
-    guard.world.email = role === 'team' ? 'Backup@Example.test' : 'owner@example.test'; // matched case-blind to accounts[].emails
-    await open(page, guard, '#/decide', { change: (s) => { s.accounts.push({ id: 'acc-team', name: 'Sample backup', kind: 'owner', role: 'team', emails: ['backup@example.test'], protect: '', protectEffective: 'no' }); } });
+    guard.world.email = role === 'team' ? 'Backup@Example.test' : 'user@example.test';
+    await open(page, guard, '#/decide', { change: (s) => { s.accounts.push({ id: 'acc-team', name: 'Sample backup', kind: 'user', role: 'team', emails: ['backup@example.test'], protect: '', protectEffective: 'no' }); } });
     const team = role === 'team';
     const gate = page.locator('.crow[data-row="sa-gate"] [data-act="gate"]').first();
-    await expect.poll(() => gate.isDisabled()).toBe(team); // the role is known once the page has asked Drive who is signed in
+    await expect.poll(() => gate.isDisabled()).toBe(team);
     if (team) {
-      await expect(gate).toHaveAttribute('title', 'Owner only');
-      await expect(page.locator('.crow[data-row="sa-gate"] [data-owneronly-why]')).toHaveText('Owner only');
+      await expect(gate).toHaveAttribute('title', 'User only');
+      await expect(page.locator('.crow[data-row="sa-gate"] [data-useronly-why]')).toHaveText('User only');
       await expect(page.locator('.crow[data-row="sa-rev1"] [data-act="bin"]')).toBeDisabled();
     }
     await expect(page.locator('#view [data-fx="acct"][data-val="acc-team"]')).toHaveCount(0); // the backup account owns no work
     await page.locator('.crow[data-row="sa-rev1"] [data-act="approve"]').click(); // team may approve
     await expect.poll(() => got.length).toBe(1);
-    expect(got[0].body).toMatchObject({ kind: 'approve', assetId: 'sa-rev1', accountId: team ? 'acc-team' : 'acc-owner' });
-    // Item details: Paid, Source files and Protection are the owner's; Client material and the AI note are not.
+    expect(got[0].body).toMatchObject({ kind: 'approve', assetId: 'sa-rev1', accountId: team ? 'acc-team' : 'acc-user' });
     await go(page, 'assets');
     await details(page, 'sa-client');
     for (const sel of ['[data-paid="yes"]', '[data-rset="sourceRights"][data-val="sold"]', '[data-iprot="sa-client"][data-val="yes"]']) await expect(page.locator('[data-delivery="sa-client"] ' + sel + ', [data-rights="sa-client"] ' + sel).first()).toBeEnabled({ enabled: !team });
     await expect(page.locator('[data-rights="sa-client"] [data-rset="clientMaterial"][data-val="true"]')).toBeEnabled();
     await expect(page.locator('[data-delivery="sa-client"] [data-disc="no"]')).toBeEnabled();
-    // Library: prices are the owner's.
     await go(page, 'kits/kits');
     await page.locator('[data-libnew="kits"]').click();
     await expect(page.locator('[data-libform="kits"] [data-lf="price"]')).toHaveCount(team ? 0 : 1);
-    if (team) await expect(page.locator('[data-libform="kits"] [data-owneronly-why]')).toHaveText('Prices: Owner only');
+    if (team) await expect(page.locator('[data-libform="kits"] [data-useronly-why]')).toHaveText('Prices: User only');
     await go(page, 'engine');
     await expect(page.locator('[data-action="studio"]')).toBeEnabled({ enabled: !team });
   });
@@ -1684,3 +1637,4 @@ test.describe('Studio page', () => {
     await expect(html).not.toHaveAttribute('data-theme', /./);
   });
 });
+

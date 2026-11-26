@@ -1,4 +1,3 @@
-// One search box on every page, opened with / or the Search button. Results are grouped by where they came from.
 const { test, expect } = require('../support/test');
 
 const signIn = async (page) => {
@@ -8,7 +7,7 @@ const signIn = async (page) => {
 };
 
 test.describe('Search', () => {
-  test('home: / opens search; it finds Drive file names per shared drive and Money to-dos, each a link @regression', async ({ page, guard }) => {
+  test('t-search-spec-1', async ({ page, guard }) => {
     guard.world.file('srch-1', 'Clover vaccination plan.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
     await page.goto('./');
     await signIn(page);
@@ -21,7 +20,6 @@ test.describe('Search', () => {
     await box.fill('sample task ready');
     await expect(dlg.locator('[data-search-group="Money to-dos"] a', { hasText: 'Sample task ready now' })).toHaveAttribute('href', 'money/#/register/R001');
     await expect(page.locator('#dashSearchStatus')).toContainText(/\d+ results? for "sample task ready"/);
-    // Drive search stays inside the shared drives (never My Drive) and only reads
     const calls = guard.world.calls.filter((c) => /name contains 'clover'/.test(c.query));
     expect(calls.length).toBeGreaterThan(0);
     for (const c of calls) { expect(c.method).toBe('GET'); expect(c.url).toContain('corpora=drive'); }
@@ -31,10 +29,10 @@ test.describe('Search', () => {
     await page.goto('./');
     await signIn(page);
     await page.locator('[data-search-open]').click();
-    await page.locator('#dashSearchBox').fill("lisa's");
-    await expect(page.locator('#dashSearchStatus')).toContainText(/for "lisa's"/);
+    await page.locator('#dashSearchBox').fill("user's");
+    await expect(page.locator('#dashSearchStatus')).toContainText(/for "user's"/);
     const c = guard.world.calls.find((x) => /name contains/.test(x.query));
-    expect(c.query).toContain("name contains 'lisa\\'s'");
+    expect(c.query).toContain("name contains 'user\\'s'");
   });
 
   test('Money Hub: finds to-dos and dates already read, without asking Drive again', async ({ page, guard }) => {
@@ -62,12 +60,11 @@ test.describe('Search', () => {
     await expect(page.locator('#q')).toHaveValue(dog);
   });
 
-  test('CD Hub Find: a view name goes there; an area opens that area; an SOP opens that SOP @regression', async ({ page }) => {
+  test('t-search-spec-2', async ({ page }) => {
     await page.goto('cdhub/');
     await page.locator('#signinbtn').click();
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
     const box = page.locator('#dashSearchBox');
-    // A view by its name, with its section beside it
     await page.locator('[data-search-open]').click();
     await box.fill('litters');
     const view = page.locator('[data-search-group="Go to"] a', { hasText: 'Litters' });
@@ -75,7 +72,6 @@ test.describe('Search', () => {
     await view.click();
     await expect(page).toHaveURL(/#\/litters$/);
     await expect(page.locator('#main h2').first()).toContainText('Litters');
-    // An area by its code opens Areas focused on that area
     await page.locator('[data-search-open]').click();
     await box.fill('test cabin b');
     const area = page.locator('[data-search-group="Areas"] a', { hasText: 'Test Cabin B' });
@@ -83,7 +79,6 @@ test.describe('Search', () => {
     await area.click();
     await expect(page).toHaveURL(/#\/areas\/area-2$/);
     await expect(page.locator('[data-focus="room"]')).toContainText('Test Cabin B');
-    // An SOP by its name opens SOPs with that SOP
     await page.locator('[data-search-open]').click();
     await box.fill('microchip audit');
     const sop = page.locator('[data-search-group="SOPs"] a', { hasText: 'Microchip Audit' });
@@ -100,3 +95,4 @@ test.describe('Search', () => {
     expect(guard.world.calls.filter((c) => /name contains/.test(c.query))).toEqual([]);
   });
 });
+

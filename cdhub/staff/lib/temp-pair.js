@@ -1,9 +1,3 @@
-/*!
- * BLDTempPair - one check for a lowest and a highest temperature.
- * The same rule and words as tempPairError_ in cdhub-write/apps-script/Specs.gs:
- * when both numbers are filled in, the lowest cannot be higher than the highest.
- * Works in a browser (window.BLDTempPair) and in Node (module.exports).
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.BLDTempPair = factory();
@@ -18,3 +12,4 @@
   function error(min, max) { return swapped(min, max) ? MSG : ''; }
   return { message: MSG, swapped: swapped, error: error };
 }));
+

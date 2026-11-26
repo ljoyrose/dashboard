@@ -1,5 +1,3 @@
-// A small in-memory stand-in for the Apps Script services the enquiries engine uses, so the real engine file can run
-// under node against invented data. Nothing here talks to Google. Records every HTTP call and every write.
 'use strict';
 const vm = require('node:vm');
 
@@ -33,8 +31,6 @@ function makeBook(name) {
   };
 }
 
-// A book the engine may only READ (a litter allocation sheet): { tabName: [[header], [row] ...] }. Reading works;
-// any other call on the book or its tabs is recorded in touched and throws, so a test sees an attempted write.
 function readOnlyBook(id, tabs, touched) {
   const guard = (obj, what) => new Proxy(obj, { get: (t, k) => {
     if (k in t) return t[k];
@@ -45,8 +41,6 @@ function readOnlyBook(id, tabs, touched) {
   return guard({ getId: () => id, getName: () => 'allocation ' + id, getSheets: () => sheets, getSheetByName: (n) => sheets.find((s) => s.getName() === n) || null }, 'book ' + id);
 }
 
-// routes: [[RegExp, (url, opt) => jsonObject]]. Unmatched URLs throw, so a test sees any unexpected call.
-// others: { bookId: { tabName: values } } read-only books (allocation sheets). touched lists any write tried on them.
 function load(engineSource, { props = {}, routes = [], dryRun, gmail = [], files = [], others = {} } = {}) {
   const store = Object.assign({}, props);
   const http = [], touched = [];
@@ -63,14 +57,12 @@ function load(engineSource, { props = {}, routes = [], dryRun, gmail = [], files
         return book;
       }
     },
-    // files: [{ id, name, text, created }] in the requests folder. Read only: no move, trash or delete is offered.
     DriveApp: { getFileById: () => ({ moveTo: () => {} }), getFolderById: () => {
       let i = 0;
       return { getFiles: () => ({ hasNext: () => i < files.length, next: () => { const f = files[i++]; return { getId: () => f.id, getName: () => f.name, getDateCreated: () => new Date(f.created || '2026-10-29T10:00:00Z'), getBlob: () => ({ getDataAsString: () => f.text }) }; } }) };
     } },
     Utilities: { formatDate: (d) => d.toISOString().slice(0, 19), sleep: () => {} },
     ScriptApp: { getProjectTriggers: () => [], newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create: () => {} }) }) }) },
-    // gmail: [{ id, from, to, subject, body, date, labels }] -> read-only thread objects. Every call is recorded.
     GmailApp: {
       search: (q, start, max) => { http.push({ url: 'gmail:search ' + q, method: 'get' }); return gmail.slice(start || 0, max || 100).map((m) => ({
         getId: () => m.id, getLabels: () => (m.labels || []).map((n) => ({ getName: () => n })), isInSpam: () => false,
@@ -100,3 +92,4 @@ function load(engineSource, { props = {}, routes = [], dryRun, gmail = [], files
 }
 
 module.exports = { load };
+

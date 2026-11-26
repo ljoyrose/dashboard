@@ -1,5 +1,3 @@
-// Data contract for RR_ENQUIRIES (JOB 13 Stage 2). Run: node --test tests/enquiries/contract.test.js
-// Invented rows only (tests/fixtures/enquiries/rows.js).
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -9,7 +7,7 @@ const F = require('../fixtures/enquiries/rows.js');
 
 const REQUIRED = ['key', 'person_key', 'source', 'source_ref', 'received_uk', 'channel', 'kind', 'brand', 'country',
   'country_basis', 'breed_interest', 'size', 'colour', 'coat', 'sex', 'timing', 'household_flags', 'question_summary',
-  'score', 'band', 'stage', 'next_step', 'next_due_uk', 'owner', 'do_not_contact', 'consent', 'litter_ref', 'pup_ref',
+  'score', 'band', 'stage', 'next_step', 'next_due_uk', 'user', 'do_not_contact', 'consent', 'litter_ref', 'pup_ref',
   'lost_reason', 'flag'];
 
 test('contract: the Enquiries tab carries every column the job names, in order', () => {
@@ -127,3 +125,4 @@ test('reader.js never writes', () => {
   assert.ok(!/method\s*:\s*['"](POST|PUT|PATCH|DELETE)/i.test(src));
   assert.ok(!/:append|:batchUpdate|:clear/.test(src));
 });
+

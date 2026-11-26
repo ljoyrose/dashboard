@@ -1,6 +1,3 @@
-// Web Estate DNS & Email section (phase 2 checks 2.1 to 2.7, Mail map hops, Mail switch progress, header contracts).
-// Run: node --test tests/estate/mail-phase2.test.js. Every name is invented (example.com, example.net, example.org).
-// Nothing here reads the network or writes DNS, a registrar, a mailbox or a sheet.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const M = require('../../estate/mail.js');
@@ -25,7 +22,6 @@ const MAP = [
 ];
 const mapRows = () => M.mailMapFromValues(MAP).rows;
 
-// ---- 2.1 DKIM ----
 test('2.1 DKIM: google selector found on Workspace passes', () => {
   const w = M.dkimWord({ google: txt('"v=DKIM1; k=rsa; p=QUJD"'), selector1: NX }, { word: 'Google Workspace' });
   assert.equal(w.word, 'found (google)');
@@ -39,14 +35,12 @@ test('2.1 DKIM: no google selector on Workspace reads "missing (google)" and ale
   assert.equal(a.find((x) => x.kind === 'dkim').level, 'amber');
 });
 
-// ---- 2.2 DMARC missing ----
 test('2.2 DMARC: present passes; missing is a fault', () => {
   assert.equal(M.dmarcWord(txt('"v=DMARC1; p=reject; rua=mailto:r@example.com"')).word, 'reject');
   assert.equal(M.dmarcWord(NX).word, 'missing');
   assert.deepEqual(M.summarise({ spf: 'pass', dmarc: M.dmarcWord(NX) }).faults, ['DMARC missing']);
 });
 
-// ---- 2.3 DMARC weak ----
 test('2.3 DMARC: p=none with rua is a note only; p=none without rua is weak', () => {
   const watched = M.dmarcWord(txt('"v=DMARC1; p=none; rua=mailto:r@example.com"'));
   assert.deepEqual(M.summarise({ spf: 'pass', dmarc: watched }), { faults: [], notes: ['DMARC p=none'] });
@@ -56,7 +50,6 @@ test('2.3 DMARC: p=none with rua is a note only; p=none without rua is weak', ()
   assert.match(a.find((x) => x.kind === 'dmarc').text, /DMARC weak/);
 });
 
-// ---- 2.4 SPF ----
 test('2.4 SPF: one sound record passes; two records is a fault', () => {
   assert.equal(M.spfWord(txt('"v=spf1 include:_spf.example.net ~all"')).word, 'pass');
   const two = M.spfWord(txt('"v=spf1 a ~all"', '"v=spf1 mx -all"'));
@@ -72,7 +65,6 @@ test('2.4 SPF syntax: lookup counting is exact at 10 and broken at 11', () => {
   assert.equal(eleven.word, 'broken');
   assert.equal(eleven.lookups, 11);
   assert.ok(eleven.problems.includes('more than 10 lookups'));
-  // a, mx, ptr, exists and redirect each count; ip4/ip6/all do not
   assert.equal(M.spfProblems('v=spf1 a mx ptr exists:x.example.net ip4:192.0.2.1 ip6:2001:db8::1 redirect=r.example.net').lookups, 5);
 });
 test('2.4 SPF syntax: bad include target and no all are broken', () => {
@@ -83,7 +75,6 @@ test('2.4 SPF syntax: bad include target and no all are broken', () => {
   assert.deepEqual(E.emailProblems({ spf: 'broken', dmarc: 'reject' }), ['SPF broken']);
 });
 
-// ---- 2.5 MX ----
 test('2.5 MX: WebWave is named; Google and forwarding still read', () => {
   assert.equal(M.mxHost(mx('10 mx1.webwavecms.com.')).word, 'WebWave');
   assert.equal(M.mxHost(mx('10 mx1.webwavecms.com.')).forwarding, false);
@@ -102,7 +93,6 @@ test('2.5 MX: none is a fault when the Mail map has addresses, a note when it ha
   assert.equal(a.filter((x) => x.kind === 'mx').map((x) => x.key).join(), 'example.test');
 });
 
-// ---- 2.6 forward hops ----
 test('2.6 hops: one hop and a plain mailbox pass', () => {
   const one = M.hops('one@example.com', mapRows());
   assert.equal(one.hops, 1);
@@ -142,7 +132,6 @@ test('2.6 hops: a forward with no next hop reads target unknown', () => {
   assert.equal(c.text, 'target unknown: needs Namecheap export');
 });
 
-// ---- 2.7 certificate ----
 test('2.7 certificate: 6 days out is red, 20 amber, 90 none', () => {
   const at = (d) => new Date(Date.UTC(2026, 10, 12 + d)).toISOString().slice(0, 10);
   const rows = [6, 20, 90].map((d) => ({ key: 'c' + d + '.example.com', ssl_expires: at(d) }));
@@ -173,7 +162,6 @@ test('ACCEPT header contract: every renamed or missing column fails closed with 
   assert.equal(M.mailMapFromValues([]).ok, false, 'empty tab fails closed');
 });
 
-// ---- 4.x switch progress ----
 test('switch progress: step N of 10, step 9 only from live checks, classes', () => {
   const row = (cls, ...steps) => { const o = { domain: 'a.example.com', class: cls }; steps.forEach((s, i) => { o['step_' + (i + 1)] = s; }); return o; };
   assert.equal(M.switchProgress(row('brand alias', 'done', 'done', 'todo'), null).text, 'step 3 of 10: Recreate every forward as an alias');
@@ -181,7 +169,7 @@ test('switch progress: step N of 10, step 9 only from live checks, classes', () 
   assert.equal(M.switchProgress(eight, false).step, 9, 'a hand tick on step 9 is ignored when checks fail');
   assert.match(M.switchProgress(eight, null).text, /step 9 of 10.*not yet read/);
   assert.equal(M.switchProgress(eight, true).text, 'all steps done');
-  assert.equal(M.switchProgress(row('', 'done'), true).text, 'class: Lisa to say');
+  assert.equal(M.switchProgress(row('', 'done'), true).text, 'class: User to say');
   assert.equal(M.switchProgress(row('keep own mail'), true).text, 'keeps its own mail: checks only');
   assert.equal(M.switchProgress(undefined, true).text, 'not on the Mail switch tab');
   assert.equal(M.switchProgress(row('brand alias', 'n/a', 'DONE'), null).step, 3);
@@ -213,3 +201,4 @@ test('domain cards: faults first, unread checks say "not yet read", fix text pre
   assert.equal(good.progress.step, 2);
   assert.equal(M.domainCards(rows, null, null, TODAY)[0].progress.text, 'Mail switch not read');
 });
+

@@ -1,8 +1,3 @@
-// Print preview checks for the CD Hub (13 Nov 2026): the round sheet, the Dogs page and the kennel cards on A4.
-// Shared by tests/mocked/cdhub-print-a4.spec.js (desktop) and tests/phone/cdhub-print-a4.spec.js (phone).
-// Every row is invented. The save script is pretend. Chrome's own PDF output is the print preview: the page count
-// proves no card was split and no row was pushed to a page of its own.
-// CDHUB_PRINT_PDF=<folder> also keeps each PDF there, to open and check by eye.
 const fs = require('fs');
 const path = require('path');
 const { expect } = require('@playwright/test');
@@ -11,12 +6,9 @@ const OUT = process.env.CDHUB_PRINT_PDF || '';
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-PRINT-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
 const csv = (h, rows) => [h].concat(rows).join('\r\n') + '\r\n';
-// The whole A4 sheet in CSS pixels (96 per inch). The pages print with margin 0 (no page address) and keep a 10 mm
-// inset as body padding, so the page is laid out at the sheet's full width.
 const MM = 96 / 25.4;
 const PAPER = { portrait: { width: Math.round(210 * MM), height: Math.round(297 * MM) }, landscape: { width: Math.round(297 * MM), height: Math.round(210 * MM) } };
 
-/** Pages and their sizes (points) in a PDF Chrome made. */
 function pdfPages(buf) {
   const s = buf.toString('latin1');
   const boxes = [...s.matchAll(/\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/g)].map((m) => [Math.round(+m[1]), Math.round(+m[2])]);
@@ -26,9 +18,7 @@ function pdfPages(buf) {
 const A4 = [596, 842];
 function isA4(box, landscape) { const [w, h] = landscape ? [A4[1], A4[0]] : A4; return Math.abs(box[0] - w) <= 2 && Math.abs(box[1] - h) <= 2; }
 
-/** Chrome's print output as a PDF (what Print and Save as PDF both use), kept when CDHUB_PRINT_PDF is set. */
 async function printPdf(page, name) {
-  // Print and Save as PDF fire beforeprint and afterprint; page.pdf() does not, so they are fired here as a browser would.
   await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')));
   await page.emulateMedia({ media: 'print' });
   const buf = await page.pdf({ preferCSSPageSize: true, printBackground: false });   // Chrome's default: background graphics off
@@ -38,7 +28,6 @@ async function printPdf(page, name) {
   return pdfPages(buf);
 }
 
-/* ------------------------------------------------------------------ the hub: 16 cabins, 32 dogs, long names, 4 photos */
 const ROOMS = 16, DOGS = 32;
 const dogName = (i) => (i % 5 === 0 ? 'Pretend Bartholomew-Fitzgerald ' + i : 'Pretend Dog ' + i);
 function put(world, name, content) {
@@ -54,14 +43,12 @@ async function openHub(page, guard) {
   put(w, 'BLD-subject_status.csv', csv('subject_id,state', Array.from({ length: DOGS }, (_, i) => `sub-${i},Active`)));
   put(w, 'BLD-occupancy.csv', csv('subject_id,area_id,classification,off_site_kind', Array.from({ length: DOGS }, (_, i) => `sub-${i},area-${i % ROOMS},Resident,`)));
   for (let i = 0; i < 4; i++) { w.file('drvprint' + i, 'p' + i + '.png', '', { mimeType: 'image/png' }); w.byId('drvprint' + i).thumbnailLink = 'https://example.com/pretend-print-dog-' + i + '.png'; }
-  // a wide photo, so a photo that is not cropped to its box would show
   await page.route(/example\.com\/pretend-print-dog/, (r) => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="300"><rect width="800" height="300" fill="#c84"/><circle cx="400" cy="150" r="120" fill="#432"/></svg>' }));
   await page.goto('cdhub/');
   await page.locator('#signinbtn').click();
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
 }
 
-/** On paper: the bars, buttons and forms are gone, cards are kept whole, nothing is wider than the page. */
 async function paperLook(page, view) {
   await page.emulateMedia({ media: 'print' });
   const r = await page.evaluate((v) => {
@@ -77,7 +64,7 @@ async function paperLook(page, view) {
       whole: cards.every((c) => /avoid/.test(getComputedStyle(c).breakInside)),
       perRow: Math.max(0, ...Object.values(rows)),
       boxes: v === 'round' ? Array.from(main.querySelectorAll('.rcabins .tmp input')).filter(shown).length : 0,
-      photoInside: Array.from(main.querySelectorAll('img.dogphoto')).filter(shown).every((i) => { const a = i.getBoundingClientRect(), b = i.closest('.ph').getBoundingClientRect(); return Math.abs(a.width - b.width) < 8 && Math.abs(a.height - b.height) < 8 && getComputedStyle(i).objectFit === 'cover'; }),   // fills its square box, cropped, never squashed or cut short
+      photoInside: Array.from(main.querySelectorAll('img.dogphoto')).filter(shown).every((i) => { const a = i.getBoundingClientRect(), b = i.closest('.ph').getBoundingClientRect(); return Math.abs(a.width - b.width) < 8 && Math.abs(a.height - b.height) < 8 && getComputedStyle(i).objectFit === 'cover'; }),
       wide,
       cards: cards.length
     };
@@ -86,7 +73,6 @@ async function paperLook(page, view) {
   return r;
 }
 
-/* ------------------------------------------------------------------ the print page: kennel cards */
 const CARDS = 5;
 function cardTables() {
   return {
@@ -94,16 +80,13 @@ function cardTables() {
     subject: Array.from({ length: CARDS }, (_, i) => ({ id: 'd' + i, name: i === 1 ? 'Pretend Bartholomew-Fitzgerald the Third' : 'Pretend Dog ' + i, sex: i % 2 ? 'Male' : 'Female', size_band: ['5-10kg (small)', '10-25kg (medium)', '25kg+ (large)'][i % 3], dob: '2022-03-01', coat_colour_id: 'cc-1', coat_pattern_id: 'cp-1', nose_pigment_id: 'np-1' })),
     subject_status: [], litter: [],
     breeding_rule: [{ rule_key: 'size_colour.medium', value: 'green' }, { rule_key: 'size_colour.small', value: 'orange' }, { rule_key: 'size_colour.large', value: 'blue' }, { rule_key: 'link_kind.bff', value: 'BFFs', effective_from: '2026-01-01' }, { rule_key: 'link_kind.fren', value: 'Fren.', effective_from: '2026-01-01' }],
-    // every room has three size limits and three room jobs: the tallest sign the page makes
     area_access: ['a', 'b', 'c', 'd', 'e', 'f'].map((x) => ({ area_id: 'ar-' + x, access_type: 'free', effective_from: '2026-01-01' })),
     area_capacity: ['a', 'b', 'c', 'd', 'e', 'f'].flatMap((x) => [['5-10kg (small)', '4'], ['10-25kg (medium)', '3'], ['25kg+ (large)', '2']].map(([b, n]) => ({ area_id: 'ar-' + x, access_type: 'free', size_band: b, max_dogs: n }))),
-    // a licence class on every dog and friends on some: the card's fullest lines
     occupancy: Array.from({ length: CARDS }, (_, i) => ({ subject_id: 'd' + i, area_id: 'ar-a', moved_in: '2026-01-01', classification: i % 2 ? 'Stud' : 'Breeding bitch' })),
     subject_link: [{ subject_id: 'd1', other_subject_id: 'd0', kind: 'bff', from_date: '2026-01-01' }, { subject_id: 'd1', other_subject_id: 'd2', kind: 'bff', from_date: '2026-01-01' }, { subject_id: 'd1', other_subject_id: 'd3', kind: 'fren', from_date: '2026-01-01' }], links: [], files: [],
     qr_tag: Array.from({ length: CARDS }, (_, i) => ({ tag: 'PRNT000' + i, kind: 'subject', ref_id: 'd' + i, active: 'true' })).concat(['a', 'b', 'c', 'd', 'e', 'f'].map((x) => ({ tag: 'PRNTROOM' + x.toUpperCase(), kind: 'area', ref_id: 'ar-' + x, active: 'true' }))),
     coat_colour: [{ id: 'cc-1', name: 'Pretend Chocolate' }], coat_pattern: [{ id: 'cp-1', name: 'Parti' }], nose_pigment: [{ id: 'np-1', name: 'Pretend brown nose' }],
     microchip: Array.from({ length: CARDS }, (_, i) => ({ id: 'm' + i, subject_id: 'd' + i, chip_number: '12345678901234' + i })),
-    // many jobs, so the job strip wraps: the most a card has to hold
     check_type: ['Nails', 'Ears', 'Weigh', 'Teeth', 'Coat brush', 'Flea and worm', 'Eyes'].map((l, i) => ({ type_key: 'k' + i, label: l, target: 'dog', every_days: '28', effective_from: '2026-01-01', active: 'true' }))
       .concat(['Daily clean', 'Deep clean', 'Water bowls'].map((l, i) => ({ type_key: 'a' + i, label: l, target: 'area', every_days: i === 1 ? '7' : '1', effective_from: '2026-01-01', active: 'true' })))
   };
@@ -115,13 +98,12 @@ async function openCards(page, change) {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
     return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [] } } });
   });
-  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-USER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
   await page.getByRole('button', { name: 'Dog cards' }).click();
   await expect(page.locator('.dcard')).toHaveCount(CARDS);
 }
 const PER_LABEL = { 1: 'Full A4', 2: '2 per A4', 4: '4 per A4' };
-/** Every card on paper: nothing inside runs past its edge (no clipped QR, chip or jobs). */
 async function cardsFit(page) {
   await page.emulateMedia({ media: 'print' });
   const r = await page.evaluate(() => Array.from(document.querySelectorAll('.dcard')).map((c) => {
@@ -136,3 +118,4 @@ async function cardsFit(page) {
 
 const SIGNS = 6;
 module.exports = { SIGNS, OUT, PAPER, MM, A4, isA4, pdfPages, printPdf, openHub, paperLook, ROOMS, DOGS, openCards, cardsFit, CARDS, PER_LABEL };
+

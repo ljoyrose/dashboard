@@ -1,35 +1,15 @@
-/**
- * EDIT, ARCHIVE AND DELETE WITH A CODE, LOGGED (Lisa 15 Nov 2026, Q1 and Q2). OFF until RECORD_EDIT_ON is 'true'.
- *
- *   record_edit     change fields of one saved row in place. Logged: one audit row with the old and new values.
- *   record_archive  end one row: its to_date is set (the row stays). Always logged.
- *   record_delete   remove one row. Always logged, with the row's last values, so nothing is lost without a trace.
- *
- * Who may is an owner setting, never fixed here: rows in BLD-permission.csv (role_code or person_id, table_name or *,
- * action edit / edit_unlogged / archive / delete, allowed yes/no, from_date / to_date). A person's row beats their role's;
- * at the same level a "no" beats a "yes". With no row, the starting defaults below apply (BLD schema 20.1).
- * Whether an edit is logged and whether a reason is needed are owner rule rows in BLD-breeding_rule (one rule list):
- *   edit.log.<table> / edit.log                         yes (default) or no
- *   edit.reason_required.<table> / edit.reason_required  yes or no (default)
- * Someone allowed edit_unlogged may ask for one edit not to be logged (unlogged: true).
- * Only the lists the owner edit is built for (ownerEditable) can be changed, and only their editable fields.
- */
 var EDIT_ = {
   PROP: 'RECORD_EDIT_ON',
   PERMISSION_FILE: 'BLD-permission.csv',
   AUDIT_FILE: 'BLD-audit_log.csv',
   AUDIT_COLS: ['id', 'tenant_id', 'at', 'person_id', 'sign_in_id', 'device_id', 'action', 'table_name', 'record_id', 'before', 'after', 'reason'],
-  /* the starting defaults when no permission row says otherwise (Q1/Q2: nobody may delete, the owner may archive;
-     edits by the owner; edit_unlogged nobody) */
-  DEFAULT: { edit: ['OWNER'], archive: ['OWNER'], delete: [], edit_unlogged: [] }
+  DEFAULT: { edit: ['USER'], archive: ['USER'], delete: [], edit_unlogged: [] }
 };
 
 function editOn_() { return prop_(EDIT_.PROP) === 'true'; }
 
-/** The audit file may be written by the save script (append only). */
 function editFiles_() { return [EDIT_.AUDIT_FILE]; }
 
-/** May this person do `action` on `table` today? Permission rows first (person, then role), else the default. */
 function editCan_(who, table, action, day) {
   var f = store_read_(EDIT_.PERMISSION_FILE, false), tenant = prop_(BLD.PROP.TENANT_ID);
   var person = null, role = null;
@@ -50,23 +30,21 @@ function editCan_(who, table, action, day) {
   return (EDIT_.DEFAULT[action] || []).indexOf(who.role) >= 0;
 }
 
-/** An edit rule row in force today: the table's own row, else the general one, else ''. */
 function editRule_(name, table, day) {
   return (fileRule_(name + '.' + table, day) || fileRule_(name, day)).toLowerCase();
 }
 
-/** Common start: switch, code, list, row. Returns {who, spec, tenant, now, day, t, idx, cur}. */
 function editStart_(req, action) {
   if (!editOn_()) throw err_('EDIT_OFF', 'Changing saved entries is switched off.');
   if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off.');
   var who = authSaver_(req);
   if (who.role === ROLE_INSPECTOR || who.role === ROLE_GUEST) throw err_('NOT_ALLOWED', 'This code can only look.');
   var spec = specFor_(String(req.table || ''));
-  if (!spec || spec.file === BLD.PENDING_FILE || spec.ownerEditable !== true) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
+  if (!spec || spec.file === BLD.PENDING_FILE || spec.userEditable !== true) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   if (!tableOn_(spec)) throw err_('TABLE_OFF', 'Saving to ' + spec.file + ' is switched off.');
   var now = new Date(), day = todayLondon_(now), tenant = prop_(BLD.PROP.TENANT_ID);
   if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
-  if (!editCan_(who, spec.key, action, day)) throw err_('NOT_ALLOWED', 'You are not allowed to do this. Ask the owner.');
+  if (!editCan_(who, spec.key, action, day)) throw err_('NOT_ALLOWED', 'You are not allowed to do this. Ask the user.');
   var rowId = String(req.record_id || '');
   if (!ID_RE_.test(rowId)) throw err_('INVALID', 'Say which entry.');
   return { who: who, spec: spec, tenant: tenant, now: now, day: day, rowId: rowId };
@@ -79,7 +57,6 @@ function editFind_(s) {
   throw err_('NOT_FOUND', 'That entry was not found in ' + s.spec.file + '.');
 }
 
-/** The reason given: '' when none is needed and none given. A bad or missing needed one goes into errors.reason. */
 function editReason_(req, need, errors) {
   var reason = String(req.reason || '').trim();
   if (!reason && !need) return '';
@@ -88,7 +65,6 @@ function editReason_(req, need, errors) {
 }
 function editStop_(errors) { if (Object.keys(errors).length) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: errors }); }
 
-/** The audit file, checked before anything is changed. */
 function editAuditRead_() {
   var a = store_read_(EDIT_.AUDIT_FILE, false);
   if (!a) throw err_('NOT_CONFIGURED', 'The change log (' + EDIT_.AUDIT_FILE + ') does not exist yet, so nothing was changed.');
@@ -107,23 +83,21 @@ function editAudit_(s, a, action, before, after, reason) {
   return id;
 }
 
-/** Change the row; if the log line then fails, put the old row back so no change is ever left unlogged. */
 function editWriteLogged_(s, f, next, a, action, before, after, reason) {
   store_replaceRow_(s.spec.file, s.spec.columns, f.idx, rowValues_(s.spec.columns, next), f.t);
   if (!a) return '';
   try { return editAudit_(s, a, action, before, after, reason); }
   catch (e) {
     try { store_replaceRow_(s.spec.file, s.spec.columns, f.idx, rowValues_(s.spec.columns, f.cur), store_read_(s.spec.file, true)); }
-    catch (x) { throw err_('VERIFY_FAILED', 'The change was made but could not be logged, and putting the old values back could not be confirmed. Tell the owner now.', { file: s.spec.file }); }
+    catch (x) { throw err_('VERIFY_FAILED', 'The change was made but could not be logged, and putting the old values back could not be confirmed. Tell the user now.', { file: s.spec.file }); }
     throw e;
   }
 }
 
-/** record_edit: {code, table, record_id, fields, reason?, unlogged?} */
 function sinkRecordEdit_(req) {
   var s = editStart_(req, 'edit');
   return withLock_(function () {
-    var f = editFind_(s), defs = ownerEditDefs_(s.spec), fields = req.fields && typeof req.fields === 'object' ? req.fields : {};
+    var f = editFind_(s), defs = userEditDefs_(s.spec), fields = req.fields && typeof req.fields === 'object' ? req.fields : {};
     var errors = {}, changedDefs = {}, changedVals = {}, name;
     for (name in fields) {
       if (!Object.prototype.hasOwnProperty.call(fields, name)) continue;
@@ -156,7 +130,6 @@ function sinkRecordEdit_(req) {
   });
 }
 
-/** record_archive: {code, table, record_id, to_date?, reason?}. The row stays; its to_date ends it. */
 function sinkRecordArchive_(req) {
   var s = editStart_(req, 'archive');
   if (s.spec.columns.indexOf('to_date') < 0) throw err_('ARCHIVE_NOT_SUPPORTED', 'This list has no end date, so an entry cannot be archived.');
@@ -174,7 +147,6 @@ function sinkRecordArchive_(req) {
   });
 }
 
-/** record_delete: {code, table, record_id, reason}. The row is removed; the log keeps its last values. */
 function sinkRecordDelete_(req) {
   var s = editStart_(req, 'delete'), errors = {};
   var reason = editReason_(req, true, errors);
@@ -184,17 +156,12 @@ function sinkRecordDelete_(req) {
     editRetentionCheck_(s, f.cur);
     var a = editAuditRead_(), last = {}, k;
     for (k in f.cur) if (Object.prototype.hasOwnProperty.call(f.cur, k) && k !== 'tenant_id') last[k] = f.cur[k];
-    var aid = editAudit_(s, a, 'delete', last, null, reason);   // logged first: a removal is never unlogged
+    var aid = editAudit_(s, a, 'delete', last, null, reason);
     store_removeRow_(s.spec.file, s.spec.columns, f.idx, f.t);
     return { status: 'deleted', table: s.spec.key, id: s.rowId, audit_id: aid, who: s.who.who };
   });
 }
 
-/**
- * Retention (Lisa, OV11 15 Nov 2026): a row inside its kept period cannot be deleted; archive it instead. The kept
- * period is the owner's BLD-retention_setting row for the section in force on the row's own date, else the fallback
- * (retentionYears_). A row with no readable date of its own is treated as still kept (the safe side).
- */
 function editRetentionCheck_(s, row) {
   var section = s.spec.retentionSection || (s.spec.ageCap && s.spec.ageCap.retentionSection) || s.spec.key;
   var cols = [(s.spec.ageCap || {}).field, 'taken_at', 'period_start', 'performed_on', 'given_on', 'from_date', 'set_on', 'created_at'];
@@ -209,7 +176,6 @@ function editRetentionCheck_(s, row) {
   if (s.day < until) throw err_('KEPT', 'This entry is kept until ' + until + ' (' + years + ' years). Archive it instead.', { kept_until: until });
 }
 
-/** Remove ONE record. Same safeguards as store_replaceRow_: allow-list, header, unchanged since read, read-back. */
 function store_removeRow_(title, expectedHeader, index, read) {
   if (allowedFiles_().indexOf(title) < 0 || title === BLD.PENDING_FILE || title === EDIT_.AUDIT_FILE) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   if (!sameHeader_(read.header, expectedHeader)) throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was changed.');
@@ -221,7 +187,7 @@ function store_removeRow_(title, expectedHeader, index, read) {
     sh.deleteRow(read.rowNums[index + 1]);
     SpreadsheetApp.flush();
     if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) !== textHash_(store_rowsText_(rows))) {
-      throw err_('VERIFY_FAILED', 'The table did not read back as expected after the delete. Tell the owner now; the earlier version is in the Sheet\'s version history.', { file: title });
+      throw err_('VERIFY_FAILED', 'The table did not read back as expected after the delete. Tell the user now; the earlier version is in the Sheet\'s version history.', { file: title });
     }
     return store_rowsText_(rows);
   }
@@ -234,3 +200,4 @@ function store_removeRow_(title, expectedHeader, index, read) {
     return check.slice(0, head.length) === head && check.slice(check.length - tail.length) === tail;
   });
 }
+

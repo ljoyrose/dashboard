@@ -44,3 +44,4 @@ jobs:
           echo "Open drill issues: $n"
           test "$n" = "0"
           echo "### ✅ The alarm works: opened, reused, closed." >> "$GITHUB_STEP_SUMMARY"
+

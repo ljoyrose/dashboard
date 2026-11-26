@@ -33,7 +33,6 @@ async function open(page, guard, { change, fail } = {}) {
   await page.locator('#signInBtn').click();
   await expect(page.locator('[data-hub-main="studio"]')).toBeVisible({ timeout: fail ? 45_000 : 7_000 });
 }
-// Lots to do: two late pieces, one due today, plus the fixture's gates, reviews and hand tasks (more than 5 rows).
 const busy = (s) => {
   const base = s.assets.find((a) => a.stage === 7) || s.assets[0];
   s.assets.push(Object.assign({}, base, { id: 'hm-late1', title: 'Sample late review', stage: 7, dated: true, eventDate: day(-2), flags: [] }));
@@ -60,7 +59,6 @@ test.describe('Studio Main', () => {
     expect(kinds.slice(0, 3)).toEqual(['late', 'late', 'today']);
     await expect(page.locator('[data-hm="next"] .hm-what')).toHaveText('Sample late review');
     await expect(page.locator('[data-hm="next"] a[data-hm-act]')).toHaveAttribute('href', '#/asset/hm-late1');
-    // Sold: Studio keeps running totals only, so "–", never a made-up number. Due Today counts exactly the piece due today.
     expect(got[2].value).toBe('–');
     expect(got[1].value).toBe('1');
     await page.locator('a.hm-n[data-k="Due Today"]').click();
@@ -101,3 +99,4 @@ test.describe('Studio Main', () => {
     await noSideways(page);
   });
 });
+

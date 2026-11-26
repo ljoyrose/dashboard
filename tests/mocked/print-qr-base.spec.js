@@ -1,5 +1,3 @@
-// Printed QRs open the staff page on this site (or a configured https address), never a fixed host.
-// A qr.base_url rule row in force wins. Invented rows only.
 const { test, expect } = require('../support/test');
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
@@ -17,14 +15,13 @@ async function open(page, rules) {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
     return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [] } } });
   });
-  // record what every QR holds: the drawer is wrapped as soon as it loads
   await page.addInitScript(([c, u]) => {
     localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u);
     window.__qr = [];
     let real;
     Object.defineProperty(window, 'BLDQr', { configurable: true, get() { return real; },
       set(v) { real = Object.assign({}, v, { svg: (text, label) => { window.__qr.push(text); return v.svg(text, label); } }); } });
-  }, ['FAKE-OWNER', SCRIPT]);
+  }, ['FAKE-USER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
 }
 
@@ -56,7 +53,7 @@ test('a configured staff address wins over the host serving the page', async ({ 
   expect(await page.evaluate(() => window.__qr)).toEqual(['https://example.test/staff/#s/AAAAAAAA']);
 });
 
-test('the owner\'s qr.base_url row in force wins; a future row, an ended row and a bad address do not', async ({ page }) => {
+test('the user\'s qr.base_url row in force wins; a future row, an ended row and a bad address do not', async ({ page }) => {
   await open(page, [
     { rule_key: 'qr.base_url', value: 'https://example.org/old/', from_date: '2026-01-01', to_date: '2026-02-01', source: 'Pretend' },
     { rule_key: 'qr.base_url', value: 'https://example.org/now/', from_date: '2026-03-01', source: 'Pretend' },
@@ -66,3 +63,4 @@ test('the owner\'s qr.base_url row in force wins; a future row, an ended row and
   await expect(page.locator('.dcard')).toHaveCount(1);
   expect(await page.evaluate(() => window.__qr)).toEqual(['https://example.org/now/#s/AAAAAAAA']);
 });
+

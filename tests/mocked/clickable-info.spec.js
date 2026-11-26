@@ -6,10 +6,8 @@
 const { test, expect } = require('../support/test');
 const { HUBS, setLook, go } = require('../support/hubs');
 
-// What counts as "info" on a view: summary numbers, tiles, list rows and the Next card.
 const INFO = '.sum, .tile, .mrow:not(.ckrow), .crow, .prow, .items > li, [data-next], .nextc, .hm-row, .hm-n, [data-hm="next"]';
 
-// Visible info elements with no target: not a link/button, not inside one, and not in a row that has an open control.
 async function bare(page) {
   return page.evaluate((sel) => [...document.querySelectorAll(sel)].filter((e) => {
     if (!e.offsetParent || e.closest('nav, header, .house-tabs, #tabs')) return false;
@@ -20,7 +18,6 @@ async function bare(page) {
   }).map((e) => e.className + ': ' + (e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 50)), INFO);
 }
 
-// Visible buttons and button-look links with no words and no visible icon or picture.
 async function blankButtons(page) {
   return page.evaluate(() => [...document.querySelectorAll('button, a.btn, a.lk, [role="button"]')].filter((b) => {
     if (!b.offsetParent || b.getBoundingClientRect().width < 1) return false;
@@ -32,7 +29,7 @@ async function blankButtons(page) {
   }).map((b) => (b.outerHTML || '').slice(0, 120)));
 }
 
-test.describe.configure({ timeout: 90_000 });   // one test walks several views of a hub; CI machines are slower
+test.describe.configure({ timeout: 90_000 });
 
 const VIEWS = {
   studio: ['me', 'do', 'decide'],
@@ -61,14 +58,12 @@ test.describe('Clickable info: every number, card and row opens what it counts',
     await page.locator('#view [data-action="signin"]').click();
     await expect(page.locator('#view [data-hub-main]')).toBeVisible();
     expect(await bare(page), 'estate #/home').toEqual([]);
-    // The count tiles moved from Main to All (Hub Mains, 2 Nov 2026); Main's 3 numbers open All filtered.
     for (const v of ['all', 'look']) {
       await go(page, v);
       expect(await bare(page), 'estate #/' + v).toEqual([]);
       const tiles = await page.locator('#view .tile').evaluateAll((l) => l.map((t) => [t.tagName, t.getAttribute('href')]));
       for (const [tag, href] of tiles) { expect(tag).toBe('A'); expect(href).toMatch(/[?&]show=\w+/); }
     }
-    // A tile lands on its list, filtered to what it counts.
     await go(page, 'all');
     await page.locator('#view a.tile[data-show="live"]').click();
     await expect(page).toHaveURL(/#\/all\?show=live$/);
@@ -204,7 +199,7 @@ test.describe('One empty message per view', () => {
   });
 
   test('Money Now with no dates, no to-dos and nothing owed says "Nothing needs you" once', async ({ page, guard }) => {
-    for (const name of ['MON-DATES.csv', 'MON-REGISTER.csv']) {   // as job34b-money-gaps.spec.js empties a file: count line + header only
+    for (const name of ['MON-DATES.csv', 'MON-REGISTER.csv']) {
       const f = guard.world.files.find((x) => x.name === name), l = f.content.split('\n');
       f.content = l[0].replace(/\d+ rows held/, '0 rows held') + '\n' + l[1] + '\n'; f.size = String(f.content.length);
     }
@@ -220,8 +215,8 @@ test.describe('No blank buttons: every visible button shows its word or icon', (
   for (const [hub, views] of Object.entries(ALL)) {
     test(`${hub}: no button with empty text and no icon (icon font blocked here, so words show instead)`, async ({ page, guard }) => {
       await HUBS[hub].open(page, guard);
-      // The words appear once the page has found the icon font missing (after document.fonts.ready), so wait for them.
       for (const v of views) { await go(page, v); await expect.poll(() => blankButtons(page), { message: `${hub} #/${v}`, timeout: 10_000 }).toEqual([]); }
     });
   }
 });
+

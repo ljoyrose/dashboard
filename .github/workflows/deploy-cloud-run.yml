@@ -1,11 +1,5 @@
 name: Deploy to Cloud Run (prototype, off)
 
-# A1 host prototype for the private move (docs/priv-move/HOST-A1-CLOUD-RUN.md). OFF: the job is skipped unless the
-# repo variable CLOUD_RUN_DEPLOY is exactly ON, and even then it is a DRY RUN unless the person starting it unticks
-# the box. Hand-started only: nothing here runs on a push, a pull request or a timer.
-# No stored key: Google Cloud is reached with Workload Identity (a short-lived token GitHub issues for this run).
-# Project, region, service and identity names come from repo VARIABLES, never from this file.
-# A dry run builds the site and the container on the runner, checks it answers, and stops. Nothing leaves the runner.
 on:
   workflow_dispatch:
     inputs:
@@ -31,7 +25,6 @@ jobs:
       contents: read
       id-token: write # lets this run ask GitHub for the short-lived token Google trusts; no key is stored anywhere
     env:
-      # Anything other than an explicit "false" is a dry run.
       DRY_RUN: ${{ inputs.dry_run == false && 'false' || 'true' }}
       GCP_PROJECT: ${{ vars.GCP_PROJECT }}
       GCP_REGION: ${{ vars.GCP_REGION }}
@@ -96,3 +89,4 @@ jobs:
       - name: Forget the sign-in
         if: always() && env.DRY_RUN == 'false'
         run: rm -f "$RUNNER_TEMP/oidc.jwt" "$RUNNER_TEMP/gcp-creds.json"
+

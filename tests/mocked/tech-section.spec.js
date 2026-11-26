@@ -1,6 +1,3 @@
-// Dashboard › More › Tech (TECH-HUB-1c/1d/1e): one tile per paid tool, read once per page load from the tools tab Studio already
-// reads (config.js studio.ownedTools), with the Tech columns added. Pretend Google and Drive only; every row is the invented
-// sample in tests/fixtures/tech-tools.js (Example Tool A..., EXAMPLE-ID-n). Set TECH_SHOTS=<folder> to save screenshots.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -17,7 +14,6 @@ const SHEETS = new RegExp('^https://sheets\\.googleapis\\.com/v4/spreadsheets/[^
 const SHOTS = process.env.TECH_SHOTS;
 const GROUP_ORDER = ['AI', 'Design and assets', 'Money and admin', 'Comms', 'Dev and hosting', 'Data and automation', 'Other'];
 
-// Answer the tools tab read with these rows (or a status), and remember every call with whether it carried the sign-in token.
 async function tab(page, values, status = 200) {
   const calls = [];
   await page.route(SHEETS, (route) => {
@@ -50,7 +46,7 @@ async function open(page, how = 'menu') {
 async function shot(page, name) {
   if (!SHOTS) return;
   fs.mkdirSync(SHOTS, { recursive: true });
-  await page.addStyleTag({ content: 'header, nav.main { position: static !important; }' }); // screenshots only: keep the bars off the tiles
+  await page.addStyleTag({ content: 'header, nav.main { position: static !important; }' });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.screenshot({ path: path.join(SHOTS, name + '.png'), fullPage: true });
 }
@@ -67,7 +63,7 @@ test.describe('Dashboard: Tech section', () => {
   });
 
   test('the tab has only Studio columns: invented Example tiles with the Example stamp, and no review links', async ({ page }) => {
-    const sec = await open(page); // the harness answers the tab with Studio's five columns
+    const sec = await open(page);
     await expect(sec).toHaveAttribute('data-tech', 'example');
     await expect(sec.locator('[data-example]')).toHaveText('Example');
     await expect(sec.locator('[data-tech-note="example"]')).toContainText('Example tiles');
@@ -85,19 +81,16 @@ test.describe('Dashboard: Tech section', () => {
     expect(calls[0].auth).toBe(true);
     expect(decodeURIComponent(calls[0].url)).toContain('/values/' + TAB + '?');
     await expect(sec.locator('[data-example]')).toHaveCount(0);
-    // A..I draw (I is a half row and fails closed); J (expired) and K (no plan) do not; the blank-name row is skipped.
     await expect(sec.locator('.ttile')).toHaveCount(9);
     await expect(sec.locator('[data-tech-note="hidden"]')).toHaveText('2 not shown: ended, or no plan.');
     await expect(sec.locator('[data-tech-note="skipped"]')).toHaveText('1 row skipped: no name.');
     await expect(sec.locator('.tgroup .tg-h')).toHaveText(GROUP_ORDER.map((g) => new RegExp('^' + g)));
-    // Colour comes from the group: a 3px bar (--sc) and a dot, never a fill. Dev and hosting reads the one config value.
     await expect(tile(sec, 'example-c')).toHaveAttribute('style', /--sc:var\(--ljr-7\)/);
     await expect(tile(sec, 'example-e')).toHaveAttribute('style', new RegExp('--sc:var\\(--ljr-' + CONF.tech.devHostingSlot + '\\)'));
     await expect(tile(sec, 'example-h')).toHaveAttribute('data-group', 'other');
     const bg = await tile(sec, 'example-a').evaluate((el) => getComputedStyle(el).backgroundColor);
     const card = await page.evaluate(() => { const d = document.createElement('div'); d.style.background = 'var(--card)'; document.body.appendChild(d); const c = getComputedStyle(d).backgroundColor; d.remove(); return c; });
     expect(bg).toBe(card);
-    // Within a group, sheet order (sort_order), then name.
     expect(await sec.locator('.tgroup[data-group="ai"] .ttile').evaluateAll((els) => els.map((e) => e.dataset.tool))).toEqual(['example-b', 'example-a']);
     await shot(page, 'tech-live-desktop');
   });
@@ -126,21 +119,17 @@ test.describe('Dashboard: Tech section', () => {
     await expect(tile(sec, 'example-c').locator('[data-date="next"]')).toHaveText(/^Trial ends /);
     await expect(tile(sec, 'example-b').locator('[data-date="lifetime"]')).toHaveText('Lifetime');
     await expect(tile(sec, 'example-g').locator('[data-date="past"]')).toHaveText(/^Ended /);
-    // Unknown figures say "unknown", never 0.
     await expect(tile(sec, 'example-b').locator('[data-nums="unknown"]')).toHaveText('Allowance unknown');
     await expect(tile(sec, 'example-e').locator('[data-date="unknown"]')).toHaveText('Renews unknown');
-    // VERIFIED shows nothing extra; UNVERIFIED shows a quiet marker with the date it was checked; a stale row says so.
     await expect(a.locator('[data-verified="no"]')).toHaveCount(0);
     await expect(tile(sec, 'example-b').locator('[data-verified="no"]')).toHaveText(/^Unverified · checked \d/);
     await expect(tile(sec, 'example-d').locator('[data-stale]')).toHaveText(/^Not updated since \d/);
-    // The one review file: https, new tab, the word Review; the id never shows as words.
     const rev = a.locator('a[data-review]');
     await expect(rev).toHaveText('Review');
     await expect(rev).toHaveAttribute('href', 'https://drive.google.com/file/d/EXAMPLE-ID-1/view');
     await expect(rev).toHaveAttribute('target', '_blank');
     await expect(rev).toHaveAttribute('rel', /noopener/);
     expect(await sec.innerText()).not.toMatch(/EXAMPLE-ID-\d/);
-    // A half-filled row fails closed for that tile only, in plain words.
     await expect(tile(sec, 'example-i').locator('[data-tile-state="broken"]')).toHaveText('Row not complete: status.');
     await expect(tile(sec, 'example-i').locator('[data-nums], [data-review]')).toHaveCount(0);
   });
@@ -149,14 +138,14 @@ test.describe('Dashboard: Tech section', () => {
     await tab(page, FX.values());
     const sec = await open(page, 'hash');
     await expect(tile(sec, 'example-a').locator('[data-flag="unused"]')).toHaveText('Unused this month');
-    await expect(sec.locator('[data-flag="unused"]')).toHaveCount(1); // D used some, G used it all, B has no cap
+    await expect(sec.locator('[data-flag="unused"]')).toHaveCount(1);
     await expect(tile(sec, 'example-b').locator('[data-flag="needs"]')).toHaveText('Needs review');
     await expect(tile(sec, 'example-c').locator('[data-flag="dup"]')).toHaveText('Duplicate reviews');
     await expect(sec.locator('[data-flag="needs"]')).toHaveCount(1);
     await expect(sec.locator('[data-flag="dup"]')).toHaveCount(1);
     await expect(tile(sec, 'example-a').locator('.tt-ai li')).toHaveText([/Paid allowance used this week\s*40%/, /Outputs in Drive\s*12/, /Outputs waiting review\s*3/, /Right-first-time builds\s*5/]);
     await expect(tile(sec, 'example-b').locator('.tt-ai')).toHaveCount(0);
-    await expect(tile(sec, 'example-e').locator('.tt-ai')).toHaveCount(0); // a count with words in it is never drawn
+    await expect(tile(sec, 'example-e').locator('.tt-ai')).toHaveCount(0);
   });
 
   test('find bar: search, group and flag filters, sort, and Clear', async ({ page }) => {
@@ -198,7 +187,6 @@ test.describe('Dashboard: Tech section', () => {
     await expect(page.locator('#techSec .ttile').first()).toBeVisible();
     expect(calls.length).toBe(1);
     const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    // Only the full load (sign-in, Refresh) clears the Tech read; the timed refresh keeps it. No timer reads the tab.
     expect(src).toMatch(/if \(!timed\) \{[^\n]*S\.tech = blank\(\)/);
     expect(src).not.toMatch(/setInterval\([^)]*loadTech/);
     await page.locator('#refreshBtn').click();
@@ -276,7 +264,6 @@ test.describe('Dashboard: Tech section', () => {
     await form.locator('[data-tf="allowance_amount"]').fill('1,000');
     await form.locator('[data-tf="allowance_unit"]').fill('credits');
     await form.locator('[data-action="techsave"]').click();
-    // First press asks Google for Drive saving (the same grant the Bin uses); the second press saves.
     await expect(form.locator('[data-tech-result="notsaved"]')).toContainText('allow Drive saving');
     await expect.poll(() => page.evaluate(() => window.__GIS_CALLS.request)).toBeGreaterThan(1);
     await form.locator('[data-action="techsave"]').click();
@@ -330,7 +317,7 @@ test.describe('Dashboard: Tech section', () => {
 
   test('public repo: the page holds no tool data and no Tech id; fixtures are invented', () => {
     const page = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8') + fs.readFileSync(path.join(ROOT, 'studio', 'tech-core.js'), 'utf8');
-    expect(page).toMatch(/CFG\.studio && CFG\.studio\.ownedTools/); // the id is read from config.js, never written in the page
+    expect(page).toMatch(/CFG\.studio && CFG\.studio\.ownedTools/);
     expect(page).not.toContain(CONF.studio.ownedTools.sheetId);
     const fx = fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'tech-tools.js'), 'utf8');
     const names = [...fx.matchAll(/tool: '([^']*)'/g)].map((m) => m[1]).filter(Boolean);
@@ -338,10 +325,11 @@ test.describe('Dashboard: Tech section', () => {
     for (const n of names) expect(n).toMatch(/^Example Tool [A-Z]$/);
     expect(fx).not.toMatch(/[\w.+-]+@[\w-]+\.[\w.]+/); // no emails
     expect(fx).not.toMatch(/(docs|drive)\.google\.com/);
-    expect(fx).not.toMatch(/\b(?=[\w-]*\d)(?=[\w-]*[A-Z])(?=[\w-]*[a-z])[\w-]{25,}\b/); // nothing shaped like a real Drive id
+    expect(fx).not.toMatch(/\b(?=[\w-]*\d)(?=[\w-]*[A-Z])(?=[\w-]*[a-z])[\w-]{25,}\b/);
     const ids = [...fx.matchAll(/review_file_id: '([^']*)'/g)].map((m) => m[1]);
     expect(ids.length).toBeGreaterThan(3);
     for (const id of ids) expect(id).toMatch(/^EXAMPLE-ID-\d+$/);
     for (const m of fx.matchAll(/logo_url: '([^']*)'/g)) expect(m[1]).toMatch(/^https:\/\/example\.com\//);
   });
 });
+

@@ -1,7 +1,3 @@
-// Engine guard for the Puppy Enquiries engine (AA_PUPPY-ENQUIRIES-ENGINE_*_Code.gs). The engine lives in Drive
-// (00 AI Commons > CHANGES), not in this public repo, so this test reads it from the path in ENQ_ENGINE_FILE.
-// Run: ENQ_ENGINE_FILE=/path/to/Code.gs node --test tests/enquiries/engine-guard.test.js
-// Without ENQ_ENGINE_FILE the engine checks are skipped (and say so); the core.js checks always run.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -11,7 +7,6 @@ const path = require('node:path');
 const FILE = process.env.ENQ_ENGINE_FILE || '';
 const src = FILE && fs.existsSync(FILE) ? fs.readFileSync(FILE, 'utf8') : '';
 const skip = src ? false : 'ENQ_ENGINE_FILE not set: engine checks skipped';
-// Comments may name forbidden calls (to say they are never made); only code counts.
 const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"])\/\/.*$/gm, '$1');
 
 const NEVER = [
@@ -111,3 +106,4 @@ test('engine: the Drafts tab is written in one place, behind the contact gate an
   assert.match(w, /EnquiriesCore\.gateContact\(/);
   assert.match(w, /EnquiriesCore\.checkDraft\(/);
 });
+

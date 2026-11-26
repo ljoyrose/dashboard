@@ -1,4 +1,3 @@
-// The home page, Money Hub and CD Hub used to each keep a sign-in that died on the next page.
 const { test, expect } = require('../support/test');
 
 const signIn = async (page) => {
@@ -9,7 +8,7 @@ const signIn = async (page) => {
 };
 
 test.describe('Shared sign-in', () => {
-  test('one sign-in is shared, and an expired token does ask again @regression', async ({ page }) => {
+  test('t-shared-signin-spec-1', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
 
@@ -52,3 +51,4 @@ test.describe('Shared sign-in', () => {
     await expect.poll(() => page.evaluate(() => window.__GIS_LAST_REQUEST && window.__GIS_LAST_REQUEST.prompt)).toBe('');
   });
 });
+

@@ -1,9 +1,4 @@
 'use strict';
-/**
- * 20 Nov 2026: live reading saves took 49-98 s. Most of it was turning every old date in the reading table into
- * London text (about 62,000 times a save) and reading the rooms, thermometers and kept-years lists in full every save.
- * These tests prove the same saves and refusals happen with neither.
- */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
@@ -47,14 +42,13 @@ test('faster saves: a reading on a big table does not turn every old date into L
   const fmt = countFormats(env);
   const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '11.3', max_c: '14.2' } }));
   assert.equal(r.ok, true, JSON.stringify(r));
-  assert.ok(fmt.n < 1000, 'date formats: ' + fmt.n);   // the last rows only (was over 6,000 for 3,000 rows)
+  assert.ok(fmt.n < 1000, 'date formats: ' + fmt.n);
 });
 
 test('faster saves: a repeat of an old reading sent with an offset is still caught as the same instant', () => {
   const env = bigEnv(500);
-  // row 10's period_start is 2025-01-01T18:00Z; sent weeks later with an explicit offset, it is the same slot
   const ps = new Date(Date.UTC(2025, 0, 1, 8) + 10 * 3600000);
-  env.nowMs = Date.UTC(2025, 1, 20, 12);   // weeks later: a late reading for a filled slot
+  env.nowMs = Date.UTC(2025, 1, 20, 12);
   const iso = '2025-01-01T18:00:00+00:00';
   assert.equal(Date.parse(iso), ps.getTime());
   const r = save(env, req(env, { fields: { area_id: 'area-t2', min_c: '18.0', max_c: '21.5', period_start: iso } }));
@@ -74,7 +68,7 @@ test('faster saves: the rooms and thermometers lists are read once, then remembe
   assert.ok((reads['BLD-thermometer.csv'] || 0) <= 1, JSON.stringify(reads));
 });
 
-test('faster saves: a room the owner adds is accepted on the very next save (the remembered list is dropped)', () => {
+test('faster saves: a room the user adds is accepted on the very next save (the remembered list is dropped)', () => {
   const env = bigEnv(50);
   let r = save(env, req(env, { fields: { area_id: 'area-new', min_c: '11.0', max_c: '14.2' } }));
   assert.equal(r.ok, false);
@@ -101,7 +95,6 @@ test('faster saves: a remembered list is never used past 2 minutes, and a big li
   assert.equal(puts.filter((p) => p[0].indexOf('small:') === 0).length, 0);
 });
 
-/* ---- One request for a round (OV12 20 Nov 2026) ---- */
 const many = (env, items, over = {}) => save(env, Object.assign({ v: 1, request_id: 'r-batch-' + Math.random().toString(36).slice(2, 10), code: env.codes.staff, action: 'add_many', items }, over));
 
 test('list save: several readings in one request are each saved, in order, each with its own answer', () => {
@@ -136,7 +129,6 @@ test('list save: sending the same list again saves nothing twice (each entry rem
   assert.equal(again.result.items[0].ok, true);
   assert.equal(again.result.items[0].result.repeat, true);
   assert.equal(env.rows(T).length, n);
-  // and one entry of the list resent on its own gets the same first answer
   const single = save(env, req(env, { request_id: 'r-item-00021', fields: items[0].fields }));
   assert.equal(single.result.repeat, true);
   assert.equal(env.rows(T).length, n);
@@ -151,3 +143,4 @@ test('list save: a wrong code, an empty list or more than 200 entries refuse the
   assert.equal(many(env, []).code, 'BAD_REQUEST');
   assert.equal(env.rows(T).length, n);
 });
+

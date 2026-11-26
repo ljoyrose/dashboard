@@ -1,5 +1,3 @@
-// Inspector links in the hub More menu, and the inspector page's own files.
-// Invented addresses only. No fixed host.
 const fs = require('fs');
 const path = require('path');
 const { test: base, expect } = require('../support/test');
@@ -9,7 +7,6 @@ const { tabClick } = require('../support/tabs');
 const ROOT = path.resolve(__dirname, '..', '..');
 const SAVE = 'https://script.google.com/macros/s/SAMPLE-fake-address/exec';
 const SECTION = SAVE + '?page=approve&section=inspect';
-// Files the inspector page needs from this site, from the site root. A sign-in bypass can cover only these.
 const PUBLIC = [
   '/cdhub/staff/inspect/',
   '/cdhub/staff/inspect/index.html',
@@ -32,14 +29,14 @@ function cssUrls(text) {
   return [...text.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g)].map((m) => m[1]).filter((u) => !u.startsWith('data:') && !u.startsWith('#'));
 }
 
-function ownerWorld() {
+function userWorld() {
   const d = buildWorld();
   d.file('adm-fv', 'BLD-field_visibility.csv',
     'id,tenant_id,table_name,field_name,audience_id,visible,condition,redaction,set_by,set_on,reason\nfv-t1,ten-x,area,*,aud-staff,yes,,,test,2026-10-16,rows\n',
     { parents: [IDS.bld], driveId: 'drv-alpha1' });
   return d;
 }
-const asOwner = base.extend({ world: async ({}, use) => use(ownerWorld()) });
+const asUser = base.extend({ world: async ({}, use) => use(userWorld()) });
 
 async function signIn(page) {
   await page.goto('cdhub/');
@@ -61,7 +58,7 @@ base('More shows Inspector links, and Set it up when this browser has no save ad
   await expect(page.locator('#main h2').first()).toHaveText('The round');
 });
 
-asOwner('More opens the same owner-page section as the Settings card', async ({ page }) => {
+asUser('More opens the same user-page section as the Settings card', async ({ page }) => {
   await signIn(page);
   await page.evaluate((u) => { localStorage.setItem('cdhub.sink.url', u); go('map', false); }, SAVE);
   await page.locator('#nav [data-house-more]').click();
@@ -119,3 +116,4 @@ base.describe('inspector page on this host', () => {
     expect(bad).toEqual([]);
   });
 });
+

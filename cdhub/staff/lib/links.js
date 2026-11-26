@@ -8,7 +8,6 @@ var BLDLinks = (function () {
   'use strict';
   function ymd(v) { var s = String(v == null ? '' : v).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
   function on(r, day, fromKey) { var f = ymd(r[fromKey]), t = ymd(r.to_date); return (!f || f <= day) && (!t || day <= t); }
-  /** The kinds in force on a day, in the order of the rule rows: [{kind, label}]. A later row for the same kind wins. */
   function kinds(rules, day) {
     var at = {}, order = [];
     (rules || []).forEach(function (r) {
@@ -18,7 +17,6 @@ var BLDLinks = (function () {
     });
     return order.map(function (k) { return { kind: k, label: String(at[k].value).trim() }; });
   }
-  /** One dog's links on a day, grouped by kind: [{kind, label, ids}]. Kinds with no rule row show their own key. */
   function forDog(rows, rules, id, day) {
     var ks = kinds(rules, day), by = {};
     (rows || []).forEach(function (r) {
@@ -34,3 +32,4 @@ var BLDLinks = (function () {
   return { kinds: kinds, forDog: forDog };
 }());
 if (typeof module !== 'undefined') module.exports = BLDLinks;
+

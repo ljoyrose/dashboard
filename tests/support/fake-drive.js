@@ -1,7 +1,3 @@
-// A small pretend Google Drive that lives in memory.
-// It answers the handful of Drive web calls the dashboard makes, so tests never touch real Drive.
-// Understands: about, drives, files list (with the query words the dashboard uses), file read,
-// export, trash a file (PATCH) and empty the bin (DELETE /files/trash).
 
 const FOLDER = 'application/vnd.google-apps.folder';
 
@@ -9,11 +5,11 @@ class FakeDrive {
   constructor({ email = 'someone@example.test' } = {}) {
     this.email = email;
     this.drives = []; // {id, name}
-    this.files = []; // {id,name,mimeType,parents,driveId,modifiedTime,content,trashed,...}
+    this.files = [];
     this.calls = []; // every request seen, for assertions
-    this.unhandled = []; // Drive calls the pretend Drive did not know how to answer (drift check, see summary.js)
-    this.failWith = null; // {status, reason, message, times?} makes every files call fail (error-path tests); times = only the first N
-    this.failFor = null; // optional: only fail when the URL contains this text
+    this.unhandled = [];
+    this.failWith = null;
+    this.failFor = null;
     this._n = 0;
   }
 
@@ -22,13 +18,11 @@ class FakeDrive {
     return this;
   }
 
-  /** Add a folder. */
   folder(id, name, { parents = [], driveId = null, modifiedTime } = {}) {
     this.files.push({ id, name, mimeType: FOLDER, parents, driveId, modifiedTime: modifiedTime || '2026-03-01T09:00:00.000Z', trashed: false });
     return this;
   }
 
-  /** Add a file. `content` is plain text (CSV, JSON...). */
   file(id, name, content, { parents = [], driveId = null, modifiedTime, mimeType = 'text/csv', trashed = false, trashedTime, md5Checksum, size } = {}) {
     this.files.push({
       id, name, mimeType, parents, driveId, content,
@@ -42,7 +36,6 @@ class FakeDrive {
 
   byId(id) { return this.files.find((f) => f.id === id); }
 
-  // ----- query language (the small part the dashboard uses) -----
   _match(f, q) {
     if (!q) return true;
     const toks = [];
@@ -55,11 +48,10 @@ class FakeDrive {
     const parseAnd = () => { let v = parseAtom(); while (toks[i] === 'and') { i++; const r = parseAtom(); v = v && r; } return v; };
     const parseAtom = () => {
       if (toks[i] === '(') { i++; const v = parseOr(); i++; return v; }
-      // 'X' in parents / 'me' in owners
       if (toks[i] && toks[i][0] === "'" && toks[i + 1] === 'in') {
         const val = unq(toks[i]); const field = toks[i + 2]; i += 3;
         if (field === 'parents') return (f.parents || []).includes(val);
-        if (field === 'owners') return val === 'me' ? f.mine !== false : true;
+        if (field === 'users') return val === 'me' ? f.mine !== false : true;
         return false;
       }
       const field = toks[i++]; const op = toks[i++];
@@ -88,8 +80,6 @@ class FakeDrive {
     }
 
     _list(params) {
-    // Like real Drive: a file whose content was changed after it was last listed gets a later modifiedTime
-    // (CD Hub skips reading a file whose modifiedTime has not changed, 22 Nov 2026).
     for (const f of this.files) {
       if (f._listed !== undefined && f._listed !== f.content) f.modifiedTime = new Date(Math.max(Date.now(), Date.parse(f.modifiedTime || 0) + 1000)).toISOString();
       f._listed = f.content;
@@ -107,7 +97,6 @@ class FakeDrive {
     return body;
   }
 
-  /** Attach to a Playwright browser context. */
   async install(context) {
     await context.route('https://www.googleapis.com/drive/v3/**', async (route) => {
       const req = route.request();
@@ -117,11 +106,9 @@ class FakeDrive {
       const auth = req.headers()['authorization'];
       this.calls.push({ method: req.method(), path: p, query: params.get('q') || '', url: req.url(), auth });
       const json = (status, body) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
-      // The Personal Drive page's look-only token is accepted for reads only (it sees the same pretend Drive).
-      // Its opted-in bin token (FAKE-PERSONAL-BIN-TOKEN) may also write.
       if (auth !== 'Bearer FAKE-TEST-TOKEN' && auth !== 'Bearer FAKE-PERSONAL-BIN-TOKEN' && !(auth === 'Bearer FAKE-PERSONAL-TOKEN' && req.method() === 'GET')) return json(401, { error: { code: 401, message: 'Invalid Credentials', errors: [{ reason: 'authError' }] } });
       let failNow = this.failWith && (p !== '/about' || this.failWith.includeAbout) && (!this.failFor || req.url().includes(this.failFor));
-      if (failNow && typeof this.failWith.times === 'number') { // fail only the first N matching calls, then answer normally
+      if (failNow && typeof this.failWith.times === 'number') {
         if (this.failWith.times <= 0) failNow = false; else this.failWith.times--;
       }
       if (failNow) {
@@ -130,7 +117,6 @@ class FakeDrive {
       }
       if (p === '/about') return json(200, { user: { emailAddress: this.email, displayName: 'Sample Person' } });
       if (p === '/drives') return json(200, { drives: this.drives });
-      // One shared drive by id (the private settings loader asks whether the drive is limited to its own domain).
       const one = /^\/drives\/([^/]+)$/.exec(p);
       if (one && req.method() === 'GET') {
         const d = this.drives.find((x) => x.id === decodeURIComponent(one[1]));
@@ -167,3 +153,4 @@ class FakeDrive {
 }
 
 module.exports = { FakeDrive, FOLDER };
+

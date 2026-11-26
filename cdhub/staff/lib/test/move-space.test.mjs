@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 const C = createRequire(import.meta.url)('../capacity.js');
 
-/* Cabins with space, most free first — the over-limit and dog-chip move picker. */
 test('freePlaces: list cabins with space, most free first, format like "3A.2: 4 small free"', () => {
   const cap = [
     { area_id: 'area-a', access_type: 'free', size_band: 'small', max_dogs: '3', from_date: '2026-01-01' },
@@ -30,3 +29,4 @@ test('freePlaces: list cabins with space, most free first, format like "3A.2: 4 
   const labels = rooms.map((x) => x.code + ': ' + x.free + ' ' + x.size + ' free');
   assert.deepEqual(labels, ['3A.2: 4 small free', '3A.1: 2 small free']);
 });
+

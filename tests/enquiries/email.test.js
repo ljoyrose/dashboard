@@ -1,5 +1,3 @@
-// Email and website-form capture (JOB 13 Stage 4). Run: node --test tests/enquiries/email.test.js
-// 12 invented emails (tests/fixtures/enquiries/emails.js): 6 enquiries, 6 noise.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -51,3 +49,4 @@ test('the Gmail query is narrow: business addresses or form senders, never promo
   assert.equal(q, '{to:(site.example OR brand.example) from:(wordpress-site)} newer_than:30d -category:promotions -category:social -in:spam -in:trash');
   assert.match(C.gmailQuery({}), /newer_than:90d -category:promotions/);
 });
+

@@ -1,26 +1,13 @@
 #!/usr/bin/env node
-// LOCAL / MANUAL check: are the column names in your REAL files the ones the dashboard pages expect?
-//
-//   node tests/contract/check-real-headers.js <folder-of-downloaded-CSV-files>
-//
-// How to use it (plain English): in Google Drive, download the files you want to check (or a copy of the BLD-app-tables
-// and Money folders) into one folder on your computer, then run the line above with that folder.
-// - It reads ONLY the first few lines of each file, to get the column names.
-// - It prints column names and file names only. It never prints, stores or sends a cell value.
-// - It needs no Google sign-in, no key and no internet. It is not run by GitHub, on purpose.
-// Exit code: 0 = all good, 1 = a column is missing, renamed or a header was not found.
 const fs = require('fs');
 const path = require('path');
 const { headerOf, compareHeader, entryFor } = require('./headers');
 
-// JOB 31: also Food (each RR_FOOD tab downloaded as CSV, e.g. "RR_FOOD - Orders.csv"), Marketplace ("... - Marketplace.csv"
-// for the Open work tab, RR_LISTINGS.csv, MKT-WAKE-WEBAPP.json) and Studio (studio-state.json: names and types only).
-//   node tests/contract/check-real-headers.js --dry-run    builds that folder from the invented fixtures and prints counts only.
 const os = require('os');
 const { EXPECTED } = require('./headers');
 const { checkColumns, checkState, EXPECTED_STATE, fixture } = require('./shape');
 const DRY = process.argv.includes('--dry-run');
-const COUNTS = DRY || process.argv.includes('--counts'); // counts only: no file or column names printed
+const COUNTS = DRY || process.argv.includes('--counts');
 const say = (line) => { if (!COUNTS) console.log(line); };
 
 /** --dry-run: a throwaway folder holding the invented fixtures under the names the owner's downloads would have. */
@@ -36,7 +23,6 @@ function dryFolder() {
   ['mon', 'bld'].forEach((g) => fs.readdirSync(path.join(__dirname, '..', 'fixtures', g)).filter((f) => f.endsWith('.csv') && f !== 'BALANCES-PERSONAL.csv').forEach((f) => fs.copyFileSync(path.join(__dirname, '..', 'fixtures', g, f), path.join(d, f))));
   return d;
 }
-/** Which Food or Marketplace entry covers a downloaded tab, and the column its header line must contain. */
 function hubEntryFor(name) {
   const tab = (/(?:^|[ -])([A-Za-z]+)\.csv$/i.exec(name) || [])[1];
   if (tab && /^RR_FOOD/i.test(name) && EXPECTED.food[tab]) return { group: 'food', name: tab, entry: EXPECTED.food[tab], key: EXPECTED.food[tab].columns[0] };
@@ -90,3 +76,4 @@ if (COUNTS) console.log('Problems by kind: ' + (Object.keys(byCode).length ? Obj
 if (DRY) fs.rmSync(dir, { recursive: true, force: true });
 if (!checked) console.log('Nothing matched. Check the folder has files such as MON-REGISTER.csv or BLD-subject.csv.');
 process.exit(bad || !checked ? 1 : 0);
+

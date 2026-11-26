@@ -1,4 +1,3 @@
-/* Staff pages: the CD Hub's own rules (house.css, tokens.css, the hub's base styles copied from cdhub/index.html), plus the phone layout. */
 :root{--mut:var(--muted);--accent:var(--ink);--good:var(--ljr-5-text);--warn:var(--ljr-3-text);--bad:var(--ljr-2-text)}
 html.text-lg body{zoom:1.12}html.text-xl body{zoom:1.25}html.space-roomy body{line-height:1.75}
 *{box-sizing:border-box}
@@ -46,7 +45,6 @@ textarea.inp{padding:10px 14px}
 .job-prob{border:0;background:transparent;color:var(--muted);font-weight:600;font-size:var(--fs-small);min-height:44px;padding:0}
 .job-dogs{margin-top:8px}.job-dog{display:flex;align-items:center;gap:10px;min-height:44px}.job-dog input{width:22px;height:22px;flex:none}
 .job-btns{display:flex;gap:8px;flex-wrap:wrap}.job-move{margin-top:14px}
-/* BLDDone: a tick once the save script has it (lib/done-state.js) - the same on every staff screen */
 .done-line{display:flex;align-items:center;gap:6px;margin:8px 0 0;font-size:var(--fs-small);font-weight:600;color:var(--good)}
 .done-line.flag{color:var(--warn)}.done-line.bad{color:var(--bad)}.done-line.wait{color:var(--muted)}
 .done-ic,.dog-done{display:inline-grid;place-items:center;width:20px;height:20px;flex:none}.done-ic svg,.dog-done svg{width:18px;height:18px}
@@ -69,3 +67,4 @@ textarea.inp{padding:10px 14px}
 /* Show help switch (the owner 18 Nov 2026): on = ✓ and the selected side line */
 .btn[role="switch"][aria-checked="true"]{box-shadow:inset 3px 0 0 var(--ink)}
 .btn[role="switch"][aria-checked="true"]::before{content:"\2713\00a0"}
+

@@ -16,10 +16,8 @@ const ALL = {
     },
   },
 };
-// Pages that show a read time in the bar today (it moves into the Look menu on a phone).
 const READ = { home: /^Read \d/, money: /^Read \d/, marketplace: /^Read \d/, cdhub: /^Read \d/ };
 
-// Everything a person sees in the bar, measured: the header box, each item in the row and each button or link.
 function measure() {
   const h = document.querySelector('header');
   const hr = h.getBoundingClientRect();
@@ -44,7 +42,6 @@ for (const [hub, H] of Object.entries(ALL)) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await H.open(page, guard);
       const m = await page.evaluate(measure);
-      // Exactly 56px high, one row: every item sits inside the bar on the same middle line.
       expect(m.rows, 'the bar is one .house-row').toBe(true);
       expect(m.height, 'header height').toBe(56);
       expect(m.items.length).toBeGreaterThan(2);
@@ -53,21 +50,18 @@ for (const [hub, H] of Object.entries(ALL)) {
         expect(it.bottom, it.tag + ' inside the bar (bottom)').toBeLessThanOrEqual(m.bottom + 0.5);
         expect(Math.abs(it.mid - (m.top + 28)), it.tag + ' on the one middle line').toBeLessThanOrEqual(1);
       }
-      // Every button or link in the bar is an icon button with a name and no words on screen; only Sign in (and the name) has words.
       for (const p of m.presses) {
-        if (p.inH1 || p.signin || p.pill) continue;   // the name, the one Sign in word button, Studio's status pills (desktop)
+        if (p.inH1 || p.signin || p.pill) continue;
         expect(p.icon, 'icon-only button: ' + p.what).toBe(true);
         expect(p.label, 'aria-label: ' + p.what).not.toBe('');
         expect(p.title, 'title: ' + p.what).not.toBe('');
         expect(p.words, 'no visible words: ' + p.what).toBe('');
       }
-      // Buttons are 36px on a desktop and 44px on a phone.
       for (const b of await page.locator('header .house-ib:visible').all()) {
         const r = await b.boundingBox();
         expect(Math.round(r.height), 'icon button height').toBe(width === 390 ? 44 : 36);
         expect(Math.round(r.width), 'icon button width').toBe(width === 390 ? 44 : 36);
       }
-      // Home: exactly one link named Dashboard, to ../, top left (first in the bar). None on the home page itself.
       const home = page.locator('header a[aria-label="Dashboard"]');
       if (hub === 'home') await expect(home).toHaveCount(0);
       else {
@@ -77,13 +71,10 @@ for (const [hub, H] of Object.entries(ALL)) {
         const hb = await home.boundingBox(), first = Math.min(...m.items.map((i) => i.left));
         expect(hb.x, 'Home is the first thing in the bar').toBeLessThanOrEqual(first + 0.5);
       }
-      // Refresh has one name everywhere.
       await expect(page.locator('header').getByRole('button', { name: 'Refresh', exact: true })).toBeVisible();
-      // Look on every page.
       const look = page.locator('header').getByRole('button', { name: 'Look', exact: true });
       await expect(look).toHaveCount(1);
       await expect(look).toBeVisible();
-      // Sign out: in the bar on a desktop; on a phone it (and the read time) leave the bar and sit inside Look.
       const out = page.locator('header').getByRole('button', { name: 'Sign out', exact: true });
       if (width === 1280) {
         await expect(out).toBeVisible();
@@ -125,3 +116,4 @@ for (const [hub, H] of Object.entries(ALL)) {
     await expect(look).toBeFocused();
   });
 }
+

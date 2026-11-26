@@ -20,7 +20,7 @@ async function setup(page, tables, store) {
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }] } });
     const b = JSON.parse(route.request().postData());
-    if (String(b.action).indexOf('read') === 0) return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], tables, role: 'OWNER' } } });
+    if (String(b.action).indexOf('read') === 0) return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], tables, role: 'USER' } } });
     sent.push(b);
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'rdg-' + sent.length, who: 'Staff A', at: '2026-01-12T09:14:00+00:00' } } });
   });
@@ -44,14 +44,14 @@ test('the round lists each thermometer in a two-thermometer room by name; a save
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-h', thermometer_id: 'th-h6' } });
   await page.getByRole('button', { name: 'CLR pressed' }).click();
-  await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);   // the tick is the shared done line (BLDDone)
+  await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
   await expect(page.locator('.cards .card', { hasText: 'H5/6 · H6' }).locator('.done-line')).toContainText(/^Done \d\d:\d\d/);
 });
 
 test('a thermometer QR opens that exact thermometer, no picking, and saves its thermometer_id', async ({ page }) => {
   const sent = await setup(page, base(), { 'bld.temp.thermometer': { thermometerId: 'th-h6' } });
   await page.goto('cdhub/staff/#m/temperature');
-  await expect(page.getByLabel('MAX')).toBeVisible();   // the boxes are open at once (demo 18 Nov 2026)
+  await expect(page.getByLabel('MAX')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'H5/6 · H6' })).toBeVisible();
   await expect(page.locator('.cards')).toHaveCount(0);   // no picking
   await page.getByLabel('MAX').fill('18.0');
@@ -72,7 +72,7 @@ test('a room QR in a room with two thermometers shows both, by name, first; noth
 test('a room QR in a room with one thermometer opens it straight away', async ({ page }) => {
   const sent = await setup(page, base(), { 'bld.move.room': { areaId: 'area-s' } });
   await page.goto('cdhub/staff/#m/temperature');
-  await expect(page.getByLabel('MAX')).toBeVisible();   // the boxes are open at once (demo 18 Nov 2026)
+  await expect(page.getByLabel('MAX')).toBeVisible();
   await page.getByLabel('MAX').fill('18.0');
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();
@@ -109,7 +109,6 @@ test('year report: a room with two thermometers can be opened whole or per therm
   await expect(rows.first()).toContainText('16.0');
 });
 
-// OVERSEER 5, 12 Nov 2026: each round card says Due, the reading, Outside (with the reading), or Room empty.
 test('round cards show due, the reading, outside the limit, or room empty', async ({ page }) => {
   const t = base();
   t.area.push({ id: 'area-e', code: 'E1', group_sort: '3' });
@@ -137,7 +136,7 @@ test('the owner 12 Nov: the card shows its tick as soon as the save reply is OK,
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => sent.length).toBe(1);
-  await expect(page.getByText('✓ Saved · Staff A · 09:14')).toBeVisible();   // demo 18 Nov: who saved it and when
+  await expect(page.getByText('✓ Saved · Staff A · 09:14')).toBeVisible();
   await page.getByRole('button', { name: '← Rooms' }).click();
   await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
   await expect(page.locator('.cards .card', { hasText: 'S1' }).locator('.done-line')).toContainText(/^Done \d\d:\d\d/);
@@ -147,7 +146,7 @@ test('20 Nov (PR 731): a reading saved while another is still sending says "Wait
   const sent = await setup(page, base());
   let release; const gate = new Promise((r) => { release = r; });
   let held = 0;
-  await page.route(SCRIPT, async (route) => {   // hold the first save's reply until released
+  await page.route(SCRIPT, async (route) => {
     const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
     if (b.action && String(b.action).indexOf('read') !== 0 && held++ === 0) await gate;
     return route.fallback();
@@ -168,3 +167,4 @@ test('20 Nov (PR 731): a reading saved while another is still sending says "Wait
   await expect(page.getByText('✓ Saved · Staff A · 09:14')).toBeVisible();
   await expect.poll(() => sent.length).toBe(2);
 });
+

@@ -33,7 +33,7 @@ test('Compliance opens with a calendar per daily job; yesterday done is green; D
   await expect(bowls.locator(`[data-day="${today}"]`)).toHaveClass(/\bdue\b/);
   await expect(cal.locator('[data-jcal="whole_site_clean"] .jd.missed')).toHaveCount(0);   // never recorded: not tracked, not "missed"
 
-  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'chk-1', ids: ['chk-1'], at: new Date().toISOString(), who: 'Pretend Owner' } }; }; });
+  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'chk-1', ids: ['chk-1'], at: new Date().toISOString(), who: 'Pretend User' } }; }; });
   await bowls.locator('[data-jcal-done="food_bowls"]').click();
   await expect(page.locator('[data-jcal="food_bowls"]').locator(`[data-day="${today}"]`)).toHaveClass(/\bdone\b/);
   await expect(page.locator('[data-jcal="food_bowls"] [data-jcal-done]')).toHaveCount(0);
@@ -72,7 +72,7 @@ test('tapping a day on a calendar opens who and when, and its diary photo; tappi
   await expect(detail).toContainText('From the diary');
   await expect(detail.locator('[data-jcal-photo]')).toHaveAttribute('href', 'https://drive.google.com/file/d/1FAKEDIARYPAGEIDFORTESTS000000aa/view');
   await expect(detail.locator('[data-jcal-photo] img')).toHaveAttribute('alt', 'evidence: diary-page.jpg');
-  await expect(detail.locator('[data-jcal-photo] img')).toHaveAttribute('src', /^blob:/);   // read with the sign-in, never a public Google address
+  await expect(detail.locator('[data-jcal-photo] img')).toHaveAttribute('src', /^blob:/);
   await page.locator(`[data-jcal="food_bowls"] [data-jcal-day="${yest}"]`).click();
   await expect(page.locator('[data-jcal-detail]')).toHaveCount(0);
 });
@@ -91,7 +91,7 @@ test('Import: a chosen file is checked row by row; Import saves only the ready r
   await page.locator('[data-jcal-file]').setInputFiles({ name: 'records.csv', mimeType: 'text/csv', buffer: Buffer.from(file) });
   await expect(page.locator('[data-jcal-imp-count]')).toContainText('2 of 4 rows ready');
   await expect(page.locator('.jcal-imp-t tr[data-ok="0"]')).toHaveCount(2);
-  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'imp-' + window.__sent.length, ids: ['imp-' + window.__sent.length], at: new Date().toISOString(), who: 'Pretend Owner' } }; }; });
+  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'imp-' + window.__sent.length, ids: ['imp-' + window.__sent.length], at: new Date().toISOString(), who: 'Pretend User' } }; }; });
   await page.locator('[data-jcal-import-go]').click();
   await expect(page.locator('[data-jcal-imp-done]')).toHaveText('Imported 2 of 2.');
   const sent = await page.evaluate(() => window.__sent);
@@ -114,13 +114,12 @@ test('Import: Cancel clears the file with nothing saved; Stop during an import l
   await page.locator('[data-jcal-import]').click();
   const file = `Csv,,,\ndate,job,outcome,note\n${day(2)},food_bowls,done,\n${day(3)},food_bowls,done,\n${day(4)},food_bowls,done,\n`;
   await page.locator('[data-jcal-file]').setInputFiles({ name: 'records.csv', mimeType: 'text/csv', buffer: Buffer.from(file) });
-  await expect(page.locator('[data-jcal-imp-count]')).toContainText('3 of 3 rows ready');   // the title line is not a row
+  await expect(page.locator('[data-jcal-imp-count]')).toContainText('3 of 3 rows ready');
   await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'x' } }; }; });
   await page.locator('[data-jcal-import-cancel]').click();
   await expect(page.locator('[data-jcal-cancelled]')).toContainText('Nothing was saved');
   await expect(page.locator('[data-jcal-import-go]')).toHaveCount(0);
   expect(await page.evaluate(() => window.__sent.length)).toBe(0);
-  // choose the file again; this time Import, then Stop after the first row
   await page.locator('[data-jcal-file]').setInputFiles({ name: 'records.csv', mimeType: 'text/csv', buffer: Buffer.from(file) });
   await expect(page.locator('[data-jcal-imp-count]')).toContainText('3 of 3 rows ready');
   await page.evaluate(() => { window.__sent = []; let n = 0; window.sinkSend = (b) => { window.__sent.push(b); n++; return new Promise((r) => { window.__release = () => r({ ok: true, result: { status: 'saved', id: 's' + n } }); }); }; });
@@ -153,21 +152,20 @@ test('daily records: done, part done and missed look different (not by colour al
       const card = getComputedStyle(k.closest('.card') || document.body).backgroundColor;
       return { part: { frame: s('part').boxShadow, fill: s('part').backgroundColor }, missed: { frame: s('missed').boxShadow, fill: s('missed').backgroundColor, mark: a.content, markColour: a.color }, done: s('done').backgroundColor, card: card };
     });
-    expect(look.missed.mark).toBe('"✕"');                          // missed has its own mark, so it never relies on colour
+    expect(look.missed.mark).toBe('"✕"');
     expect(look.part.frame).not.toBe(look.missed.frame);           // different frame colours
-    expect(look.part.fill).not.toBe(look.missed.fill);             // part done has a fill, missed has none
+    expect(look.part.fill).not.toBe(look.missed.fill);
     expect(look.done).not.toBe(look.part.fill);
     const [l1, l2] = [lum(look.missed.markColour), lum(look.card)].sort((x, y) => y - x);
     expect((l1 + 0.05) / (l2 + 0.05), scheme + ' cross contrast').toBeGreaterThanOrEqual(4.5);
   }
-  // a real missed day in the month carries the class (and so the cross)
   await expect(page.locator('#jobCals [data-jcal="food_bowls"] .jd.missed').first()).toBeVisible();
   // done days are green, not the grey button fill (the owner: the ticks were grey)
   const doneBg = await page.locator('#jobCals button.jd.done').first().evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(doneBg.replace(/\s/g, '')).toMatch(/81,173,87/);
 });
 
-test('copied water bowls ticks show on the calendar and new saves use the original @regression', async ({ page, guard }) => {
+test('t-cdhub-job-calendar-spec-2', async ({ page, guard }) => {
   const today = london(new Date()), yest = london(new Date(Date.now() - 86400000));
   addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, [
     'cty-water_bowls-1,t,water_bowls,Water bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line',
@@ -189,13 +187,13 @@ test('copied water bowls ticks show on the calendar and new saves use the origin
   await expect(bowls).toBeVisible();
   if (yest.slice(0, 7) !== today.slice(0, 7)) await cal.locator('[data-jcal-month]').first().click();
   await expect(bowls.locator(`[data-day="${yest}"]`)).toHaveClass(/\bdone\b/);
-  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'chk-wb', ids: ['chk-wb'], at: new Date().toISOString(), who: 'Pretend Owner' } }; }; });
+  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'chk-wb', ids: ['chk-wb'], at: new Date().toISOString(), who: 'Pretend User' } }; }; });
   await bowls.locator('[data-jcal-done="water_bowls"]').click();
   const sent = await page.evaluate(() => window.__sent);
   expect(sent[0].fields.check_type_id).toBe('cty-water_bowls-1');
 });
 
-test('September before the daily run is not tracked, and a vet dot is only on Health @regression', () => {
+test('t-cdhub-job-calendar-spec-3', () => {
   const assert = require('node:assert/strict');
   const C = require('../../cdhub/job-calendar.js');
   const testTypes = [
@@ -223,7 +221,7 @@ test('September before the daily run is not tracked, and a vet dot is only on He
   assert.doesNotMatch(html.slice(html.indexOf('data-jcal="exercise_all"')), /class="jd [^"]*vet/);
 });
 
-test('exercise counts the adult dogs only and hides a backfill note @regression', () => {
+test('t-cdhub-job-calendar-spec-4', () => {
   const assert = require('node:assert/strict');
   const C = require('../../cdhub/job-calendar.js');
   const ex = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01' };
@@ -233,7 +231,7 @@ test('exercise counts the adult dogs only and hides a backfill note @regression'
   ];
   const v = {
     today: '2026-11-25', types: [ex], dogs, esc: (s) => String(s), dmy: (s) => s,
-    logs: [{ id: 'e1', check_type_id: 'cty-ex', subject_id: 'd1', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill Lisa 25 Nov', taken_by: 'Lisa Carson' }],
+    logs: [{ id: 'e1', check_type_id: 'cty-ex', subject_id: 'd1', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill User 25 Nov', taken_by: 'User' }],
     rules: [{ rule_key: 'compliance.calendar.exercise_all', value: '1', effective_from: '2026-01-01' }],
     calOpen: { key: 'exercise_all', iso: '2026-11-08' }
   };
@@ -244,3 +242,4 @@ test('exercise counts the adult dogs only and hides a backfill note @regression'
   assert.match(html, /class="jd done"/);
   assert.doesNotMatch(html, /backfill/i);
 });
+

@@ -1,9 +1,3 @@
-/*
- * Styles for the write-path screens. They borrow the host page's own colours, so one file fits
- * the Bloodline redesign (--surface, --ink, --muted, --line, --p2/--p5), the Board (--card, --ink,
- * --mut, --line, --good/--warn/--bad, --accent) and the standalone test page. Fallbacks make it
- * readable on its own. Light and dark follow the host page.
- */
 .bs{
   --bs-card:var(--card,var(--surface,#fff));
   --bs-ink:var(--ink,var(--ljr-ink,#2C2C2A));
@@ -45,13 +39,6 @@
 .bs-empty{padding:16px;border:1px dashed var(--bs-line);border-radius:16px;color:var(--bs-mut);font-size:13px;text-align:center}
 @media (prefers-reduced-motion:no-preference){.bs-btn{transition:opacity .15s}}
 
-/* ------------------------------------------------------------------------------------------------
- * The daily location check uses the CD Hub's font and radius. Originally The Board's look: separate fonts for
- * headings and text, soft green page, white cards, big round yes/no taps, outlined call-to-action.
- * The tokens are set here (not borrowed from the host page) so it looks the same inside Bloodline.
- * Fonts are loaded by the page (bloodline-wire.js adds the Google Fonts link); if they cannot load,
- * the system fonts below are used and nothing breaks.
- * ---------------------------------------------------------------------------------------------- */
 .bs.bs-board{
   --bs-card:#ffffff; --bs-ink:var(--ljr-ink,#2C2C2A); --bs-mut:var(--ljr-muted,#615A53); --bs-line:var(--ljr-0,#C7C0B4); --bs-chip:var(--ljr-0-tint,#F0ECE5);
   --bs-good:var(--ljr-5-text,#1C6A27); --bs-warn:var(--ljr-3-text,#894C01); --bs-bad:var(--ljr-2-text,#AF2420); --bs-accent:var(--ljr-ink,#2C2C2A);
@@ -92,3 +79,4 @@
 .bs-board .bs-rest{background:var(--bs-card);color:var(--bs-ink);border-color:var(--bs-line);font-family:var(--bs-display);font-weight:600;font-size:19px;min-height:60px;border-radius:var(--radius,12px)}
 .bs-wrong{margin-top:8px;font-size:12.5px;color:var(--bs-mut)}
 @media (prefers-reduced-motion:reduce){.bs-board .bs-prog i{transition:none}}
+

@@ -23,7 +23,6 @@ const ALL = {
 const ROSE = 'rgb(230, 68, 61)', GREY = 'rgb(138, 127, 112)', BLACK = 'rgb(30, 28, 26)';   // black = broken (the owner, 3 Nov 2026)
 const CLEAR = /^(transparent|rgba\(0, 0, 0, 0\))$/;
 
-// Every tab on the bar: its box, its word's room, its icon, its count (box, colours, whether a number shows) and its name.
 function read() {
   const nav = [...document.querySelectorAll('nav.house-tabs')].find((n) => n.getBoundingClientRect().height > 0);
   return [...nav.querySelectorAll(':scope > .ht, :scope > .ht-more > .ht')].map((t) => {
@@ -49,10 +48,7 @@ for (const [hub, H] of Object.entries(ALL)) {
     await page.mouse.move(195, 200);
     const tabs = await page.evaluate(read);
     expect(tabs.length).toBeGreaterThan(2);
-    // One size: every tab the width of the narrowest (+-1px). The only tab that may be wider is one whose single 14px word cannot
-    // fit the bar's equal share at all (then it keeps just its word's room, never more, and the word stays whole).
     const share = Math.min(...tabs.map((t) => t.w));
-    // Square unless a word needs more: then every tab takes the longest word's room (no wider), and stays at least 56px high.
     const longest = Math.max(...tabs.filter((t) => t.wordRoom <= share + 1).map((t) => t.wordRoom));
     for (const t of tabs) {
       if (t.wordRoom > share + 1) expect(t.w, `${hub} ${t.word}: wider only by its word's room (${t.wordRoom})`).toBeLessThanOrEqual(t.wordRoom + 1);
@@ -80,7 +76,6 @@ for (const [hub, H] of Object.entries(ALL)) {
       expect(t.n.bg, `${hub} ${t.word}: rose = late, black = broken, grey = waiting`).toBe(t.n.need ? ROSE : t.n.broken ? BLACK : GREY);
       expect(t.n.px, `${hub} ${t.word}: no number shows`).toBe(0);
       expect(t.n.color, `${hub} ${t.word}: no number shows`).toMatch(CLEAR);
-      // Top right of the icon: just off its right edge, level with its top, clear of it and inside the tab.
       expect(t.n.l, `${hub} ${t.word}: the dot starts at the icon's right edge`).toBeGreaterThanOrEqual(t.icon.r);
       expect(t.n.l - t.icon.r, `${hub} ${t.word}: ...right beside it`).toBeLessThanOrEqual(3);
       expect(Math.abs(t.n.t - t.icon.t), `${hub} ${t.word}: level with the icon's top`).toBeLessThanOrEqual(2);
@@ -94,7 +89,6 @@ for (const [hub, H] of Object.entries(ALL)) {
   test(`${hub} at 390: the dot and the name follow the count (0 = none, waiting = grey, late = rose)`, async ({ page, guard }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await H.open(page, guard);
-    // The first tab with a count place: write 3 waiting, then 1 late, then 0, as the pages do.
     const ix = await page.evaluate(() => [...document.querySelectorAll('nav.house-tabs > .ht, nav.house-tabs > .ht-more > .ht')].findIndex((t) => t.querySelector(':scope > .n') && t.getBoundingClientRect().width));
     expect(ix).toBeGreaterThanOrEqual(0);
     const tab = page.locator('nav.house-tabs > .ht, nav.house-tabs > .ht-more > .ht').nth(ix);
@@ -177,3 +171,4 @@ for (const [hub, [full, short]] of Object.entries(SHORT)) {
     expect(wide.name, `${hub}: the name keeps the full word`).toMatch(new RegExp('^' + full + '( \\d+ (late|waiting))?$'));
   });
 }
+

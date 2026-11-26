@@ -1,7 +1,3 @@
-// Stage 2b: one Drives tab with one pill row (Shared drives · Work My Drive · Personal Drive · Drive check;
-// stage 9 adds Dropbox · iCloud · Mac),
-// old addresses redirect, one purpose line per page, look-only Drives pages, and a second look-only sign-in
-// for Personal Drive that never touches the work sign-in.
 const { test, expect } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 const { execSync } = require('child_process');
@@ -104,7 +100,6 @@ test.describe('Drives: tab, pills and purpose lines', () => {
     await expect(page.locator('[data-pcp-list="work"]')).toContainText('invoice-a.pdf');
     await expect(page.locator('[data-pcp-inbin]')).toContainText('ready in Bin');
     await tabClick(page, '#mainNav a[data-nav="bin"]');
-    // Stage 5: the rename step sits at the end of Ready to bin, next to the one Bin these button.
     await expect(page.locator('#sweepCard [data-bin-list="pcp-rename"]')).toContainText('invoice-a.pdf');
     await expect(page.locator('#sweepCard [data-action="pcpmark"]')).toHaveCount(1);
     await expect(page.locator('#sweepCard [data-action="sweep"]')).toHaveCount(1);
@@ -141,11 +136,9 @@ test.describe('Personal Drive: a second, look-only sign-in', () => {
     await page.locator('#view [data-action="pcpscan"][data-slot="personal"]').click();
     await expect(page.locator('#view')).toContainText(/Finished/);
     await expect(page.locator('[data-pcp-list="personal"]')).toContainText('invoice-a.pdf');
-    // The work sign-in is the same one, and the personal token is in no storage at all.
     expect(await page.evaluate(() => localStorage.getItem('ljr-dash-auth'))).toBe(workBefore);
     const stored = await page.evaluate(() => JSON.stringify(Object.assign({}, localStorage)) + JSON.stringify(Object.assign({}, sessionStorage)) + document.cookie);
     expect(stored).not.toContain('FAKE-PERSONAL-TOKEN');
-    // Personal token: only reads of the personal My Drive list. Shared drives and everything else: the work token.
     const personal = w.calls.filter((c) => c.auth === 'Bearer FAKE-PERSONAL-TOKEN');
     expect(personal.length).toBeGreaterThan(0);
     for (const c of personal) {
@@ -157,7 +150,6 @@ test.describe('Personal Drive: a second, look-only sign-in', () => {
     expect(work.some((c) => c.path === '/drives' || c.url.includes('corpora=drive'))).toBe(true);
     for (const c of w.calls.filter((x) => x.path === '/drives' || x.url.includes('corpora=drive'))) expect(c.auth).toBe('Bearer FAKE-TEST-TOKEN');
     expect(w.calls.filter((c) => c.method !== 'GET')).toEqual([]);
-    // Back on a work page, every new call uses the work token.
     const n = w.calls.length;
     await tabClick(page, '#mainNav a[data-nav="bin"]');
     await expect(page.locator('#hereTitle')).toHaveText('Bin');
@@ -179,7 +171,6 @@ test.describe('Personal Drive: a second, look-only sign-in', () => {
 });
 
 test.describe('Personal address stays out of the public repo', () => {
-  // CJ9 stage 5 (merged) removed the old lines, so the stage 2b done-test is now strict: 0 places outside config.js.
   test('the personal mail domain appears nowhere outside config.js', () => {
     let hits = '';
     try { hits = execSync("git grep -n -i 'gmail\\.com' -- . ':!config.js'", { cwd: ROOT, encoding: 'utf8' }); } catch (e) { hits = ''; }
@@ -187,3 +178,4 @@ test.describe('Personal address stays out of the public repo', () => {
     expect(lines).toEqual([]);
   });
 });
+

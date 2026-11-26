@@ -34,6 +34,6 @@ playwright-report/
 # Cloudflare Pages build output (tools/build-site)
 _site/
 
-# PR autopilot standing approval (Lisa-owned, no data)
+# PR autopilot standing approval (User-owned, no data)
 !merge-policy.json
 __pycache__/

@@ -1,4 +1,3 @@
-// Data checks: "Time zone not set" until a BLD-locale row has a time_zone in force today (STAFF, 14 Nov 2026). Rows invented.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
 
@@ -37,3 +36,4 @@ test('a time zone in force today passes and is shown', async ({ page, guard }) =
   await expect(row(page)).toHaveClass(/ ok/);
   await expect(row(page)).toContainText('Europe/London');
 });
+

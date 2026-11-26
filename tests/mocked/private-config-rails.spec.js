@@ -1,7 +1,3 @@
-// Private settings loader (config.js, bottom block): the safety rails, checked without a browser.
-// A Drive file may only fill in ids, Google addresses, the owner address and names that already have a place in
-// config.js. It can never change the sign-in id, the permissions, the Google API addresses or a live / dryRun switch.
-// Every value below is invented.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -19,26 +15,25 @@ test.describe('Private settings: what a Drive file may and may not change', () =
     const { cfg, L } = fresh();
     expect(L.status().state).toBe('off');
     expect(cfg.privateConfig).toEqual({ enabled: true, dryRun: true, fileName: 'DASH_CONFIG.json' });
-    // The settings block is plain data, so a copy through JSON is the same thing (the loader relies on this).
     expect(JSON.parse(JSON.stringify(cfg))).toEqual(cfg);
   });
 
-  test('ids, the owner address, Google addresses and names with a place in config.js are accepted', () => {
+  test('ids, the user address, Google addresses and names with a place in config.js are accepted', () => {
     const { cfg, L } = fresh();
     const p = L.plan(cfg, {
       _note: 'notes for people are ignored',
       home: { ledgerFileId: 'made-up-ledger', runLogFolderId: 'made-up-runlog' },
       cdhub: { folderName: 'Invented / folder name' },
-      money: { owner: 'someone@example.com', driveId: 'made-up-drive', folders: { ops: 'made-up-ops' } },
+      money: { user: 'someone@example.com', driveId: 'made-up-drive', folders: { ops: 'made-up-ops' } },
       urls: { moveSheet: SHEET },
       factory: { ideaFormUrl: 'https://docs.google.com/forms/d/e/made-up/viewform' },
       estate: { sheetId: 'made-up-estate' },
     });
-    expect(paths(p)).toEqual(['cdhub.folderName', 'estate.sheetId', 'factory.ideaFormUrl', 'home.ledgerFileId', 'home.runLogFolderId', 'money.driveId', 'money.folders.ops', 'money.owner', 'urls.moveSheet']);
+    expect(paths(p)).toEqual(['cdhub.folderName', 'estate.sheetId', 'factory.ideaFormUrl', 'home.ledgerFileId', 'home.runLogFolderId', 'money.driveId', 'money.folders.ops', 'money.user', 'urls.moveSheet']);
     expect(p.skipped).toEqual([]);
     expect(L.apply(cfg, p)).toBe(9);
     expect(cfg.home.ledgerFileId).toBe('made-up-ledger');
-    expect(cfg.estate.sheetId).toBe('made-up-estate'); // an empty slot in config.js can be filled from Drive
+    expect(cfg.estate.sheetId).toBe('made-up-estate');
     expect(cfg.money.folders.ops).toBe('made-up-ops');
     expect(L.apply(cfg, p)).toBe(0); // the same values again change nothing
   });
@@ -76,7 +71,7 @@ test.describe('Private settings: what a Drive file may and may not change', () =
     const p = L.plan(cfg, JSON.parse(JSON.stringify({
       madeUpSection: { anything: 'x' },
       home: { nope: 'x', ledgerFileId: '', cfFolderId: 'has spaces in it', readFirstId: 42, dbxFolderId: ['x'] },
-      money: { owner: 'not-an-address', folders: 'x' },
+      money: { user: 'not-an-address', folders: 'x' },
       urls: { moveSheet: 'http://docs.google.com/not-https' },
       factory: { ideaFormUrl: 'https://docs.google.com.example.org/forms/made-up' },
       projectsHub: { webAppUrl: 'https://example.com/made-up' },
@@ -86,11 +81,11 @@ test.describe('Private settings: what a Drive file may and may not change', () =
     expect(p.set).toEqual([]);
     expect(why(p, 'madeUpSection')).toBe('no place for it in config.js');
     expect(why(p, 'home.nope')).toBe('no place for it in config.js');
-    expect(why(p, 'home.ledgerFileId')).toBe('empty'); // an empty value never replaces a filled one
+    expect(why(p, 'home.ledgerFileId')).toBe('empty');
     expect(why(p, 'home.cfFolderId')).toBe('not a valid id');
     expect(why(p, 'home.readFirstId')).toBe('not a valid id');
     expect(why(p, 'home.dbxFolderId')).toBe('not a valid id');
-    expect(why(p, 'money.owner')).toBe('not a valid email');
+    expect(why(p, 'money.user')).toBe('not a valid email');
     expect(why(p, 'money.folders')).toBe('not a settings group');
     expect(why(p, 'urls.moveSheet')).toBe('not a valid url');
     expect(why(p, 'factory.ideaFormUrl')).toBe('not a valid url'); // a look-alike host is not Google
@@ -118,7 +113,6 @@ test.describe('Private settings: what a Drive file may and may not change', () =
     const { cfg, L } = fresh();
     const had = cfg.cleanup.excludedDrives.map((d) => d.id);
     expect(had.length).toBeGreaterThan(0);
-    // An empty list (an attempt to remove the built-in entry) changes nothing.
     expect(L.apply(cfg, L.plan(cfg, { cleanup: { excludedDrives: [] } }))).toBe(0);
     expect(cfg.cleanup.excludedDrives.map((d) => d.id)).toEqual(had);
     const p = L.plan(cfg, { cleanup: { excludedDrives: [{ id: 'made-up-never-read', name: 'Invented never-read drive' }, { id: had[0], name: 'Same one again' }, { id: 'bad id' }, 'text'] } });
@@ -132,9 +126,10 @@ test.describe('Private settings: what a Drive file may and may not change', () =
 
   test('what was left out is reported by setting name only, never by value', () => {
     const { cfg, L } = fresh();
-    const p = L.plan(cfg, { money: { owner: 'secret-looking-value' }, home: { cfFolderId: 'another secret value' } });
+    const p = L.plan(cfg, { money: { user: 'secret-looking-value' }, home: { cfFolderId: 'another secret value' } });
     const text = JSON.stringify(p.skipped);
     expect(text).not.toContain('secret');
-    expect(p.skipped.map((s) => s.path)).toEqual(['money.owner', 'home.cfFolderId']);
+    expect(p.skipped.map((s) => s.path)).toEqual(['money.user', 'home.cfFolderId']);
   });
 });
+

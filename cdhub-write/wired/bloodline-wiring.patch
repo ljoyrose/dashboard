@@ -13,14 +13,14 @@
 +<script src="wired/bloodline-wire.js"></script>
  <script>
  /* ---------------- BLD hub. Hub code BLD. Base files would be BLD-*.csv. ----------------
-    STORE: collection "answers", one doc per question id. Named reader: Claude, when Lisa
+    STORE: collection "answers", one doc per question id. Named reader: Claude, when User
 @@ -327,6 +334,9 @@
  var STAGES=[
   ['map','Map','Where this build is'],
   ['dash','The dashboard','What you see when you open it'],
-+ ['confirm','Where is everyone?','Daily location check. Saving is off until Lisa switches it on'],
-+ ['entertemp','Enter temperatures','Staff entry. Saving is off until Lisa switches it on'],
-+ ['staffin','Staff input','Roster. Owner only, every entry goes into the approvals queue'],
++ ['confirm','Where is everyone?','Daily location check. Saving is off until User switches it on'],
++ ['entertemp','Enter temperatures','Staff entry. Saving is off until User switches it on'],
++ ['staffin','Staff input','Roster. User only, every entry goes into the approvals queue'],
   ['tablemap','The table map','every table, grouped so they fit in your head'],
   ['relations','How the tables join up','which table points at which \u2014 derived, not typed'],
   ['guidance','Guidance in, rules out','The white-label mechanism \u2014 and what Wales actually says'],

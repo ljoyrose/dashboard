@@ -1,9 +1,3 @@
-// Web Estate Hub: email sending and verification words, read from DNS-over-HTTPS answers.
-// Pure: no network, and nothing here writes DNS, a registrar or a mailbox.
-// The caller (the Apps Script engine or a node script) fetches the JSON and passes it in.
-// Input format: dns.google/resolve JSON {Status, Answer:[{name, type, data}]}. TXT data arrives quoted and may be
-// split into several quoted chunks, which are joined. Every example in the tests is invented (example.com style).
-// Optional row.forward_chain (an array, or "a → b → c") comes from the private estate sheet at runtime. Absence is normal.
 (function (root, factory) {
   'use strict';
   var api = factory();
@@ -21,7 +15,6 @@
     return list.filter(function (a) { return a && (type === undefined || a.type === type); });
   }
 
-  // One TXT answer's data -> the joined string. '"v=spf1 a" " -all"' -> 'v=spf1 a -all'. Unquoted data is kept as is.
   function joinTxt(data) {
     var s = String(data == null ? '' : data).trim();
     if (s.charAt(0) !== '"') return s;
@@ -30,16 +23,12 @@
     return out;
   }
 
-  // DoH answer -> joined TXT strings (TXT type only; CNAME hops in the answer are skipped).
   function txtRecords(doh) {
     return answers(doh, TYPE.TXT).map(function (a) { return joinTxt(a.data); });
   }
 
   function asTxts(x) { return Array.isArray(x) ? x.map(String) : txtRecords(x); }
 
-  // One SPF record's syntax. Unknown mechanisms, and a missing all (unless redirect=), are broken.
-  // include, a, mx, ptr, exists and redirect each count as one lookup. More than 10 is broken.
-  // Nested includes are not walked: only the terms in this one TXT answer are visible.
   function spfProblems(record) {
     var terms = String(record || '').trim().split(/\s+/).slice(1);
     var problems = [], lookups = 0, hasAll = false, hasRedirect = false;
@@ -76,8 +65,6 @@
     return { problems: problems, lookups: lookups };
   }
 
-  // SPF: exactly one v=spf1 record with sound syntax passes ('pass', shown as present). More than one is a fault
-  // that breaks SPF for every receiver, so it reads 'two records' and never as passing. Broken syntax reads 'broken'.
   function spfWord(txts) {
     var spf = asTxts(txts).filter(function (t) { return /^v=spf1(\s|$)/i.test(t.trim()); });
     if (!spf.length) return { word: 'missing', count: 0, record: '' };
@@ -87,9 +74,6 @@
     return { word: 'pass', count: 1, record: spf[0] };
   }
 
-  // DKIM at the small allow-list (DKIM_SELECTORS). A hit on any of them, not only google, is found.
-  // Not found is not a fault on its own. When the MX is Google Workspace and none of the list answers, it is
-  // 'missing (google)': the google selector Workspace publishes is absent (2.1). A custom selector that answers still counts.
   function dkimWord(resultsBySelector, mx) {
     var by = resultsBySelector || {}, found = [];
     Object.keys(by).forEach(function (sel) {
@@ -101,7 +85,6 @@
     return { word: 'not found', selectors: [] };
   }
 
-  // DMARC at _dmarc.<domain>: the p= policy, 'missing', or 'two records' (receivers then ignore DMARC).
   function dmarcWord(txts) {
     var recs = asTxts(txts).filter(function (t) { return /^v=DMARC1\s*(;|$)/i.test(t.trim()); });
     if (!recs.length) return { word: 'missing', count: 0 };
@@ -110,7 +93,6 @@
     var p = m ? m[1].toLowerCase() : '';
     var rua = /(?:^|;)\s*rua\s*=/i.test(recs[0]);
     if (['none', 'quarantine', 'reject'].indexOf(p) === -1) return { word: 'none', count: 1, policy: p || '(no p=)', rua: rua };
-    // p=none with nowhere to send reports is weak. p=none that has an rua stays 'none' (monitor only).
     if (p === 'none' && !rua) return { word: 'weak', count: 1, policy: 'none', rua: false };
     return { word: p, count: 1, policy: p, rua: rua };
   }
@@ -137,7 +119,6 @@
     return { word: word, provider: none ? '' : word, host: host || '', present: !none, forwarding: !!forwarding };
   }
 
-  // Lowest-preference MX host as a plain provider word. 'none' when there is no MX (present is false).
   function mxHost(doh) {
     var mx = answers(doh, TYPE.MX).map(function (a) {
       var parts = String(a.data || '').trim().split(/\s+/);
@@ -151,7 +132,6 @@
     return mxResult(host.split('.').slice(-2).join('.'), host, false);
   }
 
-  // 'none', or 'present · Google Workspace'. Blank when mail was not checked.
   function mxLabel(mx) {
     var w = wordOf(mx);
     if (!w) return '';
@@ -170,7 +150,6 @@
     return false;
   }
 
-  // Optional forward_chain: an array of stops, or one string split on arrows or the word "to".
   function chainParts(v) {
     if (Array.isArray(v)) return v.map(function (s) { return String(s).trim(); }).filter(Boolean);
     var s = String(v == null ? '' : v).trim();
@@ -178,9 +157,6 @@
     return s.split(/\s*(?:→|->|⇒|>|\|)\s*|\s+to\s+/i).map(function (x) { return x.trim(); }).filter(Boolean);
   }
 
-  // null when there is no chain and the MX is not a forwarder. Otherwise the chain, the hop count
-  // (stops minus one) and flag when that count is more than one. A forwarder with no recorded target
-  // reads 'target unknown, needs registrar export'.
   function forwardChain(row) {
     row = row || {};
     var parts = chainParts(row.forward_chain);
@@ -197,7 +173,6 @@
     return asTxts(txts).some(function (t) { return /^google-site-verification=/i.test(t.trim()); });
   }
 
-  // Verification meta tags in page HTML. Names only; token values are never read out.
   function htmlVerifications(html) {
     var s = String(html || ''), out = [], m, re = /<meta\b[^>]*>/gi;
     var names = { 'google-site-verification': 'google', 'facebook-domain-verification': 'facebook', 'p:domain_verify': 'pinterest', 'msvalidate.01': 'bing' };
@@ -212,7 +187,6 @@
 
   function wordOf(x) { return String(x && typeof x === 'object' ? x.word : (x == null ? '' : x)).toLowerCase(); }
 
-  // Faults (send failures likely) and notes (softer). DKIM 'not found' is a fault only when the MX is Google Workspace.
   function summarise(r) {
     r = r || {};
     var spf = wordOf(r.spf), dmarc = wordOf(r.dmarc), dkim = wordOf(r.dkim), mx = wordOf(r.mx);
@@ -225,7 +199,6 @@
     else if (dmarc === 'weak') faults.push('DMARC weak');
     else if (dmarc === 'none') notes.push('DMARC p=none');
     if (/^missing/.test(dkim) || (/^not found/.test(dkim) && mx === 'google workspace')) faults.push('DKIM missing');
-    // 2.5: no MX is a fault unless the Mail map is read and holds no address on this domain (then it is a note).
     if (mx === 'none') {
       if (r.mail_addresses === 0 || r.mail_addresses === '0') notes.push('no MX (no addresses on the Mail map)');
       else faults.push('no MX');
@@ -238,8 +211,6 @@
 
   function rowFaults(row) { return summarise(row).faults; }
 
-  // Two or more SPF records -> one merged record text. Terms are kept once, in order; an include: or a: with no
-  // valid domain (e.g. "include:..") is dropped and reported; one ~all (or -all if every record had -all) ends it.
   function mergeSpf(records) {
     var terms = [], dropped = [], alls = [];
     (records || []).forEach(function (rec) {
@@ -285,9 +256,6 @@
     return out.join('\n');
   }
 
-  // ---- private tabs: header contracts (fail closed) ----
-  // The Mail map and Mail switch tabs live only in the private RR_WEB-ESTATE sheet. Their header rows are fixed here.
-  // A missing or renamed column means no rows at all and a plain problem line, never a guess.
   var MAIL_MAP_COLUMNS = ['address', 'kind', 'delivers_to', 'next_hop', 'checked_by'];
   var MAIL_SWITCH_STEPS = ['Export the forwards from the registrar', 'Add the domain as a Workspace alias domain and verify it',
     'Recreate every forward as an alias', 'Test delivery to each alias', 'Switch MX to Google', 'One SPF record with Google in it',
@@ -296,7 +264,6 @@
 
   function headerOf(row) { return (row || []).map(function (h) { return String(h == null ? '' : h).trim().toLowerCase(); }); }
 
-  // values (rows of arrays, header first) -> { ok, rows, problems }. tabName is only for the words.
   function tabFromValues(values, columns, tabName) {
     var v = (values || []).filter(function (r) { return r && r.some(function (c) { return String(c == null ? '' : c).trim() !== ''; }); });
     if (!v.length) return { ok: false, rows: [], problems: ['the ' + tabName + ' tab is empty'] };
@@ -317,13 +284,9 @@
   function mailMapFromValues(values) { return tabFromValues(values, MAIL_MAP_COLUMNS, 'Mail map'); }
   function mailSwitchFromValues(values) { return tabFromValues(values, MAIL_SWITCH_COLUMNS, 'Mail switch'); }
 
-  // ---- 2.6 forward hops over Mail map rows ----
   function addrKey(a) { return String(a == null ? '' : a).trim().toLowerCase(); }
   function domainOfAddress(a) { var s = addrKey(a), i = s.lastIndexOf('@'); return i < 0 ? '' : s.slice(i + 1); }
 
-  // address -> { chain, hops, loop, unknown, flag, text }. Follows next_hop from row to row.
-  // hops = forward steps (stops minus one). Flag: a loop, an unknown target, or 3 or more stops (2 or more steps).
-  // null when the address is not on the map.
   var MAX_STOPS = 20;
   function hops(address, mapRows) {
     var by = {};
@@ -350,7 +313,6 @@
     return { address: start, chain: chain, hops: n, loop: loop, unknown: unknown, flag: loop || unknown || n >= 2, text: text };
   }
 
-  // Every Mail map address on one domain -> its hops() result.
   function domainHops(domain, mapRows) {
     var d = addrKey(domain);
     var seen = {};
@@ -362,7 +324,6 @@
     }).map(function (r) { return hops(r.address, mapRows); });
   }
 
-  // ---- 4.x Mail switch progress (read only) ----
   function stepWord(v) {
     var s = String(v == null ? '' : v).trim().toLowerCase();
     if (s === 'done' || s === 'yes' || s === 'y') return 'done';
@@ -376,12 +337,10 @@
     if (/alias|brand/.test(s)) return 'alias';
     return 'unknown';
   }
-  // checksGreen: true when 2.1 to 2.5 pass for the domain, false when they do not, null when not yet read.
-  // Step 9 comes only from checksGreen: a hand tick in the sheet is ignored. Step 10 (rollback) never holds progress.
   function switchProgress(switchRow, checksGreen) {
     if (!switchRow) return { cls: 'unknown', text: 'not on the Mail switch tab', step: null, of: 10 };
     var cls = classWord(switchRow['class']);
-    if (cls === 'unknown') return { cls: cls, text: 'class: Lisa to say', step: null, of: 10 };
+    if (cls === 'unknown') return { cls: cls, text: 'class: User to say', step: null, of: 10 };
     if (cls === 'keep') return { cls: cls, text: 'keeps its own mail: checks only', step: null, of: 10 };
     if (cls === 'primary') return { cls: cls, text: 'primary Workspace domain', step: null, of: 10 };
     var steps = MAIL_SWITCH_STEPS.map(function (name, i) {
@@ -394,7 +353,6 @@
       text: 'step ' + open.n + ' of 10: ' + open.name + (open.word === 'not yet read' ? ' (not yet read)' : '') };
   }
 
-  // ---- one card per domain for #/mail ----
   function dayCount(v, today) {
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v || '').trim());
     if (!m) return null;
@@ -409,8 +367,6 @@
   }
   function hasMail(r) { return r && (r.kind === 'email-domain' || r.spf || r.dmarc || r.dkim || r.mx); }
 
-  // rows (estate rows), mapRows / switchRows (already passed through the header contracts, or null when not read),
-  // today -> cards, faults first. Every check reads 'not yet read' when the engine has not filled it.
   function domainCards(rows, mapRows, switchRows, today) {
     var by = {}, order = [];
     (rows || []).forEach(function (r) {
@@ -492,3 +448,4 @@
     domainCards: domainCards
   };
 });
+

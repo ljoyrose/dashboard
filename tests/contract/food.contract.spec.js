@@ -10,11 +10,9 @@ const book = () => JSON.parse(fixture('food/book.json'));
 const RED = !!process.env.CONTRACT_PROVE_RED;
 const caught = (problems, code) => (RED ? expect(problems).toEqual([]) : expect(codes(problems)).toEqual([code]));
 const { fns } = pageFns('food', ['table']); // the page's own tab reader
-// Number cells the page runs through num(): text there silently becomes 0, so it counts as a wrong type.
 const NUMBERS = { Orders: ['customer_orders', 'profit_est', 'boxes', 'ga_total'], Invoices: ['total', 'goods', 'delivery', 'vat'], Statements: ['total_outstanding'], DirectDebits: ['amount'],
   Products: ['fresh_meat_pct', 'protein_pct', 'ga_price_ex_vat_portal_oct26', 'ga_price_ex_vat_list_aug25', 'shopify_price_inc_vat', 'subscription_price_inc_vat', 'profit_ex_vat_1bag_1box'] };
 
-/** Every problem in one tab: header names, data rows, number cells and (Cards) the detail JSON. */
 function checkTab(tab, values) {
   const e = E[tab];
   const out = checkColumns(tab, e, values[0] && values[0].map(String));
@@ -79,3 +77,4 @@ test.describe('Food contract: each kind of change gives a named failure @contrac
   test('empty tab: Products comes back with nothing', () => { caught(checkTab('Products', []), 'EMPTY'); });
   test('empty tab: Statements has a header but no rows', () => { caught(checkTab('Statements', book().Statements.slice(0, 1)), 'EMPTY'); });
 });
+

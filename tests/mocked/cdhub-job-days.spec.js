@@ -1,4 +1,3 @@
-// Job calendar day buttons and the jobs table counts. Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
 
@@ -13,7 +12,7 @@ const shift = (n) => london(new Date(Date.now() - n * 86400000));
 const UKMON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const uk = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso); return m ? ((+m[3]) + ' ' + UKMON[+m[2] - 1] + ' ' + m[1]) : ''; };
 
-test('vet day button keeps done, part and missed; counts use that day @regression', async ({ page, guard }) => {
+test('t-cdhub-job-days-spec-1', async ({ page, guard }) => {
   const today = shift(0), back1 = shift(1), back2 = shift(2), back4 = shift(4), back10 = shift(10);
   const TYPE_H = 'id,tenant_id,type_key,label,target,active,effective_from,source,every_days,group,includes,sop,site_scope';
   const LOG_H = 'id,tenant_id,check_type_id,area_id,subject_id,item,amount,outcome,happened_at,note,taken_at,taken_by,corrects_id,photo,how_recorded';
@@ -104,3 +103,4 @@ test('vet day button keeps done, part and missed; counts use that day @regressio
   }
   expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 });
+

@@ -1,6 +1,3 @@
-// Address-level mail map (Stage 17, I1). Run: node --test tests/estate/mailmap.test.js
-// Every address, domain and service is invented (example.com, example.test, example.org, example.edu).
-// at() joins invented .org/.edu fixtures so the privacy guard (which allows only @example.com/@example.test literals) stays strict.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const MM = require('../../estate/mailmap.js');
@@ -183,3 +180,4 @@ test('garbage input never throws', () => {
   assert.doesNotThrow(() => MM.alerts([{ address: 'a@example.com', risks: 'loop' }, { address: 'a@example.com', risk: 'nonsense' }]));
   assert.deepEqual(MM.build('text', 5, {}), []);
 });
+

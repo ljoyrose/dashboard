@@ -1,7 +1,4 @@
 'use strict';
-/**
- * 8 Nov 2026: visitor (GUEST) codes, the camera fields on a reading, and the rows-based staff checks.
- */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
@@ -24,7 +21,7 @@ const recs = (env, title) => { const f = env.file(title)[0];
 const area = (env) => recs(env, 'BLD-area.csv')[0].id;
 const dog = (env) => recs(env, 'BLD-subject.csv')[0].id;
 const reading = (env, code, table, extra) => save(env, req(env, { code, table, fields: Object.assign({ area_id: area(env), min_c: '14.0', max_c: '20.5' }, extra || {}) }));
-const addType = (env, key, extra) => { const r = save(env, req(env, { code: env.codes.owner, table: 'check_type',
+const addType = (env, key, extra) => { const r = save(env, req(env, { code: env.codes.user, table: 'check_type',
   fields: Object.assign({ type_key: key, label: key, target: 'dog', effective_from: '2026-01-01' }, extra || {}) })); assert.equal(r.ok, true, JSON.stringify(r)); return r.result.id; };
 
 test('guest: a visitor code saves to the guest list, marked as the guest, and not to the staff log', () => {
@@ -89,12 +86,12 @@ test('guest: the code ends by itself after HOURS hours (8 in the editor function
   assert.match(p.revoked_at, /^ended /);
 });
 
-test('guest: a code with no end date is refused; the owner can switch one off early', () => {
+test('guest: a code with no end date is refused; the user can switch one off early', () => {
   const env = env0();
   const p = env.ctx.sinkStaffList_().filter((x) => x.role === 'GUEST')[0];
   assert.equal(p.active, true);
   assert.match(p.who, /\(ends /);
-  env.ctx.sinkRevokeCode_(p.id, 'owner@example.test');
+  env.ctx.sinkRevokeCode_(p.id, 'user@example.test');
   assert.equal(reading(env, env.guest, 'guest_reading').code, 'BAD_CODE');
   const env2 = env0();
   const reg = JSON.parse(env2.props.STAFF_REGISTRY);
@@ -122,7 +119,7 @@ test('area_reading: refuses a changed flag on a typed reading and an unknown met
   assert.equal(reading(env, env.codes.staff, 'area_reading', { read_method: 'guess' }).code, 'INVALID');
 });
 
-test('checks: the owner adds a check type as a row; staff cannot', () => {
+test('checks: the user adds a check type as a row; staff cannot', () => {
   const env = env0();
   addType(env, 'medicine', { asks_item: 'true', asks_amount: 'true' });
   assert.equal(recs(env, 'BLD-check_type.csv')[0].asks_item, 'true');
@@ -134,9 +131,9 @@ test('checks: a change is a new row from a later date; a bad key is refused', ()
   const env = env0();
   addType(env, 'feeding');
   addType(env, 'feeding', { effective_from: '2026-06-01', active: 'false' });
-  const back = save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: { type_key: 'feeding', label: 'x', target: 'dog', effective_from: '2026-03-01' } }));
+  const back = save(env, req(env, { code: env.codes.user, table: 'check_type', fields: { type_key: 'feeding', label: 'x', target: 'dog', effective_from: '2026-03-01' } }));
   assert.equal(back.code, 'INVALID');
-  const bad = save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: { type_key: 'Feed ing', label: 'x', target: 'dog', effective_from: '2026-03-01' } }));
+  const bad = save(env, req(env, { code: env.codes.user, table: 'check_type', fields: { type_key: 'Feed ing', label: 'x', target: 'dog', effective_from: '2026-03-01' } }));
   assert.equal(bad.code, 'INVALID');
 });
 
@@ -164,7 +161,7 @@ test('checks: an unknown type is refused; a concern needs a note; a repeat tap i
 test('new tables are off until their own switch is on', () => {
   const env = standardEnv();
   env.addFile('BLD-check_type.csv', fx.headerOnly(TYPE_HEADER));
-  const r = save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: { type_key: 'feeding', label: 'x', target: 'dog', effective_from: '2026-01-01' } }));
+  const r = save(env, req(env, { code: env.codes.user, table: 'check_type', fields: { type_key: 'feeding', label: 'x', target: 'dog', effective_from: '2026-01-01' } }));
   assert.equal(r.code, 'TABLE_OFF');
 });
 
@@ -172,7 +169,7 @@ test('new tables are off until their own switch is on', () => {
 const ACCESS_H = ['id', 'tenant_id', 'area_id', 'access_type', 'from_date', 'to_date', 'reason', 'set_by'];
 const QR_H = ['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by'];
 const OCC_ON = { TABLE_ON_occupancy: 'true', TABLE_ON_occupancy_out: 'true', TABLE_ON_area_access: 'true', TABLE_ON_qr_tag: 'true' };
-const env1 = () => { const env = standardEnv({ email: 'owner@example.test', props: OCC_ON });
+const env1 = () => { const env = standardEnv({ email: 'user@example.test', props: OCC_ON });
   env.addFile('BLD-area_access.csv', fx.headerOnly(ACCESS_H)); env.addFile('BLD-qr_tag.csv', fx.headerOnly(QR_H));
   if (!env.file('BLD-occupancy.csv').length) env.addFile('BLD-occupancy.csv', fx.headerOnly(fx.OCCUPANCY_HEADER));
   return env; };
@@ -190,11 +187,11 @@ test('area_access: staff set the flap, newest row wins, free-limited-free works 
   assert.ok(rows[0].from_date && rows[0].set_by);
 });
 
-test('qr_tag: owner only, stamped active, the same tag twice is refused', () => {
+test('qr_tag: user only, stamped active, the same tag twice is refused', () => {
   const env = env1(); const f = { tag: 'Ab3dEf7h', kind: 'area', ref_id: area(env) };
   assert.equal(send(env, 'qr_tag', f).code, 'NOT_ALLOWED');
-  assert.equal(send(env, 'qr_tag', f, env.codes.owner).ok, true);
-  assert.equal(send(env, 'qr_tag', f, env.codes.owner).code, 'DUPLICATE');
+  assert.equal(send(env, 'qr_tag', f, env.codes.user).ok, true);
+  assert.equal(send(env, 'qr_tag', f, env.codes.user).code, 'DUPLICATE');
   assert.equal(recs(env, 'BLD-qr_tag.csv')[0].active, 'true');
 });
 
@@ -213,7 +210,7 @@ test('occupancy_out: waits for approval, then is written to the occupancy file w
   const r = send(env, 'occupancy_out', { subject_id: dog(env), off_site_kind: 'sold' });
   assert.equal(r.result.status, 'queued', JSON.stringify(r));
   assert.equal(recs(env, 'BLD-occupancy.csv').length, before);
-  env.ctx.sinkDecide_(r.result.pending_id, 'approve', '', 'owner@example.test');
+  env.ctx.sinkDecide_(r.result.pending_id, 'approve', '', 'user@example.test');
   const rows = recs(env, 'BLD-occupancy.csv');
   assert.equal(rows.length, before + 1);
   assert.equal(rows[before].off_site_kind, 'sold');
@@ -221,7 +218,7 @@ test('occupancy_out: waits for approval, then is written to the occupancy file w
   assert.ok(rows[before].moved_in);
 });
 
-test('occupancy_out: a waiting move out is never applied by the automatic room-move step; only the owner approves it', () => {
+test('occupancy_out: a waiting move out is never applied by the automatic room-move step; only the user approves it', () => {
   const env = env1();
   const before = recs(env, 'BLD-occupancy.csv').length;
   const sold0 = recs(env, 'BLD-occupancy.csv').filter((r) => r.off_site_kind === 'sold').length;
@@ -233,7 +230,7 @@ test('occupancy_out: a waiting move out is never applied by the automatic room-m
   assert.equal(mv.ok, true, JSON.stringify(mv));
   assert.equal(recs(env, 'BLD-occupancy.csv').filter((r) => r.off_site_kind === 'sold').length, sold0);
   assert.equal(recs(env, 'BLD-occupancy.csv').length, before + 1);
-  env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test');
+  env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'user@example.test');
   assert.equal(recs(env, 'BLD-occupancy.csv').filter((r) => r.off_site_kind === 'sold').length, sold0 + 1);
 });
 
@@ -242,12 +239,12 @@ test('approving a queued item obeys the switches: saving off or that list switch
   const out = send(env, 'occupancy_out', { subject_id: dog(env), off_site_kind: 'sold' });
   const before = recs(env, 'BLD-occupancy.csv').length;
   env.props.TABLE_ON_occupancy = ''; env.props.TABLE_ON_occupancy_out = '';
-  assert.throws(() => env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test'), (e) => e.code === 'TABLE_OFF');
+  assert.throws(() => env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'user@example.test'), (e) => e.code === 'TABLE_OFF');
   env.props.TABLE_ON_occupancy_out = 'true'; env.props.SAVE_ENABLED = '';
-  assert.throws(() => env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test'), (e) => e.code === 'SAVE_OFF');
+  assert.throws(() => env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'user@example.test'), (e) => e.code === 'SAVE_OFF');
   assert.equal(recs(env, 'BLD-occupancy.csv').length, before);
   env.props.SAVE_ENABLED = 'true';
-  env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test');
+  env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'user@example.test');
   assert.equal(recs(env, 'BLD-occupancy.csv').length, before + 1);
 });
 
@@ -258,7 +255,7 @@ test('occupancy_out: a bad kind, a repeat tap and a dog already gone are refused
   assert.equal(send(env, 'occupancy_out', { subject_id: d, off_site_kind: 'temporary' }).code, 'DUPLICATE');
   const other = recs(env, 'BLD-subject.csv')[1].id;
   const r = send(env, 'occupancy_out', { subject_id: other, off_site_kind: 'sold' });
-  env.ctx.sinkDecide_(r.result.pending_id, 'approve', '', 'owner@example.test');
+  env.ctx.sinkDecide_(r.result.pending_id, 'approve', '', 'user@example.test');
   assert.equal(send(env, 'occupancy_out', { subject_id: other, off_site_kind: 'deceased' }).code, 'INVALID');
 });
 
@@ -274,7 +271,7 @@ test('check_type: job columns are saved and checked', () => {
   const [row] = recs(env, 'BLD-check_type.csv');
   assert.equal(row.every_days, '84'); assert.equal(row.group, 'Grooming'); assert.equal(row.includes, 'nails|ears');
   assert.equal(row.sop, 'Care Check'); assert.equal(row.evidence, 'optional');
-  const bad = (f) => save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: Object.assign({ type_key: 'k_x', label: 'x', target: 'dog', effective_from: '2026-02-01' }, f) }));
+  const bad = (f) => save(env, req(env, { code: env.codes.user, table: 'check_type', fields: Object.assign({ type_key: 'k_x', label: 'x', target: 'dog', effective_from: '2026-02-01' }, f) }));
   assert.match(bad({ every_days: '0' }).fields.every_days, /1 or more/);
   assert.match(bad({ includes: 'Not A Key' }).fields.includes, /separated by/);
   assert.match(bad({ includes: 'k_x|nails' }).fields.includes, /cannot include itself/);
@@ -292,7 +289,7 @@ test('check_type: a job with no new columns is as needed, no evidence, and whole
 
 test('check_log: says how it was recorded and can point at a photo; anything else is refused', () => {
   const env = env0(); const id = addType(env, 'feeding');
-  const send1 = (f) => save(env, req(env, { code: env.codes.staff || env.codes.owner, table: 'check_log', fields: Object.assign({ check_type_id: id, subject_id: dog(env), outcome: 'ok' }, f) }));
+  const send1 = (f) => save(env, req(env, { code: env.codes.staff || env.codes.user, table: 'check_log', fields: Object.assign({ check_type_id: id, subject_id: dog(env), outcome: 'ok' }, f) }));
   assert.equal(send1({ how_recorded: 'verified' }).code, 'INVALID');
   assert.equal(send1({ how_recorded: 'scanned', photo: 'photo-ref-1' }).ok, true);
   const [row] = recs(env, 'BLD-check_log.csv');
@@ -302,12 +299,11 @@ test('check_log: says how it was recorded and can point at a photo; anything els
 test('qr_tag: a site code can be made for the premises; an unknown kind cannot', () => {
   const env = standardEnv({ props: { TABLE_ON_qr_tag: 'true' } });
   env.addFile('BLD-qr_tag.csv', fx.headerOnly(['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by']));
-  const send2 = (kind, tag) => save(env, req(env, { code: env.codes.owner, table: 'qr_tag', fields: { tag, kind, ref_id: 'premises' } }));
+  const send2 = (kind, tag) => save(env, req(env, { code: env.codes.user, table: 'qr_tag', fields: { tag, kind, ref_id: 'premises' } }));
   assert.equal(send2('site', 'Ab3dEf7h').ok, true);
   assert.equal(send2('planet', 'Zz3dEf7h').code, 'INVALID');
 });
 
-// ---- whole-site tap (fake rooms and dogs from fixtures: A is in area-t2, B in area-t1, C sold, D with a family, E has no room)
 const siteEnv = () => { const env = env0(); return env; };
 const siteTap = (env, f, code) => save(env, req(env, { code: code || env.codes.staff, table: 'check_log', action: 'add_site', fields: f }));
 const allDogs = (env) => recs(env, 'BLD-subject.csv').map((r) => r.id).join('|');
@@ -401,3 +397,4 @@ test('site tap on a Sheet: all rows are added as plain text, and a failed read-b
   assert.equal(bad.code, 'VERIFY_FAILED');
   assert.equal(f.sheet.length, 3);
 });
+

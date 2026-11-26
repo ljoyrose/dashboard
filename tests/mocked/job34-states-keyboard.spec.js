@@ -1,13 +1,8 @@
-// JOB 34 state matrix (group E): KEYBOARD ONLY, every hub. Signed out, Tab reaches the sign-in button and it shows a
-// visible focus ring; Enter on it signs in; then Tab reaches the main menu (nav.house-tabs) with a visible focus ring.
-// tests/mocked/access-basics.spec.js already proves the first Tab stop is "Skip to content" on Home, Money and CD Hub;
-// this does not repeat that. Pretend Google, Drive and Sheets (the hub's own invented data via HUBS.<hub>.open).
 const { test, expect, HUBS, fixture } = require('../fixtures/job34/load');
 const H = fixture('states', 'hubs.json');
 
 test.describe.configure({ timeout: 90_000 });
 
-// Press Tab until `match(el)` is true for document.activeElement; returns how it looks when found (or null).
 async function tabTo(page, match, max) {
   for (let i = 0; i < max; i++) {
     await page.keyboard.press('Tab');
@@ -23,7 +18,6 @@ async function tabTo(page, match, max) {
   return null;
 }
 
-// Open the hub with its own open() (its data and look), but sign in with Tab + Enter instead of a click.
 async function openByKeyboard(page, guard, hub) {
   const real = page.locator.bind(page);
   let signIn = null;
@@ -52,8 +46,6 @@ for (const hub of Object.keys(HUBS)) {
   });
 }
 
-// J34-F85 (fixed on main by house.css "nav.house-tabs .ht:focus-visible"): the bottom tab for the page you are on once showed
-// NO focus ring when Tab landed on it, because the aria-current rule set outline: none. Checked on the three hubs it was seen on.
 for (const hub of ['money', 'marketplace', 'studio']) {
   test(`J34-F85 ${hub}: the current bottom tab shows a focus ring when Tab lands on it`, async ({ page, guard }) => {
     await openByKeyboard(page, guard, hub);
@@ -62,3 +54,4 @@ for (const hub of ['money', 'marketplace', 'studio']) {
     expect(cur.ring, JSON.stringify(cur)).toBe(true);
   });
 }
+

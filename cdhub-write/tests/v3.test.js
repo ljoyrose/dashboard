@@ -24,9 +24,8 @@ const withRead = (props = {}) => standardEnv({ props: Object.assign({ READ_ENABL
 function setVisibility(env, rowsText) { env.file('BLD-field_visibility.csv')[0].content = [fx.VIS_HEADER].concat(rowsText).join('\r\n') + '\r\n'; }
 let fvn = 0;
 const fv = (table, field, aud, visible, cond = '', red = '') => `fv-v3-${++fvn},${fx.TENANT},${table},${field},${aud},${visible},${cond},${red},t,2026-10-16,t`;
-const asOwner = (env) => { env.email = 'owner@example.test'; };
+const asUser = (env) => { env.email = 'user@example.test'; };
 
-// ================================================================== STEP 1: the proposed permission rows (S02-3 A, S02-4 D)
 test('proposed visibility rows: 42 remain, none of fv-p018 to fv-p024, the rest exactly as before', () => {
   const text = fs.readFileSync(VIS_FILE, 'utf8');
   const recs = text.split('\r\n').filter(Boolean);
@@ -35,15 +34,12 @@ test('proposed visibility rows: 42 remain, none of fv-p018 to fv-p024, the rest 
   const ids = recs.slice(1).map((l) => l.split(',')[0]);
   for (let n = 18; n <= 24; n++) assert.equal(ids.includes('fv-p' + String(n).padStart(3, '0')), false, 'fv-p0' + n);
   assert.equal(new Set(ids).size, 42);
-  // the 42 that are kept: p001-p017 and p025-p049
   const want = [];
   for (let n = 1; n <= 17; n++) want.push('fv-p' + String(n).padStart(3, '0'));
   for (let n = 25; n <= 49; n++) want.push('fv-p' + String(n).padStart(3, '0'));
   assert.deepEqual(ids, want);
-  // no row at all gives staff anything on area_reading
   const staffTemp = recs.slice(1).filter((l) => { const c = l.split(','); return c[2] === 'area_reading' && c[4] === 'aud-staff'; });
   assert.deepEqual(staffTemp, []);
-  // and no staff row has a "days" rule any more
   assert.equal(recs.slice(1).some((l) => /rows_days<=/.test(l)), false);
 });
 
@@ -56,16 +52,16 @@ test('proposed CSVs keep CRLF line endings (no bare LF anywhere)', () => {
   });
 });
 
-test('table_policy tp-p01: staff do not read the temperature log, only the owner (all)', () => {
+test('table_policy tp-p01: staff do not read the temperature log, only the user (all)', () => {
   const recs = fs.readFileSync(POL_FILE, 'utf8').split('\r\n').filter(Boolean);
   const env0 = standardEnv();
   const parsed = env0.ctx.csvRecords_(fs.readFileSync(POL_FILE, 'utf8')).records;
   const p01 = parsed.filter((r) => r.id === 'tp-p01')[0];
   assert.equal(p01.table_name, 'area_reading');
-  assert.equal(p01.who_may_read_by_default, 'owner (all)');
+  assert.equal(p01.who_may_read_by_default, 'user (all)');
   assert.ok(recs.length >= 3);
   const p02 = parsed.filter((r) => r.id === 'tp-p02')[0];
-  assert.equal(p02.who_may_read_by_default, 'owner (all)');       // staff have no read rows for the check log either
+  assert.equal(p02.who_may_read_by_default, 'user (all)');
 });
 
 test('staff cannot read any past temperature entry, not even their own, with the proposed rows', () => {
@@ -75,22 +71,21 @@ test('staff cannot read any past temperature entry, not even their own, with the
   const r = read(env, { table: 'area_reading' });
   assert.equal(r.code, 'NOT_ALLOWED');
   assert.equal(JSON.stringify(r).includes('20.0'), false);
-  assert.equal(read(env, { table: 'area_reading', code: env.codes.owner }).result.count, 1);   // the owner sees it
+  assert.equal(read(env, { table: 'area_reading', code: env.codes.user }).result.count, 1);
 });
 
-test('a staff code can no longer send a correction (there is no entry for staff to point at); an OWNER code still can', () => {
+test('a staff code can no longer send a correction (there is no entry for staff to point at); an USER code still can', () => {
   const env = standardEnv();
   const ok = save(env, req(env));
   const fields = { area_id: 'area-t1', min_c: '20', max_c: '21' };
   const staff = save(env, req(env, { action: 'correct', corrects_id: ok.result.id, reason: 'typed it wrong', fields }));
   assert.equal(staff.code, 'NOT_ALLOWED');
   const before = lines(env.text('BLD-_pending.csv')).length;
-  const owner = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: ok.result.id, reason: 'typed it wrong', fields }));
-  assert.equal(owner.result.status, 'queued');
+  const user = save(env, req(env, { code: env.codes.user, action: 'correct', corrects_id: ok.result.id, reason: 'typed it wrong', fields }));
+  assert.equal(user.result.status, 'queued');
   assert.equal(lines(env.text('BLD-_pending.csv')).length, before + 1);
 });
 
-// ================================================================== STEP 2: per-person overrides
 test('override GRANTS: a person row lets one named person read what their role cannot', () => {
   const env = withRead();
   setVisibility(env, [   // staff role: occupancy only
@@ -102,12 +97,11 @@ test('override GRANTS: a person row lets one named person read what their role c
     fv('occupancy', 'subject_id', 'aud-staff', 'yes'), fv('occupancy', 'area_id', 'aud-staff', 'yes'), fv('occupancy', '*', 'aud-staff', 'yes'),
     fv('area_reading', 'area_id', me, 'yes'), fv('area_reading', 'min_c', me, 'yes'), fv('area_reading', 'max_c', me, 'yes'), fv('area_reading', '*', me, 'yes')
   ]);
-  assert.equal(save(env, req(env, { code: env.codes.owner, fields: { area_id: 'area-t1', min_c: '20', max_c: '22' } })).ok, true);
+  assert.equal(save(env, req(env, { code: env.codes.user, fields: { area_id: 'area-t1', min_c: '20', max_c: '22' } })).ok, true);
   const r = read(env, { table: 'area_reading' });
   assert.equal(r.ok, true);
   assert.deepEqual(Array.from(r.result.fields), ['area_id', 'min_c', 'max_c']);
   assert.equal(r.result.count, 1);
-  // a different member of staff with the same role gets nothing: the grant is for one person only
   const salt = env.props.CODE_SALT, reg = JSON.parse(env.props.STAFF_REGISTRY);
   reg[env.ctx.hashCode_('OTHERSTAFF1', salt)] = { id: 'sc-zzzzzz', who: 'Other Staff', role: 'STAFF', active: true };
   env.props.STAFF_REGISTRY = JSON.stringify(reg);
@@ -121,13 +115,12 @@ test('override DENIES: a person row takes away what the role allows (a column, o
   setVisibility(env, [
     fv('subject', 'id', 'aud-staff', 'yes'), fv('subject', 'name', 'aud-staff', 'yes'), fv('subject', 'dob', 'aud-staff', 'yes'), fv('subject', '*', 'aud-staff', 'yes'),
     fv('occupancy', 'subject_id', 'aud-staff', 'yes'), fv('occupancy', '*', 'aud-staff', 'yes'),
-    fv('subject', 'dob', me, 'no'),                      // this person must not see dates of birth
-    fv('occupancy', '*', me, 'no')                       // ... nor the occupancy list at all
+    fv('subject', 'dob', me, 'no'),
+    fv('occupancy', '*', me, 'no')
   ]);
   const s = read(env, { table: 'subject' });
-  assert.deepEqual(Array.from(s.result.fields), ['id', 'name']);                            // dob gone, the rest from the role
+  assert.deepEqual(Array.from(s.result.fields), ['id', 'name']);
   assert.equal(read(env, { table: 'occupancy' }).code, 'NOT_ALLOWED');                      // whole list denied for this person
-  // someone else on the same role still has both
   const salt = env.props.CODE_SALT, reg = JSON.parse(env.props.STAFF_REGISTRY);
   reg[env.ctx.hashCode_('OTHERSTAFF1', salt)] = { id: 'sc-zzzzzz', who: 'Other Staff', role: 'STAFF', active: true };
   env.props.STAFF_REGISTRY = JSON.stringify(reg);
@@ -153,23 +146,18 @@ test('NO override: the role rows apply unchanged; other people\'s person rows an
 test('override rules: person row-rule beats the role row-rule; "no" beats "yes" inside the person rows; a person row with a condition stays hidden; default deny stays', () => {
   const env = withRead();
   const me = 'person:' + env.ids.staff;
-  save(env, req(env, { code: env.codes.owner, fields: { area_id: 'area-t1', min_c: '20', max_c: '22' } }));
+  save(env, req(env, { code: env.codes.user, fields: { area_id: 'area-t1', min_c: '20', max_c: '22' } }));
   const cols = (aud) => ['id', 'area_id', 'min_c', 'taken_by', 'taken_at'].map((f) => fv('area_reading', f, aud, 'yes'));
-  // role: all rows. person: only their own rows (so zero, as the owner made the entry)
   setVisibility(env, cols('aud-staff').concat([fv('area_reading', '*', 'aud-staff', 'yes')]));
   assert.equal(read(env, { table: 'area_reading' }).result.count, 1);
   setVisibility(env, cols('aud-staff').concat([fv('area_reading', '*', 'aud-staff', 'yes'), fv('area_reading', '*', me, 'yes', 'own_rows_days<=14')]));
   assert.equal(read(env, { table: 'area_reading' }).result.count, 0);
-  // inside the person rows, no beats yes
   setVisibility(env, cols('aud-staff').concat([fv('area_reading', '*', 'aud-staff', 'yes'), fv('area_reading', 'min_c', me, 'yes'), fv('area_reading', 'min_c', me, 'no')]));
   assert.equal(Array.from(read(env, { table: 'area_reading' }).result.fields).includes('min_c'), false);
-  // a person "yes" with a condition cannot be applied, so the column is hidden even though the role says yes
   setVisibility(env, cols('aud-staff').concat([fv('area_reading', '*', 'aud-staff', 'yes'), fv('area_reading', 'min_c', me, 'yes', 'some condition')]));
   assert.equal(Array.from(read(env, { table: 'area_reading' }).result.fields).includes('min_c'), false);
-  // a person row-rule we cannot understand denies the list (it does not fall back to the role)
   setVisibility(env, cols('aud-staff').concat([fv('area_reading', '*', 'aud-staff', 'yes'), fv('area_reading', '*', me, 'yes', 'garbage')]));
   assert.equal(read(env, { table: 'area_reading' }).code, 'NOT_ALLOWED');
-  // person columns alone, with no row-rule anywhere, still mean nothing
   setVisibility(env, cols(me));
   assert.equal(read(env, { table: 'area_reading' }).code, 'NOT_ALLOWED');
 });
@@ -185,14 +173,13 @@ test('a person row can grant a role that has no audience (a vet), but only that 
   assert.equal(read(env, { code: 'VETCODE12345', table: 'subject' }).code, 'NOT_ALLOWED');
 });
 
-// ================================================================== STEP 2b: owner revoke of staff codes
 const pendingEvents = (env) => rows(env, 'BLD-_pending.csv');
 
-test('revoke: the owner switches a code off; it is refused on read AND write straight away; the entry is kept', () => {
+test('revoke: the user switches a code off; it is refused on read AND write straight away; the entry is kept', () => {
   const env = withRead({ TABLE_ON_occupancy: 'true' });
   assert.equal(read(env).ok, true);
   assert.equal(save(env, req(env)).ok, true);
-  asOwner(env);
+  asUser(env);
   const r = env.ctx.ui_revokeCode(env.ids.staff);
   assert.equal(r.ok, true);
   assert.equal(r.result.status, 'revoked');
@@ -200,20 +187,17 @@ test('revoke: the owner switches a code off; it is refused on read AND write str
   assert.equal(read(env).code, 'BAD_CODE');                                      // read refused at once
   assert.equal(save(env, req(env, { fields: { area_id: 'area-t2', min_c: '19', max_c: '21' } })).code, 'BAD_CODE');   // write refused at once
   assert.equal(save(env, req(env, { table: 'occupancy', fields: { subject_id: 'sub-test-b', area_id: 'area-t2' } })).code, 'BAD_CODE');
-  // the entry is still in the registry, with revoked_at / revoked_by, and nothing was deleted
   const reg = JSON.parse(env.props.STAFF_REGISTRY), entry = Object.keys(reg).map((h) => reg[h]).filter((e) => e.id === env.ids.staff)[0];
   assert.equal(entry.active, false);
   assert.match(entry.revoked_at, /^2026-10-15T23:30:00\+01:00$/);
-  assert.equal(entry.revoked_by, 'owner@example.test');
+  assert.equal(entry.revoked_by, 'user@example.test');
   assert.equal(Object.keys(reg).length, 2);
-  // the owner's own code is untouched
-  assert.equal(read(env, { code: env.codes.owner, table: 'area_reading' }).ok, true);
-  // the failed tries above count as wrong codes like any other
+  assert.equal(read(env, { code: env.codes.user, table: 'area_reading' }).ok, true);
 });
 
 test('revoke is logged in the approvals queue file (kind code_revoke) and the log holds no code and no hash', () => {
   const env = standardEnv();
-  asOwner(env);
+  asUser(env);
   const before = env.text('BLD-_pending.csv');
   assert.equal(env.ctx.ui_revokeCode(env.ids.staff).ok, true);
   const after = env.text('BLD-_pending.csv');
@@ -222,27 +206,24 @@ test('revoke is logged in the approvals queue file (kind code_revoke) and the lo
   assert.equal(ev.kind, 'code_revoke');
   assert.equal(ev.event, 'revoked');
   assert.equal(ev.row_id, env.ids.staff);
-  assert.equal(ev.by, 'owner@example.test');
-  assert.equal(ev.role, 'OWNER');
-  // neither the code, nor its hash, nor the salt, nor the person's name is in the log
+  assert.equal(ev.by, 'user@example.test');
+  assert.equal(ev.role, 'USER');
   const salt = env.props.CODE_SALT;
   [env.codes.staff, env.ctx.hashCode_(env.codes.staff, salt), salt, 'Sam Staff'].forEach((secret) => assert.equal(after.includes(secret), false, secret));
-  // the queue's own list is not confused by it
   assert.equal(env.ctx.sinkPendingList_().length, 0);
 });
 
-test('a non-owner cannot revoke: not a staff code, not an owner CODE, not a staff Google account, not an empty session', () => {
+test('a non-user cannot revoke: not a staff code, not an user CODE, not a staff Google account, not an empty session', () => {
   const env = standardEnv();
   const snapshot = JSON.stringify(env.drive), props = JSON.stringify(env.props);
   ['', 'sam@example.test'].forEach((who) => {
     env.email = who;
-    assert.equal(env.ctx.ui_revokeCode(env.ids.owner).code, 'NOT_OWNER', who);
-    assert.equal(env.ctx.ui_staffList().code, 'NOT_OWNER', who);
+    assert.equal(env.ctx.ui_revokeCode(env.ids.user).code, 'NOT_USER', who);
+    assert.equal(env.ctx.ui_staffList().code, 'NOT_USER', who);
   });
-  // the save endpoint has no revoke action, whatever code is sent
   const post = (body) => JSON.parse(env.ctx.doPost({ postData: { contents: JSON.stringify(body) } }).getContent());
   ['revoke', 'revoke_code', 'code_revoke', 'staff'].forEach((action) => {
-    [env.codes.staff, env.codes.owner].forEach((code) => {
+    [env.codes.staff, env.codes.user].forEach((code) => {
       const out = post(req(env, { action, code, row_id: env.ids.staff, id: env.ids.staff }));
       assert.equal(out.ok, false);
     });
@@ -254,17 +235,16 @@ test('a non-owner cannot revoke: not a staff code, not an owner CODE, not a staf
 
 test('revoke edge cases: unknown id, malformed id, already switched off (no second log line), failed log still switches the code off', () => {
   const env = standardEnv();
-  asOwner(env);
+  asUser(env);
   assert.equal(env.ctx.ui_revokeCode('sc-nope99').code, 'NOT_FOUND');
   ['', 'x', '../../etc', "sc-'; DROP", undefined].forEach((bad) => assert.equal(env.ctx.ui_revokeCode(bad).code, 'INVALID', String(bad)));
   assert.equal(env.ctx.ui_revokeCode(env.ids.staff).ok, true);
   const n = pendingEvents(env).length;
   assert.equal(env.ctx.ui_revokeCode(env.ids.staff).code, 'ALREADY_REVOKED');
   assert.equal(pendingEvents(env).length, n);                                    // no second line
-  // the queue file is missing: the code is still switched off, and the answer says it was not logged
   const env2 = standardEnv();
   env2.drive = env2.drive.filter((f) => f.title !== 'BLD-_pending.csv');
-  asOwner(env2);
+  asUser(env2);
   const r = env2.ctx.ui_revokeCode(env2.ids.staff);
   assert.equal(r.ok, true);
   assert.equal(r.result.logged, false);
@@ -273,14 +253,14 @@ test('revoke edge cases: unknown id, malformed id, already switched off (no seco
 
 test('the staff list shows names, roles, ids and state only: never a code, a hash or the salt', () => {
   const env = standardEnv();
-  asOwner(env);
+  asUser(env);
   const out = env.ctx.ui_staffList();
   assert.equal(out.ok, true);
   const list = Array.from(out.result.staff);
   assert.equal(list.length, 2);
-  assert.deepEqual(list.map((s) => s.who).sort(), ['Olive Owner', 'Sam Staff']);
+  assert.deepEqual(list.map((s) => s.who).sort(), ['Olive User', 'Sam Staff']);
   const text = JSON.stringify(out), salt = env.props.CODE_SALT;
-  [env.codes.staff, env.codes.owner, env.ctx.hashCode_(env.codes.staff, salt), salt].forEach((x) => assert.equal(text.includes(x), false));
+  [env.codes.staff, env.codes.user, env.ctx.hashCode_(env.codes.staff, salt), salt].forEach((x) => assert.equal(text.includes(x), false));
   list.forEach((s) => assert.match(s.id, /^sc-[a-z0-9]{6}$/));
   env.ctx.ui_revokeCode(env.ids.staff);
   assert.equal(Array.from(env.ctx.ui_staffList().result.staff).filter((s) => s.active === false).length, 1);
@@ -291,7 +271,7 @@ test('adminAssignCodeIds gives ids to codes made before ids existed, and changes
   const reg = JSON.parse(env.props.STAFF_REGISTRY);
   Object.keys(reg).forEach((h) => { delete reg[h].id; });
   env.props.STAFF_REGISTRY = JSON.stringify(reg);
-  assert.equal(save(env, req(env)).ok, true);                                    // old codes still work without an id
+  assert.equal(save(env, req(env)).ok, true);
   assert.equal(rows(env, 'BLD-area_reading.csv')[0].taken_by, 'Sam Staff');
   env.ctx.adminAssignCodeIds();
   const after = JSON.parse(env.props.STAFF_REGISTRY);
@@ -313,26 +293,23 @@ test('adminRevokeStaff (editor) also keeps the entry and stamps revoked_at', () 
   assert.ok(Object.keys(reg).map((h) => reg[h]).filter((e) => e.who === 'Sam Staff')[0].revoked_at);
 });
 
-// ================================================================== STEP 3: owner edit stays OFF by default
-test('the owner-edit switch is OFF by default: nothing in a fresh setup turns it on, and with it off the owner cannot edit', () => {
+test('the user-edit switch is OFF by default: nothing in a fresh setup turns it on, and with it off the user cannot edit', () => {
   const env = standardEnv();
-  assert.equal('OWNER_EDIT_ENABLED' in env.props, false);
-  assert.equal(env.ctx.ownerEditEnabled_(), false);
-  assert.equal(env.ctx.BLD.PROP.OWNER_EDIT_ENABLED, 'OWNER_EDIT_ENABLED');
+  assert.equal('USER_EDIT_ENABLED' in env.props, false);
+  assert.equal(env.ctx.userEditEnabled_(), false);
+  assert.equal(env.ctx.BLD.PROP.USER_EDIT_ENABLED, 'USER_EDIT_ENABLED');
   const first = save(env, req(env));
-  asOwner(env);
+  asUser(env);
   const snapshot = JSON.stringify(env.drive);
   assert.equal(env.ctx.ui_edit('area_reading', first.result.id, { min_c: '1', max_c: '2' }).code, 'EDIT_OFF');
   assert.equal(env.ctx.ui_editList('area_reading').code, 'EDIT_OFF');
   assert.equal(JSON.stringify(env.drive), snapshot);
-  ['false', 'FALSE', 'yes', '1', ''].forEach((v) => { env.props.OWNER_EDIT_ENABLED = v; assert.equal(env.ctx.ownerEditEnabled_(), false, v); });
-  env.props.OWNER_EDIT_ENABLED = 'true';
-  assert.equal(env.ctx.ownerEditEnabled_(), true);
-  // the owner edit never reaches the daily check log (only temperatures and moves)
+  ['false', 'FALSE', 'yes', '1', ''].forEach((v) => { env.props.USER_EDIT_ENABLED = v; assert.equal(env.ctx.userEditEnabled_(), false, v); });
+  env.props.USER_EDIT_ENABLED = 'true';
+  assert.equal(env.ctx.userEditEnabled_(), true);
   assert.equal(env.ctx.ui_edit('occupancy_check', 'chk-1', { note: 'x' }).code, 'FILE_NOT_ALLOWED');
 });
 
-// ================================================================== STEP 4: "All the rest unmoved" (S02-1)
 function bulkDogs(env, n) {
   let text = env.text('BLD-subject.csv');
   for (let i = 1; i <= n; i++) text += `sub-bulk-${String(i).padStart(4, '0')},${fx.TENANT},Bulk ${i},2022-01-01,Female,9990000${String(i).padStart(8, '0')}\r\n`;
@@ -368,16 +345,14 @@ test('ONE tap with 150 dogs appends exactly ONE row: who (code id), when, the do
   const row = rows(env, 'BLD-occupancy_check.csv')[0];
   assert.match(row.id, /^chk-[a-z2-9]{8}$/);
   assert.equal(row.tenant_id, fx.TENANT);
-  assert.equal(row.confirmed_at, '2026-10-15T23:30:00+01:00');                  // ISO with offset, set by the script
-  assert.equal(row.confirmed_by, env.ids.staff);                                 // the staff code id, not the name, not the code
+  assert.equal(row.confirmed_at, '2026-10-15T23:30:00+01:00');
+  assert.equal(row.confirmed_by, env.ids.staff);
   assert.equal(row.moved_count, '7');
   assert.equal(row.note, 'rain all day');
   assert.deepEqual(row.dog_ids.split('|'), dogs);                                // pipe-separated, sorted, all 150
   assert.equal(row.dog_ids.split('|').length, 150);
   assert.equal(after.includes(env.codes.staff), false);
-  // the same 150 again straight away is a repeat tap
   assert.equal(check(env, { dog_ids: dogs }).code, 'DUPLICATE');
-  // through the real web entry point, under the body limit
   const body = JSON.stringify(req(env, { table: 'occupancy_check', fields: { dog_ids: dogs.slice(0, 149), moved_count: 1 } }));
   assert.ok(body.length < env.ctx.BLD.LIMITS.MAX_BODY_CHARS);
   assert.equal(JSON.parse(env.ctx.doPost({ postData: { contents: body } }).getContent()).ok, true);
@@ -407,24 +382,23 @@ test('the daily check: other kennels\' dogs are not accepted, there is no correc
   assert.match(check(env, { dog_ids: ['sub-other'] }).fields.dog_ids, /Not found/);
   const ok = check(env, { dog_ids: ['sub-test-a'] });
   assert.equal(ok.ok, true);
-  const c = save(env, req(env, { table: 'occupancy_check', code: env.codes.owner, action: 'correct', corrects_id: ok.result.id, reason: 'oops', fields: { dog_ids: ['sub-test-b'] } }));
+  const c = save(env, req(env, { table: 'occupancy_check', code: env.codes.user, action: 'correct', corrects_id: ok.result.id, reason: 'oops', fields: { dog_ids: ['sub-test-b'] } }));
   assert.equal(c.code, 'CORRECT_NOT_SUPPORTED');
   assert.equal(lines(env.text('BLD-occupancy_check.csv')).length, 2);
   env.writes.forEach((w) => assert.ok(w.next.startsWith(w.old)));                // append-only
 });
 
-test('the daily check can be read by the owner only if Lisa adds rows; staff get nothing by default', () => {
+test('the daily check can be read by the user only if User adds rows; staff get nothing by default', () => {
   const env = withRead({ TABLE_ON_occupancy_check: 'true' });
   assert.equal(check(env, { dog_ids: ['sub-test-a'] }).ok, true);
   assert.equal(read(env, { table: 'occupancy_check' }).code, 'NOT_ALLOWED');
   setVisibility(env, ['id', 'confirmed_at', 'confirmed_by', 'dog_ids'].map((f) => fv('occupancy_check', f, 'aud-admin', 'yes')).concat([fv('occupancy_check', '*', 'aud-admin', 'yes')]));
-  const r = read(env, { table: 'occupancy_check', code: env.codes.owner });
+  const r = read(env, { table: 'occupancy_check', code: env.codes.user });
   assert.equal(r.result.count, 1);
   assert.equal(r.result.rows[0].confirmed_by, env.ids.staff);
   assert.equal(read(env, { table: 'occupancy_check' }).code, 'NOT_ALLOWED');
 });
 
-// ================================================================== STEP 5: moves queue for the first 14 days, then straight in (S02-2 A)
 const mv = (env, s, a) => save(env, req(env, { table: 'occupancy', fields: { subject_id: s, area_id: a } }));
 const DAY = 86400000;
 
@@ -469,7 +443,6 @@ test('adminStartMovesQueue sets the last queued day to 14 days counting today, a
   assert.equal(env.ctx.modeFor_(spec), 'direct');                                // occupancy ignores the queue date
   env.nowMs = Date.UTC(2026, 9, 29, 12, 0, 0);                                   // day 15
   assert.equal(env.ctx.modeFor_(spec), 'direct');
-  // a clock change in the middle (25 Oct 2026) cannot move the date: calendar arithmetic
   env.nowMs = Date.UTC(2026, 9, 23, 23, 30, 0);                                  // 00:30 BST on the 24th
   env.ctx.adminStartMovesQueue();
   assert.equal(env.props.MOVES_QUEUE_UNTIL, '2026-11-06');
@@ -477,7 +450,6 @@ test('adminStartMovesQueue sets the last queued day to 14 days counting today, a
   assert.equal(env.ctx.addDays_('2028-02-27', 2), '2028-02-29');
 });
 
-// ================================================================== STEP 6: not on site (S02-7 B) - server side
 test('permanently gone = sold, owned_by_family, Collected, deceased: such a dog is never asked to move', () => {
   const env = standardEnv({ props: { TABLE_ON_occupancy: 'true', MODE_occupancy: 'direct' } });
   env.file('BLD-occupancy.csv')[0].content += `occ-z1,${fx.TENANT},sub-test-e,,deceased,2026-10-02,,,\r\n`;
@@ -486,7 +458,7 @@ test('permanently gone = sold, owned_by_family, Collected, deceased: such a dog 
   assert.match(save(env, req(env, { table: 'occupancy', fields: { subject_id: 'sub-test-b', area_id: 'area-t2' } })).fields.subject_id, /no longer on site/);
   ['sold', 'owned_by_family', 'DECEASED'].forEach((k) => assert.equal(env.ctx.permanentlyGone_({ off_site_kind: k }), true, k));
   ['Collected', 'collected', 'Deceased'].forEach((c) => assert.equal(env.ctx.permanentlyGone_({ classification: c }), true, c));
-  assert.equal(env.ctx.permanentlyGone_({ off_site_kind: 'off_site_temp' }), false);   // away at the vet is NOT permanent
+  assert.equal(env.ctx.permanentlyGone_({ off_site_kind: 'off_site_temp' }), false);
   assert.equal(env.ctx.permanentlyGone_({ classification: 'SLA label, not a place' }), false);
   assert.equal(env.ctx.permanentlyGone_(null), false);
 });
@@ -499,6 +471,7 @@ test('config: version bumped, the new switch is documented, and nothing secret i
   assert.match(cfg, /MOVES_QUEUE_UNTIL/);
   fs.readdirSync(dir).forEach((f) => {
     const t = fs.readFileSync(path.join(dir, f), 'utf8');
-    assert.equal(/AKfycb|1[A-Za-z0-9_-]{32,}\.(?:apps|google)/.test(t), false, f);   // no real Script URL / Drive id
+    assert.equal(/AKfycb|1[A-Za-z0-9_-]{32,}\.(?:apps|google)/.test(t), false, f);
   });
 });
+

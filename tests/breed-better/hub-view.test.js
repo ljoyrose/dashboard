@@ -25,7 +25,7 @@ test('only enrolled animals are scored, best first', () => {
 test('the chip is empty for an animal not enrolled', () => {
   const v = { T: tables(), today: '2026-06-02', esc };
   assert.equal(View.chip(v, 'a3'), '');
-  assert.match(View.chip(v, 'a1'), /data-go="breed" data-bb-dog="a1"/);   // main's chip: the card's Back returns to it; the tap opens the Score tab
+  assert.match(View.chip(v, 'a1'), /data-go="breed" data-bb-dog="a1"/);
 });
 
 test('with no enrolment rows the page says not set up', () => {
@@ -38,7 +38,7 @@ test('a draft scheme scores nothing and says so', () => {
   assert.match(View.page(v), /No active scheme/);
 });
 
-test('dates read like 2 Mar 2026', () => {
+test('dates read like ', () => {
   assert.equal(View.day('2026-03-02'), '2 Mar 2026');
   assert.equal(View.day(''), '');
 });
@@ -156,7 +156,6 @@ test('a later version of the enrolled scheme takes over on its own date; old rec
   assert.match(View.lineHtml({ esc }, later.byId.a1.lines[0]), /rules then/);
 });
 
-/* Mock-up screens (12 Nov 2026): list row, Information fold, verdict box, must-pass star */
 function pointsTables() {
   return tables({
     'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', target_points: '6' }],
@@ -209,7 +208,6 @@ test('band stats split each points section into earned and to prove', () => {
   assert.deepEqual(st.map((o) => [o.band.id, o.max, o.earned, o.unv]), [['h', 9, 4, 5]]);
 });
 
-/* Calendar, More, My system, Archive and the sex filter (mock-up, 12 Nov 2026) */
 test('the list page has the five tabs in order: Score, Evidence, Dogs (current), Calendar, More', () => {
   const html = View.page({ T: pointsTables(), today: '2026-08-14', esc, dogs: hubDogs, photoId: (x) => x });
   assert.match(html, /data-bb-tab="score"[\s\S]*data-bb-tab="evidence"[\s\S]*data-bb-tab="dogs"[^>]*aria-current="page"[\s\S]*data-bb-tab="cal"[\s\S]*data-bb-tab="more"/);
@@ -253,7 +251,6 @@ test('the sex filter appears when there is more than one sex, with counts', () =
   assert.match(html, /data-bb-sex="Male"/);
 });
 
-/* DNA panel on the Breed Better dog page and the per-puppy calculator under More */
 test('the dog page shows the DNA card from dna_result and dna_marker rows', () => {
   const T = pointsTables();
   T['BLD-dna_marker.csv'] = [{ code: 'TESTR', name: 'Recessive example', inheritance_mode: 'autosomal recessive', copies_0: 'clear', copies_1: 'carrier', copies_2: 'affected' }];
@@ -311,7 +308,7 @@ test('species words come from the scheme species row; with none, neutral words',
   View.setTab('dogs');
   const on = View.page({ T: tables(sp), today: '2026-06-12', esc });
   assert.match(on, /Find a horse<input/);
-  assert.match(on, /<span class="bb-tabw">Horses<\/span><\/button>/);   // the Dogs tab, now at the bottom (owner's design)
+  assert.match(on, /<span class="bb-tabw">Horses<\/span><\/button>/);
   const off = View.page({ T: tables(), today: '2026-06-13', esc });
   assert.match(off, /">Find<input/);
 });
@@ -327,14 +324,14 @@ test('the dog page has Back, Previous and Next in list order, and the logo heade
   View.open('');
 });
 
-test('More offers Inspector links: the owner page address from the host, or where to set it up', () => {
+test('More offers Inspector links: the user page address from the host, or where to set it up', () => {
   View.setTab('more');
   const enc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const on = View.page({ T: tables(), today: '2026-06-09', esc: enc, ownerPage: 'https://script.google.com/macros/s/X/exec?page=approve&section=inspect' });
+  const on = View.page({ T: tables(), today: '2026-06-09', esc: enc, userPage: 'https://script.google.com/macros/s/X/exec?page=approve&section=inspect' });
   assert.match(on, /<a class="bb-dog" href="https:\/\/script\.google\.com\/macros\/s\/X\/exec\?page=approve&amp;section=inspect" target="_blank" rel="noopener"><span class="bb-name">Inspector links/);
   const off = View.page({ T: tables(), today: '2026-06-10', esc });
   assert.match(off, /Set up saving first/);
-  assert.doesNotMatch(View.page({ T: tables(), today: '2026-06-11', esc, ownerPage: 'javascript:x' }), /href="javascript/);
+  assert.doesNotMatch(View.page({ T: tables(), today: '2026-06-11', esc, userPage: 'javascript:x' }), /href="javascript/);
   View.setTab('dogs');
 });
 
@@ -382,7 +379,7 @@ test('a pup not enrolled shows its DNA chances from its parents', () => {
 test('the auto-enrol setting is one dated link-kind rule row listing schemes; no row reads as off', () => {
   const key = View.autoKey();
   assert.equal(key, 'link_kind.enrolled_in.inherit_at_birth');
-  const T = { 'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01' }, { id: 's2' }], 'BLD-breeding_rule.csv': [{ rule_key: key, value: 's1', effective_from: '2026-11-15', source: 'Lisa' }, { rule_key: key, value: 'none', effective_from: '2026-12-01' }, { rule_key: key, value: '*', effective_from: '2027-01-01' }] };
+  const T = { 'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01' }, { id: 's2' }], 'BLD-breeding_rule.csv': [{ rule_key: key, value: 's1', effective_from: '2026-11-15', source: 'User' }, { rule_key: key, value: 'none', effective_from: '2026-12-01' }, { rule_key: key, value: '*', effective_from: '2027-01-01' }] };
   assert.equal(View.ruleOn(T, key, '2026-11-14'), null);
   assert.equal(View.autoOn(T, 's1', '2026-11-14'), false);
   assert.equal(View.autoOn(T, 's1', '2026-11-20'), true);
@@ -397,12 +394,12 @@ test('the auto-enrol setting is one dated link-kind rule row listing schemes; no
   View.setTab('system');
   const html = View.page({ T: tables(T), today: '2026-11-20', esc });
   assert.match(html, /data-bb-auto-v="on" aria-pressed="true" disabled>On/);
-  assert.match(html, /Since 15 Nov 2026\. Lisa/);
+  assert.match(html, /Since 15 Nov 2026\. User/);
   View.setTab('dogs');
 });
 
-test('age groups come from dated owner rows; with none there is no age filter', () => {
-  const R = (k, v, from, extra) => Object.assign({ rule_key: k, value: v, effective_from: from || '2026-01-01', source: 'Owner' }, extra || {});
+test('age groups come from dated user rows; with none there is no age filter', () => {
+  const R = (k, v, from, extra) => Object.assign({ rule_key: k, value: v, effective_from: from || '2026-01-01', source: 'User' }, extra || {});
   const rules = [R('age_group.young.from_months', '0'), R('age_group.young.to_months', '12'), R('age_group.young.label', 'Under 1'),
     R('age_group.adult.from_months', '12'), R('age_group.adult.label', 'Adult'),
     R('age_group.later.from_months', '99', '2027-01-01'),
@@ -439,7 +436,7 @@ test('with no age_group rows, the two age groups come from the existing adult-ag
   assert.equal(View.inAge(g[1], '2026-05-15', '2026-11-15'), true);   // 6 months: adult
   assert.deepEqual(View.ageGroups(T, '2024-06-01').map((x) => x.to), [9, Infinity]);   // the rule in force that day
   const own = T['BLD-breeding_rule.csv'].concat([R('age_group.all.from_months', '0'), R('age_group.all.label', 'All ages')]);
-  assert.deepEqual(View.ageGroups({ 'BLD-breeding_rule.csv': own }, '2026-11-15').map((x) => x.key), ['all']);   // owner's own groups win
+  assert.deepEqual(View.ageGroups({ 'BLD-breeding_rule.csv': own }, '2026-11-15').map((x) => x.key), ['all']);
   assert.deepEqual(View.ageGroups({ 'BLD-breeding_rule.csv': [R('dog.adult_from_months', '6', '2027-01-01')] }, '2026-11-15'), []);
 });
 
@@ -462,7 +459,7 @@ test('Save score: shown only when the hub can save; sends what the page worked o
   assert.deepEqual([f.subject_id, f.scheme_id, f.period, f.lines.length], [r.subject_id, r.scheme_id, '2026-11-20', r.lines.length]);
   assert.ok(['pass', 'below_target', 'unverified', 'fail'].includes(f.verdict));
   assert.ok(f.lines.every((l) => l.criterion_id && typeof l.points === 'string'));
-  assert.equal(sent, null);   // nothing is sent until the button is pressed
+  assert.equal(sent, null);
   View.open('');
 });
 
@@ -499,7 +496,7 @@ test('Checks records score by check type family: every version of a check type (
   const crit = { id: 'ftb', band_id: 'g', label: 'Fit to Breed', evidence_source: 'BLD-check_log', evidence_match: 'check_type_key=fit_to_breed', answer_field: 'outcome', date_field: 'happened_at' };
   const run = (id) => Score.score({ scheme: { id: 's' }, bands: [{ id: 'g', kind: 'gate' }], subject: { id }, asOf: '2026-11-16', judgements: {},
     criteria: [crit], points: [{ id: 'p1', criterion_id: 'ftb', answer_match: 'in:fit|yes|ok', gate_outcome: 'pass' }], evidence: { 'BLD-check_log': m } }).gate_result;
-  assert.deepEqual([run('a1'), run('a2'), run('a3') === 'pass'], ['pass', 'pass', false]);   // old version, new version, not this family
+  assert.deepEqual([run('a1'), run('a2'), run('a3') === 'pass'], ['pass', 'pass', false]);
 });
 
 /* D3 (the owner, 18 Nov 2026): the Testing label follows the scheme row's signed_off_on date */
@@ -519,3 +516,4 @@ test('Testing label: with nothing scored the heading keeps it, even if the schem
   const v = { T: tables({ 'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', signed_off_on: '2026-02-01' }], 'BLD-score_enrolment.csv': [] }), today: '2026-06-22', esc };
   assert.match(View.page(v), /bb-test/);
 });
+

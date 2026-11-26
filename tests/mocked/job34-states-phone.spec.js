@@ -1,7 +1,3 @@
-// JOB 34 state matrix (group E): PHONE 390 x 844, every view, no sideways scroll. Hubs already proven on every view are
-// left to their own specs (Money: tests/phone/money-look.spec.js, CD Hub and GA Hub: tests/phone/phone.spec.js,
-// Factory: tests/phone/factory-look.spec.js). This covers the gaps: Home (phone.spec.js only walks map, drives, bin,
-// changes), Marketplace (phone.spec.js skips round, stock, temu, suppliers) and Studio (no phone spec at all).
 const { test, expect, HUBS, go, sideScroll } = require('../fixtures/job34/load');
 
 test.describe.configure({ timeout: 90_000 });
@@ -24,3 +20,4 @@ for (const hub of ['home', 'marketplace', 'studio']) {
     expect(wide, `${hub}: views that scroll sideways on a phone`).toEqual([]);
   });
 }
+

@@ -1,43 +1,22 @@
-/*!
- * BLDTempReader - reads the MAX and MIN numbers off a min/max thermometer's LCD, on the phone.
- *
- * No outside service, no AI, no limit, free. It works on grey pixel numbers taken from ONE live camera frame at a
- * time; the caller throws the frame away straight after. Nothing here can store, encode or send a picture: it only
- * ever returns numbers as text.
- *
- * How it reads a seven-segment number:
- *   1. light the box evenly (local threshold), so shadows and glare do not count as ink;
- *   2. find the tallest line of ink in the box (the digits; small labels like MAX or C are shorter);
- *   3. undo the LCD's slant (try a few, keep the one where the strokes stand straightest);
- *   4. cut the line into characters at the gaps, and test each of the 7 segment places for a bar.
- * A result only counts when it looks like a temperature with 1 decimal place (e.g. 21.4, 9.8, -2.0) and is
- * between -30 and 60. Anything else is "not read": the person types it instead.
- *
- * Browser: window.BLDTempReader.  Node (tests): module.exports.
- */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.BLDTempReader = factory();
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // segments a b c d e f g  ->  digit
   var PATTERNS = {
     '1111110': '0', '0110000': '1', '1101101': '2', '1111001': '3', '0110011': '4',
     '1011011': '5', '1011111': '6', '1110000': '7', '1111111': '8', '1111011': '9'
-    // no "variant" shapes: a digit with a segment missing (glare, a dead segment) is never guessed
   };
   var SHEARS = [-0.1, -0.05, 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3];
   var LOW = -30, HIGH = 60, UNSURE = [0.35, 0.55];
 
-  /** RGBA bytes -> grey bytes (one per pixel). */
   function toGray(rgba, w, h) {
     var g = new Uint8Array(w * h);
     for (var i = 0, j = 0; i < g.length; i++, j += 4) g[i] = (rgba[j] * 77 + rgba[j + 1] * 150 + rgba[j + 2] * 29) >> 8;
     return g;
   }
 
-  /** Copy one box (x, y, w, h in pixels) out of a grey image. */
   function crop(gray, W, H, r) {
     var x0 = Math.max(0, Math.round(r.x)), y0 = Math.max(0, Math.round(r.y));
     var w = Math.min(W - x0, Math.round(r.w)), h = Math.min(H - y0, Math.round(r.h));
@@ -46,10 +25,6 @@
     return { g: out, w: w, h: h };
   }
 
-  /**
-   * Ink (1) or not (0). Sauvola local threshold with a window wider than a segment is thick, so a thick
-   * segment's middle still counts as ink. invert=true reads light digits on a dark screen.
-   */
   function binarise(g, w, h, invert) {
     var n = w * h, ii = new Float64Array((w + 1) * (h + 1)), i2 = new Float64Array((w + 1) * (h + 1));
     var x, y, v;
@@ -80,7 +55,6 @@
     return { b: out, contrast: gs };
   }
 
-  /** Connected ink blobs (4-way). Drops dust and anything touching the box edge (bezel, shadow). */
   function blobs(b, w, h, cutOff) {
     var lab = new Int32Array(w * h), list = [], stack = [], minArea = Math.max(3, Math.round(w * h * 0.0004));
     for (var p = 0; p < b.length; p++) {
@@ -102,14 +76,12 @@
     return list.filter(function (o) {
       var bw = o.x1 - o.x0 + 1, bh = o.y1 - o.y0 + 1;
       if (o.n < minArea) return false;                             // dust
-      if (o.edge) { if (cutOff) cutOff.push(o); return false; }    // the screen's edge: the number must sit wholly inside the box
+      if (o.edge) { if (cutOff) cutOff.push(o); return false; }
       if (bw > 4 * bh && bw > 0.35 * w) return false;              // a printed dividing line
       return true;
     });
   }
 
-  /** Stack blobs that sit one above another into glyphs (a 1 is two separate bars), then group glyphs that
-   *  share height into lines; return the line whose glyphs are tallest. */
   function tallestLine(list) {
     var glyphs = list.map(function (o) { return { x0: o.x0, x1: o.x1, y0: o.y0, y1: o.y1, items: [o] }; });
     function xov(A, B) { return Math.min(A.x1, B.x1) - Math.max(A.x0, B.x0) + 1; }
@@ -133,19 +105,16 @@
       return xov(A, B) >= 0.5 * Math.min(A.x1 - A.x0 + 1, B.x1 - B.x0 + 1) && gap < 0.35 * Math.max(A.y1 - A.y0 + 1, B.y1 - B.y0 + 1);
     });
     var lines = join(glyphs, function (A, B) { return yov(A, B) > 0.3 * Math.min(A.y1 - A.y0 + 1, B.y1 - B.y0 + 1); });
-    // the line's height is set by its tallest glyph, so a label lying across two lines cannot win
     lines.forEach(function (L) { L.top = 0; L.items.forEach(function (o) { L.top = Math.max(L.top, o.y1 - o.y0 + 1); }); });
     lines.sort(function (a, b) { return (b.y1 - b.y0) - (a.y1 - a.y0); });
     return lines[0] || null;
   }
 
-  /** The slant at which the strokes stand straightest (columns most concentrated). */
   function bestShear(px, w, yc) {
     var best = 0, bestScore = -Infinity;
     SHEARS.forEach(function (s) {
       var col = {}, score = 0;
       px.forEach(function (q) { var x = q % w, y = (q - x) / w, c = Math.round(x + s * (y - yc)); col[c] = (col[c] || 0) + 1; });
-      // fewest columns with ink wins (strokes upright and gaps between digits open); ties go to tighter columns
       var used = Object.keys(col);
       used.forEach(function (k) { score += col[k] * col[k]; });
       score = -used.length * 1e9 + score;
@@ -154,7 +123,6 @@
     return best;
   }
 
-  /** Bar strength of one segment place: the best single row (or column) fill inside its zone. */
   function zone(grid, cw, chH, u0, u1, v0, v1, horiz) {
     var xa = Math.floor(u0 * cw), xb = Math.max(xa + 1, Math.ceil(u1 * cw)), ya = Math.floor(v0 * chH), yb = Math.max(ya + 1, Math.ceil(v1 * chH));
     var best = 0, x, y, c;
@@ -178,13 +146,11 @@
     ];
     var key = z.map(function (v) { return v > 0.5 ? '1' : '0'; }).join('');
     var sure = z.reduce(function (s, v) { return s + Math.abs(v - 0.5); }, 0) / 7;
-    // a faint or half-lit segment is not guessed: a 0 with faint left side would otherwise read as a 7
     var unsure = z.some(function (v) { return v > UNSURE[0] && v < UNSURE[1]; });
     var d = PATTERNS[key];
     return { d: unsure || d === undefined || d === '' ? null : d, key: key, sure: sure, z: z };
   }
 
-  /** Read the tallest number in one grey box. {ok, value, text, sure} or {ok:false, reason}. */
   function readBox(g, w, h, invert, dbg, opts) {
     dbg = dbg || {}; opts = opts || {};
     if (w < 16 || h < 12) return { ok: false, reason: 'too small' };
@@ -195,7 +161,6 @@
     var H = line.y1 - line.y0 + 1;
     dbg.line = { y0: line.y0, y1: line.y1, glyphs: line.items.map(function (o) { return [o.x0, o.y0, o.x1, o.y1]; }) };
     if (H < 10) return { ok: false, reason: 'digits too small: move closer' };
-    // the decimal point: a small squarish dot sitting on the bottom of the line
     var dots = line.items.filter(function (o) {
       var bw = o.x1 - o.x0 + 1, bh = o.y1 - o.y0 + 1;
       return bh <= 0.22 * H && bw <= 0.22 * H && bw <= 2.2 * bh && bh <= 2.2 * bw && o.y1 >= line.y1 - 0.12 * H && o.n >= 0.4 * bw * bh;
@@ -210,7 +175,6 @@
     pts.forEach(function (p) { if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x; });
     var LW = maxX - minX + 1, grid = new Uint8Array(LW * H), colN = new Int32Array(LW);
     pts.forEach(function (p) { var i = p.y * LW + (p.x - minX); if (!grid[i]) { grid[i] = 1; colN[p.x - minX]++; } });
-    // characters: runs of ink columns, joining gaps thinner than a stroke
     var runs = [], gapMax = Math.max(1, Math.round(H * 0.025)), x = 0;
     while (x < LW) {
       if (!colN[x]) { x++; continue; }
@@ -218,7 +182,6 @@
       while (x < LW && gap <= gapMax) { if (colN[x]) { end = x; gap = 0; } else gap++; x++; }
       runs.push({ x0: a, x1: end });
     }
-    // each run (column of ink) and the pieces stacked in it
     var cut = Math.max(2, Math.round(H * 0.05));
     var chars = runs.map(function (r) {
       var rows = [], pieces = [], yy, xx;
@@ -239,13 +202,12 @@
     dbg.H = H; dbg.chars = chars; dbg.LW = LW; dbg.grid = Array.from(grid);
     var tall = chars.filter(function (c) { return c.h >= 0.7 * H; });
     if (!tall.length) return { ok: false, reason: 'no digits seen' };
-    // a number running off the box (a digit cut by its edge) is never read: it could lose a leading digit
     var lx0 = tall[0].x0 + minX, lx1 = tall[tall.length - 1].x1 + minX;
     var cut = cutOff.filter(function (o) {
       var oh = o.y1 - o.y0 + 1, ov = Math.min(o.y1, line.y1) - Math.max(o.y0, line.y0) + 1;
       if (oh > 0.9 * h || (o.x1 - o.x0) > 0.6 * w) return false;    // the screen's frame, not a digit
-      if (o.x0 === 0 && ov > 0.5 * Math.min(oh, H)) return o.x1 >= lx0 - 0.6 * H;            // a leading digit cut at the left
-      if (o.y0 === 0 || o.y1 === h - 1) return o.x1 >= lx0 && o.x0 <= lx1 && ov > 0.5 * oh;    // a digit cut at the top or bottom
+      if (o.x0 === 0 && ov > 0.5 * Math.min(oh, H)) return o.x1 >= lx0 - 0.6 * H;
+      if (o.y0 === 0 || o.y1 === h - 1) return o.x1 >= lx0 && o.x0 <= lx1 && ov > 0.5 * oh;
       return false;
     });
     dbg.cut = cut.map(function (o) { return [o.x0, o.y0, o.x1, o.y1]; }); dbg.lx = [lx0, lx1, line.y0, line.y1, w, h];
@@ -260,7 +222,6 @@
       keys.push(k.key); sure = Math.min(sure, k.sure);
       return k.d;
     }
-    /** On these units the tenths digit is half height, at the bottom of the last column, under the C sign. */
     function smallTenths(c) {
       var low = c.pieces.filter(function (p) { return p.y0 >= 0.4 * H; }), high = c.pieces.filter(function (p) { return p.y0 < 0.4 * H; });
       if (!low.length || (!high.length && c.h >= 0.7 * H)) return '';
@@ -278,7 +239,6 @@
         if (!d) return { ok: false, reason: 'a digit could not be read', keys: keys };
         num += d; centres.push((c.x0 + c.x1) / 2 + minX);
       } else if (!num && c.w >= 0.25 * H && c.h <= 0.3 * H && c.y0 > 0.3 * H && c.y1 < 0.7 * H) neg = true;   // minus sign
-      // anything else (labels, the degree sign, C) is not part of the number
     }
     if (opts.tenths === 'small' && !tenths) return { ok: false, reason: 'small tenths digit not seen', num: num };
     if (tenths) num += tenths;
@@ -300,7 +260,6 @@
     return { ok: true, value: v.toFixed(1), text: text, sure: sure };
   }
 
-  /** Read one box, trying dark-on-light first, then light-on-dark. */
   function readRegion(gray, W, H, rect, opts) {
     var c = crop(gray, W, H, rect);
     var r = readBox(c.g, c.w, c.h, false, null, opts);
@@ -309,21 +268,12 @@
     return r2.ok ? r2 : r;
   }
 
-  /**
-   * Both numbers. layout gives each box as fractions of the image: {max:{x,y,w,h}, min:{x,y,w,h}}.
-   * Default: these units show MAX top right and MIN bottom right.
-   */
-  /**
-   * The kennel's units (2026): MAX top right, MIN bottom right; whole digits full height and the tenths digit
-   * half height under the C sign. Boxes are fractions of the lit LCD window. tenths 'small' = only that shape counts.
-   */
   var LAYOUT = { window: true, tenths: 'small', max: { x: 0.6, y: 0.0, w: 0.4, h: 0.52 }, min: { x: 0.6, y: 0.48, w: 0.4, h: 0.52 } };
 
-  /** The lit LCD window inside the camera's box: the longest run of bright rows, then of bright columns. */
   function findWindow(gray, W, H) {
     function run(vals) {
       var s = vals.slice().sort(function (p, q) { return p - q; }), lo = s[Math.floor(s.length * 0.02)], hi = s[Math.floor(s.length * 0.9)];
-      if (lo > 0.6 * hi) return [0, vals.length];             // no dark frame in view: use it all
+      if (lo > 0.6 * hi) return [0, vals.length];
       var t = (lo + hi) / 2, best = null, start = -1, dip = 0, tol = Math.max(2, Math.round(vals.length * 0.08));
       for (var i = 0; i <= vals.length; i++) {
         var lit = i < vals.length && vals[i] > t;
@@ -356,7 +306,6 @@
     return { ok: both, max: mx, min: mn, window: win, reason: both ? '' : (mx.ok && mn.ok ? 'MIN is above MAX' : (mx.ok ? mn.reason : mx.reason)) };
   }
 
-  /** Only trust a pair once the same pair has been read `need` frames in a row. */
   function Steady(need) {
     need = need || 3;
     var last = '', count = 0;
@@ -373,3 +322,4 @@
 
   return { _binarise: binarise, findWindow: findWindow, toGray: toGray, readRegion: readRegion, readDisplay: readDisplay, readBox: readBox, Steady: Steady, LAYOUT: LAYOUT, PATTERNS: PATTERNS };
 }));
+

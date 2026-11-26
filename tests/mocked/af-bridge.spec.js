@@ -1,6 +1,3 @@
-// Stage 6 App Factory bridge (page side, mocked specs): at Step 7 Launch the Factory card has ONE "Ask Studio for a launch pack"
-// button that writes ONE Studio request (kind idea, playbook P1, appRef) into Studio's requests folder; Studio shows "From app".
-// Pretend Google and Drive only; invented data. The engine side (STUDIO-ENGINE making the idea) is not in this repo.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -51,7 +48,6 @@ test.describe('App Factory bridge (Stage 6)', () => {
     expect(got[0].meta.name).toMatch(/^idea-\d+\.json$/);
     expect(got[0].body).toMatchObject({ kind: 'idea', type: 'pack', playbookId: 'P1', appRef: { id: '869fjxpc2', slug: 'sample' }, from: 'factory' });
     expect(got[0].body.appRef.slug).toHaveLength(6);
-    // Reload: still asked, still no second button.
     await page.reload();
     if (await page.locator('#signInBtn').isVisible()) { await expect(page.locator('#signInBtn')).toBeEnabled(); await page.locator('#signInBtn').click(); }
     await expect(page.locator('[data-launch="869fjxpc2"] .sent')).toBeVisible();
@@ -92,7 +88,7 @@ test.describe('App Factory bridge (Stage 6)', () => {
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
     await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
-    if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
+    if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
     const chip = page.locator('.crow[data-row="si-1"] [data-chip="from-app"]');
     await expect(chip).toHaveText('From app: APP-A');
     await expect(page.locator('[data-chip="from-app"]')).toHaveCount(1);
@@ -101,3 +97,4 @@ test.describe('App Factory bridge (Stage 6)', () => {
     await expect(page.locator('#view [data-chip="from-app"]')).toHaveText('From app: APP-A');
   });
 });
+

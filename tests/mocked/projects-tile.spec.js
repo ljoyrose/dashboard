@@ -1,10 +1,7 @@
-// Home: the Projects tile shows 3 numbers read from the Projects Hub Sheet (INDEX tab), and still opens the hub
-// when they cannot be read. Rows are invented (tests/fixtures/projects-hub-index.json): Stuck 3, Waiting 2, Running 2.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
 
 const INDEX = /^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\/[^/]+\/values\/INDEX\?/;
-// The Projects Hub Sheet's ID, from config.js (the other hub tiles read their own Sheets too, so calls are told apart by Sheet).
 const PH_SHEET = (require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'config.js'), 'utf8').match(/projectsHub:\s*\{\s*sheetId:\s*'([^']+)'/) || [])[1];
 const TILE = '#hubTiles .hubtile[data-hub="projects"]';
 
@@ -38,13 +35,11 @@ test.describe('Home: Projects tile numbers', () => {
     await expect(nums.nth(0).locator('b')).toHaveClass('broken');
     await expect(nums.nth(0)).toHaveAttribute('aria-label', '3 Stuck stuck, Projects');
     await expect(tile.locator('b.broken')).toHaveCount(1);
-    // Only GET reads, each with the sign-in token; the Projects Hub Sheet is read only at its INDEX tab.
     expect(PH_SHEET).toBeTruthy();
     const ph = calls.filter((c) => c.url.includes('/spreadsheets/' + PH_SHEET + '/'));
     expect(ph.length).toBeGreaterThan(0);
     for (const c of calls) { expect(c.method).toBe('GET'); expect(c.auth).toBe(true); }
     for (const c of ph) expect(c.url).toMatch(INDEX);
-    // Multi-colour line on the left, full height: placed exactly like every other tile's house line (over the 1px card border).
     const edge = (el) => { const s = getComputedStyle(el, '::before'); return { bg: s.backgroundImage, top: s.top, bottom: s.bottom }; };
     const line = await tile.evaluate(edge);
     const web = await page.locator('#hubTiles .hubtile[data-hub="web"]').evaluate(edge);
@@ -52,7 +47,6 @@ test.describe('Home: Projects tile numbers', () => {
     expect([line.top, line.bottom]).toEqual([web.top, web.bottom]);
     expect(['0px', '-1px']).toContain(line.top);
     expect(line.bottom).toBe(line.top);
-    // Phone: tap-sized, nothing sticks out sideways.
     const box = await tile.boundingBox();
     expect(box.height).toBeGreaterThanOrEqual(48);
     for (const a of await nums.all()) expect((await a.boundingBox()).height).toBeGreaterThanOrEqual(24);
@@ -61,7 +55,7 @@ test.describe('Home: Projects tile numbers', () => {
 
   test('Stuck is neither rose nor black at 0', async ({ page }) => {
     await page.route(INDEX, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: [
-      ['number', 'kind', 'owner_tag', 'status_u45', 'project_status'],
+      ['number', 'kind', 'user_tag', 'status_u45', 'project_status'],
       ['0300', 'project', 'Yell', 'LIVE', 'Running'],
     ] }) }));
     await signIn(page);
@@ -85,3 +79,4 @@ test.describe('Home: Projects tile numbers', () => {
     await expect(tile.locator('a.hgo')).toHaveAttribute('title', /could not be read/);
   });
 });
+

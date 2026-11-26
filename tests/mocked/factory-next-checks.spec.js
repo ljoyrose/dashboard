@@ -1,4 +1,3 @@
-// JOB 32 Stage 2: each stage shows its checks as pass, fail or not run with a count; template rule lines sit in a closed fold.
 const { test, expect } = require('../support/test');
 const { build } = require('../fixtures/factory/state');
 const { add } = require('../fixtures/factory/next');
@@ -24,9 +23,8 @@ test.describe('Factory per-stage checks', () => {
     await expect(ck(page, 4, 'pass')).toHaveText('✓ 1 pass');
     await expect(ck(page, 4, 'none')).toHaveText('2 not run');
     await expect(ck(page, 5, 'none')).toHaveText('1 not run');
-    await expect(ck(page, 6, 'none')).toHaveText('53 not run');   // template lines were never run for this app
+    await expect(ck(page, 6, 'none')).toHaveText('53 not run');
     await expect(page.locator('.stage[data-stage="0"] .r .nr')).toHaveText('not recorded');
-    // Rings, not fills: pass and not run are transparent; fail is a tint, never the ring colour itself.
     const s = await page.evaluate(() => ['pass', 'fail', 'none'].map((k) => { const c = getComputedStyle(document.querySelector('.ck[data-ck="' + k + '"]')); return [c.borderTopWidth, c.backgroundColor === c.borderTopColor, c.color === getComputedStyle(document.body).color]; }));
     expect(s).toEqual([['1px', false, true], ['1px', false, true], ['1px', false, true]]);
   });
@@ -53,3 +51,4 @@ test.describe('Factory per-stage checks', () => {
     expect(w[0]).toBeLessThanOrEqual(w[1]);
   });
 });
+

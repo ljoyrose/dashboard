@@ -1,15 +1,5 @@
 name: Publish site (after tests)
 
-# The live site is published ONLY after the tests pass on the very commit being published.
-# (Before this, GitHub Pages published whatever landed on main without waiting for the tests.)
-#
-# Needs ONE click from Lisa, once: Settings > Pages > Build and deployment > Source = "GitHub Actions" (see TESTS.md).
-# Until then the "publish" job notices Pages is still on branch publishing, says so in its summary, and does nothing,
-# so merging this file changes nothing about the live site by itself.
-#
-# What goes live: index.html, auth.js, tokens.css, house.css, cdhub/, money/, factory/, marketplace/, food/ and studio/ only (the pages, the shared sign-in, the shared colours, the shared house look and money/core.js).
-# Not tests/, docs/, TESTS.md, zips, fixtures, tools/ or .github/. A test fails if a page refers to a file left out here.
-# No secrets: only the run's own built-in token. Rollback: Settings > Pages > Source = "Deploy from a branch" > main > / (root).
 on:
   push:
     branches: [main]
@@ -28,7 +18,6 @@ env:
 jobs:
   gate:
     name: Gate (tests must pass before anything is published)
-    # GitHub Pages is only for the public repo. Once private, the site is on Cloudflare and this costs minutes for nothing.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60 # 2,500+ tests now take about 35-40 min; 35 cut off every publish from 20 Nov 22:47 (#715) to 22 Nov (#765), so github.io went stale. Same limit as tests.yml.
@@ -53,7 +42,6 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
       - name: Run the same tests as the required check
-        # Same suite as the required check, including the route crawl (tests/mocked/route-crawl.spec.js).
         run: npx playwright test --project=mocked --project=phone
       - name: Write the short summary
         if: always()
@@ -85,7 +73,7 @@ jobs:
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
             {
-              echo "### ⏳ Waiting for Lisa's one click"
+              echo "### ⏳ Waiting for User's one click"
               echo ""
               echo "The tests passed, but GitHub Pages is still publishing straight from the branch (build type: \`$type\`), so nothing was published by this workflow."
               echo "Settings > Pages > Build and deployment > Source > **GitHub Actions**. Then run **Publish site (after tests)** once."
@@ -107,3 +95,4 @@ jobs:
         id: deployment
         if: steps.ready.outputs.ready == 'true'
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+

@@ -1,16 +1,3 @@
-/**
- * Code admin on the owner page (13 Nov 2026, DRAFT for V8): give someone a code, rename it, give them a new code.
- * Owner only (a signed-in Google account in ADMIN_EMAILS; the ui_ wrappers in Web.gs check it). Never a staff code.
- *
- * A new code is returned ONCE to the owner's own page, to be shown on her screen and written down. It is never logged,
- * never written to a file and never sent anywhere else. Only its one-way hash is kept (Script Properties registry).
- *
- * BLD-code_register.csv is a no-secrets mirror the hub can read: one row per spell of a code.
- *   id,tenant_id,code_id,who,role,from_date,to_date,ended_by
- * Rename, new code and switch-off fill to_date and ended_by on the open row; rename and new code then add a fresh row.
- * Nothing is deleted. code_id is the public sc-xxxxxx id; a new code keeps it, so person:<id> permission rows keep working.
- * Switch: TABLE_ON_code_register. While it is off (or the file is missing) codes still work; the reply says mirrored:false.
- */
 var CODE_REG = {
   FILE: 'BLD-code_register.csv',
   COLUMNS: ['id', 'tenant_id', 'code_id', 'who', 'role', 'from_date', 'to_date', 'ended_by'],
@@ -22,7 +9,6 @@ function codeRegisterOn_() { return prop_(BLD.PROP.TABLE_ON_PREFIX + CODE_REG.ON
 function codeRegisterFiles_() { return codeRegisterOn_() ? [CODE_REG.FILE] : []; }
 function codeRegisterHeader_(title) { return title === CODE_REG.FILE ? CODE_REG.COLUMNS : null; }
 
-/** A fresh code: 10 characters, no look-alikes (0/O, 1/I/L). */
 function codeMake_() {
   var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';
   for (var i = 0; i < CODE_REG.CODE_LEN; i++) code += alphabet.charAt(parseInt(raw.substr(i * 2, 2), 16) % alphabet.length);
@@ -36,7 +22,6 @@ function codeName_(who) {
   return v;
 }
 
-/** The live (not switched off) registry entry with this public id, or throws. */
 function codeFind_(reg, codeId) {
   var id = String(codeId || '');
   if (!/^sc-[a-z0-9]{6}$/.test(id)) throw err_('INVALID', 'Say which code.');
@@ -50,16 +35,12 @@ function codeFind_(reg, codeId) {
 
 function codeNote_(event, codeId, by, note, now) {
   try {
-    appendPendingEvent_({ event_id: newId_('evt', now), pending_id: 'code-' + codeId, event: event, at: londonIso_(now), by: by, role: 'OWNER',
+    appendPendingEvent_({ event_id: newId_('evt', now), pending_id: 'code-' + codeId, event: event, at: londonIso_(now), by: by, role: 'USER',
       kind: 'code_' + event, row_id: codeId, note: note, result: event });
     return true;
   } catch (e) { Logger.log('Code ' + codeId + ' ' + event + ' but could not note it: ' + (e && e.message)); return false; }
 }
 
-/**
- * Mirror one change into BLD-code_register: end the open row of this code (if any), then add a new row (if `next`).
- * Never throws: the code change has already happened, so a mirror problem is reported, not raised.
- */
 function codeMirror_(codeId, endedBy, next, now) {
   if (!codeRegisterOn_()) return false;
   try {
@@ -81,7 +62,6 @@ function codeMirror_(codeId, endedBy, next, now) {
   } catch (e) { Logger.log('code_register not updated for ' + codeId + ': ' + (e && e.message)); return false; }
 }
 
-/** Give someone a new code. role: one of ROLE_ALL (OWNER, STAFF, VET, TRAINER). Returns the code ONCE. */
 function sinkIssueCode_(who, role, adminEmail) {
   var name = codeName_(who), r = String(role || '').trim().toUpperCase();
   if (ROLE_ALL.indexOf(r) < 0) throw err_('INVALID', 'Pick a role: ' + ROLE_ALL.join(', ') + '.', { fields: { role: 'Pick a role.' } });
@@ -101,7 +81,6 @@ function sinkIssueCode_(who, role, adminEmail) {
   });
 }
 
-/** Change the name held against a code. The code itself does not change. */
 function sinkRenameCode_(codeId, who, adminEmail) {
   var name = codeName_(who);
   return withLock_(function () {
@@ -112,15 +91,11 @@ function sinkRenameCode_(codeId, who, adminEmail) {
     e.who = name;
     setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));
     var logged = codeNote_('renamed', e.id, adminEmail, 'name changed', now);
-    var mirrored = codeMirror_(e.id, 'renamed by owner', { who: name, role: e.role }, now);
+    var mirrored = codeMirror_(e.id, 'renamed by user', { who: name, role: e.role }, now);
     return { status: 'renamed', id: e.id, who: name, was: old, logged: logged, mirrored: mirrored };
   });
 }
 
-/**
- * Give the same person a new code (lost phone, code seen by someone else). The old code stops at once.
- * The public id moves to the new code, so permission rows keep working; the old entry stays, switched off, without an id.
- */
 function sinkResetCode_(codeId, adminEmail) {
   var salt = prop_(BLD.PROP.SALT);
   if (!salt) throw err_('NOT_SET_UP', 'Run adminSetup first.');
@@ -131,14 +106,13 @@ function sinkResetCode_(codeId, adminEmail) {
     while (reg[hash]) { code = codeMake_(); hash = hashCode_(code, salt); }
     reg[hash] = { id: e.id, who: e.who, role: e.role, active: true, added: londonIso_(now) };
     e.active = false; e.revoked_at = londonIso_(now); e.revoked_by = adminEmail; e.was_id = e.id; e.id = ''; e.ended = 'new code';
-    setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));            // the old code is dead from this line on
+    setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));
     var logged = codeNote_('reset', reg[hash].id, adminEmail, 'new code, old one switched off', now);
-    var mirrored = codeMirror_(reg[hash].id, 'new code by owner', { who: reg[hash].who, role: reg[hash].role }, now);
+    var mirrored = codeMirror_(reg[hash].id, 'new code by user', { who: reg[hash].who, role: reg[hash].role }, now);
     return { status: 'reset', id: reg[hash].id, who: reg[hash].who, role: reg[hash].role, code: code, logged: logged, mirrored: mirrored };
   });
 }
 
-/** Fill BLD-code_register with every code that has no row yet (names, roles, dates: never a code or a hash). */
 function sinkCodeRegisterSync_() {
   if (!codeRegisterOn_()) throw err_('TABLE_OFF', 'The code register is switched off.');
   return withLock_(function () {
@@ -155,16 +129,9 @@ function sinkCodeRegisterSync_() {
   });
 }
 
-/**
- * Codes vault: is this typed code the one held for this public id? (Lisa 14 Nov 2026, option B; OV11: the hash and its
- * salt never go to a browser, because short codes could be guessed offline.) Sent once, like a sign-in; the reply is
- * match true or false only. The typed code is never logged, stored or sent back. A miss counts towards the same
- * wrong-code limit as sign-in, so it cannot be used to guess.
- * Who may: the vault gate (OWNER codes today; BLD-permission code_vault / open when served).
- */
 function sinkCodeCheck_(req) {
   var who = authStaff_(req && req.code);
-  if (!vaultMay_(who)) throw err_('NOT_ALLOWED', 'Only people the owner allows can use the vault.');
+  if (!vaultMay_(who)) throw err_('NOT_ALLOWED', 'Only people the user allows can use the vault.');
   var id = String((req && req.code_id) || '');
   if (!/^sc-[a-z0-9]{6}$/.test(id)) throw err_('INVALID', 'Say which code.');
   var typed = req && req.typed;
@@ -176,5 +143,5 @@ function sinkCodeCheck_(req) {
   return { match: match };
 }
 
-/** The vault gate on the server. Today OWNER codes; BLD-permission rows take over when the script serves them. */
-function vaultMay_(who) { return !!who && who.role === 'OWNER'; }
+function vaultMay_(who) { return !!who && who.role === 'USER'; }
+

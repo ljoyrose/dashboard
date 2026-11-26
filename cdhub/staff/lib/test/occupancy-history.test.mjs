@@ -15,7 +15,6 @@ const cap = [
   { area_id: AREA, access_type: 'free', size_band: '10-25kg (medium)', max_dogs: '3', from_date: '', to_date: '' }
 ];
 
-// Three invented litters, no overlap: dam from DOB-10, pups from DOB, all until DOB+56.
 const L = [
   { dam: 'sub-dam-a', pups: ['sub-pup-a1', 'sub-pup-a2'], dob: '2025-07-20', start: '2025-07-10', end: '2025-09-14' },
   { dam: 'sub-dam-b', pups: ['sub-pup-b1', 'sub-pup-b2'], dob: '2026-05-26', start: '2026-05-16', end: '2026-07-21' },
@@ -32,10 +31,9 @@ function addDog(id, name, kind, state) {
 L.forEach((lit, i) => {
   addDog(lit.dam, 'Dam ' + i, 'Breeding Female', 'Active');
   occupancy.push({ id: 'occ-' + lit.dam + '-h', subject_id: lit.dam, area_id: AREA, off_site_kind: '', moved_in: lit.start, moved_out: lit.end, classification: '' });
-  // dams A and B later return to another room; dam C is still in the whelping room today
   if (i < 2) occupancy.push({ id: 'occ-' + lit.dam + '-now', subject_id: lit.dam, area_id: 'area-other', off_site_kind: '', moved_in: '2026-11-11', moved_out: '', classification: '' });
   lit.pups.forEach((id) => {
-    const gone = i < 2; // first two litters have since been collected
+    const gone = i < 2;
     addDog(id, id, 'Pup', gone ? 'Collected' : 'Active');
     occupancy.push({ id: 'occ-' + id + '-h', subject_id: id, area_id: AREA, off_site_kind: '', moved_in: lit.dob, moved_out: lit.end, classification: '' });
     if (gone) occupancy.push({ id: 'occ-' + id + '-out', subject_id: id, area_id: '', off_site_kind: 'sold', moved_in: lit.end, moved_out: '', classification: 'Collected' });
@@ -57,7 +55,6 @@ test('mid-window, the dam and her pups are in H5/6; other litters are not', () =
   assert.deepEqual(O.inArea(occupancy, AREA, '2025-08-01').sort(), ['sub-dam-a', 'sub-pup-a1', 'sub-pup-a2']);
   assert.deepEqual(O.inArea(occupancy, AREA, '2026-06-15').sort(), ['sub-dam-b', 'sub-pup-b1', 'sub-pup-b2']);
   assert.deepEqual(O.inArea(occupancy, AREA, '2026-10-15').sort(), ['sub-dam-c', 'sub-pup-c1', 'sub-pup-c2']);
-  // pups are not placed before their DOB; the dam is in from DOB-10
   assert.deepEqual(O.inArea(occupancy, AREA, '2025-07-15'), ['sub-dam-a']);
   assert.equal(O.rowOn(occupancy, 'sub-pup-a1', '2025-07-15'), null);
   assert.equal(O.rowOn(occupancy, 'sub-pup-a1', '2025-07-20').area_id, AREA);
@@ -106,7 +103,7 @@ test('room.empty: emptyOn follows the dated row; hideEmpty blanks only covered r
     { need_type: 'room.no_dogs', target_table: 'area', target_id: 'area-corr', from_date: '2025-01-01', to_date: '' }];
   assert.equal(O.emptyOn('area-x', '2025-03-01', reqRows), true);
   assert.equal(O.emptyOn('area-x', '2025-07-01', reqRows), false);
-  assert.equal(O.emptyOn('area-corr', '2025-03-01', reqRows), false);   // a corridor takes no dogs but is not empty
+  assert.equal(O.emptyOn('area-corr', '2025-03-01', reqRows), false);
   assert.equal(O.emptyOn('area-y', '2025-03-01', reqRows), false);      // no row: not empty
   const rows = [
     { id: 'r1', area_id: 'area-x', period_start: '2025-03-01T00:00:00Z', min_c: '9.0', max_c: '14.0', spot_c: '20.1', mitigation_note: 'x' },
@@ -117,5 +114,6 @@ test('room.empty: emptyOn follows the dated row; hideEmpty blanks only covered r
   assert.equal(shown[1], rows[1]);
   assert.equal(shown[2], rows[2]);
   assert.equal(rows[0].min_c, '9.0');   // the record itself is untouched
-  assert.equal(O.hideEmpty(rows, []), rows);   // no room.empty rows: the same list
+  assert.equal(O.hideEmpty(rows, []), rows);
 });
+

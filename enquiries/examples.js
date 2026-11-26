@@ -1,13 +1,9 @@
-// Puppy Enquiries Hub: the invented example rows the page shows until the sheet id is in config.js (JOB 13 Stage 13).
-// EVERY row here is made up: example.test addresses, 07700 900xxx numbers, no real person, message or pup.
-// Times are built from "now" so the example always has a call tomorrow, enquiries today and a follow-up due.
 (function (root) {
   'use strict';
   var Core = root.EnquiriesCore || (typeof require === 'function' ? require('./core.js') : null);
   var K = function (n) { return 'K-a' + String(n).padStart(15, '0'); };
   var F = function (n) { return 'F-f' + String(n).padStart(15, '0'); };
 
-  // build(now) -> { Enquiries, People, Events, Drafts, FollowUps, Litters, 'Sale Replies', Deposits, Sources, Log, Results } as page rows.
   function build(now) {
     var t = now == null ? Date.now() : Core.toMs(now);
     var uk = function (hours) { return Core.toUk(t + hours * 3600000); };
@@ -16,7 +12,7 @@
     var row = function (n, o) {
       return Object.assign({ key: K(n), person_key: 'P-x' + n, source: 'Example', source_ref: '', received_uk: uk(-72), channel: 'email', kind: 'puppy',
         brand: 'Cobberdogs', country: 'United Kingdom', country_basis: 'stated', breed_interest: 'Cobberdog', size: '', colour: '', coat: '', sex: '',
-        timing: '', household_flags: '', question_summary: '', score: 0, band: 'cool', stage: 'new', next_step: '', next_due_uk: '', owner: 'Lisa',
+        timing: '', household_flags: '', question_summary: '', score: 0, band: 'cool', stage: 'new', next_step: '', next_due_uk: '', user: 'User',
         do_not_contact: '', consent: 'ok', litter_ref: '', pup_ref: '', lost_reason: '', flag: '', ref: 'E-000' + n, score_reasons: '', updated_uk: uk(-1) }, o);
     };
     var person = function (n, o) {
@@ -51,8 +47,8 @@
         { event_key: 'V-x3', enquiry_key: K(3), person_key: 'P-x3', at_uk: uk(-96), channel: 'email', type: 'replied', detail: '', source_ref: '' }
       ],
       Drafts: [
-        draft(2, 'first-abroad', 'Hi Example2,\n\nThank you for getting in touch about our puppies. I\'d love to help.\n\n' + info + '\n\nKind regards,\n\nLisa'),
-        draft(4, 'first-uk', 'Hi Example4,\n\nThank you for getting in touch about our puppies. I\'d love to help.\n\n' + info + '\n\nKind regards,\n\nLisa'),
+        draft(2, 'first-abroad', 'Hi Example2,\n\nThank you for getting in touch about our puppies. I\'d love to help.\n\n' + info + '\n\nKind regards,\n\nUser'),
+        draft(4, 'first-uk', 'Hi Example4,\n\nThank you for getting in touch about our puppies. I\'d love to help.\n\n' + info + '\n\nKind regards,\n\nUser'),
         draft(5, 'first-uk', 'Hi Example5, this draft must never show. ' + info)
       ],
       FollowUps: [
@@ -73,7 +69,6 @@
         { deposit_key: 'D-x7', litter_ref: 'L-EX1', pup_ref: 'L-EX1-3', person_key: 'P-x7', deposit_date: day(-20, '10:00').slice(0, 10), deposit: '500', balance_due: '1500',
           balance_paid: '', collection_date: day(14, '10:00').slice(0, 10), status: 'held', basis: 'example', check: '' }
       ],
-      // Stage 15: invented Sources and engine Log rows, so the Alerts card has a silent source and a blank run to show.
       Sources: [
         { source: 'Calendly', lands_where: 'Calendly', machine_readable: 'yes', reader: 'calendly', last_read_uk: uk(-1), last_count: 0, status: 'live', note: '' },
         { source: 'Website', lands_where: 'Email', machine_readable: 'yes', reader: 'gmail', last_read_uk: uk(-1), last_count: 0, status: 'live', note: '' },
@@ -85,7 +80,6 @@
         { at_uk: uk(-1), level: 'INFO', step: 'gmail', message: '0 threads read, 0 enquiries', count: 0, dry_run: false, engine_version: 'example' },
         { at_uk: uk(-1), level: 'INFO', step: 'run', message: 'done in 9s', count: '', dry_run: false, engine_version: 'example' }
       ],
-      // Stage 14: invented history counts (as the one-off HubSpot import writes them), before the live months.
       Results: [
         { result_key: 'R-2026-03-hubspot-legacy-hubspot-history', month: '2026-03', source: 'hubspot-legacy', basis: 'hubspot-history', enquiries: 10, calls_booked: 6,
           calls_held: 4, offers: 1, deposits: 2, balances: 1, collected: 1, lost: 3, junk: 4, adult_sale: 0, median_reply_h: '', lost_reasons: 'timing:2 | went elsewhere:1', made_uk: uk(-1) },
@@ -99,3 +93,4 @@
   root.EnquiriesExamples = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+

@@ -42,3 +42,4 @@ for (const scheme of ['light', 'dark']) {
     }
   });
 }
+

@@ -1,5 +1,3 @@
-// Stage 15: alerts. Run: node --test tests/enquiries/alerts.test.js
-// Invented rows only: E-00xx refs, P-xN people, L-T litters. "Now" is fixed so every hour count is worked out by hand.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -22,7 +20,7 @@ test('ACCEPT: a hot enquiry older than 24 h with no reply is listed', () => {
     Enquiries: [
       enq(11, { band: 'hot', received_uk: '2026-06-09T11:00:00' }), // 25 h, no reply: listed
       enq(12, { band: 'hot', received_uk: '2026-06-09T13:00:00' }), // 23 h: not yet
-      enq(13, { band: 'hot', received_uk: '2026-06-08T12:00:00' }), // 48 h but a reply event: not listed
+      enq(13, { band: 'hot', received_uk: '2026-06-08T12:00:00' }),
       enq(14, { band: 'warm', received_uk: '2026-06-08T12:00:00' }), // warm: not listed
       enq(15, { band: 'hot', received_uk: '2026-06-08T12:00:00', stage: 'lost' }), // closed: not listed
       enq(16, { band: 'hot', received_uk: '2026-06-08T12:00:00', flag: 'junk?' }), // junk: not listed
@@ -47,7 +45,6 @@ test('blank run: read nothing, never finished, or stale; a good run gives nothin
   assert.match(blank(err)[0].text, /1 errors/);
   assert.match(blank(run('2026-06-10T08:00:00', { calendly: 4 }))[0].text, /No engine run for 4 h/);
   assert.match(blank([{ at_uk: '2026-06-10T11:00:00', level: 'INFO', step: 'run', message: 'start' }])[0].text, /never finished/);
-  // An older good run followed by a newer blank one: the newer one counts.
   assert.equal(blank(run('2026-06-10T09:00:00', { calendly: 3 }).concat(run('2026-06-10T11:00:00', { calendly: 0 }))).length, 1);
   assert.equal(blank([]).length, 0, 'no Log rows (engine not installed): no alert');
   assert.deepEqual(C.lastRun(run('2026-06-10T11:00:00', { calendly: 2, gmail: 3, score: 9 })), { start: '2026-06-10T11:00:00', done: '2026-06-10T11:00:00', read: 5, readers: 2, errors: 0 });
@@ -69,9 +66,9 @@ test('call in 2 h with no prep: no prep card, or a blank booking form', () => {
   const call = (n, at, o) => enq(n, Object.assign({ channel: 'calendly', stage: 'call-booked', next_due_uk: at }, o));
   const tabs = {
     Enquiries: [
-      call(31, '2026-06-10T13:30:00', { question_summary: '' }), // 1.5 h, booking form blank: listed
-      call(32, '2026-06-10T13:00:00'), // 1 h, prep card has the form: not listed
-      call(33, '2026-06-10T13:00:00', { channel: 'email' }), // not a Calendly booking, so no prep card: listed
+      call(31, '2026-06-10T13:30:00', { question_summary: '' }),
+      call(32, '2026-06-10T13:00:00'),
+      call(33, '2026-06-10T13:00:00', { channel: 'email' }),
       call(34, '2026-06-10T15:00:00', { question_summary: '' }), // 3 h away: not yet
       call(35, '2026-06-10T11:00:00', { question_summary: '' }) // already started: not listed
     ],
@@ -121,7 +118,7 @@ test('open-work rows: one per alert, refs only, never a name, email or number', 
   const tabs = { Enquiries: [enq(51, { band: 'hot', received_uk: '2026-06-08T12:00:00' })], People: [person(51, { name: 'Example51', email: 'b@example.test', phone_e164: '+447700900151' })] };
   const rows = C.openWorkRows(C.alertsView(tabs, { now: NOW }), NOW);
   assert.equal(rows.length, 1);
-  assert.deepEqual(Object.keys(rows[0]), ['key', 'area', 'item', 'next_step', 'owner', 'raised_uk', 'source']);
+  assert.deepEqual(Object.keys(rows[0]), ['key', 'area', 'item', 'next_step', 'user', 'raised_uk', 'source']);
   assert.equal(rows[0].key, 'A-hot-no-reply-K-51');
   const flat = JSON.stringify(rows);
   assert.doesNotMatch(flat, /Example51|example\.test|7700/);
@@ -131,7 +128,7 @@ test('the example rows show four alert kinds', () => {
   const X = require('../../enquiries/examples.js');
   const a = C.alertsView(X.build(NOW), { now: NOW });
   const seen = [...new Set(a.map((x) => x.kind))];
-  // The example hot rows are fresh (so the Stage 13 counts stand) and its one deposit is not due: those two kinds show only in real use.
   assert.deepEqual(seen, ['blank-run', 'contact-blocked', 'pup-no-offer', 'source-silent']);
   assert.deepEqual(a.filter((x) => x.kind === 'source-silent').map((x) => x.source), ['Pets4Homes']);
 });
+

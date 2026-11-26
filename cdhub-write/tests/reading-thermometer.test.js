@@ -9,10 +9,10 @@ const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
-const NOW = Date.UTC(2026, 10, 12, 10, 0, 0);   // 12 Nov 2026
+const NOW = Date.UTC(2026, 10, 12, 10, 0, 0);
 const THM = ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'];
 const env1 = () => {
-  const env = standardEnv({ nowMs: NOW, props: { OWNER_EDIT_ENABLED: 'true' } });
+  const env = standardEnv({ nowMs: NOW, props: { USER_EDIT_ENABLED: 'true' } });
   env.addFile('BLD-thermometer.csv', [THM.join(','), `thm-a,${fx.TENANT},H5 left,area-t1,2026-11-01T09:00:00Z,o`, `thm-b,${fx.TENANT},H5 right,area-t1,2026-11-01T09:00:00Z,o`, `thm-c,${fx.TENANT},Other,area-t2,2026-11-01T09:00:00Z,o`].join('\r\n') + '\r\n');
   return env;
 };
@@ -63,10 +63,10 @@ test('late readings (over 7 days): the slot check also tells the two thermometer
   assert.equal(rows(env).length, 2);
 });
 
-test('owner edit: a reading cannot be moved to a thermometer in another room', () => {
+test('user edit: a reading cannot be moved to a thermometer in another room', () => {
   const env = env1();
   const id = send(env, { thermometer_id: 'thm-a' }).result.id;
-  env.email = 'owner@example.test';
+  env.email = 'user@example.test';
   assert.equal(env.ctx.ui_edit('area_reading', id, { thermometer_id: 'thm-c' }).ok, false);
   assert.equal(env.ctx.ui_edit('area_reading', id, { thermometer_id: 'thm-b' }).ok, true);
 });
@@ -77,7 +77,7 @@ test('the page check (bld-save.js, both copies): thermometer_id optional, checke
     s.setLookups({ area: [{ id: 'area-t1' }] });
     const v = (f) => s.validate('area_reading', Object.assign({ area_id: 'area-t1', min_c: '18.0', max_c: '22.0' }, f));
     assert.equal(v({}).ok, true, p);
-    assert.equal(v({ thermometer_id: 'thm-a' }).ok, true, p);   // list not loaded: the save checks it
+    assert.equal(v({ thermometer_id: 'thm-a' }).ok, true, p);
     s.setLookups({ area: [{ id: 'area-t1' }], thermometer: [{ id: 'thm-a' }] });
     assert.equal(v({ thermometer_id: 'thm-a' }).ok, true, p);
     assert.equal(v({ thermometer_id: 'thm-zz' }).ok, false, p);
@@ -91,7 +91,8 @@ test('missingOn: a reading covers the thermometer it names; an unnamed one cover
   const miss = (readings) => T.missingOn(rows, readings, d, []).map((t) => t.id).sort();
   assert.deepEqual(miss([]), ['thm-a', 'thm-b', 'thm-c']);
   assert.deepEqual(miss([{ area_id: 'h5', thermometer_id: 'thm-a', period_start: at }]), ['thm-b', 'thm-c']);
-  assert.deepEqual(miss([{ area_id: 'h5', period_start: at }]), ['thm-a', 'thm-b', 'thm-c']);   // unnamed in a 2-thermometer room: covers neither
+  assert.deepEqual(miss([{ area_id: 'h5', period_start: at }]), ['thm-a', 'thm-b', 'thm-c']);
   assert.deepEqual(miss([{ area_id: 'hall', period_start: at }]), ['thm-a', 'thm-b']);          // unnamed, one thermometer: covers it
   assert.deepEqual(miss([{ area_id: 'h5', thermometer_id: 'thm-a', period_start: at }, { area_id: 'h5', thermometer_id: 'thm-b', room_empty: 'yes', period_start: at }, { area_id: 'hall', thermometer_id: 'thm-c', taken_at: at }]), []);
 });
+

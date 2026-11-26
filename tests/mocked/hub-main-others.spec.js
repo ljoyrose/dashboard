@@ -31,7 +31,6 @@ async function webSheet(page, values) {
   await page.route(SHEETS, (route) => values ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values }) })
     : route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: { code: 403, message: 'Sample failure', status: 'PERMISSION_DENIED' } }) }));
 }
-// Opens a hub's Main signed in with its sample data (the shared hubs.js openers; Web reads the estate fixture rows).
 async function open(page, guard, hub) {
   if (hub === 'web') {
     await webSheet(page, F.values());
@@ -85,7 +84,6 @@ test.describe('Hub Mains when the read fails: "–", never invented numbers', ()
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
     await expect(page.locator('#view [data-hub-main]')).toBeVisible();
-    // Money reads file by file, so a failure is never hidden behind "Nothing needs you": it is Next, with Control one tap away.
     await checkMain(page, Object.assign({ values: ['–', '–', '–'] }, WANT.money));
     await expect(page.locator('[data-hm="next"] .hm-what')).toContainText('could not be read');
     await expect(page.locator('[data-hm="next"]')).toHaveAttribute('data-kind', 'late');
@@ -148,3 +146,4 @@ test.describe('Hub Mains when nothing needs the owner: ONE "Nothing needs you", 
     await checkMain(page, Object.assign({ empty: true, values: [0, 0, 1] }, WANT.web));
   });
 });
+

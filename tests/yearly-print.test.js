@@ -1,5 +1,3 @@
-// Yearly print: month split, the daily grid, and a check type the code has never heard of.
-// Run: node --test tests/yearly-print.test.js
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const Y = require('../cdhub/yearly-print.js');
@@ -53,7 +51,7 @@ test('layout follows the check type, including one this kennel has never used', 
 });
 
 test('the 24 kennel check names all print once a row exists, whatever the industry calls them', () => {
-  const keys = ['health_check_all', 'parasites', 'whole_site_clean', 'water_bowls', 'evening_count', 'food_bowls', 'fresh_food', 'site_check', 'socialisation', 'fit_to_breed', 'exercise_all', 'round.presence', 'pat_class_1', 'pat_class_2', 'bedding', 'toys', 'pest_checks', 'vehicle_crate', 'cleaning_kit', 'brush_bath_clip', 'cleaning', 'ext_service_co2', 'ext_service_water', 'ext_service_powder'];
+  const keys = ['health_check_all', 'parasites', 'whole_site_clean', 'water_bowls', 'evening_count', 'food_bowls', 'fresh_food', 'site_check', 'socialization', 'fit_to_breed', 'exercise_all', 'round.presence', 'pat_class_1', 'pat_class_2', 'bedding', 'toys', 'pest_checks', 'vehicle_crate', 'cleaning_kit', 'brush_bath_clip', 'cleaning', 'ext_service_co2', 'ext_service_water', 'ext_service_powder'];
   const types = keys.map((k, i) => ({ id: 't' + i, type_key: k, label: k.replace(/[._]/g, ' '), target: 'none', every_days: '30', effective_from: '2026-01-01' }));
   const got = Y.catalogue(ctx({ types: types })).filter((s) => s.kind === 'check').map((s) => s.typeKey);
   assert.deepEqual(got, keys.slice().sort());
@@ -74,7 +72,7 @@ test('a per-dog month is a grid: tick, part, missed, and a pup is not missed bef
   assert.equal(g.marks['d-ada']['2026-03-03'], 'miss');
   assert.equal(g.marks['d-ada']['2026-03-04'], 'concern');
   assert.equal(g.marks['d-ada']['2026-03-16'], '');
-  assert.equal(g.marks['d-bob']['2026-03-01'], 'tick');   // a real record is shown even before the birth date used for "missed"
+  assert.equal(g.marks['d-bob']['2026-03-01'], 'tick');
   assert.equal(g.marks['d-bob']['2026-03-09'], '');
   assert.equal(g.marks['d-bob']['2026-03-10'], 'miss');
   const built = Y.build({ period: 'month', year: 2026, month: 2, ids: ['check:health_check_all'], today: TODAY }, ctx({ logs: logs }));
@@ -350,3 +348,4 @@ test('medicines: a year is one A4 sheet per month and keeps dose, dog and who', 
   assert.match(one, /<title>Medicines register · February 2026<\/title>/);
   assert.match(one, /meds-sheet/);
 });
+

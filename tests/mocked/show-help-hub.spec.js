@@ -7,7 +7,7 @@ test('hub: Compliance help lines hidden by default; Look → Show help shows the
   const help = page.locator('#main .help').first();
   await expect(help).toHaveCount(1);
   await expect(help).toBeHidden();
-  await expect(page.locator('#main p.mut:not(.help)').first()).toBeVisible();   // data and empty-state lines are not help
+  await expect(page.locator('#main p.mut:not(.help)').first()).toBeVisible();
   await page.locator('#houseLookBtn').click();
   await page.getByRole('button', { name: 'Show help' }).click();
   await expect(help).toBeVisible();
@@ -15,3 +15,4 @@ test('hub: Compliance help lines hidden by default; Look → Show help shows the
   await page.getByRole('button', { name: 'Hidden' }).click();
   await expect(help).toBeHidden();
 });
+

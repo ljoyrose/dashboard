@@ -1,5 +1,4 @@
 'use strict';
-/** BLDNeeds.coversDay (both copies): a target with no rows is open by default; opts.absentIs false makes it closed. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
@@ -17,3 +16,4 @@ const R = (id, from, to) => ({ need_type: 'litter.jobs', target_table: 'litter',
     assert.equal(N.coversDay(rows, 'litter.jobs', 'litter', 'ltr-old', '2026-11-12', { absentIs: true }), true);
   });
 });
+

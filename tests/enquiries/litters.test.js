@@ -1,5 +1,3 @@
-// Stage 10: waiting list, litters and the adult-dog sale. Run: node --test tests/enquiries/litters.test.js
-// Invented litter and sale sheet only (tests/fixtures/enquiries/litter.js).
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -76,3 +74,4 @@ test('ACCEPT: sale group cards show replies, viewings and agreed counts, "price 
   assert.deepEqual(C.checkCard(Object.assign({}, g1, { price: '9999' })), ['a price']);
   assert.deepEqual(C.checkCard(Object.assign({}, g1, { note: 'COI 5%' })), ['a COI value']);
 });
+

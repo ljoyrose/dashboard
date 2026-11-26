@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-// SCRIPT. Writes docs/cdhub/CLICK-MAP.md from the click-crawl's own results. Nothing in the map is typed by hand.
-//
-//   npx playwright test --project=mocked cdhub-crawl     the crawl writes test-results/cdhub-crawl/*.json
-//   node tools/cdhub-click-map/make.js                   this turns them into the map
-//
-// The crawl runs on the invented 27-animal set only (Dog A01..A20, Pup P01..P07, Room 1..8), so the map is safe to
-// publish: every name in it is made up. Copies of one control (one per dog, one per room, one per day) are folded
-// into one row with a count.
 const fs = require('fs');
 const path = require('path');
 
@@ -17,16 +9,14 @@ const SITES = [['hub', 'CD Hub (cdhub/)'], ['temperatures', 'Temperatures page (
 const FLAGS = ['LOOP', 'DEAD', 'ERROR', 'ESCAPE', 'WORDING'];
 
 const one = (name) => { const p = path.join(IN, name + '.json'); return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null; };
-/** One result per place and screen size. A walk done in parts (hub-desktop-0 .. hub-desktop-24, one per start screen) is added
- *  together. Two walks can meet the same screen (Main's walk and Today's walk both open a Today list): it is counted once. */
 const read = (name) => {
   const parts = [one(name)].concat(Array.from({ length: 25 }, (_, n) => one(name + '-' + n))).filter(Boolean);
   if (!parts.length) return null;
   const sum = (k) => parts.reduce((a, r) => a + (r[k] || 0), 0);
-  const seen = new Map();   // screen -> its counts, from the first walk that met it
+  const seen = new Map();
   let loose = { reachable: 0, tapped: 0 };
   parts.forEach((r) => {
-    if (!r.screens) { loose.reachable += r.reachable || 0; loose.tapped += r.tapped || 0; return; }   // an older result file: no per-screen counts
+    if (!r.screens) { loose.reachable += r.reachable || 0; loose.tapped += r.tapped || 0; return; }
     r.screens.forEach((x) => { if (!seen.has(x.screen)) seen.set(x.screen, x); });
   });
   const per = Array.from(seen.values());
@@ -35,7 +25,6 @@ const read = (name) => {
   return { rows, findings: [].concat(...parts.map((r) => r.findings)), tapped: loose.tapped + per.reduce((a, x) => a + x.tapped, 0), reachable: loose.reachable + per.reduce((a, x) => a + x.reachable, 0),
     states: new Set(rows.map((x) => x.screen).filter((sc) => !/\(old address\)$/.test(sc))).size, sampledLeft: sum('sampledLeft') };
 };
-/** One pattern for every copy: Dog A07 -> Dog A.., Room 3 -> Room N, 12/02/26 -> a date, 14.5 -> a number. */
 const fold = (s) => String(s == null ? '' : s)
   .replace(/\b(Dog A|Pup P)\d\d\b/g, '$1..').replace(/\b(Room|Field) \d\b/g, '$1 N').replace(/\bsub-[ap]\d\d\b/g, 'sub-..').replace(/\bar-\d\b/g, 'ar-N')
   .replace(/\b\d{1,2}\/\d{1,2}\/\d{2}\b/g, 'DD/MM/YY').replace(/\b\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}\b/g, 'D Mon YYYY')
@@ -88,3 +77,4 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, md);
 const n = md.split('\n').filter((l) => /^\| /.test(l)).length;
 console.log('wrote ' + path.relative(ROOT, OUT) + ' (' + n + ' table rows)');
+
