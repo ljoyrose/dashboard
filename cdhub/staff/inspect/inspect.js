@@ -15,7 +15,7 @@
  * full shared record; Fit to Breed with when it is next due; litters as "x of <limit>" with the last date and how many in the
  * last 12 months. The limit is the breeder's own rule row, sent by the script when shared; never a number in this page.
  * Pass / Unverified / Fail show on the must-pass checks only when the script sends a must-pass summary for the link AND the
- * link's viewer level shows them (BLDViewerLevels). Never points, the target, Below target, ranking, notes, programme or looks.
+ * link's viewer level shows them (BLDViewerLevels). Never points, the target, Below target, ranking, notes or programme answers.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
