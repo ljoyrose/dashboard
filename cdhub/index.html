@@ -1394,7 +1394,7 @@ function build(){
   CD.litters=T['BLD-litter.csv']||[];
   CD.manifest=T['BLD-_MANIFEST.csv']||[];
   var MCN={}; (T['BLD-microchip.csv']||[]).forEach(function(r){ if(r.subject_id&&r.chip_number) MCN[r.subject_id]=r.chip_number; });
-  CD.dogs.forEach(function(d){ if(!d.chip && MCN[d.id]) d.chip=MCN[d.id]; });   // status comes from BLD-subject_status only 
+  CD.dogs.forEach(function(d){ if(!d.chip && MCN[d.id]) d.chip=MCN[d.id]; });   // status comes from BLD-subject_status only
   CD.tenant=(T['BLD-tenant.csv']||[])[0]||{};
   CD._byId={}; CD.dogs.forEach(function(d){ CD._byId[d.id]=d; });
   CD._built=Date.now(); CD._needs=null;
@@ -1881,7 +1881,7 @@ function checks(){
      :'no bitch is over your most litters'});
  out.push({k:'breeding rules',ok:!unset.length,
    msg:unset.length? unset.length+' of 3 not set yet: '+unset.join(', ')+'. Set them on Compliance.':'all 3 set; litters and matings are checked against the version in force on their own date'});
- 
+
  var rl=roomAudit(todayISO());
  out.push({k:'room limits',ok:!rl.over.length&&!rl.unknown.length,
    msg:rl.over.length? rl.over.length+' room'+(rl.over.length===1?' is':'s are')+' over: '+rl.over.slice(0,5).map(function(x){ return x.label+' ('+x.mix+', takes '+x.alternatives+')'; }).join(', ')+(rl.over.length>5?' \u2026':'')
