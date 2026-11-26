@@ -142,6 +142,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await open(page, guard);
     await page.evaluate(() => go('dogs'));
     const one = page.locator('#rows article.dc', { hasText: 'Pretend Dam One' });
+    await expect(one).toBeVisible();   // Dogs draws after its parts load
     await expect(one.locator('.nl .st')).toHaveCount(0);   // no role badge on the card: sex is the icon on the photo
     const chips = await page.locator('.sfb.st').allTextContents();
     expect(chips.map((t) => t.replace(/\s*\d+$/, '').trim())).toEqual(expect.arrayContaining(['Bitch', 'Stud']));
