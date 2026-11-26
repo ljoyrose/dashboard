@@ -393,6 +393,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .pcrop-edit input{width:100%}
 .pcrop-size{margin:0;font-size:var(--fs-small)}
 .pcam video{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid var(--line);border-radius:var(--radius);background:var(--soft)}
+.dogphoto-turn{display:flex;gap:6px}.dogphoto-turn [hidden]{display:none !important}.dogphoto-turn .btn{flex:1 1 0;justify-content:center;padding:0 8px}
 .dogphoto-msg{margin:0 12px 8px}
 .dogphoto-msg:empty{display:none}
 /* gallery : small square thumbnails, files and links as plain links */
@@ -2879,12 +2880,35 @@ function dogPhotoBytes(img,id){
 function loadDogPhotos(){
  Array.prototype.forEach.call(document.querySelectorAll('img.dogphoto[data-photo-id]'), loadPhotoImg);
 }
+/* Photo turn (Lisa 15 Nov 2026): the stored picture never changes; the turn in force today is drawn on top. */
+function photoTurn(id){ return BLDPhotos.rotation(T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],id,todayISO()); }
+function applyTurn(img,deg){
+ if(deg==null) deg=photoTurn(img.getAttribute('data-photo-id'));
+ img.setAttribute('data-rot',String(deg));
+ var box=img.parentNode, w=box&&box.clientWidth||0, h=box&&box.clientHeight||0;
+ img.style.cssText=BLDPhotos.turnStyle(deg,w,h);
+}
+/* Which element is the card's own main photo (never a gallery thumbnail that borrowed the id). */
+function isMainPhoto(img){
+ return !!(img&&img.classList&&img.classList.contains('dogphoto'));
+}
+/* Every element showing this photo id: the card's main one, or gallery thumbnails that carry it.
+   Scoped to one card when it is given, so a save restyles only the card the owner is working in. */
+function photoImgs(id,scope){
+ var all=(scope||document).querySelectorAll('img[data-photo-id="'+id+'"]'), out=[], i;
+ for(i=0;i<all.length;i++) out.push(all[i]);
+ return out;
+}
 function loadPhotoImg(img){
-  var id=img.getAttribute('data-photo-id');
+  var id=img.getAttribute('data-photo-id'), main=isMainPhoto(img);
+  applyTurn(img);
   if(!id||!TOKEN){ pawDogPhoto(img); return; }
-  img.addEventListener('load', function(){ if(img.getAttribute('src')) showDogPhoto(img); });
+  img.addEventListener('load', function(){ if(img.getAttribute('src')){ showDogPhoto(img); applyTurn(img,+img.getAttribute('data-rot')||0); } });
   img.addEventListener('error', function(){
    if(img.getAttribute('data-tried')==='bytes'){ pawDogPhoto(img); return; }
+   if(main){ dogPhotoBytes(img,id); return; }
+   /* a gallery thumbnail: one bytes try only, then the paw, so it never retries a signed-out Drive thumbnail */
+   img.setAttribute('data-tried','bytes');
    dogPhotoBytes(img,id);
   });
   gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
@@ -3100,6 +3124,27 @@ document.addEventListener('click',async function(ev){
  (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:(r.result&&r.result.id)||'',rule_key:PHOTO_DATES_ME,value:want,effective_from:day,source:'Set on the photo gallery',note:'',set_at:(r.result&&r.result.at)||new Date().toISOString()});
  if(document.getElementById('adm-display')){ go('admin',false); var m3=document.querySelector('#adm-display [data-photo-dates-msg]'); if(m3) m3.textContent='\u2713 Saved'; return; }
  drawDogs();
+});
+/* Turn the main photo (owner): the arrows turn the picture on screen; Save keeps it as the owner setting row
+   photo.rotate.<file> from today. The rule list keeps one row per setting per day, so a second save today is refused. */
+document.addEventListener('click',async function(ev){
+ var t=ev.target&&ev.target.closest?ev.target.closest('[data-turn],[data-turn-save]'):null; if(!t) return;
+ var wrap=t.closest('[data-turn-file]'), card=t.closest('article.dc'), img=card&&card.querySelector('img.dogphoto');
+ var msg=card&&card.querySelector('[data-photo-msg]'), save=wrap.querySelector('[data-turn-save]'), file=wrap.getAttribute('data-turn-file');
+ if(!img) return;
+ var now=photoTurn(img.getAttribute('data-photo-id'));
+ if(t.hasAttribute('data-turn')){
+  var next=BLDPhotos.turned(+img.getAttribute('data-rot')||0,+t.getAttribute('data-turn'));
+  applyTurn(img,next); save.hidden=(next===now); if(msg) msg.textContent=''; return;
+ }
+ var want=+img.getAttribute('data-rot')||0, day=todayLondon(), key=BLDPhotos.rotateKey(file);
+ save.disabled=true; if(msg) msg.textContent='Saving\u2026';
+ var r=await sinkPost('breeding_rule',{rule_key:key,value:String(want),effective_from:day,source:'Turned on the dog card'});
+ save.disabled=false;
+ if(!(r.ok&&r.result&&r.result.status==='saved')){ if(msg) msg.textContent=(r.fields&&r.fields.effective_from)?'Already turned today. Try again tomorrow.':sinkMsg(r); return; }
+ (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:(r.result&&r.result.id)||'',rule_key:key,value:String(want),effective_from:day,source:'Turned on the dog card',note:'',set_at:(r.result&&r.result.at)||new Date().toISOString()});
+ save.hidden=true; if(msg) msg.textContent='\u2713 Saved';
+ photoImgs(img.getAttribute('data-photo-id'),card).forEach(function(x){ applyTurn(x); });
 });
 /* which dogs' Photos are open, so a redraw (a save, or a read landing behind the copy) does not shut them (22 Nov 2026) */
 var GAL_OPEN={};
@@ -3497,6 +3542,10 @@ function drawDogs(){
     +'<label class="btn" data-photo-upload>Upload'
       +'<input type="file" accept="image/*" class="sr" aria-label="Upload a photo" data-dog-photo="'+esc(d.id)+'" data-photo-src="upload">'
     +'</label>'
+    +(ph.main&&pic?'<div class="dogphoto-turn" data-turn-file="'+esc(ph.main.id)+'">'
+      +'<button type="button" class="btn quiet" data-turn="-1" aria-label="Turn left">\u21ba</button>'
+      +'<button type="button" class="btn quiet" data-turn="1" aria-label="Turn right">\u21bb</button>'
+      +'<button type="button" class="btn" data-turn-save hidden>Save</button></div>':'')
     +'</div>'
     +'</div>'
     +'<div class="dc-info">'
