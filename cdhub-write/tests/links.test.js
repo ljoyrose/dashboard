@@ -83,6 +83,21 @@ test('link_add: subjects is the dog list in BLD-subject.csv (live photo links sa
   assert.equal(post(e, 'link_add', { from_table: 'subjects', from_id: 'sub-missing', to_table: 'files', to_id: 'fil-1', role: 'gallery', source: 'test' }, e.codes.owner).code, 'NOT_FOUND');
 });
 
+test('link_end: several gallery links end in one save, each with the same reason', () => {
+  const e = env();
+  const a = post(e, 'link_add', Object.assign(g('sub-test-a', 'fil-1'), { from_date: '2026-11-01' }));
+  const b = post(e, 'link_add', Object.assign(g('sub-test-a', 'fil-2'), { from_date: '2026-11-02' }));
+  assert.equal(a.ok && b.ok, true);
+  const end = post(e, 'link_end', { reason: 'Removed in gallery edit', ends: [{ id: a.result.id, to_date: '2026-11-10' }, { id: b.result.id, to_date: '2026-11-11' }] });
+  assert.equal(end.ok, true, JSON.stringify(end));
+  assert.deepEqual(end.result.ids, [a.result.id, b.result.id]);
+  const rs = rows(e);
+  assert.equal(rs[0][8], '2026-11-10');
+  assert.equal(rs[1][8], '2026-11-11');
+  assert.equal(rs[0][14], 'Removed in gallery edit');
+  assert.equal(rs[1][14], 'Removed in gallery edit');
+});
+
 test('link_end: an optional reason is kept in end_reason; nothing else changes', () => {
   const e = env();
   const a = post(e, 'link_add', Object.assign(g('sub-test-a', 'fil-1'), { from_date: '2026-11-01' }), e.codes.owner);
