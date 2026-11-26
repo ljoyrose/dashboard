@@ -111,7 +111,7 @@ jobs:
       - name: Red on a scheduled run? Open or update the one issue
         continue-on-error: true # bookkeeping must never change the result of the tests
         if: ${{ failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-        run: node tests/support/report-issue.js --state red --label tests-red --title-prefix "cdhub: check failed" --results test-results/results.json
+        run: 'node tests/support/report-issue.js --state red --label tests-red --title-prefix "cdhub: check failed" --results test-results/results.json'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Green again? Close the issue
@@ -162,7 +162,7 @@ jobs:
       - name: Live site red? Open or update the one live-site issue
         continue-on-error: true
         if: ${{ steps.live.outcome == 'failure' && github.ref == 'refs/heads/main' }}
-        run: node tests/support/report-issue.js --state red --label live-site-red --title-prefix "cdhub: check failed" --results test-results/results.json
+        run: 'node tests/support/report-issue.js --state red --label live-site-red --title-prefix "cdhub: check failed" --results test-results/results.json'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Live site fine? Close the issue

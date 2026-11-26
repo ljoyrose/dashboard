@@ -34,7 +34,7 @@ jobs:
       - name: Off? Open or update the one issue
         if: ${{ failure() && steps.check.outcome == 'failure' && github.ref == 'refs/heads/main' }}
         continue-on-error: true
-        run: node tests/support/report-issue.js --state red --label protection-off --title-prefix "cdhub: protection check failed" --results none --note "Technical check failed."
+        run: 'node tests/support/report-issue.js --state red --label protection-off --title-prefix "cdhub: protection check failed" --results none --note "Technical check failed."'
       - name: On? Close the issue
         if: ${{ success() && github.ref == 'refs/heads/main' }}
         continue-on-error: true
