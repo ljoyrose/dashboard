@@ -424,6 +424,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | Room temperatures in the yearly print were a long list, so one month became many pages | "room temperatures print as one daily min and max sheet a month @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
 | 25 Nov 2026 | Empty medicine months printed as blank pages, and optional fields said "not recorded" | "an empty medicines month says no records and optional fields stay blank @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
 | 25 Nov 2026 | SOP Print records printed the SOP list straight away and froze the page | "SOP Print records opens the print view and does not print the list @regression" (tests/mocked/cdhub-sop-records.spec.js) |
+| 25 Nov 2026 | The Compliance Jobs table had no way to record a job, and an SOP record had no day | "a Jobs row tick saves like a Board tap, and a dog job opens the chooser @regression" (tests/mocked/cdhub-jobs.spec.js) |
 | 25 Nov 2026 | A SOP link opened the previous site copy as a full page load of index.html with a hash. The tab ran out of memory | "an old-host SOP address stays on this site and opens that SOP @regression" (tests/mocked/route-crawl.spec.js) |
 | 25 Nov 2026 | The yearly print page wrote errors to the console | "the yearly print page loads with no console errors @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
 | 25 Nov 2026 | a room card printed a blank size | "room card prints the area size @regression" (tests/mocked/cdhub-print-room-size.spec.js) |

@@ -797,9 +797,9 @@ function jobsV(){ var types=T['BLD-check_type.csv']||[]; if(typeof BLDSopRecords
  var day=todayISO(), occ=T['BLD-occupancy.csv']||[], st=T['BLD-subject_status.csv']||[], req=CD.req||[], subjects=CD.dogs||[];
  var dogs=subjects.filter(function(d){ return BLDDue.onSite(d, occ, st, day); });
  var areas=(CD.areas||[]).map(function(a){ return {id:a.id,code:a.code,use:a.use||'',grouping:a.grouping||'',kind:a.kind||'',retired:!BLDOccupancy.inUse(a,day,req),noDogs:BLDOccupancy.takesDogs?!BLDOccupancy.takesDogs(a,day,req):false}; });
- return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:dogs,subjects:subjects,occupancy:occ,statuses:st,areas:areas,litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],records:{weight:T['BLD-weight.csv']||[],dispense:T['BLD-dispense.csv']||[],vaccination:T['BLD-vaccination.csv']||[],microchip:T['BLD-microchip.csv']||[]},today:day,esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
+ return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:dogs,subjects:subjects,occupancy:occ,statuses:st,areas:areas,litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],records:{weight:T['BLD-weight.csv']||[],dispense:T['BLD-dispense.csv']||[],vaccination:T['BLD-vaccination.csv']||[],microchip:T['BLD-microchip.csv']||[]},today:day,esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref,doneNote:COMP.doneNote||null}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
-var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
+var COMP={shut:{},asAt:'',doneNote:null};   /* asAt: the "What was true on" date; blank = today. doneNote: the line after a Jobs tick */
 function compOpen(k){ return COMP.shut[k]?'':' open'; }
 function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><details class="compfold" data-fold="'+k+'"'+compOpen(k)+'><summary><h3>'+title+'</h3></summary>'+body+'</details></section>'; }
 function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
@@ -5048,52 +5048,116 @@ function sopCardHtml(r){
   return '<details class="sopsec"><summary>'+esc(s.h)+' <span class="n">'+n+'</span></summary>'+sopBlocks(s.blocks)+'</details>';
  }).join('')+extra;
 }
-/* Record a due or never-recorded SOP check. One check_log row per dog, room or litter (litter_id, not subject_id).
-   A whole-site job about dogs is one add_site. how_recorded is tapped or site_tap, at the real time, through the same save as other checks. */
+/* One check_log save, the same fields as a tap on The Board → Jobs. The queue keeps the request id, so a retry does not save twice. */
+var SAVE_MEM={};
+function saveMem(key,sig){ var m=SAVE_MEM[key]; if(!m||m.sig!==sig) m=SAVE_MEM[key]={sig:sig,rids:[],from:0}; return m; }
+function pushCheckLog(logs, fields, res){
+ var at=res.at||fields.happened_at||new Date().toISOString(), who=res.who||'';
+ if(res.session){ logs.push({id:res.id||'',check_type_id:fields.check_type_id,subject_id:'',area_id:fields.area_id||'',covered_ids:(res.covered_ids||fields.dog_ids||''),exceptions:fields.exceptions||'',outcome:fields.outcome,how_recorded:fields.how_recorded,happened_at:fields.happened_at||at,note:fields.note||'',taken_at:at,taken_by:who}); return; }
+ if(fields.dog_ids){ fields.dog_ids.split('|').forEach(function(d,k){ logs.push({id:(res.ids&&res.ids[k])||((res.id||'job')+'-'+k),check_type_id:fields.check_type_id,subject_id:d,area_id:fields.area_id||'',outcome:fields.outcome,how_recorded:fields.how_recorded,happened_at:fields.happened_at||at,note:fields.note||'',taken_at:at,taken_by:who}); }); return; }
+ logs.push({id:res.id||'',check_type_id:fields.check_type_id,subject_id:fields.subject_id||'',area_id:fields.area_id||'',litter_id:fields.litter_id||'',outcome:fields.outcome,how_recorded:fields.how_recorded,happened_at:fields.happened_at||at,note:fields.note||'',item:fields.item||'',amount:fields.amount||'',taken_at:at,taken_by:who});
+}
+async function sendPlans(memKey, plans, msg){
+ var sig=JSON.stringify(plans.map(function(p){ return {a:p.action,f:p.fields}; }));
+ var mem=saveMem(memKey, sig), logs=T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[]), bad='', last=null, added=0;
+ for(var i=mem.from;i<plans.length;i++){
+  var rid=mem.rids[i]||sinkRid(); mem.rids[i]=rid; mem.from=i;
+  if(msg){ msg.removeAttribute('data-saved'); msg.textContent=plans.length>1?('Saving '+(i+1)+' of '+plans.length+'\u2026'):'saving\u2026'; msg.setAttribute('data-rid', rid); }
+  var r=await sinkSend({table:'check_log',action:plans[i].action,fields:plans[i].fields,request_id:rid});
+  last=r;
+  if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); if(!(r&&(r.code==='NETWORK'||r.kept))) mem.rids[i]=''; break; }
+  pushCheckLog(logs, plans[i].fields, r.result||{}); added++; mem.from=i+1;
+ }
+ if(msg){ msg.removeAttribute('data-rid'); showSave(msg, bad||sinkMsg(last||{},'')); }
+ if(!bad) delete SAVE_MEM[memKey];
+ return {ok:!bad, added:added, message:bad||(last?sinkMsg(last,''):'')};
+}
+function readExtra(root, prefix){
+ var extra={}, item=root.querySelector('[data-'+prefix+'-item]'), amount=root.querySelector('[data-'+prefix+'-amount]'), note=root.querySelector('[data-'+prefix+'-note]');
+ if(item) extra.item=item.value.trim(); if(amount) extra.amount=amount.value.trim(); if(note) extra.note=note.value.trim();
+ return extra;
+}
+/* Record a due or never-recorded SOP check. Same payload as The Board → Jobs, on the chosen day (today is the real time). */
 async function sopRecord(btn){
  var key=btn.getAttribute('data-sop-save'), box=btn.closest('[data-sop-record]'); if(!box) return;
  var msg=box.querySelector('[data-sop-msg]'), picked=[];
  var ticks=box.querySelectorAll('[data-sop-tick]');
  if(ticks.length) Array.prototype.forEach.call(ticks,function(el){ if(!el.checked) return; picked.push({kind:el.getAttribute('data-kind')||'',id:el.value||'',area_id:el.getAttribute('data-area')||''}); });
  else if(box.hasAttribute('data-one-kind')) picked.push({kind:box.getAttribute('data-one-kind'),id:box.getAttribute('data-one-id')||'',area_id:box.getAttribute('data-one-area')||''});
- var extra={}, item=box.querySelector('[data-sop-item]'), amount=box.querySelector('[data-sop-amount]'), note=box.querySelector('[data-sop-note]');
- if(item) extra.item=item.value.trim(); if(amount) extra.amount=amount.value.trim(); if(note) extra.note=note.value.trim();
- var plan=BLDJobsView.savePlans(jobsV(),key,picked,extra,new Date().toISOString());
+ var v=jobsV(), dayEl=box.querySelector('[data-sop-day]'), day=(dayEl&&dayEl.value)||v.today;
+ if(day>v.today){ if(msg) msg.textContent='Pick today or an earlier day.'; return; }
+ var plan=BLDJobsView.tapPlans(v, key, picked, readExtra(box,'sop'), day, new Date().toISOString());
  if(plan.error){ if(msg) msg.textContent=plan.error; return; }
  btn.disabled=true;
- var bad='', logs=T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[]), n=plan.plans.length;
- for(var i=0;i<n;i++){
-  var p=plan.plans[i]; if(msg) msg.textContent='Saving '+(i+1)+' of '+n+'\u2026';
-  var r=await sinkSend({table:'check_log',action:p.action,fields:p.fields});
-  if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); break; }
-  var res=r.result||{}, at=res.at||p.fields.happened_at, who=res.who||'';
-  if(res.session){ logs.push({id:res.id||'',check_type_id:p.fields.check_type_id,subject_id:'',covered_ids:(res.covered_ids||p.fields.dog_ids||''),exceptions:p.fields.exceptions||'',outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who}); }
-  else if(p.fields.dog_ids){ p.fields.dog_ids.split('|').forEach(function(d,k){ logs.push({id:(res.ids&&res.ids[k])||((res.id||'sop')+'-'+k),check_type_id:p.fields.check_type_id,subject_id:d,outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who}); }); }
-  else logs.push({id:res.id||'',check_type_id:p.fields.check_type_id,subject_id:p.fields.subject_id||'',area_id:p.fields.area_id||'',litter_id:p.fields.litter_id||'',outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who});
- }
+ var sent=await sendPlans('sop:'+key, plan.plans, msg);
  drawSops();
- if(bad){ var again=document.querySelector('[data-sop-record="'+CSS.escape(key)+'"] [data-sop-msg]'); if(again) again.textContent=bad; }
+ if(!sent.ok){ var again=document.querySelector('[data-sop-record="'+CSS.escape(key)+'"] [data-sop-msg]'); if(again) showSave(again, sent.message); }
 }
 /* Checked today: an SOP with no check in force. The first time also adds the check_type row, then one check_log. */
 async function sopChecked(btn){
  var name=btn.getAttribute('data-sop-checked'), box=btn.closest('[data-sop-record]'); if(!box||typeof BLDSopRecords==='undefined') return;
  var msg=box.querySelector('[data-sop-msg]'), sop=(SOP.rows||[]).filter(function(r){ return r.short_name===name; })[0]||{short_name:name};
- var plan=BLDSopRecords.checkedPlan(sopCtx(), sop, new Date().toISOString());
+ var dayEl=box.querySelector('[data-sop-day]'), today=todayISO(), day=(dayEl&&dayEl.value)||today;
+ if(day>today){ if(msg) msg.textContent='Pick today or an earlier day.'; return; }
+ var now=(!day||day===today)?new Date().toISOString():(BLDJobsView.londonIso?BLDJobsView.londonIso(day,'12:00'):day+'T12:00:00.000Z');
+ var plan=BLDSopRecords.checkedPlan(sopCtx(), sop, now);
  if(plan.error){ if(msg) msg.textContent=plan.error; return; }
- btn.disabled=true; var typeId=plan.typeId||'', bad='';
- for(var i=0;i<plan.steps.length;i++){
+ if(day&&day<today) plan.steps.forEach(function(s){ if(s.table==='check_log') s.fields.confirm_unusual='yes'; });
+ btn.disabled=true; var typeId=plan.typeId||'', bad='', mem=saveMem('checked:'+name, day+'|'+plan.steps.length);
+ for(var i=mem.from;i<plan.steps.length;i++){
   var step=plan.steps[i], fields={}; Object.keys(step.fields).forEach(function(k){ fields[k]=step.fields[k]; });
   if(step.needsType) fields.check_type_id=typeId;
-  if(msg) msg.textContent='Saving '+(i+1)+' of '+plan.steps.length+'\u2026';
-  var r=await sinkSend({table:step.table,action:step.action,fields:fields});
-  if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); break; }
+  var rid=mem.rids[i]||sinkRid(); mem.rids[i]=rid; mem.from=i;
+  if(msg){ msg.textContent='Saving '+(i+1)+' of '+plan.steps.length+'\u2026'; msg.setAttribute('data-rid', rid); }
+  var r=await sinkSend({table:step.table,action:step.action,fields:fields,request_id:rid});
+  if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); if(!(r&&(r.code==='NETWORK'||r.kept))) mem.rids[i]=''; break; }
   var res=r.result||{};
   if(step.table==='check_type'){ typeId=res.id||typeId; (T['BLD-check_type.csv']||(T['BLD-check_type.csv']=[])).push(Object.assign({id:typeId}, fields)); }
   else (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:res.id||'',check_type_id:fields.check_type_id,outcome:fields.outcome,how_recorded:fields.how_recorded,happened_at:fields.happened_at,note:fields.note||'',taken_at:res.at||fields.happened_at,taken_by:res.who||''});
+  mem.from=i+1;
  }
+ if(!bad) delete SAVE_MEM['checked:'+name];
+ if(msg) msg.removeAttribute('data-rid');
  drawSops();
- if(bad){ var again=document.querySelector('[data-sop-checked="'+CSS.escape(name)+'"]'); if(again){ again.disabled=false; var m=again.parentNode.querySelector('[data-sop-msg]'); if(m) m.textContent=bad; } }
+ if(bad){ var again=document.querySelector('[data-sop-checked="'+CSS.escape(name)+'"]'); if(again){ again.disabled=false; var m=again.parentNode.querySelector('[data-sop-msg]'); if(m) showSave(m, bad); } }
 }
+/* Jobs table: a tick and a day. A dog, room or litter job opens its chooser first. The save matches a Board tap. */
+async function jobDone(btn){
+ var key=btn.getAttribute('data-job-done'), cell=btn.closest('td'); if(!cell) return;
+ var box=cell.querySelector('[data-job-box]'), pick=cell.querySelector('[data-job-pick]'), msg=cell.querySelector('[data-job-msg]');
+ if(pick&&pick.hasAttribute('hidden')){ pick.hidden=false; if(msg) msg.textContent=''; return; }
+ var picked=[];
+ if(pick) Array.prototype.forEach.call(pick.querySelectorAll('[data-job-tick]'),function(el){ if(!el.checked) return; picked.push({kind:el.getAttribute('data-kind')||'',id:el.value||'',area_id:el.getAttribute('data-area')||''}); });
+ var dayEl=box&&box.querySelector('[data-job-day]'), v=jobsV(), day=(dayEl&&dayEl.value)||v.today;
+ if(day>v.today){ if(msg) msg.textContent='Pick today or an earlier day.'; return; }
+ var plan=BLDJobsView.tapPlans(v, key, picked, pick?readExtra(pick,'job'):{}, day, new Date().toISOString());
+ if(plan.error){ if(msg) msg.textContent=plan.error; return; }
+ btn.disabled=true;
+ var sent=await sendPlans('job:'+key, plan.plans, msg);
+ if(!sent.ok&&!sent.added){ btn.disabled=false; return; }
+ COMP.doneNote={key:key, html:saveHtml(sent.message)};
+ go('compliance', false);
+ COMP.doneNote=null;
+}
+document.addEventListener('click',function(ev){
+ var all=ev.target.closest&&ev.target.closest('[data-job-all]');
+ if(all){
+  var host=all.closest('[data-job-pick]');
+  if(host) Array.prototype.forEach.call(host.querySelectorAll('[data-job-tick]'),function(el){ if(el.getAttribute('data-done')==='1') return; el.checked=true; });
+  delete SAVE_MEM['job:'+(all.getAttribute('data-job-all')||'')];
+  return;
+ }
+ var b=ev.target.closest&&ev.target.closest('[data-job-done]');
+ if(b&&!b.disabled) jobDone(b);
+});
+document.addEventListener('change',function(ev){
+ var el=ev.target;
+ if(!el||!el.getAttribute) return;
+ var job=el.getAttribute('data-job-day')||el.getAttribute('data-job-tick')||'';
+ var sop=el.getAttribute('data-sop-day')||el.getAttribute('data-sop-tick')||'';
+ if(job) delete SAVE_MEM['job:'+job];
+ if(sop) delete SAVE_MEM['sop:'+sop];
+});
 /* Print records: the yearly print for this SOP's records (loaded if it is not on the page yet).
    A SOP the yearly print does not cover falls through to this month in the Checks register. */
 /* Print records opens the print view first. The person presses Print there. It does not print the SOP list. */
