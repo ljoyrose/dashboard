@@ -111,5 +111,41 @@ var BLDPhotos = (function () {
   /** A safe web address for a link file: http(s) only, else ''. */
   function safeUrl(u) { u = String(u || '').trim(); return /^https?:\/\/[^\s"'<>]+$/i.test(u) ? u : ''; }
   return { forRecord: forRecord, label: label, safeUrl: safeUrl, shownPhoto: shownPhoto, fileDrive: fileDrive };
+  /* Photo turn (Lisa 15 Nov 2026): the stored picture is never changed. Turning a photo is an owner setting row in the one
+     rule list, photo.rotate.<files row id> = 0, 90, 180 or 270 (degrees clockwise), dated like every other rule; the row in
+     force on the day wins. Every place that draws the photo (cards, lists, Breed Better, print) reads the same turn. */
+  var TURNS = { '0': 0, '90': 90, '180': 180, '270': 270 };
+  function driveId(v) {
+    v = String(v == null ? '' : v).trim();
+    var m = /\/file\/d\/([A-Za-z0-9_-]+)/.exec(v) || /[?&]id=([A-Za-z0-9_-]+)/.exec(v);
+    return m ? m[1] : (!/^https?:/i.test(v) && /^[A-Za-z0-9_-]{8,}$/.test(v) ? v : '');
+  }
+  function rotateKey(fileId) { return 'photo.rotate.' + String(fileId == null ? '' : fileId).trim().toLowerCase(); }
+  /** The turn in force on a day for a photo, given its files row id or its Drive file id: 0, 90, 180 or 270. */
+  function rotation(files, rules, photo, day) {
+    var p = String(photo == null ? '' : photo).trim(), keys = {};
+    if (!p) return 0;
+    var did = driveId(p);
+    (files || []).forEach(function (f) {
+      if (f && f.id && (f.id === p || (did && driveId(f.drive_file_id) === did))) keys[rotateKey(f.id)] = 1;
+    });
+    var best = null;
+    (rules || []).forEach(function (r) {
+      var f = ymd(r.effective_from), t = ymd(r.to_date);
+      if (!keys[String(r.rule_key || '')] || !(String(r.value).trim() in TURNS) || (f && f > day) || (t && t < day)) return;
+      if (!best || f > ymd(best.effective_from) || (f === ymd(best.effective_from) && String(r.set_at || '') >= String(best.set_at || ''))) best = r;
+    });
+    return best ? TURNS[String(best.value).trim()] : 0;
+  }
+  /** The next turn after one step left (-1) or right (+1). */
+  function turned(deg, step) { return (((Number(deg) || 0) + (step < 0 ? 270 : 90)) % 360); }
+  /** Inline style that shows a picture turned and still filling a w x h box (the box must be position:relative). */
+  function turnStyle(deg, w, h) {
+    deg = TURNS[String(deg)] || 0;
+    if (!deg) return '';
+    if (deg === 180) return 'transform:rotate(180deg)';
+    return 'position:absolute;top:50%;left:50%;width:' + h + 'px;height:' + w + 'px;max-width:none;transform:translate(-50%,-50%) rotate(' + deg + 'deg)';
+  }
+  return { forRecord: forRecord, label: label, safeUrl: safeUrl, rotation: rotation, rotateKey: rotateKey, turned: turned, turnStyle: turnStyle };
 }());
 if (typeof module !== 'undefined') module.exports = BLDPhotos;
