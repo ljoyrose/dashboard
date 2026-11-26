@@ -1286,17 +1286,21 @@ function build(){
   Object.keys(W).forEach(function(k){ var live=liveWeights(W[k]); live.sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); W[k]=live; });
   var DSP={}, seenDose={}, copiedDose={};
   function doseOn(v){ return String(v||'').slice(0,10); }
+  var doseDay=todayLondon();
+  function doseEnded(r){ return window.BLDMedRows&&BLDMedRows.doseEnded&&BLDMedRows.doseEnded(r,doseDay); }
   (T['BLD-dispense.csv']||[]).forEach(function(r){
+    if(doseEnded(r)) return;
     if(window.BLDMedRows&&BLDMedRows.procedureDrug&&BLDMedRows.procedureDrug(r.product,r.note)) return;
     (String(r.note||'').match(/\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/gi)||[]).forEach(function(i){ copiedDose[i.toLowerCase()]=1; });
     var k=window.BLDMedRows?BLDMedRows.doseKey(r.subject_id,doseOn(r.given_on||r.given_at),r.product):'';
     if(k&&seenDose[k]) return; if(k) seenDose[k]=1;
     (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:doseOn(r.given_on||r.given_at),product:r.product,pres:r.presentation,
       dose:r.dose_volume,band:r.weight_band,kg:r.weight_kg_used,basis:r.dosage_basis,route:r.route,
-      reason:r.reason,src:r.source,need:r.ruling_needed,note:window.BLDShowNote?BLDShowNote.human(r.note):r.note}); });
+      reason:r.reason,src:r.source,need:r.ruling_needed,who:String(r.given_by||'').trim(),note:window.BLDShowNote?BLDShowNote.human(r.note):r.note}); });
   var medType={}; (T['BLD-check_type.csv']||[]).forEach(function(t){ if(window.BLDMedRows&&BLDMedRows.isMedCheck(t)) medType[t.id]=t; });
   (T['BLD-check_log.csv']||[]).forEach(function(r){
     var t=medType[r.check_type_id]; if(!t) return;
+    if(doseEnded(r)) return;
     if(r.outcome==='note'&&r.note_for_id) return;
     if(String(t.type_key||'').toLowerCase()!=='medicine'&&(r.outcome==='not_done'||r.outcome==='part_done')) return;
     if(copiedDose[String(r.id||'').toLowerCase()]) return;
@@ -1305,7 +1309,7 @@ function build(){
     if(k&&seenDose[k]) return; if(k) seenDose[k]=1;
     if(!r.subject_id) return;
     (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:on,product:r.item||'',pres:'',dose:r.amount||'',band:'',kg:'',basis:'',route:'',
-      reason:'',src:'',need:'',note:BLDShowNote?BLDShowNote.human(r.note):r.note});
+      reason:'',src:'',need:'',who:String(r.given_by||r.taken_by||'').trim(),note:BLDShowNote?BLDShowNote.human(r.note):r.note});
   });
   Object.keys(DSP).forEach(function(k){ DSP[k].sort(byDateDesc); });
   CD.dispense=DSP;
@@ -3549,6 +3553,7 @@ function drawDogs(){
         return '<div class="dcs-row"><span class="mut">'+esc(dmy(t.on))+'</span><b>'+esc(medName)+'</b>'
           +(t.dose?'<span class="mut">'+esc(t.dose)+'</span>':'')
           +(t.route?'<span class="pill">'+esc(t.route)+'</span>':'')
+          +(t.who?'<span class="mut" data-k="given">'+esc(t.who)+'</span>':'')
         +'</div>';
       }).join('')
       +'<form class="dcs-form" onsubmit="return saveMed(event,\''+esc(d.id)+'\',\''+esc(d.id.replace(/^sub-/,''))+'\',this)">'
@@ -5391,7 +5396,7 @@ function compMedsHtml(){
 function medsLib(){ return window.BLDMedsRegister?Promise.resolve(window.BLDMedsRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='meds-register.js'; s.onload=function(){ ok(window.BLDMedsRegister); }; s.onerror=no; document.head.appendChild(s); }); }
 function medsMake(R){ var period=(document.getElementById('medsPeriod')||{}).value||'month';
  var kennel=kennelNow(), printed=dmy(todayISO())+' '+hhmmNow();
- var rows=R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[]);
+ var rows=R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO());
  if(period==='year'){ var y=(document.getElementById('medsYear')||{}).value||todayISO().slice(0,4), sheets=[], mi, flat=[];
   for(mi=1;mi<=12;mi++){ var ym=y+'-'+(mi<10?'0':'')+mi; if(ym+'-01'>todayISO()) continue;
    sheets.push({month:ym,lines:R.build(rows,{month:ym,dog:regDog})}); }
@@ -5782,7 +5787,7 @@ function ypCtx(R){
   areaName:function(id){ var a=byId(areas,id); return a&&a.name?a.name:''; },
   itemName:function(id){ var it=byId(items,id); return it&&it.name?it.name:''; },
   litterName:function(id){ var l=null; litters.forEach(function(x){ if(x.id===id) l=x; }); return l&&typeof litName==='function'?'Litter '+litName(l):''; },
-  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[]),{month:ym,dog:regDog});
+  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO()),{month:ym,dog:regDog});
    return {columns:R.COLUMNS,lines:lines,cell:function(l,k){ return R.cell(l,k); }}; }:null };
 }
 function pageYearly(){
