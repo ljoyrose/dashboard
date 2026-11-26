@@ -151,9 +151,11 @@ asOwner.describe('CD Hub Admin: owner', () => {
   asOwner('Staff in More lists every staff page; owner links open Admin on the right card', async ({ page }) => {
     await open(page);
     await tabClick(page, '#nav button[data-go="staff"]');
-    for (const t of ['Board', 'Jobs', 'Scan', 'Temps', 'Where', 'This phone', 'Checks', 'Guest', 'Inspector', 'Print', 'Phone set-up', 'Codes']) {
+    for (const t of ['Board', 'Jobs', 'Scan', 'Temps', 'Where', 'This phone', 'Guest', 'Inspector', 'Print', 'Phone set-up', 'Codes']) {
       await expect(page.locator('#main a.adm-card', { hasText: t }).first()).toBeVisible();
     }
+    await expect(page.locator('#main a.adm-card', { hasText: 'Checks' })).toHaveCount(0);   // retired 22 Nov 2026: checks are on Jobs
+    await expect(page.locator('#main a[href$="checks/"]')).toHaveCount(0);
     await page.locator('#main a.adm-card', { hasText: 'Phone set-up' }).click();
     await expect(page.locator('#adm-phone')).toBeVisible();
   });

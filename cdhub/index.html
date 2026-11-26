@@ -37,7 +37,6 @@
 <script src="admin.js"></script>
 <script src="staff/lib/tables.js"></script>
 <script src="items-view.js"></script>
-<script src="bin-view.js"></script>
 <script src="work-actions.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
@@ -535,7 +534,6 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .ct{min-width:152px}
 .sel{user-select:all;-webkit-user-select:all;word-break:break-all}
 ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--fs-small)}ul.notes li{margin:2px 0}
-ul.bin-list{margin:4px 0 12px;padding-left:20px}ul.bin-list li{margin:6px 0}
 .skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
 .skip:focus{left:8px}
 .boot{padding:40px 0;text-align:center;color:var(--ink);font-size:var(--fs-body)}
@@ -787,7 +785,7 @@ function compJobsV(){ var v=jobsV(), keys={}, ids={};
  v.types=v.types.filter(function(t){ var off=bbOnlyType(t)||!!keys[String(t.type_key||'').trim()]; if(off) ids[t.id]=1; return !off; });
  v.logs=v.logs.filter(function(r){ return !ids[r.check_type_id]; });
  return v; }
-var LATER_PAGES={bin:1,items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1,yearly:1};
+var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1,yearly:1};
 /* LIVE_PAGES: Compliance ("What was true on", the inspection export) and Yearly print show a read at most COMP_FRESH_MS old, always with its "As of" time; older waits for the live read */
 var LIVE_PAGES={compliance:1,yearly:1};
 var COMP_FRESH_MS=5*60*1000;   /* Compliance shows a read at most 5 minutes old, always with its "As of" time */
@@ -1849,7 +1847,7 @@ function checks(){
  if(!rc||LOAD.copy||LOAD.stale||LOAD.later!=='ok') out.push({k:'tables',ok:true,wait:true,msg:'Checking tables\u2026'});
  else { man.forEach(function(r){ var n=rc[r.table]; if(n!=null && +n < +r.rows) mism.push(r.table); });  // saves add rows; only a table that has lost rows needs a look
  out.push({k:'tables',ok:!mism.length&&!LOAD.notes.length,
-   fix:mism.length?'Rows moved to the Bin on purpose: the tables list count is old and needs updating. Not on purpose: look in the Bin.':'',msg:mism.length?plural(mism.length,'table')+(mism.length===1?' has':' have')+' fewer rows than the manifest: '+mism.join(', ')
+   fix:mism.length?'The tables list count is old and needs updating. Ended rows stay in the sheets.':'',msg:mism.length?plural(mism.length,'table')+(mism.length===1?' has':' have')+' fewer rows than the manifest: '+mism.join(', ')
      :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, none has lost rows')}); }
  out.push({k:'law vs yours',ok:c.bitches.length===c.active.length,
    msg:c.bitches.length===c.active.length?'both counts agree at '+c.bitches.length
@@ -2189,7 +2187,7 @@ function checksCard(){
    /* skip: a rule check with no rule set is not run, so it shows a grey dash, never a green tick (17 Nov 2026) */
    return '<div id="'+ckId(x.k)+'" class="mrow ckrow'+(x.wait?' wait':x.skip?' notrun':x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.skip?' notrun':x.ok?'':' bad')+'" aria-hidden="true">'+(x.wait?'\u2026':x.skip?'\u2013':x.ok?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.wait?' checking':x.skip?' not checked':x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small>'+(x.fix&&!x.ok?'<small class="help">'+esc(x.fix)+'</small>':'')+'</span>'
-    +(x.fix&&!x.ok?'<button type="button" class="btn house-open" data-go="bin">Bin</button>':'')+(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
+    +(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
   +'</section>';
 }
 
@@ -5871,7 +5869,6 @@ if(typeof CDItems!=='undefined'){ PAGES.items=function(){ return CDItems.page(it
 PAGES.money=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Money</h2><p class="mut">Nothing here yet.</p></section>'; };
 PAGES.ideas=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Ideas</h2><p class="mut">Nothing here yet.</p></section>'; };
 SECTIONS.push(['money','Money'],['ideas','Ideas']);
-/* Bin (OV11 for Lisa, 15 Nov 2026): ended and archived rows, read only, owner only (shown with Settings). bin-view.js */
 /* Outstanding: Done, Reassign, Snooze (work-actions.js). A save is remembered at once, so the row moves without a reload. */
 function workV(){ return {esc:esc,dmy:ukDate,saveHtml:saveHtml,today:todayLondon(),rules:T['BLD-breeding_rule.csv']||[],sinkPost:sinkPost,bbSaved:bbSaved,showSave:showSave,
  canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },
@@ -5879,17 +5876,6 @@ function workV(){ return {esc:esc,dmy:ukDate,saveHtml:saveHtml,today:todayLondon
   CD.work=CDWork.apply((T['BLD-WORK.csv']||[]).filter(function(r){ return String(r.area||'').trim().toLowerCase()!=='ccp'&&!/\bnot CD Hub\b/i.test(String(r.evidence||'')); }),T['BLD-requirement.csv'],todayLondon());
   CD._needs=null; },
  redraw:function(){ go('work',false); }}; }
-function binV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,driveBin:'../index.html#/bin',showSave:showSave,
- canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },restore:binRestore}; }
-/* Bin Restore (Lisa 18 Nov 2026, answer A): one NEW dated row from today; the ended row stays as history. The page's
-   own copy gets the new row so it redraws without a reload. */
-function binRestore(plan){
- var send=plan.kind==='link'?sinkAct(plan.action,plan.fields):sinkPost(plan.table,plan.fields);
- return send.then(function(j){ var r=bbSaved(j), f=plan.fields;
-  if(plan.kind==='link') (T['BLD-links.csv']=T['BLD-links.csv']||[]).push({id:r.id,from_table:f.from_table,from_id:f.from_id,role:f.role,to_table:f.to_table,to_id:f.to_id,from_date:f.from_date,to_date:'',source:f.source});
-  else (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:r.id,rule_key:f.rule_key,value:f.value,effective_from:f.effective_from,source:f.source,to_date:''});
-  return 'Saved '+hhmmNow()+'. Restored from today.'; }); }
-if(typeof CDBin!=='undefined'){ PAGES.bin=function(){ return CDBin.page(binV()); }; SECTIONS.push(['bin','Bin']); }
 /* Which views exist on this hub for this sign-in (menu option A, Lisa 14 Nov 2026). Table map and Assocs stay off the menu. */
 function viewOn(id){ return HubNav.viewOn({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),id:id}); }
 function navHas(id){
@@ -5897,7 +5883,6 @@ function navHas(id){
  if(id==='temps') return true;
  if(id==='breed') return bbOn();
  if(id==='admin') return typeof AdminView!=='undefined'&&AdminView.on(T);
- if(id==='bin') return !!PAGES.bin&&typeof AdminView!=='undefined'&&AdminView.on(T);   /* the owner's, like Settings */
  if(id==='qrprint') return typeof AdminView!=='undefined'&&AdminView.on(T);
  return !!PAGES[id];
 }
@@ -6075,6 +6060,14 @@ function goBody(id,push){
    +'<p class="cd-retry"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
+ /* Lisa 20 Nov 2026: the Bin page is gone. An old #/bin address opens Settings, or Main when this sign-in has no Settings. */
+ if(id==='bin'&&LOAD.later==='wait'){ id='admin'; full='admin'; sub=null; main.setAttribute('data-view',id); }   /* Settings' rows still loading: wait; SHOWN stays #/bin, so the redraw when they land decides */
+ else if(id==='bin'){
+  var binTo=navHas('admin')?'admin':'map';
+  id=binTo; full=binTo; sub=null; SHOWN=binTo;
+  main.setAttribute('data-view',id);
+  try{ if(history.replaceState) history.replaceState(history.state||{},'','#/'+binTo); }catch(e1){}
+ }
  if(!PAGES[id]||!viewOn(id)){ var wasOff=!viewOn(id); id='map'; SHOWN='map';   /* a switched-off view's address opens Main */
   if(wasOff&&history.replaceState) history.replaceState(history.state,'','#/map'); }
  DOGFOCUS=(id==='dogs'&&sub&&!medGo)?sub:''; AREAFOCUS=(id==='areas'&&sub)?sub:''; MEDDOG='';
@@ -6106,7 +6099,6 @@ function goBody(id,push){
  chipsDraw(id);
  if(id==='compliance') bindCompliance();
  if(id==='admin'){ AdminView.bind(admV()); bindNavMenu(); }
- if(id==='bin') CDBin.bind(main,binV());
  if(id==='work'&&typeof CDWork!=='undefined') CDWork.bind(main,workV());
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
  if(id==='compliance'&&/^ck-/.test(sub||'')) setTimeout(function(){ var r=document.getElementById(sub); if(r){ r.setAttribute('tabindex','-1'); r.focus({preventScroll:true}); if(r.scrollIntoView) r.scrollIntoView({block:'center'}); } },0);
