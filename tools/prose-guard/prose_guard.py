@@ -132,6 +132,8 @@ def added_lines(diff):
 def scan_body(body, findings):
     text = body or ""
     text = re.sub(r"<!--[\s\S]*?-->", "", text)
+    text = re.sub(r"<[^>]*>", "", text)
+    text = text.replace("&nbsp;", " ")
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     if len(lines) > 1:
         findings.append("pr body: more than one line")

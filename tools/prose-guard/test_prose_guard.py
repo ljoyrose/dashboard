@@ -35,6 +35,9 @@ class T(unittest.TestCase):
         G.scan_body("<!-- hidden -->\nonly", bad)
         self.assertEqual(bad, [])
         bad = []
+        G.scan_body("only\n<div><img alt=\"x\">&nbsp;</div>", bad)
+        self.assertEqual(bad, [])
+        bad = []
         G.scan_text("tools/prose-guard/patterns.txt", "owner", bad)
         self.assertEqual(bad, [])
 
