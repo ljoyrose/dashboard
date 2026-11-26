@@ -1,4 +1,4 @@
-// Money Hub: https://ljoyrose.github.io/dashboard/money/
+// Money Hub: https://dashboard-eyo.pages.dev/money/
 const { test, expect, buildWorld } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 const { at } = require('../support/site');

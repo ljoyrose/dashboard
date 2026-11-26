@@ -100,18 +100,22 @@ var AdminView = (function () {
   function staffBase() { return location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/'; }
   /* Phone set-up QR opens the staff page on this site. A configured https address
      (cdhub.publicStaffBase, ending in /) wins over that. A qr.base_url rule row in force wins over both. */
+  function httpsBase(v) { v = String(v || '').trim(); return /^https:\/\/[^\s#?]+\/$/.test(v) && !/github\.io/i.test(v) ? v : ''; }
   function staffPublicBase() {
     var cfg = '';
-    try { cfg = (typeof DASH_CONFIG !== 'undefined' && DASH_CONFIG.cdhub && DASH_CONFIG.cdhub.publicStaffBase) || ''; } catch (e) { cfg = ''; }
-    if (/^https:\/\/[^\s#?]+\/$/.test(cfg)) return cfg;
+    try { cfg = httpsBase(typeof DASH_CONFIG !== 'undefined' && DASH_CONFIG.cdhub && DASH_CONFIG.cdhub.publicStaffBase); } catch (e) { cfg = ''; }
+    if (cfg) return cfg;
+    var origin = '';
+    try { origin = String(location.origin || ''); } catch (e2) { origin = ''; }
+    if (!/^https?:\/\//i.test(origin) || /github\.io/i.test(origin)) origin = 'https://dashboard-eyo.pages.dev';
     var path = String(location.pathname || '/'), mark = '/cdhub/', i = path.indexOf(mark);
-    return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
+    return origin.replace(/\/$/, '') + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
   }
   function qrBase(T, today) {
     var best = null;
     rows(T, 'BLD-breeding_rule.csv').forEach(function (r) {
-      var f = String(r.from_date || r.effective_from || ''), val = String(r.value || '').trim();
-      if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(val) || (f && f > today) || (r.to_date && String(r.to_date) < today)) return;
+      var f = String(r.from_date || r.effective_from || ''), val = httpsBase(r.value);
+      if (r.rule_key !== 'qr.base_url' || !val || (f && f > today) || (r.to_date && String(r.to_date) < today)) return;
       if (!best || f >= best.f) best = { f: f, v: val };
     });
     return best ? best.v : staffPublicBase();

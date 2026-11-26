@@ -6,23 +6,15 @@
   'use strict';
   var CODE_KEY = 'bld.device.code', ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', LEN = 8;
   var screen = document.getElementById('screen'), save = BLDSave.create({});
-  /* Printed QR codes open the staff page on this site, not this print page. A configured https address
-     (cdhub.publicStaffBase, ending in /) wins over that. An owner qr.base_url row in force wins over both. */
-  function staffPublicBase() {
-    var cfg = '';
-    try { cfg = (typeof DASH_CONFIG !== 'undefined' && DASH_CONFIG.cdhub && DASH_CONFIG.cdhub.publicStaffBase) || ''; } catch (e) { cfg = ''; }
-    if (/^https:\/\/[^\s#?]+\/$/.test(cfg)) return cfg;
-    var path = String(location.pathname || '/'), mark = '/cdhub/', i = path.indexOf(mark);
-    return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
-  }
+  var QR_ORIGIN = 'https://dashboard-eyo.pages.dev';
   function qrBase() {
-    var day = typeof BLDNeeds !== 'undefined' ? BLDNeeds.today() : '', best = null;
-    ((T && T.breeding_rule) || []).forEach(function (r) {
-      var f = String(r.from_date || r.effective_from || ''), v = String(r.value || '').trim();
-      if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(v) || (f && f > day) || (r.to_date && String(r.to_date) < day)) return;
-      if (!best || f >= best.f) best = { f: f, v: v };
-    });
-    return best ? best.v : staffPublicBase();
+    var origin = '', path = '', here = '';
+    try { origin = String(location.origin || ''); path = String(location.pathname || ''); } catch (e) { origin = ''; path = ''; }
+    here = origin.replace(/\/$/, '');
+    if (!/^https:\/\/([a-z0-9-]+\.)*pages\.dev$/i.test(here)) here = QR_ORIGIN;
+    var mark = '/cdhub/', i = path.indexOf(mark);
+    var prefix = here === origin.replace(/\/$/, '') && i >= 0 ? path.slice(0, i) : '';
+    return here + prefix + '/cdhub/staff/';
   }
   save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer', 'item'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
   save.TABLES.breeding_rule = { label: 'Owner settings', file: 'BLD-breeding_rule.csv', fields: { rule_key: { type: 'text', required: true, label: 'Setting' }, value: { type: 'text', required: true, label: 'Value' }, effective_from: { type: 'date', required: true, label: 'From' }, source: { type: 'text', label: 'Source' } } };   // item card fields choice (print.fields.item), owner only
@@ -156,9 +148,12 @@
         if (t) sheet.appendChild(draw ? draw(t.tag, it) : card(t.tag, it.label, kind === 'area', it.room));
       });
       var left = items.filter(function (it) { return !current(kind, it.id); }).length;
-      say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
-        : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
-      if (done) done();
+      photosReady(sheet).then(function () {
+        if (gen !== makeGen) return;
+        say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
+          : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
+        if (done) done();
+      });
     }());
   }
   /* Pick which cards print (Lisa 22 Nov 2026): one tick box per card, all ticked to start (or only the ids in `only`),
@@ -226,8 +221,14 @@
   function photoId(v) { v = String(v == null ? '' : v).trim(); var m = /\/file\/d\/([A-Za-z0-9_-]+)/.exec(v) || /[?&]id=([A-Za-z0-9_-]+)/.exec(v);
     return m ? m[1] : (!/^https?:/i.test(v) && /^[A-Za-z0-9_-]{8,}$/.test(v) ? v : ''); }
   /* the main photo is the 'main' link row in force (Lisa 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
-  function mainPhoto(s, table) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
-    return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
+  function photoRef(s, table) {
+    var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
+    var id = (m && photoId(m.drive_file_id || m.file_id)) || photoId(s.photo);
+    var url = BLDPhotos.safeUrl(m && m.url) || BLDPhotos.safeUrl(s.photo);
+    if (url && /drive\.google\.com|docs\.google\.com|googleusercontent\.com/i.test(url)) { if (!id) id = photoId(url); url = ''; }
+    if (id) url = '';
+    return { id: id, url: url };
+  }
   /* Lisa 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
      address (which needs them) fails. With the CD Hub Google sign-in on this browser, the page asks Drive for the photo the
      way the hub does: the file's thumbnail link with that sign-in, else the picture itself. No sign-in: the plain address. */
@@ -238,31 +239,59 @@
       return saved && scope && DashAuth.hasScope(saved, scope) ? saved.access_token : '';
     } catch (e) { return ''; }
   }
-  function loadPhoto(img, id, fail) {
-    var tok = driveToken(), auth = { headers: { Authorization: 'Bearer ' + tok } }, tried = false;
-    if (!tok) { img.onerror = fail; img.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800'; return; }
+  function arm(img) { img.removeAttribute('data-loading'); }
+  function showBlob(img, b) {
+    if (!b || !b.size) return Promise.reject(new Error('photo'));
+    if (/^image\//.test(b.type || '')) { img.src = URL.createObjectURL(b); return Promise.resolve(); }
+    return b.slice(0, 12).arrayBuffer().then(function (buf) {
+      var u = new Uint8Array(buf), type = '';
+      if (u[0] === 137 && u[1] === 80) type = 'image/png';
+      else if (u[0] === 255 && u[1] === 216) type = 'image/jpeg';
+      else if (u[0] === 71 && u[1] === 73) type = 'image/gif';
+      else if (u[0] === 82 && u[1] === 73) type = 'image/webp';
+      if (!type) throw new Error('photo');
+      img.src = URL.createObjectURL(new Blob([b], { type: type }));
+    });
+  }
+  function loadPhoto(img, ref, fail) {
+    if (ref.url) { img.onerror = fail; arm(img); img.src = ref.url; return; }
+    var id = ref.id, tok = driveToken(), auth = { headers: { Authorization: 'Bearer ' + tok } }, tried = false;
+    var get = window.DashKit && DashKit.googleFetch ? function (u, i) { return DashKit.googleFetch(u, i); } : fetch;
+    if (!tok) { img.onerror = fail; arm(img); img.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800'; return; }
     function bytes() {
       if (tried) { fail(); return; }
       tried = true;
-      fetch(DRIVE_FILES + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true', auth)
+      get(DRIVE_FILES + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true', auth)
         .then(function (r) { if (!r.ok) throw new Error('photo'); return r.blob(); })
-        .then(function (b) { if (!/^image\//.test(b.type || '')) throw new Error('photo'); img.src = URL.createObjectURL(b); })
+        .then(function (b) { return showBlob(img, b).then(function () { arm(img); }); })
         .catch(fail);
     }
     img.onerror = bytes;
-    fetch(DRIVE_FILES + encodeURIComponent(id) + '?fields=thumbnailLink&supportsAllDrives=true', auth)
+    get(DRIVE_FILES + encodeURIComponent(id) + '?fields=thumbnailLink&supportsAllDrives=true', auth)
       .then(function (r) { return r.ok ? r.json() : {}; })
-      .then(function (m) { var link = m && m.thumbnailLink; if (link && /^https:\/\//i.test(link)) img.src = link.replace(/=s\d+$/, '=s800'); else bytes(); })
+      .then(function (m) { var link = m && m.thumbnailLink; if (link && /^https:\/\//i.test(link)) { arm(img); img.src = link.replace(/=s\d+$/, '=s800'); } else bytes(); })
       .catch(bytes);
+  }
+  function photosReady(root) {
+    var imgs = (root || document).querySelectorAll('[data-k="photo"] img');
+    return Promise.all(Array.prototype.map.call(imgs, function (img) {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise(function (res) {
+        function fin() { img.removeEventListener('load', fin); img.removeEventListener('error', fin); res(); }
+        img.addEventListener('load', fin);
+        img.addEventListener('error', fin);
+        if (img.complete && !img.getAttribute('data-loading')) fin();
+      });
+    }));
   }
   /* the photo as saved (the hub's crop step saves a square); printing never crops it again: it is fitted whole (contain).
      No photo, or one that fails to load: the size-colour frame stays and is left blank (no placeholder word on paper) */
   function photoBox(s, table) {
-    var id = mainPhoto(s, table), box = h('div', { class: 'photo' + (id ? '' : ' none'), 'data-k': 'photo' });
-    if (id) {
-      var img = h('img', { alt: '', referrerpolicy: 'no-referrer' });
+    var ref = photoRef(s, table), on = !!(ref.id || ref.url), box = h('div', { class: 'photo' + (on ? '' : ' none'), 'data-k': 'photo' });
+    if (on) {
+      var img = h('img', { alt: '', referrerpolicy: 'no-referrer', 'data-loading': '1' });
       box.appendChild(img);
-      loadPhoto(img, id, function () { box.textContent = ''; box.classList.add('none'); });
+      loadPhoto(img, ref, function () { box.textContent = ''; box.classList.add('none'); });
     }
     return box; }
   /* Lisa's dog card, her APPROVED v4 design (15 Nov 2026, re-confirmed 20 Nov 18:26): name large top-left with no label; Sex (with
@@ -538,7 +567,7 @@
         if (/\bper\d\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per); } });
     }));
     opts.appendChild(perBox);
-    opts.appendChild(h('button', { class: 'btn', type: 'button', text: 'Print', onclick: function () { window.print(); } }));
+    opts.appendChild(h('button', { class: 'btn', type: 'button', text: 'Print', onclick: function () { photosReady(sheet).then(function () { window.print(); }); } }));
     opts.appendChild(lazy('Litter cards', 'litters', function () {
       var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf;
       if (!(T.litter || []).length) { sheet.className = 'sheet'; say('The litter list is not switched on yet.', 'warn'); return; }
@@ -561,7 +590,7 @@
       sheet.appendChild(h('div', { class: 'qcard big' }, [h('div', { html: BLDQr.svg(qrBase() + '#setup=' + encodeURIComponent(url), 'Phone set-up QR') }), h('b', { text: 'Set up a phone' }), h('small', { text: 'Show on screen. Do not pin up or photograph.' })]));
       say('Staff scan this once, then type their own code.', 'good');
     }));
-    opts.appendChild(lazy('Private set-up QR', 'site', privateQr));   /* both QRs use the owner's qr.base_url row */
+    opts.appendChild(lazy('Private set-up QR', 'site', privateQr));
     var add = ''; try { add = new URLSearchParams(location.search).get('add') || ''; } catch (e) { /* old browser */ }
     if (add === 'thermometer') need('thermo').then(function (ok) { if (ok) addThermometer(); });   // from the hub's "+ Thermometer"
     /* from a room's "Print sign" in CD Hub (?sign=<area id>, 21 Nov 2026): the room list with only that room ticked, its card ready to print */

@@ -331,7 +331,7 @@ const read = (p) => fs.readFileSync(path.join(CODE, p), 'utf8');
 /** A Bloodline-like page: its own palette variables, a #main, and the wiring scripts loaded as the patch loads them. */
 function bloodlinePage(fakeFetch) {
   const dom = new JSDOM('<!doctype html><html><head></head><body><main id="main"></main></body></html>',
-    { runScripts: 'outside-only', url: 'https://ljoyrose.github.io/dashboard/bloodline/' });
+    { runScripts: 'outside-only', url: 'https://dashboard-eyo.pages.dev/bloodline/' });
   const w = dom.window;
   if (fakeFetch) w.fetch = fakeFetch;
   // load exactly the scripts the patch adds to Bloodline, in the order it adds them

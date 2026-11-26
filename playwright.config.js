@@ -5,7 +5,7 @@ const PORT = Number(process.env.PORT || 4173);
 const { BASE } = require('./tests/support/site');
 const LOCAL = `http://127.0.0.1:${PORT}${BASE}`;
 // LIVE_URL lets the live check follow the site when it moves (GitHub Pages today, Cloudflare after cutover).
-const LIVE = process.env.LIVE_URL || 'https://ljoyrose.github.io/dashboard/';
+const LIVE = process.env.LIVE_URL || 'https://dashboard-eyo.pages.dev/';
 
 module.exports = defineConfig({
   testDir: './tests',
