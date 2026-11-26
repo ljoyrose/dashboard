@@ -257,14 +257,17 @@ test('a vet day button keeps the day size and drops native button chrome @regres
   assert.match(C.CSS, /\.jdays\{[^}]*font-size:10px/);
 });
 
-test('a day is done only after times_per_day records, and part done before that', () => {
-  const rules = [{ rule_key: 'job.times_per_day.food_bowls', value: '2', effective_from: '2026-01-01' }];
-  const v = base([log('1', 'cty-fb', '2026-11-10'), log('2', 'cty-fb', '2026-11-12'), log('3', 'cty-fb', '2026-11-12')], rules);
-  const st = (iso) => C.month(v, 'food_bowls', '2026-11').cells.find((c) => c.iso === iso);
-  assert.equal(st('2026-11-10').state, 'part');
-  assert.equal(st('2026-11-10').got, 1);
-  assert.equal(st('2026-11-10').need, 2);
-  assert.equal(st('2026-11-12').state, 'done');
+test('one done entry completes a multi-per-day day, including a past day', () => {
+  const rules = [
+    { rule_key: 'job.times_per_day.food_bowls', value: '2', effective_from: '2026-01-01' },
+    { rule_key: 'job.times_per_day.whole_site_clean', value: '3', effective_from: '2026-01-01' }
+  ];
+  const v = base([log('1', 'cty-fb', '2026-11-10'), log('2', 'cty-ws', '2026-11-11')], rules);
+  const st = (key, iso) => C.month(v, key, '2026-11').cells.find((c) => c.iso === iso);
+  assert.equal(st('food_bowls', '2026-11-10').state, 'done');
+  assert.equal(st('food_bowls', '2026-11-10').got, 1);
+  assert.equal(st('whole_site_clean', '2026-11-11').state, 'done');
+  assert.doesNotMatch(C.html(v, '2026-11', false), /part done \(1 of /);
 });
 
 test('the calendar counts subjects on site that day, and can leave juveniles out @regression', () => {

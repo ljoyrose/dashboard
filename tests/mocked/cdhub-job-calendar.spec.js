@@ -43,6 +43,40 @@ test('Compliance opens with a calendar per daily job; yesterday done is green; D
 });
 
 // the owner 17 Nov 2026: "Board is hard to find" and "I need to print areas and dogs": one tap each from Main.
+test('one done entry marks a multi-per-day day done, including a past day', async ({ page, guard }) => {
+  const today = london(new Date()), yest = london(new Date(Date.now() - 86400000));
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, [
+    'j1,t,food_bowls,Bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line',
+    'j2,t,water_bowls,Water bowls,none,true,2020-01-01,,1,,,Cleaning,one_line'
+  ]));
+  addTable(guard.world, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', [
+    'r1,t,job.times_per_day.food_bowls,2,2020-01-01,test,,,',
+    'r2,t,job.times_per_day.water_bowls,3,2020-01-01,test,,,'
+  ]));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [
+    `l1,t,j1,,,,,ok,,,${yest}T09:00:00Z,A1,,,site_tap`,
+    `l2,t,j2,,,,,ok,,,${yest}T09:00:00Z,A1,,,site_tap`
+  ]));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  const cal = page.locator('#jobCals');
+  const bowls = cal.locator('[data-jcal="food_bowls"]');
+  const water = cal.locator('[data-jcal="water_bowls"]');
+  if (yest.slice(0, 7) !== today.slice(0, 7)) await cal.locator('[data-jcal-month]').first().click();
+  await expect(bowls.locator(`[data-day="${yest}"]`)).toHaveClass(/\bdone\b/);
+  await expect(water.locator(`[data-day="${yest}"]`)).toHaveClass(/\bdone\b/);
+  await expect(bowls.locator(`[data-day="${yest}"]`)).not.toHaveAttribute('aria-label', /part done/);
+  await expect(water.locator(`[data-day="${yest}"]`)).not.toHaveAttribute('aria-label', /part done/);
+  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'chk-1', ids: ['chk-1'], at: new Date().toISOString(), who: 'A1' } }; }; });
+  await bowls.locator('[data-jcal-done="food_bowls"]').click();
+  await expect(bowls.locator(`[data-day="${today}"]`)).toHaveClass(/\bdone\b/);
+  await expect(bowls.locator(`[data-day="${today}"]`)).not.toHaveAttribute('aria-label', /part done/);
+  const sent = await page.evaluate(() => window.__sent);
+  expect(sent).toHaveLength(1);
+  expect(sent[0]).toMatchObject({ table: 'check_log', action: 'add_site', fields: { check_type_id: 'j1', outcome: 'ok' } });
+});
+
 test('Main has The Board and Print cards', async ({ page, guard }) => {
   await HUBS.cdhub.open(page, guard);
   await expect(page.locator('[data-open-board]')).toHaveAttribute('href', './staff/');
