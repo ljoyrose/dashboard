@@ -136,7 +136,7 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
     expect(writes(guard.world)).toEqual([]);
   });
 
-  // DECIDED by Lisa (17 Oct 2026): a personal name containing RR_ is left alone.
+  // DECIDED by the owner (17 Oct 2026): a personal name containing RR_ is left alone.
   // It is not renamed to ZZ_DELETE_DRIVE_ and it is not binned, even when it matches a shared-drive copy.
   test('a personal name containing RR_ cannot be ticked, renamed, or binned', async ({ page, guard }) => {
     guard.world.file('me-rr', 'RR_archive.pdf', 'x', { parents: ['my-root'], driveId: null, mimeType: 'application/pdf', md5Checksum: 'md5-aaa', size: 100 });

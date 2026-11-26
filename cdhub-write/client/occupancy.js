@@ -17,7 +17,7 @@
   // needs.js missing on a page: every room counts as in use (never hides a room by mistake)
   N = N || { coversDay: function () { return true; }, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); } };
 
-  // Permanently not on site (Lisa 16 Oct, S02-7): sold, owned_by_family, Collected, deceased. Never asked to move.
+  // Permanently not on site (the owner 16 Oct, S02-7): sold, owned_by_family, Collected, deceased. Never asked to move.
   var GONE_KIND = { sold: true, owned_by_family: true, deceased: true };
   var GONE_STATE = { sold: true, collected: true, deceased: true };
   // Temporarily off site (vets, groomers...): status off_site_temp. Shown as "Away", keeps its room, not asked to move.
@@ -25,7 +25,7 @@
 
   /**
    * Is room `a` in use on `day`? From BLD-requirement rows (need_type room.in_use, target_table area): a room with no
-   * rows is in use; one with rows only on days a row covers (Lisa 11 Nov 2026). Rows are never deleted; a retired
+   * rows is in use; one with rows only on days a row covers (the owner 11 Nov 2026). Rows are never deleted; a retired
    * room is hidden after its last day and still shows in History.
    */
   function inUse(a, day, reqRows) { return !!a && N.coversDay(reqRows, 'room.in_use', 'area', a.id, day || N.today()); }
@@ -96,7 +96,7 @@
   }
 
   /**
-   * Load the daily list through the script with the staff code (no Google sign-in), as far as Lisa has allowed.
+   * Load the daily list through the script with the staff code (no Google sign-in), as far as the owner has allowed.
    * @param {Object} save a BLDSave instance
    * @return {Promise<{ok:true, lookups:{areas,dogs,subjects,dogsSkipped}} | {ok:false, message}>}
    */

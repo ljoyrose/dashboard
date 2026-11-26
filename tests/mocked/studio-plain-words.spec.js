@@ -65,7 +65,7 @@ test.describe('Studio plain words (Stage 8)', () => {
     await expect(page.locator('#view')).toContainText('Studio helper');
   });
 
-  test('Me has no greeting and no "How Studio works" fold (Lisa, 2 Nov: no unnecessary words)', async ({ page, guard }) => {
+  test('Me has no greeting and no "How Studio works" fold (the owner, 2 Nov: no unnecessary words)', async ({ page, guard }) => {
     await open(page, guard, '#/me');
     await expect(page.locator('#view [data-howto]')).toHaveCount(0);
     await expect(page.locator('#view')).not.toContainText(/How Studio works|Good (morning|afternoon|evening)|moves along the Line/);

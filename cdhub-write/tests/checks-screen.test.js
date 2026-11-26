@@ -17,7 +17,7 @@ function world() {
   const env = standardEnv({ props: { TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true', READ_ENABLED: 'true' } });
   env.addFile('BLD-check_type.csv', fx.headerOnly(TYPE_H));
   env.addFile('BLD-check_log.csv', fx.headerOnly(LOG_H));
-  // the permissions Lisa would add: staff may see the three lists the screen needs
+  // the permissions the owner would add: staff may see the three lists the screen needs
   const vis = env.file('BLD-field_visibility.csv')[0];
   [['check_type', ['id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'active', 'effective_from']], ['area', ['id', 'code']], ['subject', ['id', 'name']]].forEach(([t, cols]) => {
     vis.content += `v-${t}*,${fx.TENANT},${t},*,aud-staff,yes,,,,,,\r\n`;

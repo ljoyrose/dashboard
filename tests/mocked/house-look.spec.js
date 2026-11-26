@@ -1,8 +1,8 @@
-// House look on EVERY hub (Lisa, 28 Oct 2026): the same rules, read back by computed style, on every view of every hub.
+// House look on EVERY hub (the owner, 28 Oct 2026): the same rules, read back by computed style, on every view of every hub.
 // The rules live once in tokens.css (numbers) and house.css (the shared parts); this one spec holds every hub to them:
 // one 12px radius (dots round), 1px lines (3px left colour bars), Lexend 400/600 at 13px or more, sentence case, no coloured
 // words, one control line, 36px buttons (44px on a phone), counts a fixed 30 x 22 pill, date pills ringed, deep frame top and
-// bottom with light tab buttons, 12px card padding and gaps, no solid fills, and the hover rule (Lisa, 12 Nov 2026: hover = the
+// bottom with light tab buttons, 12px card padding and gaps, no solid fills, and the hover rule (the owner, 12 Nov 2026: hover = the
 // pale grey fill --hov and no line, meaning colours too; nothing moves; read-only pills never hover; bottom tabs only widen their bar).
 // Pretend Google, Drive and Sheets; every row is invented (tests/support/hubs.js).
 //
@@ -35,7 +35,7 @@ async function hoverRule(page, phone) {
     const isMeaning = (e) => e.matches('.btn.yes, .btn.no, .btn.danger, .btn.ai') || !!getComputedStyle(e).getPropertyValue('--hmc').trim() || chroma(rgb(getComputedStyle(e).borderTopColor)) > 45;
     const neutral = all.filter((e) => !isMeaning(e)).slice(0, 3);
     const meaning = all.filter(isMeaning).slice(0, 2);
-    // A count that is a link (the Needs you pills open Do, Lisa 2 Nov) is a control, not a read-only pill.
+    // A count that is a link (the Needs you pills open Do, the owner 2 Nov) is a control, not a read-only pill.
     const ro = [...document.querySelectorAll('.cnt:not(a), .dpill, .datep, span.pill, span.tag, .stamp')].filter(seen).slice(0, 2);
     const tabs = nav ? [...nav.querySelectorAll('a, button')].filter((e) => e.getBoundingClientRect().width > 0 && e.getAttribute('aria-current') !== 'page' && !e.matches('.on, [aria-selected="true"]')).slice(0, 1) : [];
     let n = 0; const tag = (e, kind) => { e.setAttribute('data-hq', String(++n)); return { sel: '[data-hq="' + n + '"]', kind, ink: getComputedStyle(document.body).color }; };
@@ -65,7 +65,7 @@ async function hoverRule(page, phone) {
       await loc.hover({ timeout: 1500 }).catch(() => {}); await settle(loc);
     }
     if (p.kind === 'neutral' || p.kind === 'meaning') {
-      // Lisa (12 Nov 2026): "purple outline on hover/click is a lot". Hover = the pale grey fill, no line; a meaning colour too.
+      // the owner (12 Nov 2026): "purple outline on hover/click is a lot". Hover = the pale grey fill, no line; a meaning colour too.
       if (after.os !== 'none' && after.ow !== '0px' && after.outline !== before.outline) add('hover line', 'hover draws a line: ' + after.outline);
       if (!near(after.bg, after.hov)) add('hover fill', 'hover is not the pale grey fill: ' + before.bg + ' > ' + after.bg + ' (want ' + after.hov + ')');
       if (p.kind === 'meaning' && !near(after.border, before.border)) add('hover line', 'meaning resting line changed on hover: ' + before.border + ' > ' + after.border);

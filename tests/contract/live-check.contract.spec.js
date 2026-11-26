@@ -1,5 +1,5 @@
 // LIVE HEADER CHECK (JOB 31). The local script check-real-headers.js now also covers Food, Marketplace and Studio.
-// It runs on Lisa's downloaded files, never on GitHub. Here it runs on the invented fixtures only.
+// It runs on the owner's downloaded files, never on GitHub. Here it runs on the invented fixtures only.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');

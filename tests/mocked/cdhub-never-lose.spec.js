@@ -257,7 +257,7 @@ test('a list save keeps each item\'s form answers', async ({ page }) => {
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
 });
 
-// SIGN IN AGAIN (Lisa 22 Nov 2026): the owner saves with her Google sign-in, which lasts about an hour. When it has
+// SIGN IN AGAIN (the owner 22 Nov 2026): the owner saves with her Google sign-in, which lasts about an hour. When it has
 // ended, a save is kept on the phone (never lost, never "Not saved"), the line asks her to sign in again, and once she
 // has, it goes by itself, saved once.
 test('owner sign-in ends: the save is kept, the line says sign in again, and it is saved once after signing in again', async ({ page, guard }) => {
@@ -280,7 +280,7 @@ test('owner sign-in ends: the save is kept, the line says sign in again, and it 
   const hold = await page.evaluate(() => { const e = TOKEN_EXP; TOKEN_EXP = 0; return e; });
   await card.getByRole('button', { name: 'Place' }).click();
   await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
-  // no code to hand (Lisa signs in with Google): Cancel
+  // no code to hand (the owner signs in with Google): Cancel
   await page.getByRole('dialog', { name: 'Staff code' }).getByRole('button', { name: 'Cancel' }).click();
   const bar = page.locator('#hub-outbox');
   await expect(bar.locator('[data-outbox-waiting="1"][data-outbox-sign-in]')).toContainText('sign in again');

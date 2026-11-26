@@ -1,4 +1,4 @@
-// Print: dog photos with the CD Hub Google sign-in (Lisa 22 Nov 2026: "no photo on any card"). Chrome blocks Google's
+// Print: dog photos with the CD Hub Google sign-in (the owner 22 Nov 2026: "no photo on any card"). Chrome blocks Google's
 // cookies on other sites, so the plain drive.google.com/thumbnail address fails on the live page. With the hub's saved
 // sign-in the print page asks Drive for the file's thumbnail link (with the sign-in), as the hub does; if that picture
 // fails it fetches the photo itself. Fake token, fake file ids and a 1x1 picture only.

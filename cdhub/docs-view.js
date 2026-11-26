@@ -1,9 +1,9 @@
 /*!
- * BLDDocsView - a dog's documents on the dog card (Lisa 17 Nov 2026: "Yes, add it").
+ * BLDDocsView - a dog's documents on the dog card (the owner 17 Nov 2026: "Yes, add it").
  * A document is a BLD-files row linked from the dog by a BLD-links row (one file store, decision C). The link's role is the
  * document type's code from BLD-doc_type (pedigree, ofa-hips, vet-history ...); its label is the doc_type row's label, so no
  * type is named in code. Photo roles (main, gallery) are the photo gallery's and are left out. Reads and draws only.
- * Lisa 18 Nov 2026 ("Yes, add them"): files linked from the dog's own records (a check_log row whose subject_id is the dog,
+ * the owner 18 Nov 2026 ("Yes, add them"): files linked from the dog's own records (a check_log row whose subject_id is the dog,
  * e.g. a fit-to-breed certificate) show too. v.records(table) gives that table's rows; v.recordLabel(table, row) names the
  * record (the check type's label) when the role has no doc_type row. Job evidence photos stay with the job.
  */

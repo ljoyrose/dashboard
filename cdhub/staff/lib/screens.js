@@ -310,7 +310,7 @@
       var result = el(doc, 'div', { class: 'bs-result', role: 'status', 'aria-live': 'polite' });
       var was = el(doc, 'div', { class: 'bs-dog-was', text: d.out ? 'Off-site' : d.known ? 'Last recorded: ' + d.areaLabel : 'Room not recorded yet. Pick where it is now.' });
       var no = el(doc, 'button', { class: 'bs-no', type: 'button', text: d.out ? 'Back' : 'Moved' });
-      // the room code only (Lisa 12 Nov 2026: "just 4A"); Off-site is its own button, not a room
+      // the room code only (the owner 12 Nov 2026: "just 4A"); Off-site is its own button, not a room
       var sel = el(doc, 'select', { class: 'bs-in', 'aria-label': d.label + ' new room' }, [el(doc, 'option', { value: '', text: 'Pick the new room' })]
         .concat(areas.filter(function (a) { return a.id !== d.areaId && a.dogs !== false; }).map(function (a) { return el(doc, 'option', { value: a.id, text: a.label }); })));
       var err = el(doc, 'span', { class: 'bs-err' });

@@ -12,7 +12,7 @@ StaffPage.register({ id: 'where', title: 'Where', icon: StaffPage.ctx.icons.dogs
   });
 } });
 
-/* Find a dog (Lisa 22 Nov 2026: "otherwise can't find them easily"). Typing shows only the dogs whose name holds the text,
+/* Find a dog (the owner 22 Nov 2026: "otherwise can't find them easily"). Typing shows only the dogs whose name holds the text,
    any case, anywhere in the name, each with its room as before. Clear shows them all again. Only hides cards on this
    phone: nothing is saved or read. While a search is on, "All the rest unmoved" is hidden, because it confirms every dog,
    including the ones the search hides; it comes back when the search is cleared. */
@@ -41,7 +41,7 @@ function findDog(host, c) {
   clearBtn.addEventListener('click', function () { input.value = ''; run(); input.focus(); });
 }
 
-/* Only sleeping rooms are offered (Lisa 12 Nov 2026: "only the rooms on the new cabin list ... not play areas or fields or
+/* Only sleeping rooms are offered (the owner 12 Nov 2026: "only the rooms on the new cabin list ... not play areas or fields or
    corridors"): a room is offered when it has room-limit rows (BLD-area_capacity) in force today. Read from rows, no list here.
    If the limits cannot be read, every room that takes dogs is offered, rather than none. */
 function sleepingRooms(areas, cap, today) {

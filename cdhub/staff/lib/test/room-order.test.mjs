@@ -1,4 +1,4 @@
-// Room order on Where and the other staff lists (Lisa 12 Nov 2026): group_sort from the area rows, then the code in
+// Room order on Where and the other staff lists (the owner 12 Nov 2026): group_sort from the area rows, then the code in
 // natural order. No list in code. Invented rows, in a muddled file order on purpose.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

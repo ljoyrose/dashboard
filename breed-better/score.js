@@ -5,7 +5,7 @@
  * is a row the user enters. It reads no clock: the date to judge on is passed in, so an old score can
  * always be worked out again by the rules in force on its own date.
  *
- * Dated rules (Lisa, 12 Nov 2026): criterion and answer rows may carry from_date and to_date (both inclusive,
+ * Dated rules (the owner, 12 Nov 2026): criterion and answer rows may carry from_date and to_date (both inclusive,
  * blank = no limit). Rows sharing a criterion key are versions of one check. Today's row decides what is read;
  * each record is then graded by the rows in force on that record's own date, so changing a rule never turns
  * an old record into a failure. The target and must-pass verdict use the rows in force on the scoring date.
@@ -172,7 +172,7 @@
       if (WHEN_MISSING.indexOf(when) < 0) errors.push(c.id + ': when_missing cannot be "' + when + '"');
       /* a must-pass check that is skipped when its record is missing would let the animal Pass without it */
       if (when === 'skip' && band.kind === 'gate') errors.push(c.id + ': a must-pass check cannot be skipped; use unknown');
-      /* D7 (Lisa, 18 Nov 2026): a missing record is never a Fail; it stays Unverified until the record exists */
+      /* D7 (the owner, 18 Nov 2026): a missing record is never a Fail; it stays Unverified until the record exists */
       if (when === 'fail') errors.push(c.id + ': when_missing cannot be fail (a missing record is never a Fail); use unknown, or zero on a points line');
       if (text(c.reads) && READS.indexOf(text(c.reads)) < 0) errors.push(c.id + ': cannot read "' + c.reads + '"');
       if (text(c.valid_months) && !/^\d+$/.test(text(c.valid_months))) errors.push(c.id + ': valid_months must be a whole number');
@@ -238,7 +238,7 @@
     return { answer: chosen[c.answer_field], row: chosen };
   }
 
-  /* Lisa's Design Doc reads "latest final result" (OV11, 15 Nov 2026). evidence_match's FIRST condition says which record
+  /* the owner's Design Doc reads "latest final result" (OV11, 15 Nov 2026). evidence_match's FIRST condition says which record
      (test=hips); any later one says which records are accepted (certainty=final), dated with the criterion. A record that
      matches the first but not a later one is shown on the line by the value it holds ("Preliminary") and stays Unverified. */
   function heldBack(c, table, subjectField, dateField, subject, asOf) {

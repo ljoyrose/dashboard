@@ -1,4 +1,4 @@
-// The top bar (Lisa's pick A, 2 Nov 2026): the SAME bar on all 8 pages. One dark row, exactly 56px high at 1280 and at 390,
+// The top bar (the owner's pick A, 2 Nov 2026): the SAME bar on all 8 pages. One dark row, exactly 56px high at 1280 and at 390,
 // never wrapping. Home icon top left (not on home), the hub's name, then icon-only buttons, each with a name for screen
 // readers and no words on screen; Refresh is called "Refresh" everywhere; a Look button on every page. On a phone Sign out
 // and the read time leave the bar and sit inside the Look menu. Pretend Google, Drive and Sheets; every row is invented.

@@ -1,6 +1,6 @@
 'use strict';
 /**
- * 12 Nov 2026, Lisa chose option B (via NEW: TEMPS): BLD-area_link rows say that, for from_date..to_date, a reading
+ * 12 Nov 2026, the owner chose option B (via NEW: TEMPS): BLD-area_link rows say that, for from_date..to_date, a reading
  * taken in one room also counts for another. A link row with dates, never dates on the room ("A standard").
  */
 const test = require('node:test');
@@ -79,7 +79,7 @@ test('area_link: staff read it only through visibility rows, never who set it; g
   assert.equal(read(env, { table: 'area_link', code: env.ctx.adminAddGuestCode() }).code, 'NOT_ALLOWED');
 });
 
-/* Edit, archive and delete with a code, logged (Lisa 15 Nov 2026, Q1/Q2; Edit.gs). OFF until RECORD_EDIT_ON.
+/* Edit, archive and delete with a code, logged (the owner 15 Nov 2026, Q1/Q2; Edit.gs). OFF until RECORD_EDIT_ON.
    Who may: BLD-permission rows, else the starting defaults (owner edits and archives, nobody deletes). Invented rows only. */
 const AUDIT_H = ['id', 'tenant_id', 'at', 'person_id', 'sign_in_id', 'device_id', 'action', 'table_name', 'record_id', 'before', 'after', 'reason'];
 const PERM_H = 'id,tenant_id,role_code,person_id,table_name,action,allowed,from_date,to_date,set_by,reason';

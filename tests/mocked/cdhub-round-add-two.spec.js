@@ -1,4 +1,4 @@
-// Lisa 16 Nov 2026: an empty room could not take a second dog while the first was still saving. The list now goes
+// the owner 16 Nov 2026: an empty room could not take a second dog while the first was still saving. The list now goes
 // back to "add a dog..." at once, a dog being added shows "adding..." and cannot be picked twice, and both moves save.
 // Invented dogs and rooms; pretend save script that answers slowly.
 const { test, expect, HUBS } = require('../fixtures/job34/load');

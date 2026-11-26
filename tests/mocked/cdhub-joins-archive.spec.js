@@ -1,4 +1,4 @@
-// Joins A (Lisa 17 Nov 2026): records of dogs moved to the archive are history, not broken joins. Invented rows only.
+// Joins A (the owner 17 Nov 2026): records of dogs moved to the archive are history, not broken joins. Invented rows only.
 const { test, expect } = require('../support/test');
 
 test('a vaccination or parent pointing at an archived dog resolves; a truly missing dog is still reported', async ({ page }) => {
@@ -30,7 +30,7 @@ test('the archive is read after the first screen and is optional (absent is not 
   expect(r).toEqual({ want: true, later: true, optional: true });
 });
 
-// Lisa 17 Nov 2026 ("99 references remove error"): old litters live only in the paper books. Kept in BLD-litter-Archive,
+// the owner 17 Nov 2026 ("99 references remove error"): old litters live only in the paper books. Kept in BLD-litter-Archive,
 // a vet visit pointing at one is history too; a litter in neither list is still reported.
 test('a record pointing at an archived litter resolves; the litter archive is optional', async ({ page }) => {
   await page.goto('cdhub/');

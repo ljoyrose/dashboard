@@ -135,7 +135,7 @@ test.describe('Money Hub: sign-in that goes wrong, then "Sign in again"', () => 
 });
 
 test.describe('Money Hub: someone else\'s account on every screen', () => {
-  test('a deep link to Control: the Lisa-only card on every view, tab counts blank, search finds nothing', async ({ page, guard }) => {
+  test('a deep link to Control: the the owner-only card on every view, tab counts blank, search finds nothing', async ({ page, guard }) => {
     guard.world.email = 'someone.else@example.test';
     await page.goto('money/#/control');
     await signInHeader(page);
@@ -157,7 +157,7 @@ test.describe('Money Hub: empty files say so in plain words', () => {
   test('MON-DATES with no rows: Dates says nothing is waiting, Now draws no empty Dates card, Dates tab has no count', async ({ page, guard }) => {
     emptyCsv(guard.world, 'MON-DATES.csv');
     await HUBS.money.open(page, guard);
-    // Lisa, 2 Nov: an empty section is not drawn on Now (one "Nothing needs you" line only when everything is empty).
+    // the owner, 2 Nov: an empty section is not drawn on Now (one "Nothing needs you" line only when everything is empty).
     await expect(page.locator('#view .cardhead h3', { hasText: /^Dates$/ })).toHaveCount(0);
     await expect(page.locator('#view')).not.toContainText('Nothing due in the next 14 days.');
     await expect(page.locator('#nDates')).toHaveText('');
@@ -261,7 +261,7 @@ test.describe('Money Hub phone: the problem screens fit at 390px', () => {
     expect(b.x + b.width).toBeLessThanOrEqual(390);
   });
 
-  test('the Lisa-only card with an ordinary address: no sideways scroll', async ({ page, guard }) => {
+  test('the the owner-only card with an ordinary address: no sideways scroll', async ({ page, guard }) => {
     guard.world.email = 'someone.else@example.test';
     await page.goto('money/');
     await signInHeader(page);
@@ -269,8 +269,8 @@ test.describe('Money Hub phone: the problem screens fit at 390px', () => {
     expect(await sideScroll(page), 'Lisa-only card').toBe(false);
   });
 
-  // J34b-F20 (fixed): a long address on the Lisa-only card wraps instead of pushing the page sideways.
-  test('J34b-F20: the Lisa-only card with a long address still fits a 390px phone', async ({ page, guard }) => {
+  // J34b-F20 (fixed): a long address on the the owner-only card wraps instead of pushing the page sideways.
+  test('J34b-F20: the the owner-only card with a long address still fits a 390px phone', async ({ page, guard }) => {
     guard.world.email = 'someone.else.with.a.very.long.sample.address@example.test';
     await page.goto('money/');
     await signInHeader(page);

@@ -1,5 +1,5 @@
 // node --test cdhub/staff/lib/test/
-// Temps A (Lisa 17 Nov 2026): the room on the adult row (over its max = cooling action, never outside); puppies under
+// Temps A (the owner 17 Nov 2026): the room on the adult row (over its max = cooling action, never outside); puppies under
 // four weeks: the bed spot on their own row; no bed spot = "not recorded", never outside.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -23,7 +23,7 @@ test('puppy room: the room on the adult row, the bed spot on the puppy row', () 
   assert.equal(J.judge({ min: '8.0', max: '21.0', spot: '27.0' }, pup, adult, true), 'cold');  // the room itself too cold
   assert.equal(J.judge({ min: '18.0', max: '27.0', spot: '27.0' }, pup, adult, true), 'warm');
   assert.equal(J.isBreach('nospot'), false);
-  assert.equal(J.words('nospot'), '');   // Lisa 18 Nov 2026: no "bed spot not recorded" words anywhere
+  assert.equal(J.words('nospot'), '');   // the owner 18 Nov 2026: no "bed spot not recorded" words anywhere
   assert.equal(J.isBreach('spotcold'), true);
 });
 

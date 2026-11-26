@@ -31,7 +31,7 @@ async function sheetWrites(page, opts = {}) {
 test.describe('GA Hub (JOB 34)', () => {
   test('Sign out in the header: back to the sign-in card, tabs and Refresh hidden, the button says Sign in again', async ({ page }) => {
     await HUBS.food.open(page);
-    // Signed in, the one header button is the Sign out icon: named for screen readers, no words on screen (Lisa's pick A).
+    // Signed in, the one header button is the Sign out icon: named for screen readers, no words on screen (the owner's pick A).
     await expect(page.locator('#signin')).toHaveAccessibleName('Sign out');
     await expect(page.locator('#signin')).toHaveText('');
     await page.locator('#signin').click();
@@ -55,7 +55,7 @@ test.describe('GA Hub (JOB 34)', () => {
     await expect(page.locator('#backHome')).toHaveAttribute('href', '../');
   });
 
-  // Hub Mains (Lisa, 2 Nov): Main shows Next and at most 5 Needs you rows, never the answer cards; the cards with Apply live on
+  // Hub Mains (the owner, 2 Nov): Main shows Next and at most 5 Needs you rows, never the answer cards; the cards with Apply live on
   // More > Do, one tap away from the Needs you heading. Moving to a tab and back draws the same short Main again.
   test('Main: Needs you holds at most 5 rows and no answer cards; its heading opens Do with every card; a tab and back keeps Main short', async ({ page }) => {
     await HUBS.food.open(page);
@@ -198,7 +198,7 @@ test.describe('GA Hub (JOB 34)', () => {
     for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Main', 'Invoices', 'Orders', 'Products', 'More']) {
       expect(seen.some((s) => s === name || s.startsWith(name)), `Tab reaches ${name}: ${seen.join(' | ')}`).toBe(true);
     }
-    // GA sits under More (Lisa's tab picks, 2 Nov): Tab to More, Enter, and it is in the menu.
+    // GA sits under More (the owner's tab picks, 2 Nov): Tab to More, Enter, and it is in the menu.
     expect(await tabTo(page, 'nav.tabs a[data-nav="ga"]', 60), 'Tab reaches GA under More').toBe(true);
   });
 

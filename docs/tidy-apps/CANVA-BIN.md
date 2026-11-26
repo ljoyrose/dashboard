@@ -2,7 +2,7 @@
 
 The Bin page's **Canva: designs marked to delete** card. The page never calls Canva: a public page holds no Canva
 token, and Canva has no trash API. The page reads one private state file and writes two kinds of small file. A
-bot listed in the scripts register (CANVA-BIN) does the Canva side. Lisa empties Canva Trash herself.
+bot listed in the scripts register (CANVA-BIN) does the Canva side. the owner empties Canva Trash herself.
 
 All three files live in the folder `CFG.canvaBin.folderId` (config.js). Account labels come from
 `CFG.canvaBin.accounts` (`main`, `book`). No emails, design titles or ids are kept in this repo.
@@ -10,14 +10,14 @@ All three files live in the folder `CFG.canvaBin.folderId` (config.js). Account 
 ## Safety
 
 - `CFG.canvaBin.dryRun` is `true` by default. In a dry run the card lists designs, says "Dry run: N would move to the
-  bin folder" and writes nothing. Only Lisa switches it off.
+  bin folder" and writes nothing. Only the owner switches it off.
 - A design can only move when its title starts `ZZ_DELETE_` **and** it has a ledger row. Any other `ZZ_` title means
   "Name needs fixing" and is never moved.
 - Hydration check: Canva exposes no size or checksum, so the check is **last-modified time + page count**. Both are
   written into the ledger row. The page holds a design whose state-file values differ from its row. The bot checks
   them again, live, before each move.
 - The bot only **moves** designs into a folder named `ZZ_BIN` in that account. It never trashes or deletes anything.
-  Canva Trash keeps designs for 30 days, and only Lisa empties it.
+  Canva Trash keeps designs for 30 days, and only the owner empties it.
 
 ## 1. `CANVA-BIN-STATE.json` (the bot writes it; the page reads it)
 
@@ -54,7 +54,7 @@ This uses the existing slip prefix, which the ledger reader already reads. Colum
 
 ```
 date,old_name,file_id,merged_into,agent,surface
-"2026-11-03","ZZ_DELETE_Example design 1","DAEXAMPLE0001","Canva ZZ_BIN (bot move), then Canva trash by Lisa (30 days); check: modified=2026-10-01T10:00:00Z; pages=1","dashboard Canva card","canva-main"
+"2026-11-03","ZZ_DELETE_Example design 1","DAEXAMPLE0001","Canva ZZ_BIN (bot move), then Canva trash by the owner (30 days); check: modified=2026-10-01T10:00:00Z; pages=1","dashboard Canva card","canva-main"
 ```
 
 `surface` is `canva-<label>`. Readers match columns by header name, so the extra column is safe.

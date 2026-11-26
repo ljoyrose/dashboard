@@ -23,7 +23,7 @@
   var FUNNEL_HOSTS = ['myclickfunnels.com', 'clickfunnels.com', 'cf2.com'];
   var APP_HOSTS = ['lovable.app', 'base44.app', 'overskill.app', 'vercel.app', 'netlify.app'];
 
-  // A first guess at the row kind from the address alone. Lisa can always pick another kind in the Add box.
+  // A first guess at the row kind from the address alone. the owner can always pick another kind in the Add box.
   function guessKind(target) {
     var t = typeof target === 'string' || target == null ? EstateCore.normaliseTarget(target) : target;
     if (!t || !t.ok) return 'site';

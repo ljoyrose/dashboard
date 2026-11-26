@@ -1,5 +1,5 @@
-// Lives in estate/ only because that folder is already copied by pages.yml (a workflow file Lisa alone changes); it is the Do page, not the Web hub.
-// Do page, "Standing approvals" card (Lisa, 2 Nov 2026). Loaded only when the Do page opens, so no other page pays for it.
+// Lives in estate/ only because that folder is already copied by pages.yml (a workflow file the owner alone changes); it is the Do page, not the Web hub.
+// Do page, "Standing approvals" card (the owner, 2 Nov 2026). Loaded only when the Do page opens, so no other page pays for it.
 // Reads CHANGES/AA_CJ-DO-QUEUE-drive.csv (date, session, action, target, why blocked, status). Agents only append rows.
 // "Approve ticked" never edits that file: it saves ONE request file next to it, so an agent appending at the same moment
 // is never overwritten. The Master re-runs the ticked rows and marks them done. A tick approves only that row.

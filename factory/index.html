@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  /* House look (Lisa, 28 Oct 2026; the same rules on every hub). The Warm clear and Cool clear greys, the control line
+  /* House look (the owner, 28 Oct 2026; the same rules on every hub). The Warm clear and Cool clear greys, the control line
      (warm 8A7F70, cool 7A8692), the frame (3A3632 / 46413B), radius, counts, date pills, tabs and the hover rule now live once:
      the numbers in ../tokens.css, the shared parts in ../house.css. The Look (Studio's Look menu, 'dash-look') is applied by
      ../toolkit.js. Lexend 400/600, nothing under 13px, line height 1.5, ONE radius 12px (only dots and rings are round), 1px lines.
@@ -83,12 +83,12 @@
   label.date.over { --mc: var(--r-risk); } label.date.soon { --mc: var(--r-warn); }
   .stat { --mc: var(--sc); }
   /* Status pills that are also links (needs, stuck, alert, dates, stats) wear their status ring: the ring is the information.
-     Yes / No / Off rest on their own colour line (Lisa's approved picture) and keep it on hover, adding the pale tint. */
+     Yes / No / Off rest on their own colour line (the owner's approved picture) and keep it on hover, adding the pale tint. */
   .btn.yes, .btn.no, .lk.off, a.need.n4, a.need.n5, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat { border-color: var(--mc); }
   .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .lk.off .ti, a.pill.alert.has .ti { color: var(--ljr-2-text); }
   label.date.over, label.date.soon { background: color-mix(in srgb, var(--mc) 10%, var(--surface)); }
 
-  /* Hover and tap: the pale grey fill, no line, meaning colours too. Selected: the same fill plus the 1px quiet grey line inside (Lisa, 12 Nov 2026). Nothing moves. */
+  /* Hover and tap: the pale grey fill, no line, meaning colours too. Selected: the same fill plus the 1px quiet grey line inside (the owner, 12 Nov 2026). Nothing moves. */
   .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { background: var(--sel-fill); outline: 1px solid var(--sel-bd); outline-offset: -1px; }
   @media (hover: hover) {
     .btn:hover, button.pill:hover, a.pill:hover, .fbtn:hover, .ch:hover, .more:hover, .undo:hover, .copy:hover, .tick:hover, label.date:hover, a.chip:hover, details.arch > summary:hover,
@@ -102,7 +102,7 @@
   }
   .ico.on { color: var(--hc, var(--ink)); }
   .mark svg { filter: grayscale(1); opacity: .55; }
-  /* Keyboard focus: the 1px ink line inside (Lisa, 3 Nov 2026: no exception to 1px). */
+  /* Keyboard focus: the 1px ink line inside (the owner, 3 Nov 2026: no exception to 1px). */
   a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
   /* !important: focus always wins over the 1px hover / selected line, so the keyboard ring is never lost. */
   :focus-visible, label.date:has(input:focus-visible) { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
@@ -467,7 +467,7 @@
   }
   // A code reads "TEN:4" on screen. Typed or stored as TEN4, TEN 4, TEN:4, TEN-4, TEN=4 or TEN·4, it is understood the same.
   function codeParts(x) { var m = String(x).trim().match(/^([A-Z]{2,8})\s*[:=·\-]?\s*([0-9?]+|L\?)$/); return m ? [m[0], m[1], m[2]] : [x, x, '']; }
-  // The Codes (Lisa's key): codes in groups split by " / ", Leak outside the groups. State in the ring only:
+  // The Codes (the owner's key): codes in groups split by " / ", Leak outside the groups. State in the ring only:
   // settled = green ring, open (?) = amber ring; Leak: no = green, yes = red, not tested = amber. Words stay ink.
   var CODE_GROUPS = [['Who owns what', ['TEN', 'PARENTS', 'DOWN', 'MEET', 'POOL', 'EXIT']], ['People', ['ROLE', 'BELONG', 'GUEST', 'HELP', 'JOIN']], ['Customers and money', ['CUST', 'PRICE', 'SHARE', 'PAY']], ['Public and data', ['SEN', 'VIEW', 'POST', 'BRAND', 'SEND']]];
   function codeGroups(codes, md) {
@@ -623,7 +623,7 @@
     for (var i = 0; i < tags.length; i++) { var hit = A.filter(function (x) { return x !== t && ('app-' + x.id === tags[i] || x.tags.indexOf(tags[i]) >= 0); })[0]; if (hit) return bare(hit); }
     return 'Factory';
   }
-  // Test data: TEST- names, and anything marked ZZ_DELETE_ (Lisa, 20 Oct: hidden from chips, lists and counts unless TEST is on).
+  // Test data: TEST- names, and anything marked ZZ_DELETE_ (the owner, 20 Oct: hidden from chips, lists and counts unless TEST is on).
   function isTest(t) { return /^(TEST-|ZZ_DELETE_)/i.test(t.name); }
   // Group order: real apps, then Factory rules, then TEST apps. Heading = app · room · stage.
   function rank(t) { return isTest(t) ? 2 : appOf(t) === 'Factory rules' ? 1 : 0; }
@@ -636,7 +636,7 @@
   }
   // When the engine will apply a click: its next 15-minute run (:03 :18 :33 :48) plus a minute.
   function appliesBy(ts) { var d = new Date(ts), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next + 1); return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
-  /* ---------- Calm rows: one look on every screen (Lisa, 20 Oct 2026) ----------
+  /* ---------- Calm rows: one look on every screen (the owner, 20 Oct 2026) ----------
    * Always: type icon · title · flag (top right) · ✓ / ✗ · date DD/MM/YY (bottom right).
    * Everything else is an icon, shown only when there is something; tap opens it under the row, one at a time.
    * Every value is read from its ClickUp field; every change goes to AF › requests and AF-ENGINE writes it to that field.
@@ -756,7 +756,7 @@
       (detail ? iconsOf(t, kind).filter(function (x) { return x[0] !== 'reply'; }).map(function (x) { return panelOf(t, x[0]); }).join('') : '') +
       '<div class="l3"><span class="type" aria-hidden="true">' + typeIcon(t) + '</span>' + out + '<span class="grow"></span>' + date + '</div></div>';
   }
-  /* ---------- Find bar (Lisa, 20 Oct 2026): the Docs model on every list tab ----------
+  /* ---------- Find bar (the owner, 20 Oct 2026): the Docs model on every list tab ----------
    * Search · App chips · Kind chips always; Who · Stage · Flags · Sort · TEST behind the Filter button.
    * Each tab remembers its own filters (af-fs), and the address carries them, so a bot can send a 1-click link:
    *   #/do?app=links&kind=send   #/me   #/app/links   #/item/<ClickUp task id>
@@ -844,7 +844,7 @@
   function fchip(key, val, label, on, extra) { return '<button class="pill' + (on ? ' on' : '') + (extra || '') + '" type="button" data-fx="' + key + '" data-val="' + esc(val) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + label + '</button>'; }
   function flagWords(h) { return h.replace('URGENT', flagIcon({ p: 'urgent' })).replace('NOFLAG', flagIcon(null)); }
   // The bar. Chips show only what is on this tab (count in a faint circle); a row with one choice is left out.
-  // One calm row (Lisa's Studio choice, 28 Oct): Search · (Factory on/off on Rooms) · Filter. Filter is a details/summary that holds
+  // One calm row (the owner's Studio choice, 28 Oct): Search · (Factory on/off on Rooms) · Filter. Filter is a details/summary that holds
   // every chip row; open by default at 900px and wider, closed on a phone, and it remembers what you chose. The count on it says
   // how many filters are on. Inside, "More" opens Who · Stage · Flags · Sort · Test as before.
   function findBar(tab, items, F, kinds, o) {
@@ -881,7 +881,7 @@
     return '<div class="card" data-empty><p class="empty">' + esc(words || (on ? 'Nothing matches these filters.' : 'Nothing waiting here. All clear.')) + '</p>' +
       (on ? '<button class="pill" type="button" data-action="clearf"><i class="ti ti-filter-off"></i> Clear</button>' : '') + '</div>';
   }
-  // One card per app (Lisa, 20 Oct): the app's name once in the header, its items inside split by a thin line.
+  // One card per app (the owner, 20 Oct): the app's name once in the header, its items inside split by a thin line.
   // Cards follow the sorted items; each shows its top 3, "+N" opens the rest (remembered).
   var shownAll = loadLocal('af-open');
   function rowKind(t, kind) { return kind === 'me' ? (t._k === 'decisions' ? 'decide' : 'do') : kind === 'mixed' ? (t._k === 'decisions' ? 'decide' : t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view') : kind; }
@@ -898,8 +898,8 @@
     var s = fsOf(tab), show = sortT(items.filter(function (t) { return hit(t, s, TASK); }), s.sort);
     return findBar(tab, items, TASK, KINDS) + (show.length ? cards(show, slot, kind) : emptyBox());
   }
-  // ---- Main (Lisa's house style, 2 Nov 2026): Next, Needs you (at most 5), then the 3 numbers the Dashboard's Apps tile shows,
-  // worked out exactly as root index.html HubRead apps does. Rows = open decisions (gates included) and Lisa's Do items, TEST and
+  // ---- Main (the owner's house style, 2 Nov 2026): Next, Needs you (at most 5), then the 3 numbers the Dashboard's Apps tile shows,
+  // worked out exactly as root index.html HubRead apps does. Rows = open decisions (gates included) and the owner's Do items, TEST and
   // already-answered ones left out; late = due before today, today = due today, else waiting. Each row opens its item, where its
   // own Yes / No / Done buttons are. The list that used to be here (Decide + Do with the find bar) is at #/me/all.
   function testName(t) { return /^(TEST-|ZZ_DELETE_)/i.test(t.name || ''); }
@@ -922,7 +922,7 @@
         { label: 'Gates', value: ok ? gatesOf().length : null, href: '#/decide/gates' },
         { label: 'Live', value: ok ? liveApps().length : null, href: '#/all/live' }] });
   }
-  // Me: everything waiting on Lisa (Decide + Do), newest first, by app.
+  // Me: everything waiting on the owner (Decide + Do), newest first, by app.
   function meItems() { var out = decisions().slice(); mine().forEach(function (t) { if (out.indexOf(t) < 0) out.push(t); }); return out; }
   // One app on one screen: its Decide, Do and Docs. TEST and filters do not hide anything here.
   function vApp(slug) {
@@ -936,7 +936,7 @@
       sect('square-check', 'Do', dos.length, '#/do?app=' + encodeURIComponent(slugOf(g))) + dos.map(function (t) { return row(t, 'do', true); }).join('') +
       sect('file', 'Docs', docs.length, '#/docs?app=' + encodeURIComponent(slugOf(g))) + (docs.length ? '<table class="ptab dtab"><tbody>' + docs.map(function (d) { return docRow(d); }).join('') + '</tbody></table>' : '') + '</div>';
   }
-  // One item, opened: the link a bot sends Lisa (#/item/<ClickUp id>).
+  // One item, opened: the link a bot sends the owner (#/item/<ClickUp id>).
   function vItem(id) {
     var t = byId(id); if (!t) return emptyBox('That item is done or gone. Nothing to do here.');
     var kind = t._k === 'decisions' ? 'decide' : mine().indexOf(t) >= 0 || t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view';
@@ -970,7 +970,7 @@
     var p = hashParts(), h = '#/' + p.path.join('/') + (q.length ? '?' + q.join('&') : '');
     if (h !== location.hash) history.replaceState(null, '', h);
   }
-  // Everyone who has open work (assigned or tagged in ClickUp), except Lisa: a new person gets a pill by themselves.
+  // Everyone who has open work (assigned or tagged in ClickUp), except the owner: a new person gets a pill by themselves.
   function people() {
     var seen = ['Claude', 'Grok'];
     allTasks().forEach(function (t) { if (isOpen(t) && t._k !== 'apps') whoOf(t).forEach(function (w) { if (w && w !== 'Lisa' && seen.indexOf(w) < 0) seen.push(w); }); });
@@ -991,7 +991,7 @@
   var CU_MARK = '<svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 11l3-2.3c1.6 2 3.2 2 4.8 0L13 11c-2.7 3.3-8.3 3.3-11 0z" fill="#7B68EE"/><path d="M8 3.5L3.6 7.3 5.3 9.2 8 6.9l2.7 2.3 1.7-1.9z" fill="#FF02F0"/></svg>';
   var DRIVE_MARK = '<svg width="18" height="16" viewBox="0 0 16 14" aria-hidden="true"><path d="M5.5 0h5l5 8.7h-5z" fill="#FFBA00"/><path d="M0 8.7L2.5 13l5-8.7L5 0z" fill="#0F9D58"/><path d="M2.5 13h10.5l2.5-4.3H5z" fill="#4285F4"/></svg>';
 
-  /* ---------- Links: each app task's description holds "key: URL" lines (Lisa ✓ 20 Oct) ----------
+  /* ---------- Links: each app task's description holds "key: URL" lines (the owner ✓ 20 Oct) ----------
    * A stage line records each link as it is made; an expected link that is missing shows dashed. */
   var LINKS = [
     ['mockup', 'layout-dashboard', 'Mockup', 3, 'Build'], ['overskill', 'code', 'OverSkill', 6, 'Build'], ['code', 'brand-github', 'Code', 6, 'Build'], ['db', 'database', 'Database', 6, 'Build'],
@@ -1057,12 +1057,12 @@
     var a = autoToday(), q = queuedN();
     return a || q ? '<p class="muted" style="margin:0">' + (a ? '<i class="ti ti-circle-check"></i> ' + cnt(a) + ' passed on their own today' : '') + (a && q ? ' · ' : '') + (q ? '<i class="ti ti-hourglass"></i> ' + cnt(q) + ' waiting behind these' : '') + '</p>' : '';
   }
-  // A count sits in a faint circle, so it reads as "how many", never as part of the words (Lisa, 20 Oct).
+  // A count sits in a faint circle, so it reads as "how many", never as part of the words (the owner, 20 Oct).
   // One fixed box (30 x 22); 3+ characters grow. A count of 0 (or nothing) shows no pill at all; need = rose ring + tint.
   // why: true / 'late' = rose ring, 'stuck' / 'failed'... = black badge, anything else a grey ring (DashKit.count).
   function cnt(n, why) { return !n ? '' : '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + DashKit.count.cls(n, why) + '">' + n + '</span>'; }
   function tabN(id, n) { var e = $(id); e.textContent = n ? n : ''; e.classList.toggle('wide', String(n).length > 2); }
-  // Words on screen start with a capital, after any code number: "8 Operate", "To do", "0 No data stored" (Lisa, 20 Oct).
+  // Words on screen start with a capital, after any code number: "8 Operate", "To do", "0 No data stored" (the owner, 20 Oct).
   function cap(t) { return String(t == null ? '' : t).replace(/^(\S*\d\S*\s+|[?]\s+)?([a-z])/, function (m, d, c) { return (d || '') + c.toUpperCase(); }); }
   function lines(t) { return String(t.desc || '').split(/\r?\n|\\n/).map(function (l) { return l.trim(); }).filter(Boolean); }
   function line(t, re) { var l = lines(t).filter(function (x) { return re.test(x); })[0]; return l ? l.replace(re, '').trim() : ''; }
@@ -1100,8 +1100,8 @@
    *   presend: READY sha256:<64 hex> <date>                (written by tools/presend/prompt-lint.py --presend: SHA-256 of the trimmed text; dated today, Europe/London; Copy
    *                                                         refuses text whose SHA-256 differs. The checker runs inputs-gate itself.)
    *   Happy Hour: active, <n> min left, read <HH:MM> · …   (read 15 minutes ago or less)
-   *   AFTER SEND YOU MUST: …                                (shown on the card, with Lisa's Do lines for the same app)
-   *   Lisa available: <HH:MM–HH:MM>                         (only for tasks tagged security or leak…)
+   *   AFTER SEND YOU MUST: …                                (shown on the card, with the owner's Do lines for the same app)
+   *   the owner available: <HH:MM–HH:MM>                         (only for tasks tagged security or leak…)
    *   Class: CURRENT <codes> · DATA <codes> · TARGET <codes> (<register id>)   (E19, shown on the card)
    */
   var MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
@@ -1140,7 +1140,7 @@
     if (st.state !== 'READY') miss.push(PS_WHY[st.state]);
     return { ok: !miss.length, miss: miss, hh: hh, after: after, avail: avail, cls: cls, sha: st.sha, ps: st.state };
   }
-  // On the Sends card: the Happy Hour reading, what Lisa must do after the send (with her Do lines for the same app), when she is free.
+  // On the Sends card: the Happy Hour reading, what the owner must do after the send (with her Do lines for the same app), when she is free.
   function sendInfo(t, g) {
     var mineTags = t.tags.filter(function (x) { return /^app-/.test(x); });
     var dos = mineTags.length ? (S.lists.work || []).filter(function (x) { return isOpen(x) && x.tags.indexOf('who-lisa') >= 0 && x.tags.some(function (y) { return mineTags.indexOf(y) >= 0; }); }) : [];
@@ -1177,7 +1177,7 @@
     } catch (e) { text.then(function (x) { return navigator.clipboard.writeText(x); }).then(ok, no); }
   }
 
-  /* ---------- Forms (Lisa ✓ 20 Oct): New idea · Problem · Link. Each writes one request file; AF-ENGINE does the rest. ---------- */
+  /* ---------- Forms (the owner ✓ 20 Oct): New idea · Problem · Link. Each writes one request file; AF-ENGINE does the rest. ---------- */
   // The 20 frozen parts, same order and words as the Google Form. ★ = must answer; the rest start at "?".
   var PARTS = [
     ['TEN', 1, 'How many businesses, and who sits above them?', ['0 no data stored', '1 one business', '2 several, flat', '3 one reseller above', '4 several resellers', '5 one body above resellers', '6 several bodies'], 'e.g. 1 = a single kennel; 3 = a breed club above its kennels'],
@@ -1352,7 +1352,7 @@
       '</div></div>';
   }
 
-  /* ---------- Docs (Lisa, 20 Oct): every doc the factory knows, by app and type, with search. Opens in Drive (new tab). ---------- */
+  /* ---------- Docs (the owner, 20 Oct): every doc the factory knows, by app and type, with search. Opens in Drive (new tab). ---------- */
   var docsAll = false;
   var DT = [['card', 'id-badge-2', 'Card', /CARD|card \d|Card \d/], ['prompt', 'message-2-code', 'Prompt', /prompt|· P\d/i], ['mockup', 'layout-dashboard', 'Mockup', /mockup|board/i],
     ['research', 'search', 'Research', /research|rivals|base/i], ['report', 'file-check', 'Report', /report|test|proof|audit/i], ['rules', 'book', 'Rules', /rule|protocol|scheme|template|standard/i], ['other', 'file', 'Other', /.*/]];
@@ -1379,7 +1379,7 @@
     });
     return Object.keys(by).map(function (k) { return by[k]; });
   }
-  // Docs (Lisa, 20 Oct): search first. Without a search: each app in progress (idea → launch) with its own docs, plus any doc a
+  // Docs (the owner, 20 Oct): search first. Without a search: each app in progress (idea → launch) with its own docs, plus any doc a
   // waiting Decide / Do item needs (coloured tag = needs you). Search finds every doc, live and old.
   function needs() { var need = {}; decisions().forEach(function (t) { need[t.name] = 'decide'; }); mine().forEach(function (t) { if (!need[t.name]) need[t.name] = 'do'; }); return need; }
   function tagOf(d, need) { var k = ''; need = need || needs(); d.from.forEach(function (n) { if (need[n] === 'decide') k = 'decide'; else if (need[n] === 'do' && !k) k = 'do'; }); return k; }
@@ -1505,7 +1505,7 @@
   document.addEventListener('input', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('af-drafts', drafts); } });
   function barTab() { var r = hashParts().path[0] || 'rooms'; return BAR_TABS.test(r) ? r : null; }
   function saveSent() { try { localStorage.setItem('af-sent', JSON.stringify(sent)); } catch (e) {} }
-  /* ---------- Prompts (Lisa, 23 Oct 2026): the next send text per app on top with its checker state, then the rest waiting; sent and the rules folded away ---------- */
+  /* ---------- Prompts (the owner, 23 Oct 2026): the next send text per app on top with its checker state, then the rest waiting; sent and the rules folded away ---------- */
   var PS_LOOK = { READY: ['circle-check', 'READY'], 'NOT READY': ['circle-x', 'NOT READY'], OLD: ['clock', 'NOT READY · stamp not today'], NONE: ['circle-dashed', 'NOT READY · not checked'] };
   function psBadge(t) { var s = presendOf(t), L = PS_LOOK[s.state]; return '<span class="pill ps' + (s.state === 'READY' ? ' ok' : '') + '" data-ps="' + esc(t.id) + '"><i class="ti ti-' + L[0] + '"></i> ' + L[1] + '</span>'; }
   function sendsAll() { return (S.lists.sends || []).filter(function (t) { return fsOf('do').test || !testT(t); }); }

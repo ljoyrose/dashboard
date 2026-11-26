@@ -48,7 +48,7 @@
   // ---- targets ----
   var DOMAIN_RE = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,62}[a-z0-9]$/;
 
-  // Turns what Lisa pastes (a URL, a bare domain, a funnel or app link) into one canonical form.
+  // Turns what the owner pastes (a URL, a bare domain, a funnel or app link) into one canonical form.
   // Refuses anything that is not http, https or a bare domain.
   function normaliseTarget(input) {
     var raw = String(input == null ? '' : input).trim();

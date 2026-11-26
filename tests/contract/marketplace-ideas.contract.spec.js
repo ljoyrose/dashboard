@@ -95,7 +95,7 @@ test.describe('Ideas: the investigator result and the worked example', () => {
   test('not a result file is refused', () => { expect(I.mergeResult(fresh(), { kind: 'mkt-idea', patch: {} }).ok).toBe(false); expect(I.mergeResult(fresh(), null).ok).toBe(false); });
   test('the saved investigator prompt keeps its key lines word for word', () => {
     const t = fs.readFileSync(path.join(__dirname, '..', '..', 'docs', 'marketplace-ideas', 'INVESTIGATOR-PROMPT.md'), 'utf8');
-    ['ROLE: Marketplace product idea investigator for Lisa.', 'GATE 0, QUICK SCREEN (every time, then STOP with Go / Maybe / No)', 'OWN AUDIENCE AND RANGE FIT', 'A kill rule: "stop if ... by ..."', 'GATE 3, LAUNCH AND MONITOR', 'Do not buy, list, send or change anything: drafts and recommendations only.', 'End with a one-page Idea Card'].forEach((l) => expect(t).toContain(l));
+    ['ROLE: Marketplace product idea investigator for the owner.', 'GATE 0, QUICK SCREEN (every time, then STOP with Go / Maybe / No)', 'OWN AUDIENCE AND RANGE FIT', 'A kill rule: "stop if ... by ..."', 'GATE 3, LAUNCH AND MONITOR', 'Do not buy, list, send or change anything: drafts and recommendations only.', 'End with a one-page Idea Card'].forEach((l) => expect(t).toContain(l));
   });
 });
 

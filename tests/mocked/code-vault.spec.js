@@ -1,4 +1,4 @@
-// Codes vault crypto (cdhub/staff/lib/code-vault.js), Lisa 14 Nov 2026 option B. Runs in the browser's own WebCrypto.
+// Codes vault crypto (cdhub/staff/lib/code-vault.js), the owner 14 Nov 2026 option B. Runs in the browser's own WebCrypto.
 // Invented passwords and codes only: none of these is a real code.
 const { test, expect } = require('../support/test');
 

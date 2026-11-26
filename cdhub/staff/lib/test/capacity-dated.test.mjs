@@ -1,4 +1,4 @@
-// BLDCapacity dated limits (Lisa 12 Nov 2026): rows in force on a date; old placements judged by the rule then. Invented rows.
+// BLDCapacity dated limits (the owner 12 Nov 2026): rows in force on a date; old placements judged by the rule then. Invented rows.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';

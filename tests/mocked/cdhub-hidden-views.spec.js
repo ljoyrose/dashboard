@@ -1,4 +1,4 @@
-// Views a new kennel starts with switched off (Lisa 13 Nov 2026, PR 472; Enquiries added 15 Nov 2026): Assocs, the Table map,
+// Views a new kennel starts with switched off (the owner 13 Nov 2026, PR 472; Enquiries added 15 Nov 2026): Assocs, the Table map,
 // Litters, Vet and Enquiries. The data stays; the views are off every menu, and their old addresses open Main.
 // An owner turns one back on with a dated row nav.view.<id> = 1. Pretend Google and Drive only; rows invented.
 const { test, expect } = require('../support/test');

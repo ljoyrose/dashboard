@@ -1,4 +1,4 @@
-// Bottom tabs (Lisa's picks, 2 Nov 2026): at most 6 tabs, the other views sit in the More menu. A person opens More first to reach
+// Bottom tabs (the owner's picks, 2 Nov 2026): at most 6 tabs, the other views sit in the More menu. A person opens More first to reach
 // one of those, so the tests do the same.
 const MORE = 'nav.house-tabs [data-house-more]';
 const shutIn = (t) => t.evaluate((e) => { const m = e.closest('.house-more'); return !!m && m.hidden; });
@@ -28,7 +28,7 @@ async function tabTo(page, target, max = 150) {
   for (let i = 0; i < max; i++) { if (await focused(t)) return true; await page.keyboard.press('Tab'); }
   return focused(t);
 }
-/** Opens a hub view: by its tab or More item when it has one, else by its direct link (#/id). Lisa 13 Nov 2026: Table map and
+/** Opens a hub view: by its tab or More item when it has one, else by its direct link (#/id). the owner 13 Nov 2026: Table map and
  *  Assocs are off the More menu but still open by link. */
 async function openView(page, id) {
   const { expect } = require('@playwright/test');

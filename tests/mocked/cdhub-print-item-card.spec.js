@@ -1,4 +1,4 @@
-// Print any item (Lisa 15 Nov 2026, print-any-item job): one card layout for any BLD-items row (e.g. a fire extinguisher).
+// Print any item (the owner 15 Nov 2026, print-any-item job): one card layout for any BLD-items row (e.g. a fire extinguisher).
 // The fields come from the owner's dated rule rows print.fields.item(.<kind_key>); every value prints under its label; the
 // photo is fitted whole, never cropped; the QR is at least 60 mm; two cards per A4. Tags use the shared qr-rules.js helper.
 // Pretend data only: invented items, invented tags, no real names or numbers.

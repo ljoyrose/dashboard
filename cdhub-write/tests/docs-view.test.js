@@ -1,5 +1,5 @@
 'use strict';
-/** Dog card Documents (Lisa 17 Nov 2026): files linked from the dog, labelled by BLD-doc_type rows; photos, ended and other dogs' links left out. */
+/** Dog card Documents (the owner 17 Nov 2026): files linked from the dog, labelled by BLD-doc_type rows; photos, ended and other dogs' links left out. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const V = require('../../cdhub/docs-view.js');

@@ -1,4 +1,4 @@
-// Where: find a dog (Lisa 22 Nov 2026: "otherwise can't find them easily"). Typing shows only the dogs whose name holds
+// Where: find a dog (the owner 22 Nov 2026: "otherwise can't find them easily"). Typing shows only the dogs whose name holds
 // the text (any case, anywhere), each with its room; Clear shows them all; no match says so. Nothing is saved.
 // Pretend dogs, rooms and code only.
 const { test, expect } = require('../support/test');

@@ -19,10 +19,10 @@ const setFile = (world, name, content) => {
 
 const DISPENSE = [
   'id,tenant_id,subject_id,given_on,product,presentation,dose_volume,weight_band,weight_kg_used,dosage_basis,route,reason,source,ruling_needed,note',
-  'dsp-1,ten-test,sub-test-dog-1,2026-02-03,Sample Wormer,,1 tablet,,,,Oral,routine,invented,,with food',
+  'dsp-1,ten-test,sub-test-dog-1,2026-02-03,Med C,,1 tablet,,,,Oral,routine,invented,,with food',
   'dsp-2,ten-test,sub-test-dog-2,2026-02-01,NOT STATED,,,,,,,,invented,,',
   'dsp-3,ten-test,sub-not-on-list,2026-02-10,Sample Drops,,2 drops,,,,Topical,ear,invented,,',
-  'dsp-4,ten-test,sub-test-dog-1,2026-03-01,Sample Wormer,,1 tablet,,,,Oral,routine,invented,,',
+  'dsp-4,ten-test,sub-test-dog-1,2026-03-01,Med C,,1 tablet,,,,Oral,routine,invented,,',
 ].join('\n') + '\n';
 const CHIPS = 'id,subject_id,chip_number\nmc-1,sub-test-dog-1,900000000000001\n';
 const ROWS = DISPENSE.trim().split('\n').slice(1).map((l) => {
@@ -55,7 +55,7 @@ test.describe('Medicines register: the rules', () => {
     expect(R.cell(one, 'date')).toBe('3 Feb 2026');
     expect(R.cell(one, 'dog')).toBe('Test Dog One');
     expect(R.cell(one, 'chip')).toBe('900000000000001');
-    expect(R.cell(one, 'product')).toBe('Sample Wormer');
+    expect(R.cell(one, 'product')).toBe('Med C');
     expect(R.cell(one, 'dose')).toBe('1 tablet');
     expect(R.cell(one, 'reason')).toBe('routine');
     expect(R.cell(one, 'note')).toBe('with food');
@@ -200,7 +200,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     const csv = fs.readFileSync(await dl.path(), 'utf8');
     expect(csv).toContain('Medicines register,Sample Kennel (invented)');
     expect(csv).toContain('Month,February 2026');
-    expect(csv).toContain('2026-02-03,,Test Dog One,900000000000001,Sample Wormer,,,1 tablet,Oral,routine,,Lisa Carson,with food');
+    expect(csv).toContain('2026-02-03,,Test Dog One,900000000000001,Med C,,,1 tablet,Oral,routine,,Lisa Carson,with food');
     expect(csv).not.toContain('dog card');
     expect(csv).not.toContain('Recorded in');
     expect(csv).toContain('Dog not on the current list');
@@ -267,7 +267,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
 
 });
 
-// Lisa 23 Nov 2026: no internal codes on paper. A record id looks like clg-20261118-042020-vf20.
+// the owner 23 Nov 2026: no internal codes on paper. A record id looks like clg-20261118-042020-vf20.
 const ID_PATTERN = /\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/i;
 test('a parasite dose joins the medicines register once, and a vet procedure drug does not @regression', () => {
   const types = [
@@ -308,7 +308,7 @@ test('the medicines register does not show where it was recorded, and a blank na
 test.describe('Medicines register: no internal codes, nothing counted twice', () => {
   const disp = [
     { id: 'dsp-a1', subject_id: 'sub-test-dog-1', given_on: '2026-02-04', product: 'Sample Drops', dose_volume: '2', note: 'from clg-20261118-042020-vf20' },
-    { id: 'dsp-a2', subject_id: 'sub-gone-77', given_on: '2026-02-05', product: 'Sample Wormer', note: 'with food (from chk-9x2k1)' },
+    { id: 'dsp-a2', subject_id: 'sub-gone-77', given_on: '2026-02-05', product: 'Med C', note: 'with food (from chk-9x2k1)' },
   ];
   const logs = [
     { id: 'clg-20261118-042020-vf20', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Sample Drops', amount: '2', outcome: 'ok', happened_at: '2026-02-04T08:00:00Z', taken_by: 'Sample Staff A' },

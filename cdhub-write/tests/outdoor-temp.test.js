@@ -1,6 +1,6 @@
 'use strict';
 /**
- * 17 Nov 2026 (Lisa: "Clear all failures and ensure this is not repeated"): BLD-outdoor_temp had wx-0584 and wx-0585
+ * 17 Nov 2026 (the owner: "Clear all failures and ensure this is not repeated"): BLD-outdoor_temp had wx-0584 and wx-0585
  * twice. These tests run the real outdoor-temp/Code.gs against a fake Sheet and prove a new row always takes the
  * next number after the highest ever used, never one already used, and only one run writes at a time.
  * Invented location and tenant only.

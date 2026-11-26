@@ -1,5 +1,5 @@
 // FOOD DATA CONTRACT (JOB 31). No browser, no Google. Names and types only.
-// If the food engine changes a tab of RR_FOOD, a test here goes red before Lisa's page breaks.
+// If the food engine changes a tab of RR_FOOD, a test here goes red before the owner's page breaks.
 // Each failure case proves itself: CONTRACT_PROVE_RED=1 flips it to expect "no problem", so it must go red.
 const { test, expect } = require('@playwright/test');
 const { EXPECTED } = require('./headers');

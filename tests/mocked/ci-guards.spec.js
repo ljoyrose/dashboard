@@ -107,11 +107,13 @@ test.describe('Alarm wiring @ci-guard', () => {
     expect(evaluate({ protected: true, protection: on }, wf, null).problems).toEqual([]); // could not read: no false alarm
   });
 
-  test('the alarm message starts with a plain "What to do" line', () => {
+  test('the alarm message is one technical line', () => {
     const out = execFileSync('node', ['tests/support/report-issue.js', '--state', 'red', '--label', 'x', '--results', 'none', '--note', 'drill', '--dry-run'], {
       cwd: REPO, encoding: 'utf8', env: { ...process.env, GITHUB_REPOSITORY: 'o/r', GITHUB_RUN_ID: '1' },
     });
-    expect(out).toMatch(/\*\*What to do:\*\* open the run link/);
+    expect(out).toMatch(/--title cdhub: check failed/);
+    expect(out).toMatch(/--body Technical check failed\./);
+    expect(out).not.toMatch(/drill/);
   });
 
   test('every workflow that can open an issue does it with the built-in token only (no stored secrets but the privacy denylist)', () => {
@@ -197,7 +199,7 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     fs.rmSync(out, { recursive: true, force: true });
   });
 
-  // Lisa's minutes plan (2 Nov 2026): once the repo is private, pushes skip the browser suite (weekly and hand-started runs keep it).
+  // the owner's minutes plan (2 Nov 2026): once the repo is private, pushes skip the browser suite (weekly and hand-started runs keep it).
   test('private repo: pushes and PRs skip the browser suite; schedule and hand-started runs keep it', () => {
     const scope = (event, ref, priv) => execFileSync('bash', [path.join(REPO, 'tools/ci-local/docs-only.sh'), event, ref],
       { cwd: REPO, env: { ...process.env, GITHUB_OUTPUT: '', REPO_PRIVATE: priv } }).toString().trim();
