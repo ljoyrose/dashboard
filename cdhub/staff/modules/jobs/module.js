@@ -302,9 +302,22 @@
           kept[job.type_key] = true;   // stays on today's list with its tick, not gone without a trace
           say(left ? 'Left out: ' + left + '.' : '', 'warn');
           draw();
+          if (!paper) donePhoto(job, t, entry, r);   // an Earlier entry gets the diary-page photo instead (PR 755)
         });
       }
 
+      /* After a Done, offer a photo. The record is already saved; the photo is optional and joins each saved row
+         (one per dog) as evidence. Switch: rule rows job.done_photo(.<type_key>), default on. */
+      function donePhoto(job, t, entry, r) {
+        var P = window.BLDEvidencePhoto;
+        if (!P || r.status === 'queued' || (entry.outcome !== 'ok' && entry.outcome !== 'recorded')) return;
+        var ids = r.ids && r.ids.length ? r.ids : [r.id];
+        if (!ids[0] || !P.doneOn(rules, t.type_key, today)) return;
+        var card = list.querySelector('[data-job="' + t.type_key + '"]');
+        if (!card) return;
+        P.offer(card, { send: P.staffSender(c.save), fromTable: 'check_log', fromIds: ids, day: today,
+          name: t.type_key + '.jpg', source: 'Job done: ' + (t.label || t.type_key), title: 'Add photo', hint: 'A photo of the job done, or skip.' });
+      }
       function diaryPhoto(job, ids, day) {
         loadEvidence().then(function (E) {
           if (!E || !E.offer) return;

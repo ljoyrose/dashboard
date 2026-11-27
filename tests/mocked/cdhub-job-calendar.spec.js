@@ -278,3 +278,24 @@ test('exercise counts the adult dogs only and hides a backfill note @regression'
   assert.match(html, /class="jd done"/);
   assert.doesNotMatch(html, /backfill/i);
 });
+
+// After Done today a photo is offered (the same helper as the staff page). Skip is fine.
+test('Done today on Compliance offers a photo; a chosen one is kept and linked to the record as evidence', async ({ page, guard }) => {
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, []));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b);
+    const id = b.action === 'file_add' ? 'fil-1' : b.action === 'link_add' ? 'lnk-1' : 'chk-1';
+    return { ok: true, result: { status: 'saved', id, ids: b.action === 'add_site' ? ['chk-1'] : undefined, at: new Date().toISOString(), who: 'Pretend Owner' } }; }; });
+  await page.locator('[data-jcal-done="food_bowls"]').click();
+  const card = page.locator('[data-jcal="food_bowls"]');
+  await expect(card.locator('[data-ev-photo]')).toContainText('Add photo');
+  await card.locator('[data-ev-photo] input[type=file]').setInputFiles({ name: 'bowls.png', mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+  await expect(card.getByText('✓ Photo kept with the record.')).toBeVisible();
+  const sent = await page.evaluate(() => window.__sent);
+  expect(sent.map((b) => b.action)).toEqual(['add_site', 'file_add', 'link_add']);
+  expect(sent[2].fields).toMatchObject({ from_table: 'check_log', from_id: 'chk-1', role: 'evidence', to_table: 'files', to_id: 'fil-1' });
+});
