@@ -179,7 +179,7 @@ test.describe('Medicines register: the staff "Medicine given" job counts too', (
 });
 
 test.describe('CD Hub: Medicines register on Compliance', () => {
-  test('pick a month, download the CSV and open the print page; nothing is written', async ({ page, guard, context }) => {
+  test('pick a month, download the CSV and open the print page; nothing is written @live', async ({ page, guard, context }) => {
     setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
     setFile(guard.world, 'BLD-microchip.csv', CHIPS);
     setFile(guard.world, 'BLD-check_type.csv', 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit\nct-med,ten-test,medicine,Medicine given,dog,true,Medicine,true,dose\n');

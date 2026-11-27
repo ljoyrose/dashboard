@@ -266,7 +266,7 @@ test('owner sign-in ends: the save is kept, the line says sign in again, and it 
   await page.route(SINK, async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
     let ans;
-    if (body.google_token) { saved.push(body.request_id); ans = { ok: true, result: { status: 'saved', id: 'occ-new', who: 'Lisa', at: '2026-11-13T10:00:00+00:00' } }; }
+    if (body.google_token) { saved.push(body.request_id); ans = { ok: true, result: { status: 'saved', id: 'occ-new', who: 'Owner', at: '2026-11-13T10:00:00+00:00' } }; }
     else ans = answer(body);
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ans) });
   });
