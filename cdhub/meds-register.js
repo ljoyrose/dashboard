@@ -3,7 +3,7 @@
  * priority 2 "legally compliant exports"). Read only: it never writes a row.
  * One line per medicine given. Every column an inspector asks for is always printed; a detail the record does not hold
  * says "not recorded" only for a legally required detail: the date, the dog, the medicine and the dose.
- * A blank name in Given by shows Lisa Carson while those blanks are filled in on the sheet. The sheet still keeps the name column.
+ * A blank name in Given by shows the owner Carson while those blanks are filled in on the sheet. The sheet still keeps the name column.
  * Time, batch, expiry, route, reason and the vet instruction are left blank when the record does not hold them.
  * Where the row was recorded (dog card or staff job) stays on the line for other code. It is not a column.
  * A column is read only by its own name (listed in FROM below); nothing is worked out from another column.

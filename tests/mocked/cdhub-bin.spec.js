@@ -1,4 +1,4 @@
-// CD Hub Bin is gone (Lisa 20 Nov 2026: "I dont want this in the hub"). UI only: the sheets stay.
+// CD Hub Bin is gone (20 Nov 2026: "I dont want this in the hub"). UI only: the sheets stay.
 // #/bin opens Settings for the owner, and Main when Settings is not on this sign-in. Invented rows only.
 const fs = require('fs');
 const path = require('path');
