@@ -44,7 +44,47 @@ async function open(page, { thumbOk }) {
 const photo = (page) => page.locator('.dcard[data-dog="d1"] [data-k="photo"] img');
 const loaded = (page) => expect.poll(() => photo(page).evaluate((i) => i.complete && i.naturalWidth > 0)).toBe(true);
 
-test('signed in to CD Hub: the photo comes from the Drive thumbnail link, asked for with the sign-in, never the cookie address @regression', async ({ page }) => {
+test('a removed photo is left off the card and the next open photo is printed', async ({ page }) => {
+  const asked = [];
+  const tables = {
+    area: [{ id: 'ar-a', code: 'Room A' }], requirement: [], area_access: [], area_capacity: [], litter: [], breeding_rule: [], weight: [], microchip: [], check_type: [],
+    subject: [{ id: 'd1', name: 'A', sex: 'Female', photo: 'FAKEphotoGone1' }],
+    occupancy: [{ subject_id: 'd1', area_id: 'ar-a', moved_in: '2026-01-01' }],
+    qr_tag: [{ tag: 'AAAA2222', kind: 'subject', ref_id: 'd1', active: 'true' }],
+    files: [
+      { id: 'fil-1', kind: 'photo', drive_file_id: 'FAKEphotoFile1' },
+      { id: 'fil-z', kind: 'photo', drive_file_id: 'FAKEphotoGone1' }
+    ],
+    links: [
+      { id: 'lnk-1', from_table: 'subjects', from_id: 'd1', to_table: 'files', to_id: 'fil-1', role: 'gallery', from_date: '2026-02-01', to_date: '' },
+      { id: 'lnk-z', from_table: 'subjects', from_id: 'd1', to_table: 'files', to_id: 'fil-z', role: 'gallery', from_date: '2026-01-01', to_date: '2026-03-01', end_reason: 'Removed from gallery' },
+      { id: 'lnk-m', from_table: 'subjects', from_id: 'd1', to_table: 'files', to_id: 'fil-z', role: 'main', from_date: '2026-01-01', to_date: '' }
+    ]
+  };
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [], role: 'OWNER' } } });
+  });
+  await page.route(/^https:\/\/drive\.google\.com\/thumbnail/, (route) => route.fulfill({ status: 403, body: '' }));
+  await page.route(/^https:\/\/www\.googleapis\.com\/drive\/v3\/files\/(FAKEphotoFile1|FAKEphotoGone1)\?fields=thumbnailLink/, (route) => {
+    asked.push(route.request().url());
+    return route.fulfill({ headers: CORS, json: { thumbnailLink: 'https://lh3.googleusercontent.com/FAKEthumb=s220' } });
+  });
+  await page.route(/^https:\/\/lh3\.googleusercontent\.com\//, (route) => route.fulfill({ contentType: 'image/png', body: PNG }));
+  await page.addInitScript(([c, u, t]) => {
+    localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u);
+    localStorage.setItem('ljr-dash-auth', JSON.stringify({ access_token: t, expires_at: Date.now() + 1800000, scope: 'https://www.googleapis.com/auth/drive.readonly' }));
+  }, ['FAKE-OWNER', SCRIPT, TOKEN]);
+  await page.goto('cdhub/staff/print/');
+  await page.getByRole('button', { name: 'Dog cards' }).click();
+  await expect(photo(page)).toHaveAttribute('src', 'https://lh3.googleusercontent.com/FAKEthumb=s800');
+  await loaded(page);
+  expect(asked.join(' ')).toContain('FAKEphotoFile1');
+  expect(asked.join(' ')).not.toContain('FAKEphotoGone1');
+  await expect(page.locator('.dcard[data-dog="d1"]')).not.toContainText(/\bEnded\b/);
+});
+
+test('signed in to CD Hub: the photo comes from the Drive thumbnail link, asked for with the sign-in, never the cookie address @regression @live', async ({ page }) => {
   const seen = await open(page, { thumbOk: true });
   await expect(photo(page)).toHaveAttribute('src', 'https://lh3.googleusercontent.com/FAKEthumb=s800');   // print size, not the 220px list size
   await loaded(page);

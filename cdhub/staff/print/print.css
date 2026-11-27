@@ -18,6 +18,7 @@
 /* the owner's "Dog Card Print-outs" v4. Size colours come from rule rows; these only turn a colour word into the print shade. */
 :root{--sz-orange:var(--ljr-3-icon);--sz-green:var(--ljr-5-icon);--sz-blue:var(--ljr-6-icon);--sz-purple:var(--ljr-7-icon)}
 .per{display:inline-flex;gap:6px}.per [aria-pressed="true"],.opts>.btn[aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px}
+@media screen and (min-width:1000px){.screen{max-width:none}}
 /* the owner's dog card (18 Nov 2026). --c is the size colour from the owner's size_colour rows. */
 .sheet.dogs{display:grid;gap:10px;grid-template-columns:1fr}
 .sheet.dogs.per2{grid-template-columns:1fr}
@@ -28,7 +29,7 @@
 .dcard dl{margin:0;display:grid;gap:10px}.dcard dt{color:#57504A;font-size:13px}.dcard dd{margin:0;font-weight:600;font-size:20px;display:flex;align-items:center;gap:6px}
 .dcard .sex svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
 .dcard .photo{overflow:hidden;aspect-ratio:1/1;width:100%;min-width:48px;height:auto;align-self:start;border:4px solid var(--c);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#57504A}
-.dcard .photo img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.dcard .photo img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;aspect-ratio:1/1}
 .dcard .szb{width:100%;box-sizing:border-box;background:var(--c);color:#fff;border-radius:10px;padding:8px 12px;font-size:20px;text-align:center}
 .dcard .code svg,.rcard .code svg{width:100%;max-width:300px;height:auto;display:block;margin:0 auto}
 .dcard .tag,.rcard .tag{font-size:11px;color:#57504A;text-align:center}
@@ -38,19 +39,29 @@
 /* the owner's APPROVED dog card v4 (15 Nov 2026; 20 Nov 18:26): a grid, name and facts on top, photo left, Size tile and QR right
    (top of the tile = top of the photo, bottom of the QR = bottom of the photo), microchip across the bottom. Item cards use the
    same grid with their labelled fields in place of the tile. */
-.dcard.vcard{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"name facts" "photo size" "photo code" "chip chip";column-gap:24px;row-gap:12px;align-items:start;padding:18px 20px}
-.vcard .name{grid-area:name;margin:0;min-width:8rem;font-size:40px;font-weight:700;line-height:1.05;text-align:left;align-self:center;overflow-wrap:normal;word-break:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.dcard.vcard{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"name name" "facts facts" "photo size" "photo code" "chip chip";column-gap:24px;row-gap:12px;align-items:start;padding:18px 20px;container-type:inline-size;min-width:0}
+.vcard .name{grid-area:name;margin:0;width:100%;min-width:0;max-width:100%;font-size:40px;font-weight:700;line-height:1.05;text-align:left;align-self:center;overflow-wrap:normal;word-break:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
 .vcard .name.n2{font-size:32px}.vcard .name.n3{font-size:24px}
-.vcard .facts{grid-area:facts;margin:0;display:grid;grid-template-columns:auto auto;justify-content:space-between;gap:12px;align-self:center}
-.vcard .facts dt{color:#57504A;font-size:13px}.vcard .facts dd{margin:0;font-weight:600;font-size:22px;display:flex;align-items:center;gap:6px}
+.vcard .facts{grid-area:facts;margin:0;display:grid;grid-template-columns:auto auto;justify-content:space-between;gap:12px;align-self:center;width:100%;min-width:0}
+.vcard .facts dt{color:#57504A;font-size:13px}.vcard .facts dd{margin:0;font-weight:600;font-size:clamp(13px,4cqi,22px);display:flex;align-items:center;gap:6px;white-space:nowrap;overflow-wrap:normal;word-break:normal}
 .vcard .sex svg{width:20px;height:20px}
 .vcard .sex[aria-label="Female"]{color:color-mix(in srgb,var(--ljr-2-icon) 55%,var(--ljr-7-icon))}.vcard .sex[aria-label="Male"]{color:var(--ljr-6-icon)}
+.vcard .photo{grid-area:photo;width:100%;min-width:0;aspect-ratio:1/1;height:auto;box-sizing:border-box;border-width:6px;border-radius:12px;align-self:start}
+.vcard .szb{grid-area:size;display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:6px 16px 8px;border-radius:10px;box-sizing:border-box;min-width:0;max-width:100%;overflow:hidden}
+.vcard .szb .lab{font-size:12px;font-weight:600;letter-spacing:.04em}.vcard .szb b{font-size:clamp(14px,7cqi,36px);line-height:1.1;max-width:100%;overflow-wrap:normal;word-break:normal}
+.vcard .code{grid-area:code;align-self:end;justify-self:stretch;width:100%;min-width:0;max-width:100%}
+.vcard .code svg{max-width:100%;width:100%;height:auto}
+.vcard .chipline{grid-area:chip;display:block;color:#141413;min-width:0;max-width:100%}
+.vcard .chipline span{display:block;font-size:13px;color:#57504A}.dcard.vcard .chipline b{display:block;font-size:clamp(12px,5cqi,34px);letter-spacing:.04em;word-spacing:.12em;white-space:normal;overflow-wrap:normal;word-break:normal;max-width:100%}
 .vcard .photo{grid-area:photo;width:100%;min-width:88px;aspect-ratio:1/1;height:auto;box-sizing:border-box;border-width:6px;border-radius:12px;align-self:start}
 .vcard .szb{grid-area:size;display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:6px 16px 8px;border-radius:10px;box-sizing:border-box}
 .vcard .szb .lab{font-size:12px;font-weight:600;letter-spacing:.04em}.vcard .szb b{font-size:36px;line-height:1.1}
 .vcard .code{grid-area:code;align-self:end;justify-self:center;width:100%}
 .vcard .code svg{max-width:240px}
 .vcard .chipline{grid-area:chip;display:block;color:#141413}
+.dcard.vcard{position:relative}
+.vqr{position:absolute;right:4mm;bottom:4mm;width:22mm;height:22mm;background:#fff;z-index:1}
+.vqr svg{width:100%;height:100%;display:block}
 .vcard .chipline span{display:block;font-size:13px;color:#57504A}.vcard .chipline b{display:block;font-size:34px;letter-spacing:.08em;word-spacing:.25em}
 .dcard.vcard.icard{grid-template-areas:"name name" "photo facts" "photo code"}
 .vcard.icard .facts{grid-template-columns:1fr;justify-content:stretch;align-self:start}.vcard.icard .facts dd{font-size:18px}
@@ -121,26 +132,26 @@
  .sheet.dogs .dcard.vcard{display:inline-grid;box-sizing:border-box;border-radius:0;border-width:0;align-content:space-between}
  .vcard .code{display:block;flex:none;height:auto;min-height:0}
  .vcard .code svg{width:100%;height:100%;max-width:none;max-height:none}
- .sheet.dogs.per2 .dcard.vcard{width:194mm;height:138mm;margin:0 -2mm;padding:4mm 6mm;column-gap:8mm;row-gap:4mm;grid-template-columns:88mm 1fr;grid-template-rows:auto 18mm 66mm auto;grid-template-areas:"name facts" "photo size" "photo code" "chip chip"}
+ .sheet.dogs.per2 .dcard.vcard{width:194mm;height:138mm;margin:0 -2mm;padding:4mm 6mm;column-gap:8mm;row-gap:3mm;grid-template-columns:minmax(0,88mm) minmax(0,1fr);grid-template-rows:auto auto 18mm 67mm auto;grid-template-areas:"name name" "facts facts" "photo size" "photo code" "chip chip"}
  .sheet.dogs.per2 .dcard.vcard:nth-child(odd){border-bottom:1px dashed #57504A}
- .sheet.dogs.per2 .vcard .name{font-size:44px}.sheet.dogs.per2 .vcard .name.n2{font-size:34px}.sheet.dogs.per2 .vcard .name.n3{font-size:26px}.sheet.dogs.per2 .vcard .facts dt{font-size:13px}.sheet.dogs.per2 .vcard .facts dd{font-size:22px}
+ .sheet.dogs.per2 .vcard .name{font-size:36px}.sheet.dogs.per2 .vcard .name.n2{font-size:28px}.sheet.dogs.per2 .vcard .name.n3{font-size:22px}.sheet.dogs.per2 .vcard .facts dt{font-size:12px}.sheet.dogs.per2 .vcard .facts dd{font-size:18px;white-space:nowrap}
  .sheet.dogs.per2 .vcard .photo{width:88mm;height:88mm;aspect-ratio:1}
  .sheet.dogs.per2 .vcard .szb{width:100%;height:18mm;padding:2mm 4mm;justify-content:center}.sheet.dogs.per2 .vcard .szb b{font-size:30px}
  .sheet.dogs.per2 .vcard .code{width:62mm;height:62mm;align-self:end;justify-self:center;overflow:visible}
  /* 62 mm of black squares; the white quiet zone spills onto the white card round it (8 mm clear above, to the tile) */
  .sheet.dogs.per2 .vcard .code svg{width:calc(100% * var(--qz,1));height:auto;margin:calc(50% - 50% * var(--qz,1))}
- .sheet.dogs.per2 .vcard .chipline b{font-size:32px}
- .sheet.dogs.per1 .dcard.vcard{width:100%;height:265mm;margin:0;padding:8mm;column-gap:8mm;row-gap:6mm;grid-template-columns:98mm 1fr;grid-template-rows:auto 24mm 68mm auto;grid-template-areas:"name facts" "photo size" "photo code" "chip chip";align-content:start;break-after:page;page-break-after:always}
+ .sheet.dogs.per2 .vcard .chipline b{font-size:22px;white-space:normal;overflow-wrap:normal;max-width:100%}
+ .sheet.dogs.per1 .dcard.vcard{width:100%;height:265mm;margin:0;padding:8mm;column-gap:8mm;row-gap:6mm;grid-template-columns:minmax(0,98mm) minmax(0,1fr);grid-template-rows:auto auto 24mm 68mm auto;grid-template-areas:"name name" "facts facts" "photo size" "photo code" "chip chip";align-content:start;break-after:page;page-break-after:always}
  .sheet.dogs.per1 .dcard.vcard:last-child{break-after:auto;page-break-after:auto}
  .sheet.dogs.per1 .vcard .name{font-size:52px}.sheet.dogs.per1 .vcard .facts dd{font-size:26px}.sheet.dogs.per1 .vcard .facts dt{font-size:15px}
  .sheet.dogs.per1 .vcard .photo{width:98mm;height:98mm}.sheet.dogs.per1 .vcard .szb{height:24mm;justify-content:center}.sheet.dogs.per1 .vcard .szb b{font-size:40px}
- .sheet.dogs.per1 .vcard .code{width:68mm;height:68mm;align-self:end;justify-self:center}.sheet.dogs.per1 .vcard .chipline b{font-size:40px}
+ .sheet.dogs.per1 .vcard .code{width:68mm;height:68mm;align-self:end;justify-self:center}.sheet.dogs.per1 .vcard .chipline b{font-size:28px;white-space:normal;overflow-wrap:normal;max-width:100%}.sheet.dogs.per1 .vcard .facts dd{white-space:nowrap}
  /* 4 per A4: name, facts and the Size tile across; photo and QR side by side; chip at the foot */
- .sheet.dogs.per4 .dcard.vcard{width:calc(50% - 2mm);height:129mm;margin:0 0 4mm;padding:3mm 4mm;column-gap:4mm;row-gap:2mm;grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto auto auto;grid-template-areas:"name name" "facts facts" "size size" "photo code" "chip chip";align-content:space-between}
+ .sheet.dogs.per4 .dcard.vcard{width:calc(50% - 2mm);height:129mm;margin:0 0 4mm;padding:3mm 4mm;column-gap:4mm;row-gap:2mm;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto auto auto auto;grid-template-areas:"name name" "facts facts" "size size" "photo code" "chip chip";align-content:space-between}
  .sheet.dogs.per4 .vcard .name{font-size:24px}.sheet.dogs.per4 .vcard .facts{grid-template-columns:auto auto}.sheet.dogs.per4 .vcard .facts dt{font-size:9px}.sheet.dogs.per4 .vcard .facts dd{font-size:14px}
  .sheet.dogs.per4 .vcard .szb{padding:1mm 3mm}.sheet.dogs.per4 .vcard .szb .lab{font-size:8px}.sheet.dogs.per4 .vcard .szb b{font-size:18px}
  .sheet.dogs.per4 .vcard .photo{width:100%;height:auto;aspect-ratio:1;border-width:3px}.sheet.dogs.per4 .vcard .code{width:100%;aspect-ratio:1;height:auto;align-self:center}
- .sheet.dogs.per4 .vcard .chipline span{font-size:9px}.sheet.dogs.per4 .vcard .chipline b{font-size:16px}
+ .sheet.dogs.per4 .vcard .chipline span{font-size:9px}.sheet.dogs.per4 .vcard .chipline b{font-size:13px;white-space:normal;overflow-wrap:normal;max-width:100%}.sheet.dogs.per4 .vcard .facts dd{white-space:nowrap}
  .sheet.dogs.per4 .dcard.vcard.icard{grid-template-areas:"name name" "facts facts" "photo code"}
  .sheet.dogs.per2 .dcard.vcard.icard{grid-template-rows:auto minmax(18mm,1fr) 66mm;grid-template-areas:"name name" "photo facts" "photo code"}
  .sheet.dogs.per1 .dcard.vcard.icard{grid-template-rows:auto minmax(24mm,auto) 68mm;grid-template-areas:"name name" "photo facts" "photo code"}

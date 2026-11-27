@@ -314,7 +314,7 @@ test('closing and reopening the browser keeps saving on: the panel says on and a
   await ctx.close();
 });
 
-// Storage tidy, stage 2 (owner 15 Nov 2026, "go with recommendation"): new keys are written, every old key is still read,
+// Storage tidy, stage 2: new keys are written, every old key is still read,
 // and nothing old is deleted yet. A phone set up last week (old keys only) must carry on exactly as before.
 const OLD_SETUPS = {
   'the staff page (bld.device.code, bld.scriptUrl)': { 'bld.device.code': CODE, 'bld.scriptUrl': SINK },

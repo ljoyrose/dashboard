@@ -28,7 +28,7 @@ test('a good private QR sets the phone up and leaves no code in the address', as
   await expect(page.locator('[data-module="jobs"]')).toBeVisible();
 });
 
-// Storage tidy, stage 2 (owner 15 Nov 2026): set-up here also keeps CD Hub's copy, so both pages share one code and address.
+// Storage tidy, stage 2: set-up here also keeps CD Hub's copy, so both pages share one code and address.
 const hubKeys = (page) => page.evaluate(() => ['cdhub.staff.code', 'cdhub.save.url', 'cdhub.save.off', 'cdhub.sink.off'].map((k) => localStorage.getItem(k)));
 
 test('set-up here also keeps CD Hub\'s copy and undoes an earlier "Switch off here" in CD Hub', async ({ page }) => {
@@ -189,7 +189,7 @@ test('dog kennel cards are only for dogs on site: none for a dog that has left',
   await expect(page.locator('.dcard .name')).toHaveText(['Test here', 'Test offsite']);
 });
 
-test('thermometer cards: one per thermometer whose need rows have not all ended, by name; adding one saves it and makes its card', async ({ page }) => {
+test('thermometer cards: one per thermometer whose need rows have not all ended, by name; adding one saves it and makes its card @live', async ({ page }) => {
   const tables = {
     area: [{ id: 'area-t1', code: 'T1' }, { id: 'area-old', code: '3A.1' }], subject: [], subject_status: [], litter: [], occupancy: [], qr_tag: [],
     thermometer: [{ id: 'thm-1', name: 'Hall', area_id: 'area-t1' }, { id: 'thm-4', name: 'Ended', area_id: 'area-t1' }],

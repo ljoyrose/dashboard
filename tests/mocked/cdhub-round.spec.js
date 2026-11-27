@@ -73,7 +73,7 @@ test.describe('The Round: the room list', () => {
 });
 
 test.describe('The Round: recording a reading', () => {
-  test('save OK: Saved, then CLR pressed finishes; the card ticks as soon as the reply is OK, before CLR is pressed', async ({ page }) => {
+  test('save OK: Saved, then CLR pressed finishes; the card ticks as soon as the reply is OK, before CLR is pressed @live', async ({ page }) => {
     const { script, errors } = await round(page);
     await openRoom(page, 'Room 5');
     await typeReading(page, '18.5', '12.0');
@@ -395,7 +395,7 @@ test.describe('Scan and move: the move shows at once, with no read again', () =>
   const scan = async (page, tag) => { await page.goto('cdhub/staff/#mv/' + tag); };
   const reads = (page) => { const r = []; page.on('request', (q) => { if (q.method() === 'POST') { try { const b = JSON.parse(q.postData() || '{}'); if (String(b.action).indexOf('read') === 0) r.push(b.table || (b.tables || []).join(',') || b.action); } catch (e) { /* not JSON */ } } }); return r; };
 
-  test('a saved move shows the dog in its new room and out of the old one, with no read of the lists @regression', async ({ page }) => {
+  test('a saved move shows the dog in its new room and out of the old one, with no read of the lists @regression @live', async ({ page }) => {
     const { script } = await round(page, { tables: (t) => { t.occupancy = t.occupancy.filter((r) => r.subject_id !== 'sub-a12'); } });
     await scan(page, 'ROOMAAAB');
     await expect(page.getByRole('heading', { name: 'Room 2', exact: true })).toBeVisible();

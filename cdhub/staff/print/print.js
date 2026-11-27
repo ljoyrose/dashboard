@@ -30,7 +30,8 @@
   function h(t, a, k) { var e = document.createElement(t); Object.keys(a || {}).forEach(function (x) { if (x === 'text') e.textContent = a[x]; else if (x === 'class') e.className = a[x]; else if (x === 'html') e.innerHTML = a[x]; else if (x.slice(0, 2) === 'on') e.addEventListener(x.slice(2), a[x]); else e.setAttribute(x, a[x]); }); (k || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
   /* tags and which tag an item already has: the one shared helper (staff/lib/qr-rules.js), also used by the back-fill tool */
   function newTag() { var taken = {}; (T && T.qr_tag || []).forEach(function (t) { taken[t.tag] = 1; }); return BLDQrRules.newTag(taken, function (n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return a; }); }
-  function say(t, k) { msg.className = 'msg noprint ' + (k || ''); msg.textContent = t; }   // noprint kept: the status line never prints
+  var saidN = 0;   // counts messages, so a late 'cards ready' never covers a newer one (a save, an error)
+  function say(t, k) { saidN++; msg.className = 'msg noprint ' + (k || ''); msg.textContent = t; }   // noprint kept: the status line never prints
   var msg = h('p', { class: 'msg noprint', role: 'status' });
   screen.appendChild(h('h1', { class: 'noprint', text: 'Print QR cards' }));
   var code = ''; try { code = localStorage.getItem(CODE_KEY) || ''; } catch (e) { /* no storage */ }
@@ -39,6 +40,13 @@
   if (!save.getScriptUrlSet() && owner) { ['cdhub.sink.url', 'cdhub.save.url'].some(function (k) { var u = ''; try { u = localStorage.getItem(k) || ''; } catch (e) { u = ''; } return u && save.setScriptUrl(u, true).ok; }); }
   if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: owner ? 'The save address is not on this phone yet. Open CD Hub while signed in, then open this page again. An owner is not asked for a staff code.' : 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
   if (code) save.setCode(code, false);
+  /* Owner mode (no staff code, Google sign-in at load): the access token lasts about an hour and this page cannot renew it.
+     When it runs out mid-visit, say so plainly instead of the script's "Enter your staff code." A renewal in another tab
+     is picked up at the next button press (the token is read from browser storage each time). */
+  var ownerStart = !code && !!owner;
+  var SIGNIN_GONE = 'Your Google sign-in has run out (it lasts about an hour). Open CD Hub in another tab so it signs you in again, then press the button again. No staff code is needed.';
+  function signInGone() { return ownerStart && !(save.getCode && save.getCode()) && !(BLDSave.ownerToken && BLDSave.ownerToken()); }
+  function saveMsg(r, dflt) { return (r && r.code === 'NO_CODE' && ownerStart) ? SIGNIN_GONE : ((r && r.message) || dflt); }
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
   var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' }), pick = h('div', { class: 'pick noprint' }), pickBox = h('div', { class: 'noprint' });
   screen.appendChild(opts); screen.appendChild(pickBox); screen.appendChild(pick); screen.appendChild(msg); screen.appendChild(sheet);
@@ -51,7 +59,7 @@
   var NEEDS = {
     site: BASE,
     rooms: BASE.concat(['area', 'requirement', 'area_capacity', 'area_access', 'check_type']),
-    dogs: BASE.concat(SITE, ['area_capacity', 'area_access', 'weight', 'links', 'files', 'microchip', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type']),
+    dogs: BASE.concat(SITE, ['area_capacity', 'area_access', 'weight', 'links', 'files', 'microchip', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type', 'subject_video']),
     litters: BASE.concat(SITE, ['litter', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type']),
     thermo: BASE.concat(['thermometer', 'requirement', 'area']),
     items: BASE.concat(['items', 'item_kinds', 'links', 'files'])   /* item cards (print any item, the owner 15 Nov 2026) */
@@ -66,11 +74,12 @@
     asOf.textContent = '';
     if (!readAt) return;
     asOf.appendChild(document.createTextNode('Lists as of ' + hhmm(readAt) + ' '));
-    asOf.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Refresh', 'data-print-refresh': '', onclick: function () { T = {}; readAt = 0; showAsOf(); say('Lists will be read again when you choose a card.'); } }));
+    asOf.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Refresh', 'data-print-refresh': '', onclick: function () { T = {}; readAt = 0; if (save.dropCache) save.dropCache(); showAsOf(); say('Lists will be read again when you choose a card.'); } }));
   }
   function need(what) {
     var keys = NEEDS[what].filter(function (k, i, a) { return a.indexOf(k) === i && !(k in T); });
     if (!keys.length) return Promise.resolve(true);
+    if (signInGone()) { say(SIGNIN_GONE, 'bad'); return Promise.resolve(false); }
     var left = keys.slice(), done = 0, fail = null;
     say('Loading ' + keys.length + ' list' + (keys.length === 1 ? '' : 's') + '...');
     function worker() {
@@ -87,7 +96,8 @@
     return Promise.all([worker(), worker(), worker(), worker()]).then(function () {
       if (fail) {
         var said = fail.message || 'Could not load the lists.';
-        if (save.usingGoogle && save.usingGoogle() && (fail.code === 'NO_CODE' || /staff code/i.test(said))) said = 'Sign in again on CD Hub, then open this page. An owner is not asked for a staff code.';
+        if ((fail.code === 'NO_CODE' && ownerStart) || signInGone()) said = SIGNIN_GONE;
+        else if (save.usingGoogle && save.usingGoogle() && (fail.code === 'NO_CODE' || /staff code/i.test(said))) said = 'Sign in again on CD Hub, then open this page. An owner is not asked for a staff code.';
         say(said, 'bad'); return false;
       }
       readAt = Date.now(); showAsOf(); say(''); return true;
@@ -126,6 +136,7 @@
       if (done) done();
       return;
     }
+    if (missing.length && signInGone()) { say(SIGNIN_GONE, 'bad'); if (done) done(); return; }
     (function next() {
       if (gen !== makeGen) return;
       if (i < missing.length && !failed) {
@@ -139,7 +150,7 @@
           delete tagSave[key];
           if (r.ok) { if (!current(kind, it.id)) T.qr_tag.push({ tag: tag, kind: kind, ref_id: it.id, active: 'true' }); }
           if (gen !== makeGen) return;
-          if (!r.ok) failed = r.message;
+          if (!r.ok) failed = r.code === 'NO_CODE' && ownerStart ? 'your Google sign-in has run out: open CD Hub in another tab, then press the button again.' : r.message;
           i++;
           next();
         });
@@ -156,9 +167,16 @@
         if (t) sheet.appendChild(draw ? draw(t.tag, it) : card(t.tag, it.label, kind === 'area', it.room));
       });
       var left = items.filter(function (it) { return !current(kind, it.id); }).length;
-      say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
-        : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
-      if (done) done();
+      var saidAt = saidN;
+      photosReady(sheet).then(function () {
+        if (gen !== makeGen) return;
+        if (saidN !== saidAt) { if (done) done(); return; }
+        var ready = sheet.children.length + ' cards ready. Use your browser’s Print.';
+        function sayReady() { var note = photoNote(sheet); say(ready + note, note ? 'warn' : 'good'); readySaid = saidN; }
+        if (failed) say('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.', 'bad');
+        else { sayReady(); resay = sayReady; }
+        if (done) done();
+      });
     }());
   }
   /* Pick which cards print (the owner 22 Nov 2026): one tick box per card, all ticked to start (or only the ids in `only`),
@@ -196,18 +214,12 @@
     if (/^var\(/i.test(c)) return c;
     return /^([a-z]+|#[0-9a-f]{3,6})$/i.test(c) ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : c;
   }
-  /* the owner 21 Nov 2026: a pup under puppy.under_weeks old on the print day prints in the size_colour.puppy colour, not its size
-     colour (the owner's dated rule rows; the newest in force wins). No date of birth, or no rows: the size colour. */
+  /* puppy colour and Size tile: the shared rule (staff/lib/capacity.js puppy): a pup under puppy.under_weeks on the print day
+     takes the size_colour.puppy colour, and puppy.size_tile says whether its tile reads Puppy. No date of birth: never a pup. */
   function colourVar(c) { return /^([a-z]+|#[0-9a-f]{3,6})$/i.test(c || '') ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : ''; }
-  function isPup(s) {
-    var wk = parseFloat(ruleNow('puppy.under_weeks')), b = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s.dob || '')), t = /^(\d{4})-(\d{2})-(\d{2})/.exec(BLDNeeds.today());
-    if (!(wk > 0) || !b || !t) return false;
-    var days = (Date.UTC(+t[1], +t[2] - 1, +t[3]) - Date.UTC(+b[1], +b[2] - 1, +b[3])) / 864e5;
-    return days >= 0 && days < wk * 7;
-  }
-  function dogColour(s, sz) { return (isPup(s) && colourVar(ruleNow('size_colour.puppy'))) || sizeColour(sz); }
-  /* what a pup's Size tile says: the owner's dated puppy.size_tile row, "size" (Small/Medium/Large, the default) or "puppy" */
-  function tileWord(s, sz) { return isPup(s) && /^puppy$/i.test(ruleNow('puppy.size_tile')) ? 'Puppy' : sizeWord(sz); }
+  function pupOf(dob) { return BLDCapacity.puppy(T.breeding_rule || [], BLDNeeds.today(), dob); }
+  function dogColour(s, sz) { return colourVar(pupOf(s.dob).colour) || sizeColour(sz); }
+  function tileWord(s, sz) { return pupOf(s.dob).tile === 'puppy' ? 'Puppy' : sizeWord(sz); }
   /* one date format everywhere: 2 Mar 2026 (the owner 13 Nov 2026; never DD/MM/YY) */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : ''; }
@@ -225,9 +237,27 @@
      loads for whoever is signed in to Google with access to the photos folder; otherwise the empty Photo box stays. */
   function photoId(v) { v = String(v == null ? '' : v).trim(); var m = /\/file\/d\/([A-Za-z0-9_-]+)/.exec(v) || /[?&]id=([A-Za-z0-9_-]+)/.exec(v);
     return m ? m[1] : (!/^https?:/i.test(v) && /^[A-Za-z0-9_-]{8,}$/.test(v) ? v : ''); }
+  /* the main photo is the open main link (staff/lib/photos.js). The old photo cell is used only when there is no open main, and never when that file has ended. */
+  function mainPhoto(s, table) {
+    var ph = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today());
+    var m = ph.main && photoId(ph.main.drive_file_id);
+    if (m) return m;
+    var cell = photoId(s.photo);
+    if (!cell) return '';
+    var ended = (ph.ended || []).some(function (f) { return photoId(f.drive_file_id) === cell; });
+    return ended ? '' : cell;
+  }
+  /* Lisa 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
   /* the main photo is the 'main' link row in force (the owner 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
-  function mainPhoto(s, table) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
-    return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
+  /* main photo as main picks it (BLDPhotos.shownPhoto: a removed main falls back to the gallery, an ended file is never shown); a plain web link otherwise */
+  function photoRef(s, table) {
+    var rec = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()), m = rec.main;
+    var id = photoId(BLDPhotos.shownPhoto(rec, s.photo));
+    var url = BLDPhotos.safeUrl(m && m.url) || BLDPhotos.safeUrl(s.photo);
+    if (url && /drive\.google\.com|docs\.google\.com|googleusercontent\.com/i.test(url)) { if (!id && m && url === BLDPhotos.safeUrl(m.url)) id = photoId(url); url = ''; }
+    if (id) url = '';
+    return { id: id, url: url };
+  }
   /* the owner 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
      address (which needs them) fails. With the CD Hub Google sign-in on this browser, the page asks Drive for the photo the
      way the hub does: the file's thumbnail link with that sign-in, else the picture itself. No sign-in: the plain address. */
@@ -238,36 +268,74 @@
       return saved && scope && DashAuth.hasScope(saved, scope) ? saved.access_token : '';
     } catch (e) { return ''; }
   }
-  function loadPhoto(img, id, fail) {
-    var tok = driveToken(), auth = { headers: { Authorization: 'Bearer ' + tok } }, tried = false;
-    if (!tok) { img.onerror = fail; img.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800'; return; }
+  function arm(img) { img.removeAttribute('data-loading'); }
+  function showBlob(img, b) {
+    if (!b || !b.size) return Promise.reject(new Error('photo'));
+    if (/^image\//.test(b.type || '')) { img.src = URL.createObjectURL(b); return Promise.resolve(); }
+    return b.slice(0, 12).arrayBuffer().then(function (buf) {
+      var u = new Uint8Array(buf), type = '';
+      if (u[0] === 137 && u[1] === 80) type = 'image/png';
+      else if (u[0] === 255 && u[1] === 216) type = 'image/jpeg';
+      else if (u[0] === 71 && u[1] === 73) type = 'image/gif';
+      else if (u[0] === 82 && u[1] === 73) type = 'image/webp';
+      if (!type) throw new Error('photo');
+      img.src = URL.createObjectURL(new Blob([b], { type: type }));
+    });
+  }
+  function loadPhoto(img, ref, fail) {
+    if (ref.url) { img.onerror = fail; arm(img); img.src = ref.url; return; }
+    var id = ref.id, tok = driveToken(), auth = { headers: { Authorization: 'Bearer ' + tok } }, tried = false;
+    var get = window.DashKit && DashKit.googleFetch ? function (u, i) { return DashKit.googleFetch(u, i); } : fetch;
+    if (!tok) { img.onerror = fail; arm(img); img.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800'; return; }
     function bytes() {
       if (tried) { fail(); return; }
       tried = true;
-      fetch(DRIVE_FILES + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true', auth)
+      get(DRIVE_FILES + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true', auth)
         .then(function (r) { if (!r.ok) throw new Error('photo'); return r.blob(); })
-        .then(function (b) { if (!/^image\//.test(b.type || '')) throw new Error('photo'); img.src = URL.createObjectURL(b); })
+        .then(function (b) { return showBlob(img, b).then(function () { arm(img); }); })
         .catch(fail);
     }
     img.onerror = bytes;
-    fetch(DRIVE_FILES + encodeURIComponent(id) + '?fields=thumbnailLink&supportsAllDrives=true', auth)
+    get(DRIVE_FILES + encodeURIComponent(id) + '?fields=thumbnailLink&supportsAllDrives=true', auth)
       .then(function (r) { return r.ok ? r.json() : {}; })
-      .then(function (m) { var link = m && m.thumbnailLink; if (link && /^https:\/\//i.test(link)) img.src = link.replace(/=s\d+$/, '=s800'); else bytes(); })
+      .then(function (m) { var link = m && m.thumbnailLink; if (link && /^https:\/\//i.test(link)) { arm(img); img.src = link.replace(/=s\d+$/, '=s800'); } else bytes(); })
       .catch(bytes);
+  }
+  /* Photos that cannot show are named on screen (never on paper): the photo records cannot be read with this sign-in,
+     or some photos did not load. */
+  var resay = null, readySaid = -1;
+  function photoNote(root) {
+    var boxes = root.querySelectorAll('[data-k="photo"]');
+    if (!boxes.length) return '';
+    if (readBlock.files || readBlock.links) return ' Photos are not shown: this sign-in cannot read photo records (sign in to CD Hub as owner on this address).';
+    var n = root.querySelectorAll('[data-k="photo"][data-failed]').length;
+    return n ? ' ' + n + ' photo' + (n === 1 ? '' : 's') + ' did not load: sign in to CD Hub on this browser, or the photo is not shared.' : '';
+  }
+  function photosReady(root) {
+    var imgs = (root || document).querySelectorAll('[data-k="photo"] img');
+    return Promise.all(Array.prototype.map.call(imgs, function (img) {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise(function (res) {
+        function fin() { img.removeEventListener('load', fin); img.removeEventListener('error', fin); res(); }
+        img.addEventListener('load', fin);
+        img.addEventListener('error', fin);
+        if (img.complete && !img.getAttribute('data-loading')) fin();
+      });
+    }));
   }
   /* the photo as saved (the hub's crop step saves a square); printing never crops it again: it is fitted whole (contain).
      No photo, or one that fails to load: the size-colour frame stays and is left blank (no placeholder word on paper).
      A saved turn (photo.rotate.<file>) is drawn on top; the stored picture never changes. */
   function photoBox(s, table) {
-    var id = mainPhoto(s, table), box = h('div', { class: 'photo' + (id ? '' : ' none'), 'data-k': 'photo' });
-    var deg = id && typeof BLDPhotos !== 'undefined' && BLDPhotos.rotation ? BLDPhotos.rotation(T.files || [], T.breeding_rule || [], id, BLDNeeds.today()) : 0;
-    if (id) {
-      var img = h('img', { alt: '', referrerpolicy: 'no-referrer', 'data-rot': String(deg) });
+    var ref = photoRef(s, table), on = !!(ref.id || ref.url), box = h('div', { class: 'photo' + (on ? '' : ' none'), 'data-k': 'photo' });
+    var deg = ref.id && typeof BLDPhotos !== 'undefined' && BLDPhotos.rotation ? BLDPhotos.rotation(T.files || [], T.breeding_rule || [], ref.id, BLDNeeds.today()) : 0;
+    if (on) {
+      var img = h('img', { alt: '', referrerpolicy: 'no-referrer', 'data-loading': '1', 'data-rot': String(deg) });
       box.appendChild(img);
       img.addEventListener('load', function () {
         if (deg && BLDPhotos.turnStyle) { box.style.position = 'relative'; img.style.cssText = BLDPhotos.turnStyle(deg, box.clientWidth, box.clientHeight); }
       });
-      loadPhoto(img, id, function () { box.textContent = ''; box.classList.add('none'); });
+      loadPhoto(img, ref, function () { box.textContent = ''; box.classList.add('none'); box.setAttribute('data-failed', '1'); if (resay && saidN === readySaid) resay(); });
     }
     return box; }
   /* the owner's dog card, her APPROVED v4 design (15 Nov 2026, re-confirmed 20 Nov 18:26): name large top-left with no label; Sex (with
@@ -285,13 +353,25 @@
   function cardName(s) {
     var n = s.name || s.id;
     if (typeof BLDDisplay === 'undefined' || !BLDDisplay.marblePupName) return n;
-    var young = isPup(s) || !!s.birth_litter_id;
+    var young = pupOf(s.dob).pup || !!s.birth_litter_id;
     if (s.birth_litter_id && s.dob) {
       var wk = 26, born = Date.parse(String(s.dob).slice(0, 10) + 'T12:00:00Z'), today = Date.parse(BLDNeeds.today() + 'T12:00:00Z');
       if (!isNaN(born) && !isNaN(today) && (today - born) / 864e5 >= wk * 7) young = false;
     }
     if (!young) return n;
     return BLDDisplay.marblePupName(n, '') || n;
+  }
+  /* The main RoseQuest clip only. No video: nothing extra is printed. The dog's own code stays as it is. */
+  function mainVideoUrl(id) {
+    var rows = (T.subject_video || []).filter(function (r) { return r && r.subject_id === id; });
+    var replaced = {};
+    rows.forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = 1; });
+    var live = rows.filter(function (r) {
+      return r.id && !replaced[r.id] && String(r.active || '') !== 'no' && /^https:\/\/share\.puppyclassroom\.com\/v\/[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/.test(String(r.video_url || ''));
+    }).sort(function (a, b) { return String(b.created_at || '').localeCompare(String(a.created_at || '')); });
+    var mains = live.filter(function (r) { return String(r.is_main) === 'yes'; });
+    var main = mains[0] || live[0] || null;
+    return main ? main.video_url : '';
   }
   function dogCard(tag, it) {
     var s = it.s, sz = sizeOfDog(s), col = dogColour(s, sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || ''), nm = cardName(s);
@@ -304,6 +384,7 @@
       photoBox(s),
       (function (w) { return w ? h('div', { class: 'szb', 'data-size': sz || 'puppy', 'data-k': 'size' }, [h('span', { class: 'lab', text: 'Size' }), h('b', { text: w })]) : null; })(tileWord(s, sz)),
       qrBox(qrBase() + '#s/' + tag, 'QR code for ' + (s.name || s.id)),
+      (function () { var url = mainVideoUrl(s.id); return url ? h('div', { class: 'vqr', 'data-k': 'video-qr', 'data-url': url, html: BLDQr.svg(url, 'Watch video') }) : null; })(),
       chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, [h('span', { text: 'Microchip' }), h('b', { text: chip })]) : null]);
   }
   /* Item cards (print any item, the owner 15 Nov 2026): one card layout for any BLD-items row, e.g. a fire extinguisher. The fields
@@ -373,14 +454,14 @@
       var row = { rule_key: 'print.fields.item', value: cols.join('|'), effective_from: BLDNeeds.today(), source: 'CD Hub print page' };
       save.submit('breeding_rule', row).then(function (res) {
         if (res.ok) { T.breeding_rule.push(row); itemPick = null; make('item', itemList(), itemCard); say('Saved. Item cards print these fields from today.', 'good'); }
-        else say('Not saved: ' + (res.message || 'the save did not go through.') + ' These fields are used for this print only.', 'bad');
+        else say('Not saved: ' + saveMsg(res, 'the save did not go through.') + ' These fields are used for this print only.', 'bad');
       });
     });
     pickBox.appendChild(h('fieldset', { class: 'picks' }, [h('legend', { text: 'Fields on item cards' })].concat(boxes, [use, keep])));
   }
   /* Litter card in the kennel-card style (the owner's "Dog Card Print-outs" v4): band with the dam's size colour, photo, facts, one large code */
   function litterCard(tag, it) {
-    var l = it.l, dam = it.dam || {}, col = sizeColour(sizeOfDog(dam)), rows = [], born = l.born_on || l.dob || '';
+    var l = it.l, dam = it.dam || {}, rows = [], born = l.born_on || l.dob || '', col = colourVar(pupOf(born).colour) || sizeColour(sizeOfDog(dam));   // a litter of pups under the puppy age prints in the puppy colour
     if (it.sire) rows.push(['Sire', it.sire]);
     if (it.pups) rows.push(['Pups', String(it.pups)]);
     if (it.room) rows.push(['Room', it.room]);
@@ -522,7 +603,7 @@
       var f = { name: name.value.trim(), area_id: room.value };
       save.submit('thermometer', f).then(function (r) {
         go.disabled = false;
-        if (!r.ok) { say(r.message || 'Not saved.', 'bad'); return; }
+        if (!r.ok) { say(saveMsg(r, 'Not saved.'), 'bad'); return; }
         if (r.status !== 'saved' || !r.id) { say(r.message, 'good'); return; }
         var id = r.id;
         T.thermometer.push({ id: id, name: f.name, area_id: f.area_id });
@@ -543,7 +624,7 @@
         if (/\bper\d\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per); } });
     }));
     opts.appendChild(perBox);
-    opts.appendChild(h('button', { class: 'btn', type: 'button', text: 'Print', onclick: function () { window.print(); } }));
+    opts.appendChild(h('button', { class: 'btn', type: 'button', text: 'Print', onclick: function () { photosReady(sheet).then(function () { window.print(); }); } }));
     opts.appendChild(lazy('Litter cards', 'litters', function () {
       var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf;
       if (!(T.litter || []).length) { sheet.className = 'sheet'; say('The litter list is not switched on yet.', 'warn'); return; }
@@ -566,7 +647,7 @@
       sheet.appendChild(h('div', { class: 'qcard big' }, [h('div', { html: BLDQr.svg(qrBase() + '#setup=' + encodeURIComponent(url), 'Phone set-up QR') }), h('b', { text: 'Set up a phone' }), h('small', { text: 'Show on screen. Do not pin up or photograph.' })]));
       say('Staff scan this once, then type their own code.', 'good');
     }));
-    opts.appendChild(lazy('Private set-up QR', 'site', privateQr));   /* both QRs use the owner's qr.base_url row */
+    opts.appendChild(lazy('Private set-up QR', 'site', privateQr));
     var add = ''; try { add = new URLSearchParams(location.search).get('add') || ''; } catch (e) { /* old browser */ }
     if (add === 'thermometer') need('thermo').then(function (ok) { if (ok) addThermometer(); });   // from the hub's "+ Thermometer"
     /* from a room's "Print sign" in CD Hub (?sign=<area id>, 21 Nov 2026): the room list with only that room ticked, its card ready to print */

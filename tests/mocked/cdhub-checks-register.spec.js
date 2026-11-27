@@ -132,7 +132,7 @@ test.describe('Checks register: the rules', () => {
 });
 
 test.describe('CD Hub: Checks register on Compliance', () => {
-  test('pick a month, download the CSV and print it in the page; nothing is written', async ({ page, guard }) => {
+  test('pick a month, download the CSV and print it in the page; nothing is written @live', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-check_type.csv', TYPES);
     setFile(guard.world, 'BLD-check_log.csv', LOGS);
     await page.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
@@ -191,6 +191,23 @@ test.describe('CD Hub: Checks register on Compliance', () => {
     await expect(one).toContainText('included in the round');
     await expect(two).toContainText('included in the round');
     await expect(two).toContainText('not here');
+  });
+
+  test('the header names the kennel from the Settings row kennel.name, as Medicines does @regression @live', async ({ page, guard }) => {
+    setFile(guard.world, 'BLD-check_type.csv', TYPES);
+    setFile(guard.world, 'BLD-check_log.csv', LOGS);
+    const rule = guard.world.files.find((x) => x.name === 'BLD-breeding_rule.csv');
+    setFile(guard.world, 'BLD-breeding_rule.csv', rule.content.replace(/\n?$/, '\n') + 'kn1,,kennel.name,Settings Kennel (invented),2020-01-01,Test kennel,invented,,\n');
+    await page.addInitScript(() => { window.print = () => {}; });
+    await page.goto('cdhub/');
+    await signIn(page);
+    await tabClick(page, '#nav button[data-go="compliance"]');
+    await page.locator('#ckrMonth').selectOption('2026-02');
+    await page.waitForFunction(() => !!window.BLDChecksRegister);
+    await page.locator('#ckrPrint').click();
+    await expect(page.locator('#ckrReport .meta').first()).toContainText('Kennel: Settings Kennel (invented)');
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('#ckrCsv').click()]);
+    expect(fs.readFileSync(await dl.path(), 'utf8')).toContain('Checks register,Settings Kennel (invented)');
   });
 
   test('a month with no checks prints a nil record', async ({ page, guard }) => {
