@@ -161,7 +161,7 @@ test('dog card photo is a loaded square in every layout and in print @regression
   await expect.poll(() => page.evaluate(() => window.__printed)).toBe(1);
 });
 
-test('every print QR uses the staff rule or the staff page @regression', async ({ page }) => {
+test('every print QR uses the staff rule or the staff page @regression @live', async ({ page }) => {
   await open(page);
   await page.goto('cdhub/staff/print/');
   const kinds = ['Whole-site code', 'Room cards', 'Dog cards', 'Litter cards', 'Item cards', 'Thermometer cards', 'Phone set-up QR'];
