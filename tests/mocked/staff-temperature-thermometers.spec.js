@@ -48,7 +48,7 @@ test('the round lists each thermometer in a two-thermometer room by name; a save
   await expect(page.locator('.cards .card', { hasText: 'H5/6 · H6' }).locator('.done-line')).toContainText(/^Done \d\d:\d\d/);
 });
 
-test('a thermometer QR opens that exact thermometer, no picking, and saves its thermometer_id', async ({ page }) => {
+test('a thermometer QR opens that exact thermometer, no picking, and saves its thermometer_id @live', async ({ page }) => {
   const sent = await setup(page, base(), { 'bld.temp.thermometer': { thermometerId: 'th-h6' } });
   await page.goto('cdhub/staff/#m/temperature');
   await expect(page.getByLabel('MAX')).toBeVisible();   // the boxes are open at once (demo 18 Nov 2026)
@@ -92,7 +92,7 @@ test('an older reading with no thermometer_id counts for a one-thermometer room 
   await expect(page.locator('.cards .card', { hasText: 'S1' }).locator('.done-line')).toContainText(/^Done \d\d:\d\d/);
 });
 
-test('year report: a room with two thermometers can be opened whole or per thermometer', async ({ page }) => {
+test('year report: a room with two thermometers can be opened whole or per thermometer @live', async ({ page }) => {
   const t = base();
   t.area_reading = [
     { id: 'r1', area_id: 'area-h', thermometer_id: 'th-h5', period_start: '2026-11-11T00:00:00+00:00', min_c: '12.0', max_c: '15.0' },

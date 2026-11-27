@@ -49,7 +49,7 @@ function store_findOne_(title) {
  *   - each row is read as the text shown in the cell (getDisplayValues), cut to the header's width;
  *   - `text` is those rows written out as CSV, so the same hash proves nothing changed while saving.
  * Writing adds ONE row under the last row, stored as plain text ("@") so Sheets never turns a microchip number into
- * 9.8E+14 or a code into a date. EXCEPT the columns a table lists in sheetTypes (Specs.gs; Lisa 15 Nov 2026: "issues with
+ * 9.8E+14 or a code into a date. EXCEPT the columns a table lists in sheetTypes (Specs.gs; Report 15 Nov 2026: "issues with
  * text and numbers" in BLD-area_reading): those are written as real values, the same as the rows typed in by hand -
  * a number as a number shown to 1 decimal place, a date and time as a real date shown as UK time (2026-11-12 21:53).
  * Reading them back, a real date cell becomes London ISO text (2026-11-12T21:53:37+00:00), so every check that
@@ -208,7 +208,7 @@ function store_readTail_(title, n, fullCols) {
            tail: true, tailFrom: from, full: full, complete: from === 2 };
 }
 
-/* FAST APPEND CHECKS (Lisa 16 Nov 2026: saves took about 25 s each and a second person got "Someone else is saving").
+/* FAST APPEND CHECKS (16 Nov 2026: saves took about 25 s each and a second person got "Someone else is saving").
  * An append used to read the WHOLE tab three times (once to read, once before writing, once after). The temperature
  * log is over 30,000 rows, so the lock was held for most of that time. Now, after the one full read, an append checks
  * only what an append can disturb: the row count, the header row and the last row before writing, then reads back
@@ -318,7 +318,7 @@ function store_read_(title, must) {
   return { file: file, text: text, size: file.getSize(), header: parsed.header, records: parsed.records };
 }
 
-/* A column the save system keeps unnamed ('') may carry one of these names in the live header (Lisa named area_reading's
+/* A column the save system keeps unnamed ('') may carry one of these names in the live header (named area_reading's
    7th column variance_c on 15 Nov 2026). Either state is accepted; any other change still stops the save. */
 var HEADER_NAMED_BLANK_ = { variance_c: true };
 function sameHeader_(a, b) {
@@ -465,7 +465,7 @@ function store_replaceRow_(title, expectedHeader, index, rowValues, read) {
 }
 
 /**
- * OWNER DELETE (Lisa 17 Nov 2026): take ONE existing record out of a table for good. Same safeguards as the in-place
+ * OWNER DELETE (17 Nov 2026): take ONE existing record out of a table for good. Same safeguards as the in-place
  * edit: allow-list, exact header, unchanged since read, read-back by hash, exact restore on failure; every other record
  * must be byte-identical afterwards. `index` is the position in read.records (0 = first data row).
  */
@@ -515,7 +515,7 @@ function store_deleteRow_(title, expectedHeader, index, read) {
 }
 
 /**
- * Create a header-only table. Used ONLY by adminCreateEmptyTables (Lisa, from the editor).
+ * Create a header-only table. Used ONLY by adminCreateEmptyTables (from the editor).
  * A new table is a Google Sheet with the ".csv" name, every cell plain text, like the rest of BLD-app-tables.
  */
 function store_createEmpty_(title, header) {
