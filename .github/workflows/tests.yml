@@ -38,8 +38,8 @@ jobs:
   shards:
     name: Browser tests ${{ matrix.lane }} ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: ubuntu-24.04
-    # A ci-guard keeps this at least 2x the slowest shard's last measured run.
-    timeout-minutes: 45
+    # A ci-guard keeps this at least 2x the slowest shard's last measured run (SLOWEST_SHARD_MIN in ci-guards.spec.js).
+    timeout-minutes: 30
     strategy:
       fail-fast: false # every shard finishes, so the merged report lists every failure
       matrix:

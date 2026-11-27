@@ -32,7 +32,7 @@ jobs:
     # GitHub Pages is only for the public repo. Once private, the site is on Cloudflare and this costs minutes for nothing.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45 # same limit as a tests.yml shard. History: one 35-min job cut off every publish from 20 Nov 22:47 (#715) to 22 Nov (#765), so github.io went stale.
+    timeout-minutes: 30 # same limit as a tests.yml shard. History: one 35-min job cut off every publish from 20 Nov 22:47 (#715) to 22 Nov (#765), so github.io went stale.
     strategy:
       fail-fast: false
       matrix:

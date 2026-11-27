@@ -14,6 +14,9 @@ const read = (rel) => fs.readFileSync(path.join(REPO, rel), 'utf8');
 const specFiles = () => ['mocked', 'phone', 'live'].flatMap((d) => fs.readdirSync(path.join(REPO, 'tests', d)).filter((f) => f.endsWith('.spec.js')).map((f) => `tests/${d}/${f}`));
 const allSpecText = () => specFiles().map(read).join('\n');
 
+// Slowest shard's last measured run, in minutes. Update it when a shard gets slower: the shard timeout must stay at least 2x.
+// 27 Nov 2026, PR #856 (two lanes, 8 shards): crawl 1/4 13.7, rest 2/4 11.6, the rest 3.7-7.7.
+const SLOWEST_SHARD_MIN = 13.7;
 const SAME_SUITE = /npx playwright test \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\}\/\$\{\{ matrix\.of \}\}/;
 const matrixRows = (wf) => (wf.match(/- \{ lane: \w+, shard: \d+, of: \d+, projects: '[^']+' \}/g) || []).join('\n');
 
@@ -180,8 +183,9 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
       expect(list.filter((r) => r.lane === 'crawl').every((r) => r.projects === '--project=mocked'), job + ': crawl runs the desktop crawl').toBe(true);
       expect(wf).toContain('npx playwright test ${{ matrix.projects }} --shard=${{ matrix.shard }}/${{ matrix.of }}');
       expect(wf).toContain('PW_LANE: ${{ matrix.lane }}');
-      // 53 min in one job on 27 Nov: a shard needs at least 2x its share of that.
+      // At least 2x the slowest shard's last measured run, and 2x its share of the 53-minute single-job run.
       const t = Number(new RegExp('\\n  ' + job + ':[\\s\\S]*?\\n    timeout-minutes:\\s*(\\d+)').exec(wf)[1]);
+      expect(t, job + ' timeout vs measured slowest shard').toBeGreaterThanOrEqual(2 * SLOWEST_SHARD_MIN);
       expect(t, job + ' timeout').toBeGreaterThanOrEqual(Math.ceil((2 * 53) / list.length));
     }
     // The lanes split on one regex, used both ways, so every test is in exactly one lane (unset = everything, for local runs).
