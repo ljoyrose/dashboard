@@ -30,6 +30,9 @@
     ['vet', 'Vet instruction'], ['given_by', 'Given by'], ['note', 'Note']
   ];
   var SOURCE = { dispense: 'dog card', job: 'staff job' };
+  /* How a staff-job dose was recorded, when it was not on the day (how_recorded, set on the phone). Never a late mark:
+     saved times can be when the save arrived, hours after the dose (owner ruling 27 Nov). */
+  var HOW_NOTE = { paper: 'Recorded from paper.', bulk: 'Recorded with several days at once.', import: 'Imported.' };
   var RESULT = { ok: 'done', done: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', part_done: 'part done' };
 
   /* Where each detail is read from: the record's own column names, first one with a value wins. */
@@ -114,7 +117,8 @@
       if (mine.some(function (c) { return str(c.corrects_id) === str(r.id); })) notes.push('Corrected by a later record.');
       return { id: str(r.id), subject_id: str(r.subject_id), given_at: str(r.happened_at) || str(r.taken_at), product: str(r.item),
         dose_volume: amt && u && amt.indexOf(u) < 0 ? amt + ' ' + u : amt, taken_by: str(r.taken_by), given_by: str(r.given_by) || str(r.taken_by), note: notes.join(' '),
-        time_given: str(r.time_given), to_date: str(r.to_date), end_reason: str(r.end_reason), _from: 'job' };
+        time_given: str(r.time_given), to_date: str(r.to_date), end_reason: str(r.end_reason), _from: 'job',
+        how_recorded: str(r.how_recorded) };
     });
   }
 
@@ -152,6 +156,8 @@
       };
       Object.keys(FROM).forEach(function (k) { line[k] = pick(r, FROM[k]); });
       line.note = Show.human(clean(line.note)); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by) || named;
+      var howNote = HOW_NOTE[str(r.how_recorded)];
+      if (howNote) line.note = [howNote, line.note].filter(Boolean).join(' ');
       line.missing = ['date', 'dog', 'product', 'dose'].filter(function (k) { return !line[k]; });
       out.push(line);
     });

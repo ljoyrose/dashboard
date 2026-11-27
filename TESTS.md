@@ -460,6 +460,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | A photo frame was wider than it was tall, and the chosen print type did not stay marked | "the chosen card type stays pressed, and photo frames stay square @regression" (tests/mocked/cdhub-print-dog-fit.spec.js) |
 | 25 Nov 2026 | Full A4 printed a three-column grid and left the card fields off the page | "each layout prints that many cards a page, and the fields are on the page @regression" (tests/mocked/cdhub-print-pages.spec.js) |
 | 25 Nov 2026 | Room card size icons printed grey, and the square metres were missing when the live row omitted them | "room card dog icons stay coloured and the room size prints from the device copy @regression" (tests/mocked/cdhub-print-room-colour.spec.js) |
+| 27 Nov 2026 | Medicines register: a staff-job dose recorded from paper, with several days at once or by import did not say so; saved times are not used, because a save can reach the sheet hours after the dose | "a dose typed from paper or imported says how it was recorded; a late save is never marked late @regression" and "a dose recorded from paper says so in the downloaded CSV @live" (tests/mocked/cdhub-meds-register.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
