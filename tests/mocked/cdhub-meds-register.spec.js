@@ -171,18 +171,20 @@ test.describe('Medicines register: the staff "Medicine given" job counts too', (
     expect(R.cell(get('j1'), 'date')).toBe('4 Feb 2026');
   });
 
-  test('a dose saved on a later day, or typed from paper, says Entered later in Note; a same-day save does not @regression', () => {
+  test('a dose typed from paper or imported says how it was recorded; a late save is never marked late @regression', () => {
     const logs = [
-      { id: 'k1', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Sample Drops', amount: '2', outcome: 'ok', happened_at: '2026-02-04T08:15:00Z', taken_at: '2026-02-06T18:40:00Z', taken_by: 'Sample Staff A', note: 'Given with food' },
+      { id: 'k1', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Sample Drops', amount: '2', outcome: 'ok', happened_at: '2026-02-04T08:15:00Z', taken_at: '2026-02-06T18:40:00Z', taken_by: 'Sample Staff A', note: 'Given with food', how_recorded: 'tapped' },
       { id: 'k2', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Sample Drops', amount: '2', outcome: 'ok', happened_at: '2026-02-05T08:15:00Z', taken_at: '2026-02-05T08:20:00Z', taken_by: 'Sample Staff A', how_recorded: 'paper' },
-      { id: 'k3', check_type_id: 'ct-med', subject_id: 'sub-test-dog-2', item: 'Sample Drops', amount: '2', outcome: 'ok', happened_at: '2026-02-05T08:15:00Z', taken_at: '2026-02-05T09:00:00Z', taken_by: 'Sample Staff A', how_recorded: 'tapped' },
+      { id: 'k3', check_type_id: 'ct-med', subject_id: 'sub-test-dog-2', item: 'Sample Drops', amount: '2', outcome: 'ok', happened_at: '2026-02-05T08:15:00Z', taken_by: 'Sample Staff A', how_recorded: 'import' },
     ];
     const lines = R.build(R.fromChecks(logs, JOB_TYPES), { month: '2026-02', dog });
     const get = (id) => lines.find((l) => l.id === id);
-    expect(R.cell(get('k1'), 'note')).toBe('Entered later, 6 Feb 2026 18:40. Given with food');
-    expect(R.cell(get('k2'), 'note')).toBe('Entered later (from paper).');
-    expect(R.cell(get('k3'), 'note')).toBe('');
-    expect(R.toCsv({ kennel: 'K', month: '2026-02', printed: '' }, lines)).toContain('Entered later, 6 Feb 2026 18:40. Given with food');
+    expect(R.cell(get('k1'), 'note')).toBe('Given with food');   // saved two days later: no late mark
+    expect(R.cell(get('k2'), 'note')).toBe('Recorded from paper.');
+    expect(R.cell(get('k3'), 'note')).toBe('Imported.');
+    const csv = R.toCsv({ kennel: 'K', month: '2026-02', printed: '' }, lines);
+    expect(csv).toContain('Recorded from paper.');
+    expect(csv).not.toMatch(/late/i);
   });
 
   test('UK time: a job at 23:30 UTC in summer falls on the next day', () => {
