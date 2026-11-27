@@ -91,3 +91,36 @@ test('Checks page: retired (daily checks are on Jobs); it says it has moved and 
   await expect(page.locator('body')).toContainText('This page has moved');
   expect(await page.evaluate(() => localStorage.getItem('bld.device.code'))).toBe('FAKE-CODE-1');
 });
+
+test('Temps: a reading kept on the phone is sent as soon as the page is shown again, not on a later timer @live', async ({ page, allowedConsole }) => {
+  allowedConsole.push(/ERR_INTERNET_DISCONNECTED/, /Failed to load resource/);   // the save tried while the phone had no signal
+  await page.clock.install({ time: new Date('2026-11-12T09:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-11-12T09:00:01Z'));   // timers only run when the test says so
+  const sent = [], state = { offline: true };
+  await setup(page);
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() !== 'GET') {
+      const b = JSON.parse(route.request().postData());
+      if (b.request_id === 'req-kept-test-0001') {
+        if (state.offline) return route.abort('internetdisconnected');   // the phone has no signal while the page opens
+        sent.push(b); return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'rdg-kept' } } });
+      }
+    }
+    return route.fallback();
+  });
+  await page.addInitScript(() => {
+    const body = { v: 1, request_id: 'req-kept-test-0001', table: 'area_reading', action: 'add', fields: { area_id: 'area-new', thermometer_id: 'thm-new', min_c: '12.0', max_c: '15.0', period_start: '2026-11-12T00:00:00+00:00' } };
+    localStorage.setItem('bld.outbox', JSON.stringify([{ id: body.request_id, body, at: '2026-11-12T08:59:00Z' }]));
+  });
+  await page.goto('cdhub/staff/#m/temperature');
+  await expect(page.locator('.cards .card .nm')).toHaveText(['3A.1/2']);
+  await page.waitForLoadState('load');
+  state.offline = false;   // signal back, but no timer runs: only showing the page again can send it now
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].code).toBe('FAKE-CODE-1');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('bld.outbox'))).toBeNull();
+});
