@@ -11,7 +11,7 @@ function put(world, name, content) {
   const like = world.files.find((x) => x.name === 'BLD-area.csv' && !x.trashed);
   world.file('fx-' + name, name, content, { parents: like.parents, driveId: like.driveId, mimeType: like.mimeType });
 }
-const URL_ = 'https://script.google.com/macros/s/AKfyTEST_only_123/exec';
+const URL_ = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 
 async function setUp(page, guard, today) {
   await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) {} }, URL_);
@@ -55,8 +55,8 @@ test('Remove takes a bad photo out of the gallery at once; the card does not lis
   expect(sent[0].fields.to_date < today).toBe(true);   // an older photo ends yesterday, so it is gone from today
   const g2 = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
   await expect(g2.locator('> summary')).toHaveText('Photos (2)');
-  await expect(g2.locator('details[data-k="ended"]')).toHaveCount(0);
   await expect(g2.locator('.gi[data-file="fil-2"]')).toHaveCount(0);
+  await expect(g2.locator('details[data-k="ended"]')).toHaveCount(0);
 });
 
 test('a photo added today is removed at once too (end date today, marked removed)', async ({ page, guard }) => {
@@ -106,8 +106,29 @@ test('gallery: × and ✎ sit on each photo; ✎ saves an edited copy in the old
   await expect(g2.locator('[data-gal-msg]')).toHaveText('✓ Edited copy saved');
   await expect(g2.locator('> summary')).toHaveText('Photos (3)');
   await expect(g2.locator('.gi[data-file="fil-new"]')).toHaveCount(1);
-  await expect(g2.locator('details[data-k="ended"]')).toHaveCount(0);
   await expect(g2.locator('.gi[data-file="fil-2"]')).toHaveCount(0);
+  await expect(g2.locator('details[data-k="ended"]')).toHaveCount(0);
+});
+
+test('Select ticks several photos and Remove selected ends them in one save', async ({ page, guard }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const { sent, gal } = await setUp(page, guard, today);
+  await gal.locator('[data-gal-select]').click();
+  await expect(gal).toHaveAttribute('data-select', '1');
+  await gal.locator('[data-gal-pick="fil-2"]').click();
+  await gal.locator('[data-gal-pick="fil-3"]').click();
+  await expect(gal.locator('[data-gal-bulk]')).toHaveText('Remove selected (2)');
+  page.once('dialog', (d) => d.accept());
+  await gal.locator('[data-gal-bulk]').click();
+  await expect(gal.locator('> summary')).toHaveText('Photos (1)');
+  await expect(gal.locator('.gi[data-file="fil-2"]')).toHaveCount(0);
+  await expect(gal.locator('.gi[data-file="fil-3"]')).toHaveCount(0);
+  await expect(gal.locator('.gi[data-file="fil-1"]')).toHaveCount(1);
+  await expect(gal.locator('details[data-k="ended"]')).toHaveCount(0);
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].action).toBe('link_end');
+  expect(sent[0].fields.reason).toBe('Removed in gallery edit');
+  expect(sent[0].fields.ends.map((e) => e.id).sort()).toEqual(['l2', 'l3']);
 });
 
 test('card: the photo menu has no Edit; the one Edit is by the name', async ({ page, guard }) => {
