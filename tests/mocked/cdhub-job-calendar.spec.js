@@ -278,3 +278,33 @@ test('exercise counts the adult dogs only and hides a backfill note @regression'
   assert.match(html, /class="jd done"/);
   assert.doesNotMatch(html, /backfill/i);
 });
+
+// Checks register (priority 2): a daily job that was due and not done is on paper as its own line, not just absent.
+test('the checks register prints a missed day of a daily job as its own line, in the CSV and the print @regression @live', async ({ page, guard }) => {
+  const fs = require('fs');
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, [
+    'j1,t,food_bowls,Bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line'
+  ]));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [
+    'l1,t,j1,,,,,ok,2026-02-01T09:00:00Z,,2026-02-01T09:00:00Z,Sample Staff A,,,site_tap',
+    'l3,t,j1,,,,,ok,2026-02-03T09:00:00Z,,2026-02-03T09:00:00Z,Sample Staff A,,,site_tap'
+  ]));
+  await page.addInitScript(() => { window.print = () => {}; });
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  const card = page.locator('#compChecksReg');
+  await card.locator('#ckrMonth').selectOption('2026-02');
+  const [dl] = await Promise.all([page.waitForEvent('download'), card.locator('#ckrCsv').click()]);
+  const text = fs.readFileSync(await dl.path(), 'utf8');
+  expect(text).toContain('2026-02-02,,Bowls washed,Whole site,missed,');
+  expect(text).not.toContain('2026-02-01,,Bowls washed,Whole site,missed');
+  expect(text).not.toContain('2026-02-03,,Bowls washed,Whole site,missed');
+  await expect(card.locator('#ckrMsg')).toHaveText('Downloaded 2 entries and 26 missed or part-done days.');
+  await page.waitForFunction(() => !!window.BLDChecksRegister);
+  await card.locator('#ckrPrint').click();
+  const rep = page.locator('#ckrReport');
+  await expect(rep.locator('.meta').first()).toContainText('Entries: 2');
+  await expect(rep.locator('.meta').first()).toContainText('Missed or part done: 26');
+  await expect(rep.locator('tr.missed').first()).toContainText('2 Feb 2026');
+});

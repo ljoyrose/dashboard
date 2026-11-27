@@ -5592,11 +5592,19 @@ function ckrSubject(r){ var a=r.area_id&&(CD.allAreas||[]).filter(function(x){ r
   it=r.item_id&&(T['BLD-items.csv']||[]).filter(function(x){ return x.id===r.item_id; })[0], d=r.subject_id&&regDog(r.subject_id);
  return [r.subject_id?(d?d.name:'Dog not on the current list'):'', r.area_id?(a?a.cabin:'Room not on the list'):'', r.litter_id?(l?'Litter '+litName(l):'Litter not on the list'):'',
   r.item_id?(it&&(it.name||it.item_no)?'Item '+(it.name||it.item_no):'Item not on the list'):''].filter(Boolean).join(', ')||'Whole site'; }
+/* The daily jobs on Compliance > Daily records, worked out for the month by the calendar (missed and part-done days).
+   One check chosen: only that job's family. Nothing here decides what was due; BLDJobCal does. */
+function ckrMissed(ym,tid){ if(typeof BLDJobCal==='undefined'||!ym) return [];
+ try{ var v=compJobsV(), keys=BLDJobCal.chosen(v), fam=null;
+  if(tid){ fam={}; fam[tid]=1; if(typeof BLDDue!=='undefined'&&BLDDue.familyIds) BLDDue.familyIds(v.types||[],tid).forEach(function(id){ fam[id]=1; }); }
+  return keys.map(function(k){ return BLDJobCal.month(v,k,ym); }).filter(function(c){ return c&&(!fam||fam[c.typeId]); });
+ }catch(e){ return []; } }
 function ckrMake(R){ var ym=(document.getElementById('ckrMonth')||{}).value||'', ts=document.getElementById('ckrType'), tid=ts?ts.value:'';
  var lines=R.build(T['BLD-check_log.csv']||[],{month:ym,typeId:tid,types:T['BLD-check_type.csv']||[],subject:ckrSubject,dogName:function(id){ var d=regDog(id); return d&&d.name?d.name:'Dog not on the current list'; }});
+ lines=R.withMissed?R.withMissed(lines,ckrMissed(ym,tid)):lines;
  return {ym:ym,lines:lines,head:{kennel:(CD.tenant&&CD.tenant.name)||'',month:ym,which:tid&&ts?ts.options[ts.selectedIndex].textContent:'All checks',printed:dmy(todayISO())+' '+hhmmNow()}}; }
 function bindChecksReg(){ var p=document.getElementById('ckrPrint'), c=document.getElementById('ckrCsv'), msg=document.getElementById('ckrMsg'); if(!p||!c) return;
- var say=function(t){ if(msg) msg.textContent=t; }, n=function(x){ return x.lines.length+' entr'+(x.lines.length===1?'y':'ies'); };
+ var say=function(t){ if(msg) msg.textContent=t; }, n=function(x){ var k=x.lines.filter(function(l){ return !l.missed; }).length, m=x.lines.length-k; return k+' entr'+(k===1?'y':'ies')+(m?' and '+m+' missed or part-done day'+(m===1?'':'s'):''); };
  ckrLib().catch(function(){});
  p.addEventListener('click',function(){ ckrLib().then(function(R){
    if(!document.getElementById('ckrCss')){ var st=document.createElement('style'); st.id='ckrCss'; st.textContent=R.CSS; document.head.appendChild(st); }

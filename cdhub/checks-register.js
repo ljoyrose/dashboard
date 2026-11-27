@@ -8,6 +8,8 @@
  *  - Corrections: a record that corrects another (corrects_id) is its own line marked "Corrects ...", and the original
  *    stays, marked "Corrected by ...". Nothing is silently replaced.
  *  - A time the owner's default filled in (time_given = false) prints as "time not recorded".
+ *  - Missed days: a daily job on Compliance > Daily records that was due and not done (or only part done) that day is a
+ *    line of its own, "missed" or "part done (1 of 2)", so a gap is on paper, not just absent. Worked out by BLDJobCal.
  * Times are UK time (Europe/London). No staff code or licence number is in this file.
  */
 (function (root, factory) {
@@ -128,8 +130,28 @@
     return out;
   }
 
+  /**
+   * The missed and part-done days of the daily jobs for one month, as register lines, merged into lines in date order.
+   * cals: [BLDJobCal.month(...)] for the month. Only days the calendar marks 'missed' or 'part' are added; nothing is guessed.
+   */
+  function withMissed(lines, cals) {
+    var add = [];
+    (cals || []).forEach(function (c) {
+      if (!c || !c.cells) return;
+      c.cells.forEach(function (x) {
+        if (x.state !== 'missed' && x.state !== 'part') return;
+        var part = x.state === 'part', of = part && x.need ? ' (' + (x.got || 0) + ' of ' + x.need + ')' : '';
+        add.push({ id: 'missed:' + c.key + ':' + x.iso, sort: x.iso + ' 99:99 ~' + str(c.label), date: x.iso, time: '', missed: true,
+          check: str(c.label), subject: c.perDog ? 'Dogs on site' : 'Whole site', result: (part ? 'part done' : 'missed') + of,
+          detail: '', note: '', action: '', needsAction: false, by: '', how: '', correction: '' });
+      });
+    });
+    return (lines || []).concat(add).sort(function (a, b) { return a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : 0; });
+  }
+
   /** A line's value for a column. Blank only where nothing is owed (no detail asked, no note, no action needed). */
   function cell(l, key, iso) {
+    if (l.missed && key !== 'date') return l[key] || '';
     if (key === 'date') return l.date ? (iso ? l.date : ymd(l.date)) : NR;
     if (key === 'time') return l.noTime ? NO_TIME : (l.time || NR);
     if (key === 'detail' || key === 'note' || key === 'correction') return l[key] || '';
@@ -174,28 +196,30 @@
     + 'body.ckr-printing{background:#FFFFFF!important}body.ckr-printing #ckrReport{display:block;color:#111111;font:10px/1.3 system-ui,sans-serif}'
     + '#ckrReport h1{font-size:15px;margin:0 0 4px}#ckrReport .meta{margin:0 0 8px}#ckrReport .meta span{margin-right:14px}'
     + '#ckrReport table{border-collapse:collapse;width:100%}#ckrReport th,#ckrReport td{border:1px solid #595959;padding:2px 4px;text-align:left;vertical-align:top}'
-    + '#ckrReport th{background:#ECEAE6}#ckrReport thead{display:table-header-group}#ckrReport tr{break-inside:avoid}#ckrReport .nr{font-style:italic}'
+    + '#ckrReport tr.missed td{font-weight:700}#ckrReport th{background:#ECEAE6}#ckrReport thead{display:table-header-group}#ckrReport tr{break-inside:avoid}#ckrReport .nr{font-style:italic}'
     + '#ckrReport .sign{margin-top:20px}#ckrReport .sign span{display:inline-block;min-width:220px;border-top:1px solid #111111;margin-right:36px;padding-top:2px}}';
 
   /** The report's inner HTML (put inside #ckrReport). */
   function reportHtml(head, lines) {
-    var g = gaps(lines), gk = COLUMNS.map(function (c) { return c[0]; }).filter(function (k) { return g[k]; });
+    var recs = lines.filter(function (l) { return !l.missed; }), nMiss = lines.length - recs.length;
+    var g = gaps(recs), gk = COLUMNS.map(function (c) { return c[0]; }).filter(function (k) { return g[k]; });
     return '<h1>Checks register · ' + esc(monthWords(head.month)) + '</h1>'
       + '<p class="meta"><span><b>Kennel:</b> ' + esc(str(head.kennel) || NR) + '</span><span><b>Checks:</b> ' + esc(str(head.which) || 'All checks') + '</span>'
-      + '<span><b>Printed:</b> ' + esc(head.printed) + '</span><span><b>Entries:</b> ' + lines.length + '</span></p>'
-      + '<p class="meta">A detail the record does not hold is shown as <i>' + NR + '</i>. Nothing is filled in or guessed. A corrected record stays, with its correction on its own line.</p>'
+      + '<span><b>Printed:</b> ' + esc(head.printed) + '</span><span><b>Entries:</b> ' + recs.length + '</span>' + (nMiss ? '<span><b>Missed or part done:</b> ' + nMiss + '</span>' : '') + '</p>'
+      + '<p class="meta">A detail the record does not hold is shown as <i>' + NR + '</i>. Nothing is filled in or guessed. A corrected record stays, with its correction on its own line.'
+      + ' A daily job that was due and not done (or part done) that day has a line saying missed.</p>'
       + (lines.length
         ? '<table><thead><tr>' + COLUMNS.map(function (c) { return '<th scope="col">' + esc(c[1]) + '</th>'; }).join('') + '</tr></thead><tbody>'
           + lines.map(function (l) {
-            return '<tr>' + COLUMNS.map(function (c) { var v = cell(l, c[0]); return '<td' + (v === NR || v === NO_TIME ? ' class="nr"' : '') + '>' + esc(v) + '</td>'; }).join('') + '</tr>';
+            return '<tr' + (l.missed ? ' class="missed"' : '') + '>' + COLUMNS.map(function (c) { var v = cell(l, c[0]); return '<td' + (v === NR || v === NO_TIME ? ' class="nr"' : '') + '>' + esc(v) + '</td>'; }).join('') + '</tr>';
           }).join('') + '</tbody></table>'
         : '<p>No checks recorded in ' + esc(monthWords(head.month)) + '.</p>')
-      + (gk.length ? '<p><b>Not recorded:</b> ' + gk.map(function (k) { return esc(heading(k)) + ' ' + g[k] + ' of ' + lines.length; }).join(' · ') + '</p>' : '')
+      + (gk.length ? '<p><b>Not recorded:</b> ' + gk.map(function (k) { return esc(heading(k)) + ' ' + g[k] + ' of ' + recs.length; }).join(' · ') + '</p>' : '')
       + '<p class="sign"><span>Checked by</span><span>Date</span></p>';
   }
 
   function fileName(ym) { return 'checks-register-' + (str(ym) || 'month') + '.csv'; }
 
   return { NR: NR, NO_TIME: NO_TIME, COLUMNS: COLUMNS, CSS: CSS, clean: clean, months: months, build: build, cell: cell, gaps: gaps,
-    toCsv: toCsv, reportHtml: reportHtml, fileName: fileName, monthWords: monthWords };
+    toCsv: toCsv, reportHtml: reportHtml, fileName: fileName, monthWords: monthWords, withMissed: withMissed };
 }));
