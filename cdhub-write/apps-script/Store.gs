@@ -260,15 +260,32 @@ function store_appendSheet_(title, rowValues, read) {
     { restored: restored, file: title });
 }
 
-/** Same as the CSV in-place edit, for a Sheet: ONE row's values change, every other cell must be identical. */
+/** Same as the CSV in-place edit, for a Sheet: ONE row's values change, every other cell must be identical.
+ * 27 Nov 2026 (a one-row edit such as a gallery link_end took 19-60 s): the whole tab used to be read twice more, once
+ * before writing and once after. Now, like FAST APPEND CHECKS, only what this edit can disturb is checked: the row
+ * count, the header row, the target row (and the rows next to it) must still be exactly as read before writing, and
+ * after writing the target row must read back as sent and its neighbours, header and row count must be unchanged.
+ * A changed target row still stops the edit (CHANGED_DURING_WRITE); a failed read-back still puts the old values back. */
+function store_editRowsSame_(sh, read, index, skipTarget) {
+  if (sh.getLastRow() !== read.lastRow) return false;
+  var w = read.width, shown = read.shown || csvRecordsRows_(read), nums = read.rowNums;
+  var check = [0, index, index + 1, index + 2];
+  for (var k = 0; k < check.length; k++) {
+    var i = check[k];
+    if (i < 0 || i >= shown.length || (k > 0 && i === 0) || (skipTarget && i === index + 1)) continue;
+    if (store_rowShown_(sh, nums[i], w) !== csvLine_(shown[i])) return false;
+  }
+  return true;
+}
+
 function store_replaceSheetRow_(title, index, rowValues, read) {
   if (read.tail) throw err_('UNEXPECTED_LAYOUT', title + ' was read in part, so nothing was changed. Try again.');
-  var sh = read.tab, beforeHash = textHash_(read.text);
-  if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) !== beforeHash) {
-    throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was changed. Try again.');
-  }
-  if (index < 0 || index >= read.records.length) {
+  if (index < 0 || index >= read.records.length || !read.rowNums || read.rowNums.length !== read.records.length + 1) {
     throw err_('UNEXPECTED_LAYOUT', title + ' is laid out in a way the edit cannot handle safely, so nothing was changed.');
+  }
+  var sh = read.tab;
+  if (!store_editRowsSame_(sh, read, index, false)) {
+    throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was changed. Try again.');
   }
   var rowNum = read.rowNums[index + 1], w = read.width;
   var vals = rowValues.slice(0, w).map(function (v) { return v === null || v === undefined ? '' : String(v); });
@@ -279,19 +296,18 @@ function store_replaceSheetRow_(title, index, rowValues, read) {
   rg.setValues(read.types ? typed.values : [vals]);
   SpreadsheetApp.flush();
   var rows = (read.shown || csvRecordsRows_(read)).slice();
-  if (!read.types) {
-    rows[index + 1] = vals;
-    var want = textHash_(store_rowsText_(rows));
-    if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === want) return store_rowsText_(rows);
-  } else {
-    var now = store_sheetRows_(sh).rows, others = now.slice(); others.splice(index + 1, 1); rows.splice(index + 1, 1);
-    if (now.length === read.shown.length && textHash_(store_rowsText_(others)) === textHash_(store_rowsText_(rows)) && store_sameTyped_(rg.getValues(), typed.values)) return store_rowsText_(now);
+  // read back the target row only, plus the header, its neighbours and the row count
+  var back = rg.getDisplayValues()[0];
+  if (store_editRowsSame_(sh, read, index, true) &&
+      (read.types ? store_sameTyped_(rg.getValues(), typed.values) : csvLine_(back) === csvLine_(vals))) {
+    rows[index + 1] = read.types ? back : vals;
+    return store_rowsText_(rows);
   }
   var restored = false;
   try {
     if (oldFmt) rg.setNumberFormats(oldFmt);
     rg.setValues(old); SpreadsheetApp.flush();
-    restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash;
+    restored = store_editRowsSame_(sh, read, index, false);
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED',
     restored
