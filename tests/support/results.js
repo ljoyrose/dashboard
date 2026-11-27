@@ -16,7 +16,7 @@ const GROUPS = [
   ['look-and-access', 'Dark mode, accessibility, text size', 'all three pages'],
   ['phone', 'Phone-sized screen', 'all three pages, 390 x 844'],
   ['repo-hygiene', 'Safety checks (no secrets, no real data)', 'whole repo'],
-  ['live-smoke', 'Live site check (optional)', 'ljoyrose.github.io'],
+  ['live-smoke', 'Live site check (optional)', 'dashboard-eyo.pages.dev'],
 ];
 const groupOf = (f) => GROUPS.find((g) => f.includes(g[0])) || [f, f, ''];
 

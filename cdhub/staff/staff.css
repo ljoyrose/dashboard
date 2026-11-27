@@ -66,6 +66,8 @@ textarea.inp{padding:10px 14px}
 .here-now h3{width:100%;margin:0;font-size:15px}
 .here-now .chip{font:inherit;font-size:16px;font-weight:600;padding:8px 14px;min-height:44px;border:1px solid var(--line,#C7C0B4);border-radius:12px;background:transparent;color:inherit}
 .here-now button.chip{cursor:pointer}.here-now button.chip:hover{box-shadow:inset 3px 0 0 currentColor}
+.scan-cam{position:relative;width:100%;aspect-ratio:3/4;max-height:50vh;background:var(--ink);border-radius:var(--radius);overflow:hidden;margin:8px 0}
+.scan-cam video{width:100%;height:100%;object-fit:cover;display:block}
 /* Show help switch (the owner 18 Nov 2026): on = ✓ and the selected side line */
 .btn[role="switch"][aria-checked="true"]{box-shadow:inset 3px 0 0 var(--ink)}
 .btn[role="switch"][aria-checked="true"]::before{content:"\2713\00a0"}
