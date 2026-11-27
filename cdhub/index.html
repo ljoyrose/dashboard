@@ -5892,24 +5892,29 @@ function compMedsHtml(){
  while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
  var years=[]; list.forEach(function(k){ var yy=k.slice(0,4); if(years.indexOf(yy)<0) years.push(yy); });
  if(years.length<2) years.push(String(Number(years[0]||todayISO().slice(0,4))-1));
- return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine and dose say \u201cnot recorded\u201d when the record does not hold them. A blank name shows Lisa Carson. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
+ return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine and dose say \u201cnot recorded\u201d when the record does not hold them. A blank name shows the default name in your rules (register.given_by_default), when set. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
   +'<div class="frow"><label for="medsPeriod">Period</label> <select id="medsPeriod" aria-label="Period"><option value="month" selected>One month</option><option value="year">Whole year</option></select></div>'
   +'<div class="frow"><label for="medsMonth">Month</label> <select id="medsMonth">'+list.map(function(k){ return '<option value="'+k+'">'+esc(UKMON[Number(k.slice(5))-1]+' '+k.slice(0,4))+' ('+(ms[k]||'none')+')</option>'; }).join('')+'</select> '
   +'<label for="medsYear">Year</label> <select id="medsYear" aria-label="Year">'+years.map(function(yy){ return '<option value="'+yy+'">'+yy+'</option>'; }).join('')+'</select> '
   +'<button type="button" class="btn" id="medsPrint">Print</button> <button type="button" class="btn" id="medsCsv">Download CSV</button></div><p id="medsMsg" class="mut" aria-live="polite"></p>');
 }
 function medsLib(){ return window.BLDMedsRegister?Promise.resolve(window.BLDMedsRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='meds-register.js'; s.onload=function(){ ok(window.BLDMedsRegister); }; s.onerror=no; document.head.appendChild(s); }); }
+/* The name a blank Given by shows: the owner's rule row register.given_by_default in force today (latest from-date wins).
+   Read at run time so no name is written in the code (public repo rule). No row: a blank name stays blank. */
+function medsNamed(){ var t=todayISO(), best=null;
+ (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ if(r.rule_key==='register.given_by_default'&&r.effective_from&&r.effective_from<=t&&(!r.to_date||r.to_date>=t)&&(!best||r.effective_from>best.effective_from)) best=r; });
+ return best?String(best.value||'').trim():''; }
 function medsMake(R){ var period=(document.getElementById('medsPeriod')||{}).value||'month';
- var kennel=kennelNow(), printed=dmy(todayISO())+' '+hhmmNow();
+ var kennel=kennelNow(), printed=dmy(todayISO())+' '+hhmmNow(), named=medsNamed();
  var rows=R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO());
  if(period==='year'){ var y=(document.getElementById('medsYear')||{}).value||todayISO().slice(0,4), sheets=[], mi, flat=[];
   for(mi=1;mi<=12;mi++){ var ym=y+'-'+(mi<10?'0':'')+mi; if(ym+'-01'>todayISO()) continue;
-   sheets.push({month:ym,lines:R.build(rows,{month:ym,dog:regDog})}); }
+   sheets.push({month:ym,lines:R.build(rows,{month:ym,dog:regDog,named:named})}); }
   sheets.forEach(function(s){ flat=flat.concat(s.lines); });
-  return {period:'year',year:y,ym:y,sheets:sheets,lines:flat,head:{kennel:kennel,year:y,printed:printed}}; }
+  return {period:'year',year:y,ym:y,sheets:sheets,lines:flat,head:{kennel:kennel,year:y,printed:printed,named:named}}; }
  var ym=(document.getElementById('medsMonth')||{}).value||'';
- var lines=R.build(rows,{month:ym,dog:regDog});
- return {ym:ym,lines:lines,head:{kennel:kennel,month:ym,printed:printed}}; }
+ var lines=R.build(rows,{month:ym,dog:regDog,named:named});
+ return {ym:ym,lines:lines,head:{kennel:kennel,month:ym,printed:printed,named:named}}; }
 function bindMeds(){ var p=document.getElementById('medsPrint'), c=document.getElementById('medsCsv'), msg=document.getElementById('medsMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; };
  medsLib().catch(function(){});   /* fetched now, so Print can open its tab inside the press and is not blocked */
@@ -6306,7 +6311,7 @@ function ypCtx(R){
   areaName:function(id){ var a=byId(areas,id); return a&&a.name?a.name:''; },
   itemName:function(id){ var it=byId(items,id); return it&&it.name?it.name:''; },
   litterName:function(id){ var l=null; litters.forEach(function(x){ if(x.id===id) l=x; }); return l&&typeof litName==='function'?'Litter '+litName(l):''; },
-  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO()),{month:ym,dog:regDog});
+  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO()),{month:ym,dog:regDog,named:medsNamed()});
    return {columns:R.COLUMNS,lines:lines,cell:function(l,k){ return R.cell(l,k); }}; }:null };
 }
 function pageYearly(){

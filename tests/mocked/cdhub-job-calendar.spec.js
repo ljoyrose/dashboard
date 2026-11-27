@@ -267,7 +267,7 @@ test('exercise counts the adult dogs only and hides a backfill note @regression'
   ];
   const v = {
     today: '2026-11-25', types: [ex], dogs, esc: (s) => String(s), dmy: (s) => s,
-    logs: [{ id: 'e1', check_type_id: 'cty-ex', subject_id: 'd1', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill Lisa 25 Nov', taken_by: 'Lisa Carson' }],
+    logs: [{ id: 'e1', check_type_id: 'cty-ex', subject_id: 'd1', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill 25 Nov', taken_by: 'Owner A' }],
     rules: [{ rule_key: 'compliance.calendar.exercise_all', value: '1', effective_from: '2026-01-01' }],
     calOpen: { key: 'exercise_all', iso: '2026-11-08' }
   };
