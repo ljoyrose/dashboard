@@ -4834,12 +4834,21 @@ async function tempSave(areaId,slot,which,raw,el,msgEl,th){
   var cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
   var nv={min:t.min,max:t.max,at:r.result.at||new Date().toISOString()};
   cur['t_'+slot]=nv; if(multi) cur[sk]=nv; delete TYPED[tk];
-  keptRow(areaId,ps,th?{min_c:t.min,max_c:t.max,thermometer_id:th}:{min_c:t.min,max_c:t.max},r); roundRefresh(date); }
+  keptRow(areaId,ps,th?{min_c:t.min,max_c:t.max,thermometer_id:th}:{min_c:t.min,max_c:t.max},r); roundRefresh(date); roundPhoto(areaId,slot,th,r,date,msgEl); }
 }
 /* After a save (the owner 12 Nov 2026: "0 with a temperature" and "No readings" right after an H1 reading that HAD saved):
    the new row joins the page's copy of the sheet, and the count and Kept readings are drawn again at once. */
 function keptRow(areaId,ps,f,r){ var rows=T['BLD-area_reading.csv']||(T['BLD-area_reading.csv']=[]);
  rows.push(Object.assign({id:(r.result&&r.result.id)||'',area_id:areaId,period_start:ps,taken_at:(r.result&&r.result.at)||new Date().toISOString()},f)); }
+/* After a Round reading or Empty mark is saved, offer a photo of it (shared helper staff/lib/evidence-photo.js). The reading
+   is already saved; the photo joins it as evidence. Same switch as staff Temps: rule row job.temps_keep_photo = yes (no row = off). */
+function roundPhoto(areaId,slot,th,r,date,msgEl){
+ var P=window.BLDEvidencePhoto, id=r&&r.result&&r.result.id;
+ if(!P||!id||r.result.status!=='saved'||!msgEl||!P.ruleOn(T['BLD-breeding_rule.csv']||[],'job.temps_keep_photo',date,false)) return;
+ var row=msgEl.closest('.tmp'); if(!row) return;
+ var host=document.createElement('div'); host.setAttribute('data-round-photo',areaId+'|'+slot+(th?'|'+th:'')); row.parentNode.insertBefore(host,row.nextSibling);
+ P.offer(host,{send:hubPhotoSender(),fromTable:'area_reading',fromIds:[id],day:date,past:date!==todayISO(),name:'reading-'+areaId+'-'+slot+'.jpg',source:'Round reading',title:'Add photo',hint:'A photo of the thermometer, or skip.'});
+}
 function roundRefresh(date){
  var st=document.getElementById('rstat'); if(st){ var rows=liveCabins(), n=rows.filter(function(a){ var x=ROUND[roundKey(date,a.id)]||{}; return x.t_am||x.t_pm; }).length; st.textContent=rows.length+' cabins \u00b7 '+n+' with a temperature'; }
  var kr=document.getElementById('kept-readings'); if(kr) kr.outerHTML=keptReadings(date); }
@@ -4860,7 +4869,7 @@ async function roomEmptySave(areaId,slot,msgEl,th){
   var ev={min:'',max:'',at:r.result.at||new Date().toISOString(),empty:true};
   cur['t_'+slot]=ev; if(multi) cur[sk]=ev;
   keptRow(areaId,ps,th?{room_empty:'yes',thermometer_id:th}:{room_empty:'yes'},r); roundRefresh(date);
-  if(msgEl) msgEl.textContent='empty, saved'; }
+  if(msgEl) msgEl.textContent='empty, saved'; roundPhoto(areaId,slot,th,r,date,msgEl); }
 }
 /* a whole litter (and its dam) into one cabin: one move row each, through the same save as one dog */
 async function roundAddLitter(areaId,litterId,msgEl){
