@@ -47,9 +47,9 @@ test('a parasite dose is on the dog card medications, once, newest first @regres
     'ct-med,t,medicine,Medicine given,dog,true,2026-01-01'
   ]));
   put(w, 'BLD-check_log.csv', csv('id,tenant_id,check_type_id,subject_id,item,amount,outcome,happened_at,note,taken_by', [
-    'clg-1,t,cty-parasites-1,sub-x1,Moxiclear,1 pipette,ok,2026-11-01T12:00:00Z,backfill Lisa 25 Nov,Lisa Carson',
-    'clg-2,t,cty-parasites-1,sub-x1,Panacur,4.5 ml,ok,2026-11-20T12:00:00Z,with food,Lisa Carson',
-    'clg-3,t,ct-med,sub-x1,Propofol,2 ml,ok,2026-11-21T12:00:00Z,vet procedure,Lisa Carson'
+    'clg-1,t,cty-parasites-1,sub-x1,Moxiclear,1 pipette,ok,2026-11-01T12:00:00Z,backfill 25 Nov,Owner A',
+    'clg-2,t,cty-parasites-1,sub-x1,Panacur,4.5 ml,ok,2026-11-20T12:00:00Z,with food,Owner A',
+    'clg-3,t,ct-med,sub-x1,Propofol,2 ml,ok,2026-11-21T12:00:00Z,vet procedure,Owner A'
   ]));
   await HUBS.cdhub.open(page, guard);
   await page.evaluate(() => go('dogs/sub-x1'));
@@ -176,6 +176,30 @@ test.describe('CD Hub dog card summary', () => {
     await expect(card).toHaveAttribute('data-size', 'medium');   // 24.9 kg is medium; 25.0 counts as large (live row)
     await expect(card.locator('[data-k="size"]')).toHaveText('Pretend Mid');
     expect(await page.evaluate(() => [sizeName('small'), sizeName('large')])).toEqual(['Small', 'Large']);
+  });
+
+  test('a pup under puppy.under_weeks shows in the size_colour.puppy colour on its card and move chip; an adult keeps its size colour', async ({ page, guard }) => {
+    const w = guard.world;
+    const day = (n) => new Date(Date.now() - n * 864e5).toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+    put(w, 'BLD-subject.csv', csv('id,tenant_id,name,sex,dob,kind,neuter_status', [
+      'sub-x1,t,Pretend Dam One,Female,2021-01-01,Breeding Female,entire', 'sub-p1,t,Pretend Pup One,Male,' + day(20) + ',Pup,entire',
+      'sub-p2,t,Pretend Pup Two,Female,' + day(120) + ',Pup,entire']));
+    put(w, 'BLD-subject_status.csv', csv('id,tenant_id,subject_id,state', ['s1,t,sub-x1,Active', 's2,t,sub-p1,Active', 's3,t,sub-p2,Active']));
+    put(w, 'BLD-weight.csv', csv('id,subject_id,performed_on,weight_kg', ['w1,sub-x1,2026-01-12,8.4', 'w2,sub-p1,' + day(1) + ',2.1', 'w3,sub-p2,' + day(1) + ',9']));
+    put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', [
+      'r1,t,size_colour.small,orange,2026-01-01,Pretend poster,,,', 'r3,t,size_from_kg.medium,10,2026-01-01,Pretend vet,,,', 'r4,t,size_from_kg.large,25,2026-01-01,Pretend vet,,,',
+      'p1,t,size_colour.puppy,purple,2026-01-01,Pretend owner rule,,,', 'p2,t,puppy.under_weeks,12,2026-01-01,Pretend owner rule,,,']));
+    await HUBS.cdhub.open(page, guard);
+    const frame = () => page.locator('#rows article.dc .ph').evaluate((e) => getComputedStyle(e).borderTopColor);
+    await page.evaluate(() => go('dogs/sub-p1'));
+    await expect(page.locator('#rows article.dc')).toHaveAttribute('data-pup', '1');
+    expect(await frame()).toBe('rgb(128, 0, 128)');                                        // 20 days old: purple
+    expect(await page.evaluate(() => dogMoveChip(CD._byId['sub-p1'], '', 'sub-p1'))).toMatch(/--sz:purple/);
+    await page.evaluate(() => go('dogs/sub-p2'));
+    await expect(page.locator('#rows article.dc')).not.toHaveAttribute('data-pup', /./);   // 120 days: past the puppy age
+    expect(await frame()).toBe('rgb(255, 165, 0)');                                        // small (9 kg): orange
+    await page.evaluate(() => go('dogs/sub-x1'));
+    expect(await frame()).toBe('rgb(255, 165, 0)');
   });
 
   test('size: no cut-off rows means no size from weight; a row without a source does not count', async ({ page, guard }) => {

@@ -19,6 +19,9 @@
      rows fit, the table sizes its text to the days and rooms, and fit() shrinks any page that would still run over. */
   var PAGE_W = 281, PAGE_H = 194, BODY_H = 170;   // mm; BODY_H leaves room for the title, key, totals and signature line
   function e(s) { return window.esc ? window.esc(s) : String(s || ''); }
+  /* Who took it: a name; a record id (e.g. stf-1) is not printed. No late mark: taken_at can be the time the save arrived,
+     hours after the reading (owner ruling 27 Nov), so only who is shown. */
+  function who(v) { return String(v || '').replace(/\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/gi, '').trim(); }
   function days(y, m) { var n = window.mdays(y)[m], out = []; for (var d = 1; d <= n; d++) out.push(window.ds(y, m, d)); return out; }
 
   /** One month: {rooms:[{aid, name, days:{iso:{am,pm}}}], totals, outside:[...]}, all from the page's day rules. */
@@ -34,7 +37,7 @@
           if (READ[s.k]) t.read++;
           if (s.k === 'miss') t.miss++;
           if (s.k === 'empty' || s.empty) t.empty++;
-          if (s.k === 'out' || s.k === 'swap') { t.out++; outside.push({ iso: iso, room: rooms[x.aid].name, slot: p[0], lo: s.lo, hi: s.hi, note: s.note || '', why: s.k === 'swap' ? (s.unread ? 'not a number' : 'max lower than min') : '' }); }
+          if (s.k === 'out' || s.k === 'swap') { t.out++; outside.push({ iso: iso, room: rooms[x.aid].name, slot: p[0], lo: s.lo, hi: s.hi, note: s.note || '', by: who(s.by), why: s.k === 'swap' ? (s.unread ? 'not a number' : 'max lower than min') : '' }); }
         });
       });
     });
@@ -117,7 +120,7 @@
     if (md.outside.length) {
       h += '<div class="rp-out"><b>Outside the limit, and what was done</b><ul>' + md.outside.map(function (o) {
         return '<li>' + e(+o.iso.slice(8) + ' ' + MON[m].slice(0, 3)) + ' · ' + e(o.room) + ' · ' + o.slot + ' ' + e((o.lo || '–') + '–' + (o.hi || '–'))
-          + (o.why ? ' (' + e(o.why) + ')' : '') + ' · ' + (o.note ? e(o.note) : '<i>nothing recorded</i>') + '</li>';
+          + (o.why ? ' (' + e(o.why) + ')' : '') + ' · ' + (o.note ? e(o.note) : '<i>nothing recorded</i>') + (o.by ? ' · by ' + e(o.by) : '') + '</li>';
       }).join('') + '</ul></div>';
     }
     return h + foot() + '</section>';

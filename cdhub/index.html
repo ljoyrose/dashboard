@@ -17,6 +17,7 @@
 <script src="staff/lib/temp-judge.js"></script>
 <script src="staff/lib/thermometer.js"></script>
 <script src="staff/lib/capacity.js"></script>
+<script src="staff/lib/evidence-photo.js"></script>
 <script src="staff/lib/temp-pair.js"></script>
 <script src="staff/lib/display.js"></script>
 <script src="staff/lib/area-temp-line.js"></script>
@@ -125,7 +126,7 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .card .card{box-shadow:none}
 
 
-.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{
+.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd):not(.phbtn):not(.gx):not(.ged):not(.gpick),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{
  font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);
  min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;box-sizing:border-box;line-height:1.2}
 .filt input,.sbox input,.tmp input,#rdate,.frow input{font-weight:400;cursor:text}
@@ -135,7 +136,7 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .filt select,.fpanel select,.sortsel{padding:0 10px}
 .btn[disabled],#main button[disabled]{cursor:not-allowed;opacity:.6}
 @media (hover:hover){.filt select:hover, .fpanel select:hover, .frow select:hover {background:var(--hov);}
-.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):not(.jd):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
+.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):not(.jd):not(.phbtn):not(.gx):not(.ged):not(.gpick):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
 .sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{background:var(--sel-fill);outline:1px solid var(--sel-bd);outline-offset:-1px;}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
 .sv-line{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--ink)}.sv-ic{display:inline-flex}.sv-ic svg{width:16px;height:16px}
@@ -150,8 +151,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
 .sbox input:is(:focus,:focus-visible){outline:none!important}
 .sbox:focus-within{border-color:var(--ink)}
-/* any touch screen too (the owner 17 Nov 2026: the folding phone open is 860px wide) */
-@media (max-width:544px),(pointer:coarse){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
+/* any touch screen too (Lisa 17 Nov 2026: the folding phone open is 860px wide) */
+@media (max-width:544px),(pointer:coarse){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd):not(.phbtn):not(.gx):not(.ged):not(.gpick),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
 
 
 .pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
@@ -404,13 +405,24 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .gph img.off{visibility:hidden}
 /* × remove and ✎ edit on the photo itself (the owner 17 Nov 2026: "still not got a x to remove a bad image") */
 .gph{position:relative}
-.gx,.ged{all:unset;box-sizing:border-box;position:absolute;top:4px;width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;
- background:var(--card);color:var(--ink);border:1px solid var(--line);font-size:var(--fs-head);line-height:1;cursor:pointer}
-.gx{right:4px}.ged{left:4px;font-size:var(--fs-body)}
+.gx,.ged{all:unset}
+#main .gph .gx,#main .gph .ged{box-sizing:border-box;position:absolute;top:4px;width:24px;height:24px;min-width:24px;min-height:24px;max-width:24px;max-height:24px;padding:0;border-radius:999px;display:flex;align-items:center;justify-content:center;
+ background:color-mix(in srgb,var(--card) 65%,transparent);color:var(--ink);border:1px solid var(--line);font-size:var(--fs-small);line-height:1;cursor:pointer;opacity:.85}
+.gx{right:4px}.ged{left:4px}
+#main .gph .gpick{box-sizing:border-box;position:absolute;left:4px;bottom:4px;width:24px;height:24px;min-width:24px;min-height:24px;max-width:24px;max-height:24px;padding:0;border-radius:12px;border:1px solid var(--line);background:color-mix(in srgb,var(--card) 80%,transparent);color:var(--ink);font-size:var(--fs-small);line-height:1;cursor:pointer}
+.gal:not([data-select]) .gpick{display:none}
+.gpick[aria-pressed="true"]{background:var(--sel-fill)}
+.gal-bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gal:not([data-select]) .gal-bulk{display:none}
 .gx:focus-visible,.ged:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .gi .gtools{display:flex;gap:4px;flex-wrap:wrap}
 .gi .gtools .cb{font-size:var(--fs-small)}
 .gal-ended{margin-top:8px}
+.psort{position:fixed;inset:0;z-index:900;display:flex;align-items:stretch;justify-content:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
+.psort-in{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:100%;max-width:880px;max-height:calc(100dvh - 24px);display:grid;grid-template-rows:auto auto minmax(120px,1fr) auto auto;gap:10px;font-family:var(--house-font);min-height:0}
+.psort-pic{width:100%;height:100%;min-height:0;object-fit:contain;background:var(--soft);border:1px solid var(--line);border-radius:var(--radius);touch-action:pan-y}
+.psort-count{margin:0}
+.psort-btns{display:flex;flex-wrap:wrap;gap:8px}.psort-btns .btn{flex:1 1 120px}
 /* photo crop step (12 Nov 2026): white sheet, 12px corners, 1px lines; works by touch */
 .pcrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
 .pcrop-in{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px;font-family:var(--house-font)}
@@ -577,6 +589,10 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs[open]>summary::after{transform:rotate(90deg)}
 .dcs-bd{padding:8px 12px 10px;display:flex;flex-direction:column;gap:5px;font-size:var(--fs-small)}
 .dcs-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.vids .btn{align-self:flex-start}
+.vclips{display:flex;flex-direction:column;gap:4px;max-height:240px;overflow:auto}
+.vclip span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vmain{display:flex;align-items:center;gap:8px;min-height:44px}
 .dcs-line{display:flex;align-items:center;gap:7px;padding:0 12px;font-size:var(--fs-small);color:var(--ink);min-width:0;height:var(--house-btn);border-top:1px solid var(--press);box-sizing:border-box}
 .dcs-line svg{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dcs-line .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -613,13 +629,14 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 @media (max-width: 600px) { #nav.house-tabs > .ht, #nav.house-tabs > .ht-more { max-width: calc(var(--house-tabs-h) - 2 * var(--house-tabs-gap)); } }
 /* Print (13 Nov 2026): A4 from the browser's Print or Save as PDF. Bars, buttons and forms stay off the paper; no card
    splits across pages. The round prints as a two-column round sheet with blank min/max boxes; Dogs prints two cards a row.
-   Inline-block, not grid, so Safari and Chrome break pages the same way. Screen is unchanged. */
+   The Videos section stays off this paper (the kennel card carries the one video QR). Inline-block, not grid, so Safari
+   and Chrome break pages the same way. Screen is unchanged. */
 @media print{
 @page{size:A4;margin:0}   /* no room for the browser's header and footer: no page address on the paper */
 html,body{background:#fff!important;color:var(--ljr-8)!important;margin:0!important}
 body{padding:10mm!important;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 *{box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.top,#nav,#chips,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.phmenu,.wedit,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.whor{display:none!important}
+.top,#nav,#chips,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.phmenu,.wedit,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.vids,.whor{display:none!important}
 .wrap{padding:0!important;margin:0!important;max-width:none!important}
 #main{max-width:none!important;margin:0!important;padding:0!important}
 #main [data-house-folded]>[data-fold-part]{display:revert!important}
@@ -735,7 +752,8 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
 WANT.push('BLD-subject_link.csv');
 WANT.push('BLD-links.csv','BLD-files.csv');   /* main photo + gallery : one file store, link rows (decision C); absent until the files exist */   /* BFFs / Fren. links ; absent until the file exists */
-var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-links.csv':1,'BLD-files.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
+WANT.push('BLD-subject_video.csv');   /* external video share links; absent until the sheet exists */
+var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-subject_video.csv':1,'BLD-links.csv':1,'BLD-files.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
 /* LATER: tables the first screen does not need (owner speed, 13 Nov 2026). They are read straight after the first
    screen shows; a page that needs them (LATER_PAGES) says it is getting them ready until they land. */
 var LATER={};
@@ -1042,6 +1060,8 @@ function onCdToken(resp){
   if(!google.accounts.oauth2.hasGrantedAllScopes(resp,SCOPE)){ LOAD.state='signin'; LOAD.err='Read access was not granted, so nothing can be shown yet.'; render(); return; }
   TOKEN=resp.access_token; TOKEN_EXP=DashAuth.expiryFrom(resp.expires_in);
   DashAuth.save(TOKEN, TOKEN_EXP, resp.scope||SCOPE);
+  /* a quiet renewal while the page is in use: keep the screen as it is (nothing typed is lost) and send what waits */
+  if(hubRenewing){ hubRenewing=false; if(LOAD.state==='ok'){ hubBoxDraw(); hubFlush(); return; } }
   load();
 }
 function onCdError(e){ var t=(e&&e.type)||'';
@@ -1049,6 +1069,7 @@ function onCdError(e){ var t=(e&&e.type)||'';
   if(LOAD.state!=='ok') LOAD.state='signin'; render();
 }
 function onCdSilentFail(hadExpired){
+  if(hubRenewing){ hubRenewing=false; hubBoxDraw(); return; }   /* the outbox line keeps asking to sign in again; the screen stays */
   if(TOKEN&&Date.now()<TOKEN_EXP) return;
   if(!hadExpired) return;
   LOAD.state='signin'; LOAD.err='Sign-in expired. Sign in again.'; render();
@@ -1398,6 +1419,8 @@ function build(){
   CD.sizeLabel=BLDCapacity.sizeLabels(T['BLD-breeding_rule.csv']||[],todayISO());   /* shared with the print cards (staff/lib/capacity.js) */
   CD.sizeCut=BLDCapacity.sizeCutoffs(T['BLD-breeding_rule.csv']||[],_day);
   CD.dogs.forEach(sizeFromWeight);
+  /* a pup under the owner's puppy.under_weeks rows shows in the size_colour.puppy colour (shared rule, staff/lib/capacity.js puppy) */
+  CD.dogs.forEach(function(d){ var p=BLDCapacity.puppy(T['BLD-breeding_rule.csv']||[],todayISO(),d.dob); d.pupColour=p.colour; });
   CD.tempBands=(T['BLD-temperature_band.csv']||[]).map(function(r){
     return {band:r.band,from:parseInt(r.age_from_days,10),to:r.age_to_days===''?99999:parseInt(r.age_to_days,10),
             min:(r.min_temp==null||r.min_temp==='')?null:parseFloat(r.min_temp),max:(r.max_temp==null||r.max_temp==='')?null:parseFloat(r.max_temp),
@@ -2866,6 +2889,53 @@ function pawDogPhoto(img){
  var paw=img.parentNode&&img.parentNode.querySelector('[data-paw]');
  if(paw) paw.classList.remove('off');
 }
+var PHOTO_MEM={}, PHOTO_URLS_KEY='cdhub.photo.urls', PHOTO_CACHE='cdhub-photos-v1';
+function photoUrlsGet(){ try{ var o=JSON.parse(localStorage.getItem(PHOTO_URLS_KEY)||'{}'); return o&&typeof o==='object'?o:{}; }catch(e){ return {}; } }
+function photoUrlsSet(o){ try{ localStorage.setItem(PHOTO_URLS_KEY, JSON.stringify(o)); }catch(e){} }
+function thumbSize(url){ url=String(url||''); if(!url) return ''; var re=/=s\d+/; return re.test(url)?url.replace(re,'=s200'):url; }
+function photoCacheOpen(){ try{ return window.caches?caches.open(PHOTO_CACHE):Promise.resolve(null); }catch(e){ return Promise.resolve(null); } }
+function photoCacheKey(kind,id){ return 'https://cdhub.photo/'+kind+'/'+encodeURIComponent(id); }
+function photoCacheGet(kind,id){ return photoCacheOpen().then(function(c){ return c?c.match(photoCacheKey(kind,id)):null; }).then(function(res){ return res?res.blob():null; }).catch(function(){ return null; }); }
+function photoCachePut(kind,id,blob){ if(!blob) return Promise.resolve(); return photoCacheOpen().then(function(c){ if(!c) return; return c.put(photoCacheKey(kind,id), new Response(blob,{headers:{'Content-Type':blob.type||'image/jpeg'}})); }).catch(function(){}); }
+function photoMemUrl(id,kind,blob){ var slot=PHOTO_MEM[id]||(PHOTO_MEM[id]={}); if(slot[kind]) return slot[kind]; var url=URL.createObjectURL(blob); slot[kind]=url; DOGPHOTO_URLS.push(url); return url; }
+function photoRememberLink(id,link){ var o=photoUrlsGet(); o[id]={thumb:link,at:Date.now()}; photoUrlsSet(o); var slot=PHOTO_MEM[id]||(PHOTO_MEM[id]={}); slot.thumbLink=link; }
+function photoShow(img,url,id){ if(!img||!url) return; img.src=url; if(id) img.setAttribute('data-loaded',id); showDogPhoto(img); }
+function loadGalleryThumb(img){
+ var id=img&&(img.getAttribute('data-gal-id')||img.getAttribute('data-photo-id')); if(!id) return;
+ img.setAttribute('loading','lazy'); img.setAttribute('data-photo-id',id);
+ var mem=PHOTO_MEM[id]; if(mem&&mem.thumb){ photoShow(img,mem.thumb,id); return; }
+ photoCacheGet('thumb',id).then(function(blob){
+  if(!img.isConnected) return;
+  if(blob){ photoShow(img,photoMemUrl(id,'thumb',blob),id); return; }
+  var saved=photoUrlsGet()[id], link=(mem&&mem.thumbLink)||(saved&&saved.thumb)||'';
+  if(link){ fetchThumb(img,id,link); return; }
+  if(!TOKEN){ pawDogPhoto(img); return; }
+  gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
+   var raw=meta&&meta.thumbnailLink, sized=thumbSize(raw);
+   if(sized&&/^https:\/\//i.test(sized)){ photoRememberLink(id,sized); fetchThumb(img,id,sized); }
+  }).catch(function(){});
+ });
+}
+function fetchThumb(img,id,link){
+ if(PHOTO_MEM[id]&&PHOTO_MEM[id].thumb){ photoShow(img,PHOTO_MEM[id].thumb,id); return; }
+ var slot=PHOTO_MEM[id]||(PHOTO_MEM[id]={}); slot.thumb=link;
+ photoShow(img,link,id);
+}
+function photoFull(id){
+ if(!id) return Promise.resolve('');
+ var mem=PHOTO_MEM[id]; if(mem&&mem.full) return Promise.resolve(mem.full);
+ return photoCacheGet('full',id).then(function(blob){
+  if(blob) return photoMemUrl(id,'full',blob);
+  if(!TOKEN) return '';
+  return DashKit.googleFetch(DRIVE+'/'+encodeURIComponent(id)+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
+   if(!res.ok) return null; return res.blob();
+  }).then(function(blob){ if(!blob||!/^image\//.test(blob.type||'')) return ''; photoCachePut('full',id,blob); return photoMemUrl(id,'full',blob); });
+ }).catch(function(){ return ''; });
+}
+function photoPreloadNeighbours(){
+ var S=PHOTO_SORT; if(!S) return;
+ [S.i-1,S.i+1].forEach(function(n){ if(n<0||n>=S.list.length) return; var id=dogPhotoId(S.list[n].drive_file_id); if(id) photoFull(id); });
+}
 function dogPhotoBytes(img,id){
  img.setAttribute('data-tried','bytes');
  if(!TOKEN){ pawDogPhoto(img); return; }
@@ -2900,6 +2970,13 @@ function photoImgs(id,scope){
  return out;
 }
 function loadPhotoImg(img){
+  if(img&&img.classList&&img.classList.contains('galph')){ loadGalleryThumb(img); return; }
+  var id=img.getAttribute('data-photo-id');
+  if(!id||!TOKEN){ pawDogPhoto(img); return; }
+  var mem=PHOTO_MEM[id]; if(mem&&(mem.thumb||mem.full)){ photoShow(img,mem.thumb||mem.full,id); return; }
+  if(img.getAttribute('data-wired')==='1') return;
+  img.setAttribute('data-wired','1');
+  img.addEventListener('load', function(){ if(img.getAttribute('src')) showDogPhoto(img); });
   var id=img.getAttribute('data-photo-id'), main=isMainPhoto(img);
   applyTurn(img);
   if(!id||!TOKEN){ pawDogPhoto(img); return; }
@@ -2911,15 +2988,18 @@ function loadPhotoImg(img){
    img.setAttribute('data-tried','bytes');
    dogPhotoBytes(img,id);
   });
-  gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
-   var link=meta&&meta.thumbnailLink;
-   if(link&&/^https:\/\//i.test(link)){ img.src=link; return; }
-   dogPhotoBytes(img,id);
-  }).catch(function(){ dogPhotoBytes(img,id); });
+  photoCacheGet('thumb',id).then(function(blob){
+   if(blob){ photoShow(img,photoMemUrl(id,'thumb',blob),id); return; }
+   gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
+    var link=thumbSize(meta&&meta.thumbnailLink);
+    if(link&&/^https:\/\//i.test(link)){ photoRememberLink(id,link); fetchThumb(img,id,link); return; }
+    dogPhotoBytes(img,id);
+   }).catch(function(){ dogPhotoBytes(img,id); });
+  });
 }
 /* Main photo + gallery : files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subject',d.id,todayISO()); }
-/* The card shows the chosen (main) photo. A photo that was removed stays off the card even if the old photo cell still names it. */
+/* The card shows the open main link. The old photo cell is used only when there is no open main, and never when that file has ended. */
 function cardPhotoId(d,ph){
  var main=ph&&ph.main&&dogPhotoId(ph.main.drive_file_id);
  if(main) return main;
@@ -2946,7 +3026,8 @@ function galleryTools(f,main,ended){
 /* the × and ✎ that sit on a gallery photo (not in the Ended list) */
 function galleryPhotoMarks(f,ended){
  if(ended||!f.link_id) return '';
- return '<button type="button" class="ged" data-gal-edit="'+esc(f.id)+'" aria-label="Crop or adjust this photo" title="Crop or adjust">\u270e</button>'
+ return '<button type="button" class="gpick" data-gal-pick="'+esc(f.id)+'" aria-pressed="false" aria-label="Select this photo">\u2713</button>'
+  +'<button type="button" class="ged" data-gal-edit="'+esc(f.id)+'" aria-label="Crop or adjust this photo" title="Crop or adjust">\u270e</button>'
   +'<button type="button" class="gx" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this photo from the gallery" title="Remove">\u00d7</button>';
 }
 function galleryItem(f,mainId,dates,ended){
@@ -2956,20 +3037,80 @@ function galleryItem(f,mainId,dates,ended){
   var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
   return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
  var id=dogPhotoId(f.drive_file_id); if(!id) return '';
- if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
+ if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-link="'+esc(f.link_id||'')+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" loading="lazy" decoding="async" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
+/* RoseQuest clips (25 Nov 2026). The file stays on RoseQuest; the card stores only the share link. */
+var VIDEO_MORE={}, VIDEO_SHOW=5;
+function videoUrlOk(u){ return /^https:\/\/share\.puppyclassroom\.com\/v\/[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/.test(String(u||'').trim()); }
+function dogVideoList(id){
+ var rows=(T['BLD-subject_video.csv']||[]).filter(function(r){ return r&&r.subject_id===id; });
+ var replaced={}; rows.forEach(function(r){ if(r.corrects_id) replaced[r.corrects_id]=1; });
+ var live=rows.filter(function(r){ return r.id&&!replaced[r.id]&&String(r.active||'')!=='no'&&videoUrlOk(r.video_url); });
+ live.sort(function(a,b){ return String(b.created_at||'').localeCompare(String(a.created_at||'')); });
+ var mains=live.filter(function(r){ return String(r.is_main)==='yes'; });
+ var main=mains[0]||live[0]||null;
+ return {main:main, rest:live.filter(function(r){ return r!==main; }), n:live.length};
+}
+function videoReopen(id,text){ var c=document.querySelector('#rows article.dc[data-dog="'+id+'"]'); if(!c) return;
+ var w=c.querySelector('details.vids'); if(w) w.open=true;
+ var m=w&&w.querySelector('[data-video-msg]'); if(m&&text) m.textContent=text; }
+function videoHtml(d){
+ var v=dogVideoList(d.id), rest=v.rest, open=!!VIDEO_MORE[d.id], shown=open?rest:rest.slice(0,VIDEO_SHOW);
+ function row(r){ var title=r.title||'Video';
+  return '<div class="dcs-row vclip" data-k="vrow"><a class="cb" href="'+esc(r.video_url)+'" target="_blank" rel="noopener noreferrer">'+esc(title)+'</a>'
+   +'<button type="button" class="cb" data-video-main="'+esc(r.id)+'" data-dog="'+esc(d.id)+'">Make main</button>'
+   +'<button type="button" class="cb" data-video-remove="'+esc(r.id)+'" data-dog="'+esc(d.id)+'">Remove</button></div>'; }
+ return '<details class="dcs vids" data-k="videos" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label" data-k="videos-n">Videos'+(v.n?' ('+v.n+')':'')+'</span></summary><div class="dcs-bd">'
+  +(v.main?'<a class="btn" data-k="watch" href="'+esc(v.main.video_url)+'" target="_blank" rel="noopener noreferrer">Watch video</a>'+(v.main.title?' <span class="mut">'+esc(v.main.title)+'</span>':''):'<span class="mut">No video yet</span>')
+  +(rest.length?'<div class="vclips" data-k="vlist">'+shown.map(row).join('')+'</div>':'')
+  +(rest.length>VIDEO_SHOW&&!open?'<button type="button" class="btn" data-video-all="'+esc(d.id)+'">Show all ('+rest.length+')</button>':'')
+  +'<form class="dcs-form" data-video-form="'+esc(d.id)+'" novalidate><div class="dcs-row">'
+  +'<label>RoseQuest link<input name="url" type="url" inputmode="url" autocomplete="off" placeholder="https://share.puppyclassroom.com/v/" required></label>'
+  +'<label>Title<input name="title" type="text" maxlength="80" autocomplete="off"></label></div>'
+  +'<label class="vmain"><input type="checkbox" name="main"> Main video</label>'
+  +'<button type="submit">Add video</button><p class="mut" data-video-msg role="status"></p></form>'
+  +'</div></details>';
+}
 function galleryHtml(d,ph){
- if(!ph.gallery.length) return '';   /* ended photos stay in the sheet; the card does not list them  */
- var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
+ if(!ph.gallery.length) return '';
+ var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO()), photos=ph.gallery.some(function(f){ return f.kind==='photo'; });
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
   +'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>'
+  +(photos?'<button type="button" class="btn" data-gal-select="'+esc(d.id)+'">Select</button><span class="gal-bulk"><button type="button" class="btn" data-gal-bulk="'+esc(d.id)+'">Remove selected</button></span><button type="button" class="btn" data-photo-sort="'+esc(d.id)+'">Sort photos</button>':'')
   +'<p class="mut" data-gal-msg role="status">'+esc(GAL_MSG[d.id]||'')+'</p></div></details>';
 }
 /* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
    with the gallery still open. A photo added today can only end today (an end date cannot be before its start), so the
    end reason marks it removed and photos.js treats it as ended straight away. */
-var GAL_REMOVED='Removed from gallery';
+var GAL_REMOVED='Removed from gallery', GAL_EDIT='Removed in gallery edit', GAL_PICK={};
+function galleryBulkRemove(dog){
+ var g=galBox(dog); if(!g) return;
+ var picks=g.querySelectorAll('.gpick[aria-pressed="true"]'), n=picks.length; if(!n) return;
+ if(!window.confirm('Remove '+n+' photo'+(n===1?'':'s')+' from the gallery? The files are kept.')) return;
+ var links=T['BLD-links.csv']||[], ends=[], files=[];
+ Array.prototype.forEach.call(picks, function(btn){
+  var li=btn.closest('.gi'), id=li&&li.getAttribute('data-link');
+  var row=links.filter(function(l){ return l.id===id; })[0];
+  if(!row||String(row.to_date||'').trim()) return;
+  var to=galEndDate(row);
+  row.to_date=to; row.end_reason=GAL_EDIT; row._local=1; linkEndKeep(id,to,GAL_EDIT);
+  ends.push({id:id, to_date:to}); if(li) files.push(li.getAttribute('data-file'));
+ });
+ delete GAL_PICK[dog];
+ var sel=g.querySelector('[data-gal-select]'); if(sel) sel.textContent='Select';
+ g.removeAttribute('data-select');
+ gallerySync(dog);
+ files.forEach(function(fid){ clearCardPhoto(dog, fid); });
+ var msg=g.querySelector('[data-gal-msg]'); if(msg) msg.textContent=ends.length+' saving';
+ sinkSend({action:'link_end', fields:{reason:GAL_EDIT, ends:ends}, request_id:sinkRid()}).then(function(j){
+  var ok=j&&j.ok&&j.result&&j.result.status==='saved';
+  function say(t){ var box=galBox(dog), m=box&&box.querySelector('[data-gal-msg]'); if(m) m.textContent=t; }
+  if(ok){ say('\u2713 Removed '+ends.length); return; }
+  ends.reduce(function(p,e){ return p.then(function(){ return sinkSend({action:'link_end', fields:{id:e.id, to_date:e.to_date, reason:GAL_EDIT}, request_id:sinkRid()}); }); }, Promise.resolve())
+   .then(function(){ say('\u2713 Removed '+ends.length); });
+ });
+}
 /* Take a removed photo off the dog card: end any other open link to the same file, and clear the old photo cell when it is that file. */
 async function clearCardPhoto(dog, fileRowId){
  var files=T['BLD-files.csv']||[], links=T['BLD-links.csv']||[], d=CD._byId[dog]||{}, day=todayLondon();
@@ -3006,6 +3147,7 @@ function linkEndsGet(){ try{ var o=JSON.parse(localStorage.getItem(LINK_ENDS_KEY
 function linkEndsSet(o){ try{ if(Object.keys(o).length) localStorage.setItem(LINK_ENDS_KEY,JSON.stringify(o)); else localStorage.removeItem(LINK_ENDS_KEY); }catch(e){ /* private window: this visit still shows it */ } }
 var LINK_ENDS_MEM={};   /* the same, for a phone that will not keep it */
 function linkEndKeep(id,to,reason){ var o=linkEndsGet(); o[id]={to_date:to,end_reason:reason,at:Date.now()}; LINK_ENDS_MEM[id]=o[id]; linkEndsSet(o); }
+function linkEndDrop(id){ var o=linkEndsGet(); if(!o[id]&&!LINK_ENDS_MEM[id]) return; delete o[id]; delete LINK_ENDS_MEM[id]; linkEndsSet(o); }
 function linkEndsApply(){
  var o=linkEndsGet(); Object.keys(LINK_ENDS_MEM).forEach(function(k){ if(!o[k]) o[k]=LINK_ENDS_MEM[k]; });
  var ids=Object.keys(o); if(!ids.length) return;
@@ -3018,36 +3160,285 @@ function linkEndsApply(){
  });
  if(drop) linkEndsSet(o);
 }
+var PHOTO_SORT=null;
+function galEndDate(row){ var day=todayLondon(), y=dayMinus(day,1); return String((row&&row.from_date)||'').slice(0,10)<=y?y:day; }
+function photoGalleryList(dog){ var ph=dogPhotos(CD._byId[dog]||{id:dog}); return (ph.gallery||[]).filter(function(f){ return f.kind==='photo'&&f.link_id; }); }
+function photoSortPaint(){
+ var S=PHOTO_SORT; if(!S||!S.box) return;
+ var n=S.list.length, item=n?S.list[S.i]:null;
+ S.box.setAttribute('data-file', item?item.id:'');
+ var count=S.box.querySelector('[data-k="sort-count"]');
+ if(count) count.textContent=n?((S.i+1)+' of '+n):'No photos left';
+ var saving=S.box.querySelector('[data-k="sort-saving"]');
+ if(saving){ saving.hidden=!S.saving; saving.textContent=S.saving?(S.saving+' saving'):''; }
+ var img=S.box.querySelector('[data-k="sort-pic"]');
+ if(img){ img.hidden=!item; if(item){ img.alt=item.name||'Photo';
+  if(item._preview) img.src=item._preview;
+  else { var drive=dogPhotoId(item.drive_file_id);
+   if(drive&&img.getAttribute('data-full')!==drive){ img.setAttribute('data-full',drive); photoFull(drive).then(function(url){ if(url&&PHOTO_SORT&&PHOTO_SORT.list[PHOTO_SORT.i]===item) img.src=url; }); } }
+  photoPreloadNeighbours(); } }
+ var mainBtn=S.box.querySelector('[data-sort="main"]'); if(mainBtn) mainBtn.disabled=!item||item.id===S.mainId;
+ ['keep','remove','edit'].forEach(function(k){ var b=S.box.querySelector('[data-sort="'+k+'"]'); if(b) b.disabled=!item; });
+ var undo=S.box.querySelector('[data-sort="undo"]'); if(undo) undo.disabled=!S.stack.length;
+}
+function photoSortQueue(action, fields){
+ var rid=sinkRid(); if(PHOTO_SORT) PHOTO_SORT.saving++; photoSortPaint();
+ var p=sinkSend({action:action, fields:fields, request_id:rid}).then(function(j){
+  if(PHOTO_SORT) PHOTO_SORT.saving=Math.max(0,PHOTO_SORT.saving-1); photoSortPaint(); return j;
+ }, function(){ if(PHOTO_SORT) PHOTO_SORT.saving=Math.max(0,PHOTO_SORT.saving-1); photoSortPaint(); return {ok:false}; });
+ return {rid:rid, p:p};
+}
+function photoSortPutBack(fileId){
+ var S=PHOTO_SORT; if(!S||!fileId) return;
+ var day=todayLondon(), links=T['BLD-links.csv']||(T['BLD-links.csv']=[]), local='local-back-'+sinkRid();
+ links.push({id:local, from_table:'subject', from_id:S.dog, role:'gallery', to_table:'files', to_id:fileId, from_date:day, to_date:'', set_on:day, created_at:new Date().toISOString(), _local:1});
+ photoSortQueue('link_add',{from_table:'subject', from_id:S.dog, role:'gallery', to_table:'files', to_id:fileId, from_date:day, source:'CD Hub, Put back'}).p.then(function(j){
+  if(j&&j.ok&&j.result&&j.result.id){ var row=links.filter(function(l){ return l.id===local; })[0]; if(row) row.id=j.result.id; }
+ });
+}
+function photoSortMove(dir){ var S=PHOTO_SORT; if(!S||!S.list.length) return; var n=S.i+dir; if(n<0||n>=S.list.length) return; S.i=n; photoSortPaint(); }
+function photoSortRemove(){
+ var S=PHOTO_SORT; if(!S||!S.list.length) return;
+ var item=S.list[S.i], links=T['BLD-links.csv']||[], row=links.filter(function(l){ return l.id===item.link_id; })[0], to=galEndDate(row);
+ if(row&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(item.link_id, to, GAL_REMOVED); }
+ var q=photoSortQueue('link_end',{id:item.link_id, to_date:to, reason:GAL_REMOVED});
+ S.stack.push({type:'remove', item:item, index:S.i, q:q});
+ S.list.splice(S.i,1); if(S.i>=S.list.length) S.i=Math.max(0,S.list.length-1); photoSortPaint();
+}
+function photoSortMain(){
+ var S=PHOTO_SORT; if(!S||!S.list.length||S.list[S.i].id===S.mainId) return;
+ var item=S.list[S.i], day=todayLondon(), links=T['BLD-links.csv']||(T['BLD-links.csv']=[]), ended=[], prev=S.mainId, local='local-main-'+sinkRid();
+ links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===S.dog&&l.role==='main'&&!String(l.to_date||'').trim()){
+  ended.push({id:l.id, to_date:l.to_date||'', end_reason:l.end_reason||''}); var to=galEndDate(l); l.to_date=to; l.end_reason='Replaced as main'; l._local=1; } });
+ links.push({id:local, from_table:'subject', from_id:S.dog, role:'main', to_table:'files', to_id:item.id, from_date:day, to_date:'', set_on:day, created_at:new Date().toISOString(), _local:1});
+ S.mainId=item.id;
+ var q=photoSortQueue('link_add',{from_table:'subject', from_id:S.dog, role:'main', to_table:'files', to_id:item.id, from_date:day, source:'CD Hub, Make main'});
+ S.stack.push({type:'main', prev:prev, localId:local, ended:ended, q:q}); photoSortPaint();
+}
+function photoSortUndo(){
+ var S=PHOTO_SORT; if(!S||!S.stack.length) return;
+ var a=S.stack.pop();
+ if(a.type==='keep') S.i=a.from;
+ else if(a.type==='remove'){ S.list.splice(a.index,0,a.item); S.i=a.index; photoSortPutBack(a.item.id); }
+ else if(a.type==='main'){
+  var links=T['BLD-links.csv']||[], i=links.findIndex(function(l){ return l.id===a.localId; }); if(i>=0) links.splice(i,1);
+  a.ended.forEach(function(s){ var l=links.filter(function(x){ return x.id===s.id; })[0]; if(l){ l.to_date=s.to_date; l.end_reason=s.end_reason; } });
+  S.mainId=a.prev; hubDrop(a.q.rid);
+  if(a.prev) a.q.p.then(function(j){ if(j&&j.ok) photoSortQueue('link_add',{from_table:'subject', from_id:S.dog, role:'main', to_table:'files', to_id:a.prev, from_date:todayLondon(), source:'CD Hub, Make main'}); });
+ } else if(a.type==='edit'){ a.token.undone=true; if(S.list[a.index]&&S.list[a.index]._editing) S.list[a.index]=a.prev; S.i=a.index; }
+ photoSortPaint();
+}
+function photoSortEditFail(at, old, token){
+ var S=PHOTO_SORT; if(!S||token.undone) return;
+ if(S.list[at]&&S.list[at]._editing) S.list[at]=old;
+ var note=S.box&&S.box.querySelector('[data-k="sort-note"]'); if(note) note.textContent='That edit was not saved. The original photo is still here.';
+ photoSortPaint();
+}
+function photoSortSaveEdit(pic){
+ var S=PHOTO_SORT; if(!S||!S.list.length) return;
+ var at=S.i, old=S.list[at], token={undone:false}, day=todayLondon();
+ S.list[at]=Object.assign({}, old, {_preview:'data:'+pic.mime+';base64,'+pic.b64, _editing:true});
+ S.stack.push({type:'edit', index:at, prev:old, token:token});
+ if(at<S.list.length-1) S.i=at+1;
+ S.saving++; photoSortPaint();
+ var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]), files=T['BLD-files.csv']||(T['BLD-files.csv']=[]), done=false;
+ function finish(){ if(done) return; done=true; if(PHOTO_SORT) PHOTO_SORT.saving=Math.max(0,PHOTO_SORT.saving-1); photoSortPaint(); }
+ sinkSend({action:'file_add', fields:{kind:'photo', mime:pic.mime, data_base64:pic.b64, name:'edited-photo.jpg', taken_on:String(old.taken_on||day).slice(0,10), source:'Edited copy of '+old.id}, request_id:sinkRid()}).then(function(j){
+  if(token.undone||!(j&&j.ok&&j.result&&j.result.id)){ if(!token.undone) photoSortEditFail(at, old, token); finish(); return; }
+  var nid=j.result.id, drive=j.result.drive_file_id||'';
+  if(!files.some(function(x){ return x.id===nid; })) files.push({id:nid, kind:'photo', drive_file_id:drive, mime:pic.mime, name:'edited-photo.jpg', taken_on:old.taken_on||day, set_on:day, created_at:new Date().toISOString()});
+  if(PHOTO_SORT&&PHOTO_SORT.list[at]&&PHOTO_SORT.list[at]._editing){ PHOTO_SORT.list[at].id=nid; PHOTO_SORT.list[at].drive_file_id=drive; PHOTO_SORT.list[at]._editing=false; }
+  return sinkSend({action:'link_add', fields:{from_table:'subject', from_id:S.dog, role:'gallery', to_table:'files', to_id:nid, from_date:day, source:'CD Hub, Edited copy'}, request_id:sinkRid()}).then(function(k){
+   if(token.undone||!(k&&k.ok&&k.result&&k.result.status==='saved')){ if(!token.undone) photoSortEditFail(at, old, token); finish(); return; }
+   var newLink=k.result.id||'';
+   links.push({id:newLink, from_table:'subject', from_id:S.dog, role:'gallery', to_table:'files', to_id:nid, from_date:day, to_date:'', set_on:day, created_at:new Date().toISOString()});
+   if(PHOTO_SORT&&PHOTO_SORT.list[at]) PHOTO_SORT.list[at].link_id=newLink;
+   if(token.undone){ var back=galEndDate({from_date:day}); return sinkSend({action:'link_end', fields:{id:newLink, to_date:back, reason:GAL_REMOVED}, request_id:sinkRid()}).then(finish, finish); }
+   var row=links.filter(function(l){ return l.id===old.link_id; })[0], to=galEndDate(row);
+   if(row&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_EDITED; row._local=1; linkEndKeep(old.link_id, to, GAL_EDITED); }
+   return sinkSend({action:'link_end', fields:{id:old.link_id, to_date:to, reason:GAL_EDITED}, request_id:sinkRid()}).then(finish, finish);
+  });
+ }).then(null, finish);
+}
+async function photoLoadDrive(drive){
+ var url=await photoFull(drive); if(!url) return null;
+ var img=new Image();
+ await new Promise(function(ok,no){ img.onload=ok; img.onerror=no; img.src=url; });
+ return img;
+}
+function photoTour(dog, fileId){
+ var list=photoGalleryList(dog), at=0; list.forEach(function(x,i){ if(x.id===fileId) at=i; });
+ return {list:list, at:function(){ return at; },
+  hasPrev:function(){ return at>0; }, hasNext:function(){ return at<list.length-1; },
+  file:function(){ return list[at]||null; },
+  step:function(dir){ var n=at+dir; if(n<0||n>=list.length) return Promise.resolve(null);
+   return photoLoadDrive(dogPhotoId(list[n].drive_file_id)).then(function(im){ if(im) at=n; return im; }); } };
+}
+async function photoSortEdit(){
+ var S=PHOTO_SORT; if(!S||!S.list.length) return;
+ var item=S.list[S.i], img=await photoLoadDrive(dogPhotoId(item.drive_file_id));
+ if(!img){ var note=S.box.querySelector('[data-k="sort-note"]'); if(note) note.textContent='The photo could not be opened.'; return; }
+ var tour={hasPrev:function(){ return S.i>0; }, hasNext:function(){ return S.i<S.list.length-1; }, file:function(){ return S.list[S.i]; },
+  step:function(dir){ var n=S.i+dir; if(n<0||n>=S.list.length) return Promise.resolve(null);
+   return photoLoadDrive(dogPhotoId(S.list[n].drive_file_id)).then(function(im){ if(!im) return null; S.i=n; photoSortPaint(); return im; }); }};
+ var pic=await photoCrop(img,'',{tour:tour});
+ if(!PHOTO_SORT) return;
+ if(!pic){ photoSortPaint(); return; }
+ if(pic.galleryRemove){ photoSortRemove(); return; }
+ if(pic.error){ var n2=S.box.querySelector('[data-k="sort-note"]'); if(n2) n2.textContent=pic.error; return; }
+ photoSortSaveEdit(pic);
+}
+function galBox(dog){ return document.querySelector('details.gal[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'); }
+function galleryRetile(li,f,mainId,dates,ended){
+ var img=li.querySelector('img.galph'), drive=dogPhotoId(f.drive_file_id);
+ var box=document.createElement('div'); box.innerHTML=galleryItem(f,mainId,dates,ended);
+ var neu=box.firstChild; if(!neu) return li;
+ var fresh=neu.querySelector('img.galph');
+ if(img&&fresh&&img.getAttribute('data-gal-id')===drive&&img.getAttribute('src')) fresh.replaceWith(img);
+ else if(fresh) loadGalleryThumb(fresh);
+ li.replaceWith(neu); return neu;
+}
+function cardPhotoSync(dog,ph){
+ var card=document.querySelector('.dc[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'); if(!card) return;
+ var img=card.querySelector('img.dogphoto'); if(!img) return;
+ var id=cardPhotoId(CD._byId[dog]||{id:dog},ph); if(!id) return;
+ if(img.getAttribute('data-photo-id')===id&&img.getAttribute('src')) return;
+ img.setAttribute('data-photo-id',id);
+ var mem=PHOTO_MEM[id]; if(mem&&(mem.thumb||mem.full)){ photoShow(img,mem.thumb||mem.full,id); return; }
+ loadGalleryThumb(img);
+}
+function gallerySync(dog){
+ var g=galBox(dog); if(!g) return;
+ var d=CD._byId[dog]||{id:dog}, ph=dogPhotos(d), dates=photoDatesOn(todayISO()), word=ph.galleryLabel||'Photos';
+ var label=g.querySelector(':scope > summary .dcs-label'); if(label) label.textContent=word+' ('+ph.gallery.length+')';
+ var bd=g.querySelector(':scope > .dcs-bd'); if(!bd) return;
+ var open=bd.querySelector(':scope > ul.glist');
+ if(!open){ open=document.createElement('ul'); open.className='glist'; bd.insertBefore(open,bd.firstChild); }
+ var pool={}; Array.prototype.forEach.call(g.querySelectorAll('.gi[data-file]'),function(li){ pool[li.getAttribute('data-file')]=li; });
+ function fill(list,ul,ended){
+  if(!ul) return; var keep={};
+  list.forEach(function(f){
+   if(f.kind!=='photo'&&f.kind!=='link'&&f.kind!=='upload') return;
+   var li=pool[f.id];
+   if(li&&f.kind==='photo') li=galleryRetile(li,f,ph.main&&ph.main.id,dates,ended);
+   else if(!li){ var box=document.createElement('div'); box.innerHTML=galleryItem(f,ph.main&&ph.main.id,dates,ended); li=box.firstChild;
+    var im=li&&li.querySelector('img.galph'); if(im) loadGalleryThumb(im); }
+   if(!li) return; pool[f.id]=li; keep[f.id]=1; ul.appendChild(li);
+  });
+  Array.prototype.forEach.call(ul.querySelectorAll(':scope > .gi'),function(li){ if(!keep[li.getAttribute('data-file')]) li.remove(); });
+ }
+ fill(ph.gallery,open,false);
+ var det=bd.querySelector(':scope > details.gal-ended'); if(det) det.remove();
+ cardPhotoSync(dog,ph);
+}
+function photoSortClose(){
+ var dog=PHOTO_SORT&&PHOTO_SORT.dog, box=PHOTO_SORT&&PHOTO_SORT.box, key=PHOTO_SORT&&PHOTO_SORT.key;
+ if(key) document.removeEventListener('keydown', key, true);
+ if(box) box.remove(); PHOTO_SORT=null;
+ if(dog) gallerySync(dog);
+ var again=dog&&galBox(dog); if(again) again.open=true;
+}
+function photoSortOpen(dog){
+ if(PHOTO_SORT) photoSortClose();
+ var list=photoGalleryList(dog); if(!list.length) return;
+ var ph=dogPhotos(CD._byId[dog]||{id:dog});
+ var box=document.createElement('div');
+ box.className='psort'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','sortT'); box.setAttribute('data-k','photo-sort');
+ box.innerHTML='<div class="psort-in"><h3 id="sortT">Sort photos</h3>'
+  +'<p class="psort-count" data-k="sort-count"></p><p class="mut" data-k="sort-saving" hidden></p>'
+  +'<img class="psort-pic" data-k="sort-pic" alt="">'
+  +'<p class="mut" data-k="sort-note" role="status"></p>'
+  +'<div class="psort-btns"><button type="button" class="btn yes" data-sort="keep">Keep</button>'
+  +'<button type="button" class="btn" data-sort="remove">Remove</button><button type="button" class="btn" data-sort="edit">Edit</button>'
+  +'<button type="button" class="btn" data-sort="main">Make main</button><button type="button" class="btn" data-sort="undo">Undo last</button>'
+  +'<button type="button" class="btn" data-sort="done">Done</button></div></div>';
+ document.body.appendChild(box);
+ PHOTO_SORT={dog:dog, list:list.slice(), i:0, mainId:ph.main&&ph.main.id||'', stack:[], saving:0, box:box};
+ function key(e){ if(!PHOTO_SORT||document.querySelector('.pcrop')) return;
+  if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) return;
+  if(e.key==='Escape'){ e.preventDefault(); photoSortClose(); }
+  else if(e.key==='ArrowRight'){ e.preventDefault(); photoSortMove(1); }
+  else if(e.key==='ArrowLeft'){ e.preventDefault(); photoSortMove(-1); } }
+ PHOTO_SORT.key=key; document.addEventListener('keydown', key, true);
+ box.addEventListener('click', function(e){ var b=e.target&&e.target.closest?e.target.closest('[data-sort]'):null; if(!b||b.disabled) return;
+  var act=b.getAttribute('data-sort');
+  if(act==='done') photoSortClose();
+  else if(act==='keep'){ var from=PHOTO_SORT.i; photoSortMove(1); if(PHOTO_SORT&&PHOTO_SORT.i!==from) PHOTO_SORT.stack.push({type:'keep', from:from}); photoSortPaint(); }
+  else if(act==='remove') photoSortRemove();
+  else if(act==='main') photoSortMain();
+  else if(act==='undo') photoSortUndo();
+  else if(act==='edit') photoSortEdit(); });
+ var pic=box.querySelector('[data-k="sort-pic"]'), sx=0, sy=0, down=false;
+ pic.addEventListener('pointerdown', function(e){ sx=e.clientX; sy=e.clientY; down=true; });
+ pic.addEventListener('pointerup', function(e){ if(!down) return; down=false; var dx=e.clientX-sx, dy=e.clientY-sy; if(Math.abs(dx)<48||Math.abs(dx)<Math.abs(dy)) return; photoSortMove(dx<0?1:-1); });
+ photoSortPaint(); var keep=box.querySelector('[data-sort="keep"]'); if(keep) keep.focus();
+}
 document.addEventListener('click',async function(ev){
+ var sortBtn=ev.target&&ev.target.closest?ev.target.closest('[data-photo-sort]'):null;
+ if(sortBtn){ ev.preventDefault(); photoSortOpen(sortBtn.getAttribute('data-photo-sort')); return; }
+ var selBtn=ev.target&&ev.target.closest?ev.target.closest('[data-gal-select]'):null;
+ if(selBtn){ ev.preventDefault(); var sd=selBtn.getAttribute('data-gal-select'), sg=galBox(sd); if(!sg) return;
+  if(sg.getAttribute('data-select')){ delete GAL_PICK[sd]; sg.removeAttribute('data-select'); selBtn.textContent='Select'; }
+  else { GAL_PICK[sd]={}; sg.setAttribute('data-select','1'); selBtn.textContent='Done'; }
+  var sb=sg.querySelector('[data-gal-bulk]'); if(sb) sb.textContent='Remove selected'; return; }
+ var tick=ev.target&&ev.target.closest?ev.target.closest('[data-gal-pick]'):null;
+ if(tick){ ev.preventDefault(); var tg=tick.closest('details.gal'), td=tg&&tg.getAttribute('data-dog'), on=tick.getAttribute('aria-pressed')!=='true';
+  tick.setAttribute('aria-pressed', on?'true':'false'); var bag=GAL_PICK[td]||(GAL_PICK[td]={});
+  if(on) bag[tick.getAttribute('data-gal-pick')]=1; else delete bag[tick.getAttribute('data-gal-pick')];
+  var nb=tg.querySelectorAll('.gpick[aria-pressed="true"]').length, bb=tg.querySelector('[data-gal-bulk]');
+  if(bb) bb.textContent='Remove selected'+(nb?' ('+nb+')':''); return; }
+ var bulk=ev.target&&ev.target.closest?ev.target.closest('[data-gal-bulk]'):null;
+ if(bulk){ ev.preventDefault(); galleryBulkRemove(bulk.getAttribute('data-gal-bulk')); return; }
+ var all=ev.target&&ev.target.closest?ev.target.closest('[data-video-all]'):null;
+ if(all){ VIDEO_MORE[all.getAttribute('data-video-all')]=1; var det=all.closest('details'); drawDogs();
+  var again=document.querySelector('details.vids[data-dog="'+all.getAttribute('data-video-all')+'"]'); if(again) again.open=true; return; }
+ var vb=ev.target&&ev.target.closest?ev.target.closest('[data-video-main],[data-video-remove]'):null;
+ if(vb){ ev.preventDefault();
+  var dog=vb.getAttribute('data-dog'), id=vb.getAttribute('data-video-main')||vb.getAttribute('data-video-remove');
+  var box=vb.closest('details.vids'), msg=box&&box.querySelector('[data-video-msg]');
+  vb.disabled=true; if(msg) msg.textContent='Saving\u2026';
+  var fields={subject_id:dog,corrects_id:id}; if(vb.hasAttribute('data-video-remove')) fields.active='no'; else fields.is_main='yes';
+  var j=await sinkAct('subject_video',fields);
+  if(!(j.ok&&j.result&&j.result.status==='saved')){ if(msg) msg.textContent='Not saved: '+((j&&j.message)||'try again.'); vb.disabled=false; return; }
+  var list=T['BLD-subject_video.csv']=T['BLD-subject_video.csv']||[];
+  (j.result.rows||[]).forEach(function(row){ list.push(row); });
+  drawDogs(); videoReopen(dog,'\u2713 Saved'); return; }
  var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-end],[data-gal-back],[data-gal-main]'):null; if(!b) return;
  var g=b.closest('details.gal'), dog=g?g.getAttribute('data-dog'):'', msg=g&&g.querySelector('[data-gal-msg]'), day=todayLondon(), j;
  var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]);
  b.disabled=true; if(msg) msg.textContent='Saving\u2026'; GAL_MSG[dog]='Saving\u2026';
  if(b.hasAttribute('data-gal-end')){
   var id=b.getAttribute('data-gal-end'), row=links.filter(function(l){ return l.id===id; })[0]||{};
-  var y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;   /* gone from today; never before its start */
+  var to=galEndDate(row), wasTo=row.to_date||'', wasWhy=row.end_reason||'';
+  if(row.id&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); }
+  gallerySync(dog);
   j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
-  /* already ended (22 Nov 2026): this phone was showing an old copy, and the photo was removed before. It is gone, so
-     the screen says so instead of "Not saved". */
   if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
-  if(j.ok&&j.result&&j.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); linkEndsApply();
-   await clearCardPhoto(dog, row.to_id); }
+  if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
+   linkEndDrop(id);
+   var back=(T['BLD-links.csv']||[]).filter(function(l){ return l.id===id; })[0];
+   if(back){ back.to_date=wasTo; back.end_reason=wasWhy; delete back._local; }
+   if(row.id&&row!==back){ row.to_date=wasTo; row.end_reason=wasWhy; }
+   gallerySync(dog);
+   GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); var mBad=galBox(dog); if(mBad){ mBad.open=true; var mm=mBad.querySelector('[data-gal-msg]'); if(mm) mm.textContent=GAL_MSG[dog]; }
+   return; }
+  clearCardPhoto(dog, row.to_id);
  } else {
   var fid=b.getAttribute('data-gal-back')||b.getAttribute('data-gal-main'), role=b.hasAttribute('data-gal-main')?'main':'gallery';
+  if(role==='main') links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
+  var local='local-'+sinkRid();
+  links.push({id:local,from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString(),_local:1});
+  gallerySync(dog);
   j=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,source:'CD Hub, '+(role==='main'?'Make main':'Put back')});
-  if(j.ok&&j.result&&j.result.status==='saved'){
-   if(role==='main') links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
-   links.push({id:j.result.id||'',from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()}); }
+  if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
+   var ix=links.findIndex(function(l){ return l.id===local; }); if(ix>=0) links.splice(ix,1); gallerySync(dog);
+   GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); var mNo=galBox(dog); if(mNo){ mNo.open=true; var mn=mNo.querySelector('[data-gal-msg]'); if(mn) mn.textContent=GAL_MSG[dog]; }
+   return; }
+  var patched=links.filter(function(l){ return l.id===local; })[0]; if(patched&&j.result.id) patched.id=j.result.id;
  }
- b.disabled=false;
- /* a read may have redrawn the list while this saved: use the gallery on screen now, not the one tapped */
- var gNow=dog?document.querySelector('details.gal[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'):null;
- if(gNow&&gNow!==g){ g=gNow; msg=g.querySelector('[data-gal-msg]'); }
- if(!(j&&j.ok&&j.result&&j.result.status==='saved')){ GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); if(g){ g.open=true; GAL_OPEN[dog]=1; } if(msg) msg.textContent=GAL_MSG[dog]; return; }
  GAL_MSG[dog]='\u2713 Saved';
- var open=g&&g.open; drawDogs();
- var again=document.querySelector('details.gal[data-dog="'+dog+'"]');
- if(again){ again.open=open||true; var m2=again.querySelector('[data-gal-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
+ var again=galBox(dog);
+ if(again){ again.open=true; var m2=again.querySelector('[data-gal-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
 });
 /* ✎ Crop or adjust a photo already saved (the owner 17 Nov 2026: "a crop / adjust tool anywhere there is a photo, starting
    with dog photos"). The same crop tool as Take/Upload photo opens on the saved picture (read from Drive with this
@@ -3071,12 +3462,22 @@ async function photoEdit(dog,fileId,msg){
   await new Promise(function(ok,no){ img.onload=ok; img.onerror=no; img.src=url; });
  }catch(e){ say('The photo could not be opened for editing.'); return; }
  say('');
- var pic=await photoCrop(img,'',{canDelete:true});
+ var tour=photoTour(dog, f&&f.id);
+ var pic=await photoCrop(img,'',{canDelete:true, tour:tour.list.length?tour:null});
  if(!pic) return;   /* Cancel: nothing is saved */
- if(pic.remove){ say('Removing the photo\u2026'); await clearCardPhoto(dog,f&&f.id); drawDogs();
+ if(pic.galleryRemove){
+  var lid=pic.linkId, row=links.filter(function(l){ return l.id===lid; })[0]||{}, y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;
+  say('Removing the photo\u2026');
+  var jr=await sinkAct('link_end',{id:lid, to_date:to, reason:GAL_REMOVED});
+  if(jr&&jr.ok&&jr.result&&jr.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(lid, to, GAL_REMOVED); linkEndsApply(); }
+  gallerySync(dog);
+  var ag=galBox(dog); if(ag){ ag.open=true; var mm=ag.querySelector('[data-gal-msg]'); if(mm) mm.textContent=jr&&jr.ok?'\u2713 Removed':'Not saved: '+sinkMsg(jr); }
+  return; }
+ if(pic.remove){ say('Removing the photo\u2026'); await clearCardPhoto(dog,f&&f.id); gallerySync(dog);
   var gone=document.querySelector('.dc[data-dog="'+dog+'"]'), gm=gone&&gone.querySelector('[data-photo-msg]');
   if(gm) gm.textContent='Photo removed'; return; }
  if(pic.error){ say(pic.error); return; }
+ if(pic.fileId){ var picked=files.filter(function(x){ return x.id===pic.fileId; })[0]; if(picked) f=picked; }
  say('Saving the edited copy\u2026');
  var j=await sinkAct('file_add',{kind:'photo',mime:pic.mime,data_base64:pic.b64,name:'edited-photo.jpg',taken_on:(f&&String(f.taken_on||'').slice(0,10))||day,source:'Edited copy'+(f?' of '+f.id:'')});
  if(!(j.ok&&j.result&&j.result.id)){ say('Not saved: '+sinkMsg(j)); return; }
@@ -3100,8 +3501,8 @@ async function photoEdit(dog,fileId,msg){
    gl.to_date=to; gl.end_reason=GAL_EDITED; }
   if(!fileId||(ph.main&&f&&ph.main.id===f.id)) await add('main');
  }catch(err){ done='The edited copy is saved, but it is not shown yet: '+((err&&err.message)||'try again.'); }
- drawDogs();   /* the message is set after the redraw, so it is not wiped by it (17 Nov 2026) */
- var again=document.querySelector('details.gal[data-dog="'+dog+'"]'); if(again&&fileId) again.open=true;
+ gallerySync(dog);
+ var again=galBox(dog); if(again&&fileId) again.open=true;
  var card=document.querySelector('.dc[data-dog="'+dog+'"]'), m=(again&&fileId)?again.querySelector('[data-gal-msg]'):card&&card.querySelector('[data-photo-msg]');
  if(m) m.textContent=done;
 }
@@ -3153,9 +3554,9 @@ document.addEventListener('toggle',function(e){ var el=e.target;
 /* gallery pictures load only when that gallery is opened (one Drive call each) */
 document.addEventListener('toggle',function(e){
  var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal,details.gal-ended')) return;
- Array.prototype.forEach.call(el.querySelectorAll('img.galph[data-gal-id]:not([data-photo-id])'),function(img){
+ Array.prototype.forEach.call(el.querySelectorAll('img.galph[data-gal-id]:not([data-loaded])'),function(img){
   if(img.closest('details')!==el) return;   /* an ended list loads only when it is opened itself */
-  img.setAttribute('data-photo-id',img.getAttribute('data-gal-id')); loadPhotoImg(img);
+  loadGalleryThumb(img);
  });
 },true);
 function photoMsg(inp,text){
@@ -3230,6 +3631,7 @@ function photoCrop(src,was,opts){
    +'<p class="mut pcrop-size" data-crop-size aria-live="polite"></p>'
    +'<div class="pcrop-btns">'+(opts.canDelete?'<button type="button" class="btn no" data-crop-delete aria-label="Delete this photo">\u00d7</button>':'')
    +'<button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><button type="button" class="btn" data-crop-reset>Reset</button><span class="pcrop-gap"></span>'
+   +(opts.tour?'<button type="button" class="btn" data-crop-prev>Previous</button><button type="button" class="btn" data-crop-next>Next</button><button type="button" class="btn" data-crop-remove>Remove</button>':'')
    +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Save</button></div></div>';
   document.body.appendChild(box);
   var view=box.querySelector('[data-crop-view]'), cv=box.querySelector('[data-crop-canvas]'), zoom=box.querySelector('[data-crop-zoom]');
@@ -3264,15 +3666,27 @@ function photoCrop(src,was,opts){
   bright.addEventListener('input',draw); contrast.addEventListener('input',draw);
   box.querySelector('[data-crop-reset]').addEventListener('click',function(){ bright.value='0'; contrast.value='0'; rot=0; fit(); });
   function done(v){ clearTimeout(sizeT); document.removeEventListener('keydown',key,true); window.removeEventListener('resize',fit); box.remove(); resolve(v); }
-  function key(e){ if(e.key==='Escape'){ e.preventDefault(); done(null); } }
+  function nav(){ var p=box.querySelector('[data-crop-prev]'), n=box.querySelector('[data-crop-next]');
+   if(p) p.disabled=!(opts.tour&&opts.tour.hasPrev()); if(n) n.disabled=!(opts.tour&&opts.tour.hasNext()); }
+  function go(dir){ if(!opts.tour||!opts.tour.step) return; nav();
+   Promise.resolve(opts.tour.step(dir)).then(function(im){ if(im){ src=im; fit(); } nav(); }); }
+  function key(e){ if(e.key==='Escape'){ e.preventDefault(); done(null); return; }
+   if(!opts.tour||(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'))) return;
+   if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); e.stopPropagation(); go(e.key==='ArrowRight'?1:-1); } }
   document.addEventListener('keydown',key,true); window.addEventListener('resize',fit);
   box.querySelector('[data-crop-rotate]').addEventListener('click',function(){ rot=(rot+1)%4; fit(); });
   box.querySelector('[data-crop-cancel]').addEventListener('click',function(){ done(null); });
+  var prevBtn=box.querySelector('[data-crop-prev]'), nextBtn=box.querySelector('[data-crop-next]'), remBtn=box.querySelector('[data-crop-remove]');
+  if(prevBtn) prevBtn.addEventListener('click',function(){ go(-1); });
+  if(nextBtn) nextBtn.addEventListener('click',function(){ go(1); });
+  if(remBtn) remBtn.addEventListener('click',function(){ var f=opts.tour&&opts.tour.file?opts.tour.file():null; done({galleryRemove:true, fileId:f&&f.id||'', linkId:f&&f.link_id||''}); });
+  nav();
   var delBtn=box.querySelector('[data-crop-delete]');
   if(delBtn) delBtn.addEventListener('click',function(){ done({remove:true}); });
   box.querySelector('[data-crop-use]').addEventListener('click',function(){
    var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
-   done(b?{mime:'image/jpeg',b64:b}:{error:'That picture is too large.'}); });
+   var f=opts.tour&&opts.tour.file?opts.tour.file():null;
+   done(b?{mime:'image/jpeg',b64:b,fileId:f&&f.id||'',linkId:f&&f.link_id||''}:{error:'That picture is too large.'}); });
   fit(); box.querySelector('[data-crop-use]').focus();
  });
 }
@@ -3377,6 +3791,17 @@ document.addEventListener('submit',async function(ev){
    if(typeof sizeFromWeight==='function') sizeFromWeight(dd);
   }
   db.disabled=false; drawDogs(); return; }
+ if(f.matches('[data-video-form]')){ ev.preventDefault();
+  var vid=f.getAttribute('data-video-form'), vmsg=f.querySelector('[data-video-msg]'), vbtn=f.querySelector('button[type=submit]');
+  var vurl=String(f.url.value||'').trim(), vtitle=String(f.title.value||'').trim();
+  if(!videoUrlOk(vurl)){ vmsg.textContent='Paste a RoseQuest share link, like https://share.puppyclassroom.com/v/abc123'; return; }
+  vbtn.disabled=true; vmsg.textContent='Saving\u2026';
+  var vr=await sinkAct('subject_video',{subject_id:vid,video_url:vurl,title:vtitle,is_main:f.main.checked?'yes':''});
+  vbtn.disabled=false;
+  if(!(vr.ok&&vr.result&&vr.result.status==='saved')){ vmsg.textContent='Not saved: '+((vr&&vr.message)||'try again.'); return; }
+  var vlist=T['BLD-subject_video.csv']=T['BLD-subject_video.csv']||[];
+  (vr.result.rows||[]).forEach(function(row){ vlist.push(row); });
+  drawDogs(); videoReopen(vid,'\u2713 Saved'); return; }
  if(f.matches('[data-weigh-form]')){ ev.preventDefault();
   var id=f.getAttribute('data-weigh-form'), msg=f.querySelector('[data-weigh-msg]'), btn=f.querySelector('button[type=submit]');
   var on=f.on.value, kg=String(f.kg.value||'').trim(), bcs=f.bcs.value;
@@ -3522,9 +3947,9 @@ function drawDogs(){
    var gSex=d.sex==='Female'?(isEntire(d)?'f':'fn'):d.sex==='Male'?(isEntire(d)?'m':'mn'):'u';
    var gSym=d.sex==='Female'?'#i-female':d.sex==='Male'?'#i-male':'#i-paw';
    var gTitle=(d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered/spayed');
-   var szC=d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'';
+   var szC=d.pupColour||(d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'');
    var ph=dogPhotos(d), pic=cardPhotoId(d,ph);
-   h+='<article class="dc '+cls+(d.sizeWord?' sz':'')+'"'+(d.sizeWord?' data-size="'+esc(d.sizeWord)+'" data-size-from="'+esc(d.sizeFrom)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')+' data-dog="'+esc(d.id)+'">'
+   h+='<article class="dc '+cls+(szC?' sz':'')+'"'+(d.pupColour?' data-pup="1"':'')+(d.sizeWord?' data-size="'+esc(d.sizeWord)+'" data-size-from="'+esc(d.sizeFrom)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')+' data-dog="'+esc(d.id)+'">'
 
   +'<div class="dc-top">'
     +'<div class="dogphoto-col">'
@@ -3576,6 +4001,7 @@ function drawDogs(){
 
   +'<div class="dc-sects">'
     +galleryHtml(d,ph)
+    +videoHtml(d)
 
     +'<details class="dcs wtc" data-dog="'+esc(d.id)+'"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg>'
@@ -3734,7 +4160,7 @@ function capFor(aid,band,access){ var a=CD.cap[aid]; if(!a||!access) return null
 function hideSource(s){ return BLDDisplay.hideSource(s); }
 function dogMoveChip(d, fromId, sid){
  if(!d) return '<span class="pill i">'+esc(sid)+'</span>';
- var szC=d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'';
+ var szC=d.pupColour||(d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'');
  var col=(typeof colourLabel==='function'?colourLabel(d):'')||'';
  return '<button type="button" class="dchip" data-move-dog="'+esc(d.id)+'" data-from="'+esc(fromId||'')+'"'
   +(d.sizeWord?' data-size="'+esc(d.sizeWord)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')
@@ -4453,7 +4879,7 @@ var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code', SAVE_KEEP_KE
    and the address kept on this device, and stops the staff page's copy being reused here (15 Nov 2026).
    #join=<code>&url=<address> still fills the card. */
 var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.save.off', SINK_OFF_OLD='cdhub.sink.off';
-/* Storage tidy, stage 2 (owner 15 Nov 2026, "go with recommendation"): "Switch off here" is now kept as cdhub.save.off.
+/* Storage tidy, stage 2: "Switch off here" is now kept as cdhub.save.off.
    A phone switched off before this still has the old cdhub.sink.off, so either one means off. Only the new one is written;
    switching back on clears both, or the old flag would keep the phone off for good. Old keys are removed in the last stage. */
 function offHere(){ return !!(sinkRaw(SINK_OFF_KEY)||sinkRaw(SINK_OFF_OLD)); }
@@ -4684,6 +5110,18 @@ function hubDelivered(item,j){
 /* Send every kept entry again, oldest first. They are all queued first, so Send now is one list (up to 20) rather than
    one request per row. A script that has no list save yet (before v24) still answers once and they go one by one.
    {old:true} also sends those past 5 hours. Resolves to how many are still kept. */
+/* QUIET RENEWAL: a Google sign-in lasts about an hour. While this page is open and the owner saves with Google (no
+   staff code), it is renewed quietly from 5 minutes before it ends, and as soon as a kept save waits for it, so the save
+   goes within about a minute without a reload. At most one try every 5 minutes. If Google cannot renew it quietly, the
+   outbox line keeps asking to sign in again and nothing on screen changes. */
+var hubRenewAt=0, hubRenewing=false, HUB_RENEW_EARLY=5*60000, HUB_RENEW_GAP=5*60000;
+function hubQuietRenew(){
+ if(hubRenewing||!TOKEN||staffCodeNow()||offHere()) return false;
+ var now=Date.now(); if(TOKEN_EXP-now>HUB_RENEW_EARLY||now-hubRenewAt<HUB_RENEW_GAP) return false;
+ hubRenewAt=now; hubRenewing=true;
+ if(!auth.requestSilent()){ hubRenewing=false; return false; }
+ return true; }
+setInterval(hubQuietRenew,60000);
 function hubFlush(o){
  if(hubFlushing) return hubFlushing;
  if(o&&o.ask) hubStop=false;
@@ -4692,7 +5130,7 @@ function hubFlush(o){
  hubFlushing=(async function(){
   /* by itself (every minute, on open, signal back): never asks for a code, and waits while no one is signed in */
   if(hubStop) return;
-  if(!(o&&o.ask)&&!hubCanSend()) return;
+  if(!(o&&o.ask)&&!hubCanSend()){ hubQuietRenew(); return; }
   var g=await sinkGate(); if(!g.ok||hubStop) return;
   var auth=hubAuthNow(), jobs=[];
   for(var i=0;i<due.length;i++){ if(hubStop) break; var it=due[i]; if(hubInFlight[it.id]) continue;
@@ -4833,12 +5271,21 @@ async function tempSave(areaId,slot,which,raw,el,msgEl,th){
   var cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
   var nv={min:t.min,max:t.max,at:r.result.at||new Date().toISOString()};
   cur['t_'+slot]=nv; if(multi) cur[sk]=nv; delete TYPED[tk];
-  keptRow(areaId,ps,th?{min_c:t.min,max_c:t.max,thermometer_id:th}:{min_c:t.min,max_c:t.max},r); roundRefresh(date); }
+  keptRow(areaId,ps,th?{min_c:t.min,max_c:t.max,thermometer_id:th}:{min_c:t.min,max_c:t.max},r); roundRefresh(date); roundPhoto(areaId,slot,th,r,date,msgEl); }
 }
 /* After a save (the owner 12 Nov 2026: "0 with a temperature" and "No readings" right after an H1 reading that HAD saved):
    the new row joins the page's copy of the sheet, and the count and Kept readings are drawn again at once. */
 function keptRow(areaId,ps,f,r){ var rows=T['BLD-area_reading.csv']||(T['BLD-area_reading.csv']=[]);
  rows.push(Object.assign({id:(r.result&&r.result.id)||'',area_id:areaId,period_start:ps,taken_at:(r.result&&r.result.at)||new Date().toISOString()},f)); }
+/* After a Round reading or Empty mark is saved, offer a photo of it (shared helper staff/lib/evidence-photo.js). The reading
+   is already saved; the photo joins it as evidence. Same switch as staff Temps: rule row job.temps_keep_photo = yes (no row = off). */
+function roundPhoto(areaId,slot,th,r,date,msgEl){
+ var P=window.BLDEvidencePhoto, id=r&&r.result&&r.result.id;
+ if(!P||!id||r.result.status!=='saved'||!msgEl||!P.ruleOn(T['BLD-breeding_rule.csv']||[],'job.temps_keep_photo',date,false)) return;
+ var row=msgEl.closest('.tmp'); if(!row) return;
+ var host=document.createElement('div'); host.setAttribute('data-round-photo',areaId+'|'+slot+(th?'|'+th:'')); row.parentNode.insertBefore(host,row.nextSibling);
+ P.offer(host,{send:hubPhotoSender(),fromTable:'area_reading',fromIds:[id],day:date,past:date!==todayISO(),name:'reading-'+areaId+'-'+slot+'.jpg',source:'Round reading',title:'Add photo',hint:'A photo of the thermometer, or skip.'});
+}
 function roundRefresh(date){
  var st=document.getElementById('rstat'); if(st){ var rows=liveCabins(), n=rows.filter(function(a){ var x=ROUND[roundKey(date,a.id)]||{}; return x.t_am||x.t_pm; }).length; st.textContent=rows.length+' cabins \u00b7 '+n+' with a temperature'; }
  var kr=document.getElementById('kept-readings'); if(kr) kr.outerHTML=keptReadings(date); }
@@ -4859,7 +5306,7 @@ async function roomEmptySave(areaId,slot,msgEl,th){
   var ev={min:'',max:'',at:r.result.at||new Date().toISOString(),empty:true};
   cur['t_'+slot]=ev; if(multi) cur[sk]=ev;
   keptRow(areaId,ps,th?{room_empty:'yes',thermometer_id:th}:{room_empty:'yes'},r); roundRefresh(date);
-  if(msgEl) msgEl.textContent='empty, saved'; }
+  if(msgEl) msgEl.textContent='empty, saved'; roundPhoto(areaId,slot,th,r,date,msgEl); }
 }
 /* a whole litter (and its dam) into one cabin: one move row each, through the same save as one dog */
 async function roundAddLitter(areaId,litterId,msgEl){
@@ -5445,24 +5892,29 @@ function compMedsHtml(){
  while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
  var years=[]; list.forEach(function(k){ var yy=k.slice(0,4); if(years.indexOf(yy)<0) years.push(yy); });
  if(years.length<2) years.push(String(Number(years[0]||todayISO().slice(0,4))-1));
- return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine and dose say \u201cnot recorded\u201d when the record does not hold them. A blank name shows Lisa Carson. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
+ return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine and dose say \u201cnot recorded\u201d when the record does not hold them. A blank name shows the default name in your rules (meds.given_by.default), when set. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
   +'<div class="frow"><label for="medsPeriod">Period</label> <select id="medsPeriod" aria-label="Period"><option value="month" selected>One month</option><option value="year">Whole year</option></select></div>'
   +'<div class="frow"><label for="medsMonth">Month</label> <select id="medsMonth">'+list.map(function(k){ return '<option value="'+k+'">'+esc(UKMON[Number(k.slice(5))-1]+' '+k.slice(0,4))+' ('+(ms[k]||'none')+')</option>'; }).join('')+'</select> '
   +'<label for="medsYear">Year</label> <select id="medsYear" aria-label="Year">'+years.map(function(yy){ return '<option value="'+yy+'">'+yy+'</option>'; }).join('')+'</select> '
   +'<button type="button" class="btn" id="medsPrint">Print</button> <button type="button" class="btn" id="medsCsv">Download CSV</button></div><p id="medsMsg" class="mut" aria-live="polite"></p>');
 }
 function medsLib(){ return window.BLDMedsRegister?Promise.resolve(window.BLDMedsRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='meds-register.js'; s.onload=function(){ ok(window.BLDMedsRegister); }; s.onerror=no; document.head.appendChild(s); }); }
+/* The name a blank Given by shows: the owner's rule row meds.given_by.default (older key register.given_by_default) in force
+   today (latest from-date wins). Read at run time so no name is written in the code (public repo rule). No row: a blank name stays blank. */
+function medsNamed(){ var t=todayISO(), best=null;
+ (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ if((r.rule_key==='meds.given_by.default'||r.rule_key==='register.given_by_default')&&r.effective_from&&r.effective_from<=t&&(!r.to_date||r.to_date>=t)&&(!best||r.effective_from>best.effective_from)) best=r; });
+ return best?String(best.value||'').trim():''; }
 function medsMake(R){ var period=(document.getElementById('medsPeriod')||{}).value||'month';
- var kennel=kennelNow(), printed=dmy(todayISO())+' '+hhmmNow();
+ var kennel=kennelNow(), printed=dmy(todayISO())+' '+hhmmNow(), named=medsNamed();
  var rows=R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO());
  if(period==='year'){ var y=(document.getElementById('medsYear')||{}).value||todayISO().slice(0,4), sheets=[], mi, flat=[];
   for(mi=1;mi<=12;mi++){ var ym=y+'-'+(mi<10?'0':'')+mi; if(ym+'-01'>todayISO()) continue;
-   sheets.push({month:ym,lines:R.build(rows,{month:ym,dog:regDog})}); }
+   sheets.push({month:ym,lines:R.build(rows,{month:ym,dog:regDog,named:named})}); }
   sheets.forEach(function(s){ flat=flat.concat(s.lines); });
-  return {period:'year',year:y,ym:y,sheets:sheets,lines:flat,head:{kennel:kennel,year:y,printed:printed}}; }
+  return {period:'year',year:y,ym:y,sheets:sheets,lines:flat,head:{kennel:kennel,year:y,printed:printed,named:named}}; }
  var ym=(document.getElementById('medsMonth')||{}).value||'';
- var lines=R.build(rows,{month:ym,dog:regDog});
- return {ym:ym,lines:lines,head:{kennel:kennel,month:ym,printed:printed}}; }
+ var lines=R.build(rows,{month:ym,dog:regDog,named:named});
+ return {ym:ym,lines:lines,head:{kennel:kennel,month:ym,printed:printed,named:named}}; }
 function bindMeds(){ var p=document.getElementById('medsPrint'), c=document.getElementById('medsCsv'), msg=document.getElementById('medsMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; };
  medsLib().catch(function(){});   /* fetched now, so Print can open its tab inside the press and is not blocked */
@@ -5567,8 +6019,22 @@ document.addEventListener('click',async function(ev){
   if(res.session) rows.push({id:res.id||'',check_type_id:f.check_type_id,subject_id:'',covered_ids:res.covered_ids||f.dog_ids||'',exceptions:f.exceptions||'',outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who});
   else ids.forEach(function(d,i){ rows.push({id:(res.ids&&res.ids[i])||((res.id||'jcal')+'-'+i),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who}); });
   var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml();
+  donePhotoHub(key,res);
  } else { b.disabled=false; b.textContent='Done today'; var p=document.createElement('p'); p.className='msg bad'; p.setAttribute('data-jcal-msg',''); p.textContent=sinkMsg(r||{},''); b.closest('.jcal').appendChild(p); }
 });
+/* After Done today, offer a photo (shared helper staff/lib/evidence-photo.js). The record is already saved; the photo
+   joins each saved row as evidence. Switch: rule rows job.done_photo(.<type_key>), default on. */
+function hubPhotoSender(){
+ function norm(j){ return j&&j.ok?{ok:true,id:(j.result||{}).id}:{ok:false,message:(j&&j.message)||'Not saved.'}; }
+ return {fileAdd:function(f){ return sinkSend({action:'file_add',fields:f}).then(norm); },
+  linkAdd:function(f){ return sinkSend({action:'link_add',fields:f}).then(function(j){ if(j&&j.ok) (T['BLD-links.csv']=T['BLD-links.csv']||[]).push(Object.assign({id:(j.result||{}).id||''},f)); return norm(j); }); }};
+}
+function donePhotoHub(key,res){
+ var P=window.BLDEvidencePhoto, ids=res&&res.ids&&res.ids.length?res.ids:[res&&res.id];
+ if(!P||!ids[0]||(res.status==='queued')||!P.doneOn(T['BLD-breeding_rule.csv']||[],key,todayISO())) return;
+ var card=[].slice.call(document.querySelectorAll('[data-jcal]')).filter(function(x){return x.getAttribute('data-jcal')===key;})[0]; if(!card) return;
+ P.offer(card,{send:hubPhotoSender(),fromTable:'check_log',fromIds:ids,day:todayISO(),name:key+'.jpg',source:'Job done: '+key,title:'Add photo',hint:'A photo of the job done, or skip.'});
+}
 /* Checks register (priority 2, 21 Nov 2026): print or CSV of one month's check records for an inspector. Read only.
    checks-register.js is fetched when Compliance opens (not on first load). Every month from the first record to this one
    is offered, a month with none too, so its nil record can be printed. Printing is inside this page, as Temperatures. */
@@ -5594,7 +6060,7 @@ function ckrSubject(r){ var a=r.area_id&&(CD.allAreas||[]).filter(function(x){ r
   r.item_id?(it&&(it.name||it.item_no)?'Item '+(it.name||it.item_no):'Item not on the list'):''].filter(Boolean).join(', ')||'Whole site'; }
 function ckrMake(R){ var ym=(document.getElementById('ckrMonth')||{}).value||'', ts=document.getElementById('ckrType'), tid=ts?ts.value:'';
  var lines=R.build(T['BLD-check_log.csv']||[],{month:ym,typeId:tid,types:T['BLD-check_type.csv']||[],subject:ckrSubject,dogName:function(id){ var d=regDog(id); return d&&d.name?d.name:'Dog not on the current list'; }});
- return {ym:ym,lines:lines,head:{kennel:(CD.tenant&&CD.tenant.name)||'',month:ym,which:tid&&ts?ts.options[ts.selectedIndex].textContent:'All checks',printed:dmy(todayISO())+' '+hhmmNow()}}; }
+ return {ym:ym,lines:lines,head:{kennel:kennelNow(),month:ym,which:tid&&ts?ts.options[ts.selectedIndex].textContent:'All checks',printed:dmy(todayISO())+' '+hhmmNow()}}; }
 function bindChecksReg(){ var p=document.getElementById('ckrPrint'), c=document.getElementById('ckrCsv'), msg=document.getElementById('ckrMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; }, n=function(x){ return x.lines.length+' entr'+(x.lines.length===1?'y':'ies'); };
  ckrLib().catch(function(){});
@@ -5845,7 +6311,7 @@ function ypCtx(R){
   areaName:function(id){ var a=byId(areas,id); return a&&a.name?a.name:''; },
   itemName:function(id){ var it=byId(items,id); return it&&it.name?it.name:''; },
   litterName:function(id){ var l=null; litters.forEach(function(x){ if(x.id===id) l=x; }); return l&&typeof litName==='function'?'Litter '+litName(l):''; },
-  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO()),{month:ym,dog:regDog});
+  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO()),{month:ym,dog:regDog,named:medsNamed()});
    return {columns:R.COLUMNS,lines:lines,cell:function(l,k){ return R.cell(l,k); }}; }:null };
 }
 function pageYearly(){
@@ -6178,7 +6644,7 @@ function goBody(id,push){
    +'<p class="cd-retry"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
- /* Report 20 Nov 2026: the Bin page is gone. An old #/bin address opens Settings, or Main when this sign-in has no Settings. */
+ /* The Bin page is gone. An old #/bin address opens Settings, or Main when this sign-in has no Settings. */
  if(id==='bin'&&LOAD.later==='wait'){ id='admin'; full='admin'; sub=null; main.setAttribute('data-view',id); }   /* Settings' rows still loading: wait; SHOWN stays #/bin, so the redraw when they land decides */
  else if(id==='bin'){
   var binTo=navHas('admin')?'admin':'map';

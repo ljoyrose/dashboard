@@ -57,8 +57,10 @@
     function moves() { c.go('mv/' + tag); }
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
-    Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field'), c.readOptional('breeding_rule'), c.readOptional('check_setting'),
-      tag ? c.readOptional('area_capacity') : { ok: true, rows: [] }, tag ? c.readOptional('area_access') : { ok: true, rows: [] }, tag ? c.readOptional('weight') : { ok: false, rows: [] }]).then(function (v) {
+    // 22 Nov 2026: the lists are shared for the session (save library), the job records are always read fresh, and the
+    // whole wait gives up after 45 s with Try again (shell limit).
+    (c.limit || function (p) { return p; })(Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field'), c.readOptional('breeding_rule'), c.readOptional('check_setting'),
+      tag ? c.readOptional('area_capacity') : { ok: true, rows: [] }, tag ? c.readOptional('area_access') : { ok: true, rows: [] }, tag ? c.readOptional('weight') : { ok: false, rows: [] }]), host, function () { open(host, c); }).then(function (v) {
       /* a visitor's records count here only when stamped counts_due true: this screen does not read the visit's grant */
       var d = v[0], typesRead = v[1], logs = (v[2].rows || []).filter(function (l) { return !BLDDue.visitOf(l) || String(l.counts_due).toLowerCase() === 'true'; }), tags = v[3], off = !typesRead.ok || !c.save.banner('check_log').canSave || !d.ok;
       if (off && tag) { moves(); return; }
@@ -188,14 +190,11 @@
           : [h('p', { class: 'sub', text: 'No dogs here.' })])));
       }
       /* this code cannot read past records (no read rows for check_log): say so, never a silent "Due" */
-      /* the owner 17 Nov 2026: jobs she had just saved still said Due. Say WHY the records were not read: not allowed for this
-         code (ask the owner), or no answer in time (slow saves: try again), with a Try again button for the second. */
+      /* 17 Nov 2026: jobs the owner had just saved still said Due. 22 Nov 2026: one neutral line whatever the reason (no
+         answer in time, or no read rows for check_log yet), always with Try again; never "Ask <name>", never blame. */
       if (!v[2].ok) {
-        var slow = v[2].code === 'NETWORK' || v[2].code === 'BUSY' || v[2].code === 'TIMEOUT' || !v[2].code;
-        host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', text: slow
-          ? 'The past records did not load in time, so "Due" may already be done. Try again in a minute.'
-          : 'This code cannot read past records' + (v[2].message ? ' (' + v[2].message + ')' : '') + ', so "Due" may already be done. Ask Lisa.' }));
-        if (slow) host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));
+        host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', 'data-why': String(v[2].code || ''), text: 'Couldn\u2019t check what\u2019s done yet. Try again.' }));
+        host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));
       }
       var status = h('p', { class: 'msg', role: 'status' }), list = h('div', { class: 'cards' }), group = '', more = false;
       var photoBox = h('div', { 'data-diary-photo': '1' });   // 22 Nov 2026: "Add the diary page" after an Earlier save; outside the list, so a redraw keeps it
@@ -302,9 +301,22 @@
           kept[job.type_key] = true;   // stays on today's list with its tick, not gone without a trace
           say(left ? 'Left out: ' + left + '.' : '', 'warn');
           draw();
+          if (!paper) donePhoto(job, t, entry, r);   // an Earlier entry gets the diary-page photo instead (PR 755)
         });
       }
 
+      /* After a Done, offer a photo. The record is already saved; the photo is optional and joins each saved row
+         (one per dog) as evidence. Switch: rule rows job.done_photo(.<type_key>), default on. */
+      function donePhoto(job, t, entry, r) {
+        var P = window.BLDEvidencePhoto;
+        if (!P || r.status === 'queued' || (entry.outcome !== 'ok' && entry.outcome !== 'recorded')) return;
+        var ids = r.ids && r.ids.length ? r.ids : [r.id];
+        if (!ids[0] || !P.doneOn(rules, t.type_key, today)) return;
+        var card = list.querySelector('[data-job="' + t.type_key + '"]');
+        if (!card) return;
+        P.offer(card, { send: P.staffSender(c.save), fromTable: 'check_log', fromIds: ids, day: today,
+          name: t.type_key + '.jpg', source: 'Job done: ' + (t.label || t.type_key), title: 'Add photo', hint: 'A photo of the job done, or skip.' });
+      }
       function diaryPhoto(job, ids, day) {
         loadEvidence().then(function (E) {
           if (!E || !E.offer) return;
@@ -619,7 +631,7 @@
     var h = c.h, was = ctx0.reportFor || {};
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
-    Promise.all([c.data(), c.readOptional('check_type')]).then(function (v) {
+    (c.limit || function (p) { return p; })(Promise.all([c.data(), c.readOptional('check_type')]), host, function () { openReport(host, c); }).then(function (v) {
       /* the kinds of report are the owner's job rows with target "optional" (incident, accident, lost dog...): no fixed key */
       var d = v[0], kinds = v[1].ok ? BLDDue.jobsInForce(v[1].rows, c.today()).filter(function (t) { return t.target === 'optional' && isOn(t); })
         .sort(function (a, b) { return (a.type_key === REPORT_KEY ? -1 : b.type_key === REPORT_KEY ? 1 : 0) || String(a.label).localeCompare(String(b.label)); }) : [], type = kinds[0];

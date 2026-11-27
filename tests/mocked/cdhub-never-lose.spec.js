@@ -266,7 +266,7 @@ test('owner sign-in ends: the save is kept, the line says sign in again, and it 
   await page.route(SINK, async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
     let ans;
-    if (body.google_token) { saved.push(body.request_id); ans = { ok: true, result: { status: 'saved', id: 'occ-new', who: 'Lisa', at: '2026-11-13T10:00:00+00:00' } }; }
+    if (body.google_token) { saved.push(body.request_id); ans = { ok: true, result: { status: 'saved', id: 'occ-new', who: 'Owner', at: '2026-11-13T10:00:00+00:00' } }; }
     else ans = answer(body);
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ans) });
   });
@@ -297,6 +297,64 @@ test('owner sign-in ends: the save is kept, the line says sign in again, and it 
   await expect(bar).toBeHidden();
   expect(saved).toEqual([kept[0].id]);
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
+});
+
+// QUIET RENEWAL: an owner Google sign-in ends mid-round. The hub renews it without a prompt and the kept save goes by
+// itself, saved once, with the screen left as it is (no reload). If Google cannot renew quietly, the line keeps asking to
+// sign in again, the page stays as it is, and Google is not asked again for 5 minutes.
+async function ownerRound(page, guard, saved) {
+  rooms(guard.world);
+  await page.route(SINK, async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    let ans;
+    if (body.google_token) { saved.push({ id: body.request_id, token: body.google_token }); ans = { ok: true, result: { status: 'saved', id: 'occ-new', who: 'Owner', at: '2026-11-13T10:00:00+00:00' } }; }
+    else ans = answer(body);
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ans) });
+  });
+  await page.goto('cdhub/');
+  await page.evaluate((url) => { DASH_CONFIG.cdhub.saveScriptUrl = url; }, SINK);
+  await page.locator('#signinbtn').click();
+  await tabClick(page, '#nav button[data-go="dogs"]');
+  const card = page.locator('.dc[data-dog="sub-test-pup-1"]');
+  await expect(card).toBeVisible();
+  await page.evaluate(() => { document.querySelector('.dc[data-dog="sub-test-pup-1"]').dataset.sameNode = '1'; TOKEN_EXP = 0; });
+  await card.getByRole('button', { name: 'Place' }).click();
+  await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
+  await page.getByRole('dialog', { name: 'Staff code' }).getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.locator('#hub-outbox [data-outbox-waiting="1"][data-outbox-sign-in]')).toContainText('sign in again');
+  return JSON.parse(await page.evaluate(() => localStorage.getItem('cdhub.outbox') || '[]'));
+}
+
+test('owner sign-in ends mid-round: it is renewed quietly and the kept save goes by itself, once, with no reload @live', async ({ page, guard }) => {
+  const saved = [];
+  const kept = await ownerRound(page, guard, saved);
+  expect(kept).toHaveLength(1);
+  expect(saved).toHaveLength(0);
+  await page.evaluate(() => { window.__GIS_MODE = 'silent-ok'; hubRenewAt = 0; });
+  const before = await page.evaluate(() => window.__GIS_CALLS.request);
+  await page.evaluate(() => hubFlush());   // the minute retry: the save waits for a sign-in, so the hub renews it
+  await expect(page.locator('#hub-outbox')).toBeHidden();
+  expect(saved).toEqual([{ id: kept[0].id, token: 'FAKE-TEST-TOKEN' }]);
+  expect(await page.evaluate(() => window.__GIS_CALLS.request)).toBe(before + 1);
+  expect(await page.evaluate(() => window.__GIS_LAST_REQUEST.prompt)).toBe('');   // no pop-up, no account chooser
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
+  await expect(page.locator('.dc[data-dog="sub-test-pup-1"][data-same-node="1"]')).toHaveCount(1);   // screen not redrawn
+});
+
+test('owner sign-in ends and cannot be renewed quietly: the save stays kept, the page stays, Google is not asked again for 5 minutes', async ({ page, guard }) => {
+  const saved = [];
+  const kept = await ownerRound(page, guard, saved);
+  await page.evaluate(() => { window.__GIS_MODE = 'ok'; hubRenewAt = 0; });   // 'ok': a prompt-less request fails
+  const before = await page.evaluate(() => window.__GIS_CALLS.request);
+  await page.evaluate(() => hubFlush());
+  await expect.poll(() => page.evaluate(() => hubRenewing)).toBe(false);
+  await page.evaluate(() => hubFlush());
+  expect(await page.evaluate(() => window.__GIS_CALLS.request)).toBe(before + 1);   // one quiet try, not one a minute
+  await expect(page.locator('#hub-outbox [data-outbox-waiting="1"][data-outbox-sign-in]')).toContainText('sign in again');
+  await expect(page.locator('#signinbtn')).toHaveCount(0);   // the page did not drop to the sign-in screen
+  await expect(page.locator('.dc[data-dog="sub-test-pup-1"][data-same-node="1"]')).toHaveCount(1);
+  expect(saved).toHaveLength(0);
+  expect(JSON.parse(await page.evaluate(() => localStorage.getItem('cdhub.outbox') || '[]'))).toHaveLength(kept.length);
 });
 
 // OV13 22 Nov 2026: saves took 19-60 s; the first try saved but its answer never came; the resend was answered

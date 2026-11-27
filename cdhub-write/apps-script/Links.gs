@@ -1,5 +1,5 @@
 /**
- * Record-to-record links (14 Nov 2026, DRAFT; Lisa decision C, 13 Nov: one link table, shown on both sides,
+ * Record-to-record links (14 Nov 2026, DRAFT; the owner decision C, 13 Nov: one link table, shown on both sides,
  * addable from either side; free tags are links of a kind that carries no rule meaning).
  *
  *   action 'link_add'  adds one BLD-links row: from_table/from_id -> to_table/to_id with a role.
@@ -18,7 +18,7 @@
  * One links table: the spec is ITEMS' TABLES.links (PR 568); the owner's generic add path writes the same file.
  * A second open row with the same from, to and kind is refused as DUPLICATE.
  * Rows follow STANDARD S4: from_date/to_date, source, set_by, set_on, created_at/updated_at (UTC).
- * Switch: TABLE_ON_links, OFF until Lisa says go.
+ * Switch: TABLE_ON_links, OFF until the owner says go.
  */
 var LINKS_ = {
   file: 'BLD-links.csv', on: 'links', idPrefix: 'lnk',
@@ -159,8 +159,39 @@ function sinkLinkAdd_(req) {
   });
 }
 
+function linkEndOne_(read, rec, idx, to, reason, stamp) {
+  var row = read.header.map(function (h) {
+    if (h === 'to_date') return to;
+    if (h === 'updated_at') return stamp;
+    if (h === 'end_reason') return reason;
+    return rec[h] == null ? '' : String(rec[h]);
+  });
+  store_replaceRow_(LINKS_.file, read.header, idx, row, read);
+}
+function linkEndMany_(f, who, now) {
+  var list = f.ends, today = todayLondon_(now);
+  if (!list || !list.length || list.length > 200) throw err_('INVALID', 'Say which photos to remove.');
+  var rerr = {}, reason = dogcardText_(f.reason, 'reason', rerr, 500);
+  if (Object.keys(rerr).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: rerr });
+  var saved = [], already = [];
+  for (var n = 0; n < list.length; n++) {
+    var one = list[n] || {}, rowId = String(one.id || '').trim(), to = String(one.to_date || '').trim() || today;
+    if (!ID_RE_.test(rowId) || !isRealDate_(to)) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { id: 'Say which link to end.' } });
+    var read = linksRead_(), tenant = prop_(BLD.PROP.TENANT_ID), idx = -1;
+    read.records.forEach(function (r, i) { if (r.id === rowId && (!tenant || !r.tenant_id || r.tenant_id === tenant)) idx = i; });
+    if (idx < 0) throw err_('NOT_FOUND', 'That link was not found.');
+    var rec = read.records[idx], kind = linkKindsInForce_(today)[rec.role] || {};
+    if (!linkMay_(kind, who)) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask the owner.');
+    if (String(rec.to_date || '')) { already.push(rowId); continue; }
+    if (to < String(rec.from_date || '')) to = String(rec.from_date || to);
+    linkEndOne_(read, rec, idx, to, reason, linksUtc_(now));
+    saved.push(rowId);
+  }
+  return { status: 'saved', ids: saved, already: already };
+}
 function sinkLinkEnd_(req) {
   return linksEntry_(req, function (f, who, now) {
+    if (f.ends) return linkEndMany_(f, who, now);
     var rowId = String(f.id || '').trim(), today = todayLondon_(now), to = String(f.to_date || '').trim() || today;
     if (!ID_RE_.test(rowId)) throw err_('INVALID', 'Say which link to end.');
     var rerr = {}, reason = dogcardText_(f.reason, 'reason', rerr, 500);
@@ -174,14 +205,7 @@ function sinkLinkEnd_(req) {
     // Already ended: the link is in the state this save wanted. Say saved so the phone stops and does not send it again.
     if (String(rec.to_date || '')) return { status: 'saved', id: rowId, ended: String(rec.to_date), already: true };
     if (to < String(rec.from_date || '')) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_date: 'The end date cannot be before the start date.' } });
-    var stamp = linksUtc_(now);
-    var row = read.header.map(function (h) {
-      if (h === 'to_date') return to;
-      if (h === 'updated_at') return stamp;
-      if (h === 'end_reason') return reason;
-      return rec[h] == null ? '' : String(rec[h]);
-    });
-    store_replaceRow_(LINKS_.file, read.header, idx, row, read);
+    linkEndOne_(read, rec, idx, to, reason, linksUtc_(now));
     return { status: 'saved', id: rowId, ended: to };
   });
 }

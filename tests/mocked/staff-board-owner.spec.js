@@ -49,7 +49,7 @@ test('an owner with no save address on this phone: it is read from the hub folde
   expect(await page.evaluate(() => localStorage.getItem('bld.scriptUrl'))).toBe(SCRIPT);
 });
 
-// Storage tidy, stage 2 (owner 15 Nov 2026): the file may carry set_at and set_by (a role); only url is used. The address
+// Storage tidy, stage 2: the file may carry set_at and set_by (a role); only url is used. The address
 // found is kept for CD Hub too (cdhub.save.url), unless CD Hub was switched off on this phone (new or old key).
 for (const off of [null, 'cdhub.save.off', 'cdhub.sink.off']) {
   test(`an owner's address from the hub folder (with set_at and set_by) is ${off ? 'not shared while ' + off + ' is set' : 'kept for CD Hub too'}`, async ({ page }) => {

@@ -172,6 +172,9 @@ const CASES = [
       put(env, 'BLD-species.csv', lines('id,tenant_id,code,common_name,adult_female_word,adult_male_word,young_word,active', [`sp-dog,${T},dog,dog,Female,Male,puppy,yes`]));
     },
     body: () => ({ action: 'subject_create', fields: { name: 'Invented Dog', sex: 'Male', species: 'dog', kind: 'adult', dob: '2024-01-01' } }) },
+  { id: 'subject_video', on: ['subject_video'], role: 'staff', writes: ['BLD-subject_video.csv'], read: 'subject_video',
+    seed: (env) => put(env, 'BLD-subject_video.csv', lines('id,subject_id,video_url,title,is_main,created_at,corrects_id,active')),
+    body: () => ({ action: 'subject_video', fields: { subject_id: 'sub-test-a', video_url: 'https://share.puppyclassroom.com/v/pretend1', title: 'Pretend clip' } }) },
   { id: 'subject_link', on: ['subject_link'], role: 'owner', writes: ['BLD-subject_link.csv'], read: 'subject_link',
     seed: (env) => { put(env, 'BLD-subject_link.csv', lines(H.subject_link)); rules(env, [`r1,${T},link_kind.bff,BFFs,2026-01-01,test,,,,`]); },
     body: () => ({ action: 'subject_link', fields: { subject_id: 'sub-test-a', other_subject_id: 'sub-test-b', kind: 'bff' } }) },
@@ -313,7 +316,7 @@ test('status=1: no side effects (no waiting move applied, no file written) and e
   assert.equal(st.ok, true); assert.equal(st.sideEffectFree, true); assert.equal(st.version, env.ctx.BLD.VERSION);
   assert.ok(st.tables.some((t) => t.key === 'occupancy' && t.on === true));
   const by = Object.fromEntries(st.switches.map((s) => [s.name, s]));
-  ['TABLE_ON_weighing', 'TABLE_ON_vaccination', 'TABLE_ON_dog_details', 'TABLE_ON_subject_create', 'TABLE_ON_subject_link', 'TABLE_ON_files',
+  ['TABLE_ON_weighing', 'TABLE_ON_vaccination', 'TABLE_ON_dog_details', 'TABLE_ON_subject_create', 'TABLE_ON_subject_link', 'TABLE_ON_subject_video', 'TABLE_ON_files',
     'TABLE_ON_links', 'TABLE_ON_code_register', 'TABLE_ON_staff', 'DOG_PHOTOS_FOLDER_ID', 'FILES_FOLDER_ID', 'OWNER_EDIT_ENABLED'].forEach((k) => assert.ok(by[k], k));
   assert.equal(by.TABLE_ON_files.on, true); assert.equal(by.TABLE_ON_links.on, false);
   assert.equal(by.DOG_PHOTOS_FOLDER_ID.set, true); assert.equal(by.FILES_FOLDER_ID.set, false);

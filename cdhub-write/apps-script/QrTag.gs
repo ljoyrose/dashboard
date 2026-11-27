@@ -1,5 +1,5 @@
 /**
- * QR codes made when an item is added (Lisa 15 Nov 2026, print-any-item job, Addendum 2 f-h and Addendum 3 j).
+ * QR codes made when an item is added (15 Nov 2026, print-any-item job, Addendum 2 f-h and Addendum 3 j).
  *
  * Whether an item gets a code is an owner rule row in BLD-breeding_rule, one per item type, dated like every rule:
  *   qr.on_add.<kind>             yes / no     kind = a BLD-qr_tag kind: subject, area, litter, site, thermometer, item
@@ -9,7 +9,7 @@
  * When the rule says yes, the add (subject_create, items, thermometer) writes ONE BLD-qr_tag row (tag, kind, ref_id) in the
  * same save. An active tag that already exists for the same kind + ref_id is reused, never doubled. The print page keeps
  * making a code for anything that still has none, and reuses existing ones.
- * Nothing here runs unless SAVE_ENABLED and TABLE_ON_qr_tag are both true (both OFF until Lisa says yes). A failed QR write
+ * Nothing here runs unless SAVE_ENABLED and TABLE_ON_qr_tag are both true (both OFF until the owner says yes). A failed QR write
  * never undoes the item: the answer says so and Print makes the code later.
  *
  * The same rule is in cdhub/staff/lib/qr-rules.js for the browser and the back-fill tool; tests/qr-on-add.test.js checks
