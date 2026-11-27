@@ -477,14 +477,14 @@ async function loadAreaData(){
         if(!AREA_DAYS[date])AREA_DAYS[date]={};
         var u=unitFor(r.area_id,r.thermometer_id);
         if(!AREA_DAYS[date][u])AREA_DAYS[date][u]={};
-        var v={min:r.min_c,max:r.max_c,spot:r.spot_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes',from:r.linked_from?[r.linked_from]:[]};
+        var v={min:r.min_c,max:r.max_c,spot:r.spot_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes',from:r.linked_from?[r.linked_from]:[],by:String(r.taken_by||'').trim()};   /* by: who took it, for the print */
         var was=AREA_DAYS[date][u][slot];
         /* A merged room: two old rooms' readings in one slot. Never averaged: the lowest MIN and highest MAX, so a breach stays visible. */
         /* A reading taken in the room itself wins over linked copies (same rule as Compliance, SOPS 12 Nov). */
         if(was&&!was.from.length&&v.from.length) return;
         if(was&&was.from.length&&v.from.length&&window.BLDAreaLink){
           var w=window.BLDAreaLink.widest(was,v);
-          v={min:w.min===null?'':String(w.min),max:w.max===null?'':String(w.max),note:[was.note,v.note].filter(Boolean).join(' · '),empty:was.empty&&v.empty,from:was.from.concat(v.from.filter(function(f){ return was.from.indexOf(f)<0; }))};
+          v={min:w.min===null?'':String(w.min),max:w.max===null?'':String(w.max),note:[was.note,v.note].filter(Boolean).join(' · '),empty:was.empty&&v.empty,from:was.from.concat(v.from.filter(function(f){ return was.from.indexOf(f)<0; })),by:was.by};
         }
         AREA_DAYS[date][u][slot]=v;
       });
@@ -732,8 +732,8 @@ function slotState(t,aid,day,slot){
   if(t&&(hasVal(t.min)||hasVal(t.max))){
     var cls=tempCls(t.min,t.max,day,unitArea(aid),t.spot), k=cls==='ok'?'in':cls==='unknown'?'nolimit':(cls==='swap'||cls==='unread')?'swap':cls==='warm'?'warm':cls==='nospot'?'nospot':'out';
     if(t.empty&&k==='out') k='eout';
-    if(cls==='unread') return {k:k, unread:true, empty:!!t.empty, lo:String(t.min==null?'':t.min).trim(), hi:String(t.max==null?'':t.max).trim(), note:t.note||''};
-    return {k:k, why:cls, empty:!!t.empty, lo:dpIndoor(t.min), hi:dpIndoor(t.max), spot:hasVal(t.spot)?dpIndoor(t.spot):'', note:t.note||''};
+    if(cls==='unread') return {k:k, unread:true, empty:!!t.empty, lo:String(t.min==null?'':t.min).trim(), hi:String(t.max==null?'':t.max).trim(), note:t.note||'', by:t.by||''};
+    return {k:k, why:cls, empty:!!t.empty, lo:dpIndoor(t.min), hi:dpIndoor(t.max), spot:hasVal(t.spot)?dpIndoor(t.spot):'', note:t.note||'', by:t.by||''};
   }
   if(t&&t.empty) return {k:'empty'};
   if(!neededOn(aid,day)) return {k:'none'};
