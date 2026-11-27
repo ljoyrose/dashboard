@@ -28,7 +28,7 @@ test('a good private QR sets the phone up and leaves no code in the address', as
   await expect(page.locator('[data-module="jobs"]')).toBeVisible();
 });
 
-// Storage tidy, stage 2 (owner 15 Nov 2026): set-up here also keeps CD Hub's copy, so both pages share one code and address.
+// Storage tidy, stage 2: set-up here also keeps CD Hub's copy, so both pages share one code and address.
 const hubKeys = (page) => page.evaluate(() => ['cdhub.staff.code', 'cdhub.save.url', 'cdhub.save.off', 'cdhub.sink.off'].map((k) => localStorage.getItem(k)));
 
 test('set-up here also keeps CD Hub\'s copy and undoes an earlier "Switch off here" in CD Hub', async ({ page }) => {
