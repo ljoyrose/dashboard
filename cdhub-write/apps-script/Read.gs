@@ -1,8 +1,8 @@
 /**
- * The code-gated READ action. A staff code can read a list only as far as Lisa has allowed.
+ * The code-gated READ action. A staff code can read a list only as far as the owner has allowed.
  *
  * DEFAULT DENY. Nothing is readable until BOTH are true:
- *   1. READ_ENABLED is 'true' (a switch Lisa sets; off by default), and
+ *   1. READ_ENABLED is 'true' (a switch the owner sets; off by default), and
  *   2. BLD-field_visibility.csv has rows for the code's audience (OWNER -> aud-admin, STAFF -> aud-staff)
  *      on that table. The file is only ever READ here; this script never writes to it.
  *
@@ -20,17 +20,17 @@
  *         own_rows_days<=N      only rows this person entered, from the last N days
  *         key_prefix=<p>        only rows whose key column starts with <p> (e.g. key_prefix=job. on breeding_rule:
  *                               staff phones read the job.* owner settings and nothing else; 15 Nov 2026, SOPJOBS S8)
- *         key_prefix=<p>|<q>    several prefixes in one rule, up to 10, joined by | (Lisa 22 Nov 2026: staff also need
+ *         key_prefix=<p>|<q>    several prefixes in one rule, up to 10, joined by | (22 Nov 2026: staff also need
  *                               the size rows, e.g. key_prefix=job.|size_from_kg.|size_colour.|size_label.); a row
  *                               whose key starts with any of them is shown, every other row stays hidden
  *     No * row, or one we cannot understand, means no rows at all.
- *   - DATED HIDING (Lisa 15 Nov 2026, Q3; optional columns at the end of the file, read only when they are there):
+ *   - DATED HIDING (15 Nov 2026, Q3; optional columns at the end of the file, read only when they are there):
  *         from_date / to_date   the row is in force only from .. to (both days included, London); blank = no limit.
  *                               A date that is not a real date: a hide row (visible = no) still counts, a show row does not.
  *         role_code             OWNER / STAFF / GUEST: the row is for that role when audience_id is blank.
  *         row_id                hides ONE record (its id column): field_name * hides the whole record, a column name
  *                               hides that one cell (sent blank). Only visible = no rows count here: a row_id row never
- *                               shows anything Lisa has not allowed. Hides from the person's and the role's rows both apply.
+ *                               shows anything the owner has not allowed. Hides from the person's and the role's rows both apply.
  *         source                why the row is there; not read.
  *     No such columns, or blank: everything works as before.
  * Staff never get the tenant_id column, the permissions file, the approvals queue or any list that is not in READABLE.

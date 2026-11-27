@@ -1,4 +1,4 @@
-// CD Hub Admin -> Visits (Lisa 13 Nov 2026): time-boxed visits by card or link. Invented rows only; the save script is pretend.
+// CD Hub Admin -> Visits (13 Nov 2026): time-boxed visits by card or link. Invented rows only; the save script is pretend.
 const { test: base, expect } = require('../support/test');
 const { buildWorld, IDS } = require('../support/world');
 const { tabClick } = require('../support/tabs');

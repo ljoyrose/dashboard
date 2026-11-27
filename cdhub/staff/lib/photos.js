@@ -70,7 +70,7 @@ var BLDPhotos = (function () {
   }
   /** A safe web address for a link file: http(s) only, else ''. */
   function safeUrl(u) { u = String(u || '').trim(); return /^https?:\/\/[^\s"'<>]+$/i.test(u) ? u : ''; }
-  /* Photo turn (Lisa 15 Nov 2026): the stored picture is never changed. Turning a photo is an owner setting row in the one
+  /* Photo turn (15 Nov 2026): the stored picture is never changed. Turning a photo is an owner setting row in the one
      rule list, photo.rotate.<files row id> = 0, 90, 180 or 270 (degrees clockwise), dated like every other rule; the row in
      force on the day wins. Every place that draws the photo (cards, lists, Breed Better, print) reads the same turn. */
   var TURNS = { '0': 0, '90': 90, '180': 180, '270': 270 };

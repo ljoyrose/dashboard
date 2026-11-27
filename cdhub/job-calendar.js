@@ -15,7 +15,7 @@
 
   /* the stop-gap until the owner has calendar rows (the owner 17 Nov 2026: health checks, bowls washed, site cleaned) */
   var STARTER = ['health_check_all', 'food_bowls', 'water_bowls', 'whole_site_clean'];
-  /* the stop-gap until the owner has calendar rows (Lisa 17 Nov 2026: health checks, bowls washed, site cleaned).
+  /* the stop-gap until the owner has calendar rows (17 Nov 2026: health checks, bowls washed, site cleaned).
      Bedding and Toys stay on the list even when the owner has chosen the other cards, unless a row turns them off. */
   var STARTER = ['health_check_all', 'food_bowls', 'water_bowls', 'whole_site_clean', 'bedding', 'toys'];
   var ALWAYS = ['bedding', 'toys'];

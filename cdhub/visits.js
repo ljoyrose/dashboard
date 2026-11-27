@@ -1,5 +1,5 @@
 /*!
- * VISITS (Admin -> Visits), owner-only. Lisa, 13 Nov 2026: inspectors, vets, auditors and guests get a time-boxed visit.
+ * VISITS (Admin -> Visits), owner-only. the owner, 13 Nov 2026: inspectors, vets, auditors and guests get a time-boxed visit.
  * Loaded only when the Visits card opens (admin.js), so the hub's first load stays the same size.
  * One window shape: Now for X hours, Now until HH:MM, or Scheduled DD/MM/YY HH:MM to DD/MM/YY HH:MM. End now needs a reason. Field names follow Regulatory-Core (7 Nov): a visit is a DisclosureGrant.
  * A visit is given by a pre-printed visitor card (BLD-qr_tag kind visitor_card) or a link. Visit types (BLD-grant_type)
@@ -235,7 +235,7 @@ var VisitView = (function () {
       + '<p class="mut">A change is a new row from today; earlier visits keep what they were given.</p></form>';
   }
 
-  /* WHO CAN GIVE VISITS (Lisa 13 Nov): giving access is a power of its own (BLD-delegation, power give_visit). No role
+  /* WHO CAN GIVE VISITS (13 Nov): giving access is a power of its own (BLD-delegation, power give_visit). No role
      carries it; only the owner confers it, with its own limits and how many layers it may be passed on. The server
      enforces "never more than the giver holds"; this list only shows the rows. */
   function person(T, id) {
@@ -319,7 +319,7 @@ var VisitView = (function () {
     return '';
   }
 
-  /* WHO GAVE WHAT (Lisa 13 Nov: "I can see who has given what from my admin screen?"). Owner-only, from rows:
+  /* WHO GAVE WHAT (13 Nov: "I can see who has given what from my admin screen?"). Owner-only, from rows:
      powers held (BLD-delegation, any power) with the chain back to the owner, and everything each person gave:
      visits (inspect_link.issued_by = the giver's code_id or 'owner'), codes (code_register.issued_by when the column exists, else the owner),
      roles (person_role.granted_by). Blank issuer = the owner ("You"). */

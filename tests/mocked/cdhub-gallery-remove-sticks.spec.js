@@ -50,7 +50,7 @@ async function setUp(page, guard, { reply } = {}) {
   return { sent, release, gal };
 }
 
-test('× removes the photo at once even when a live read lands during a slow save; both Photos stay open; it survives a reload', async ({ page, guard }) => {
+test('× removes the photo at once even when a live read lands during a slow save; both Photos stay open; it survives a reload @live', async ({ page, guard }) => {
   const { sent, release, gal } = await setUp(page, guard);
   await gal('sub-g1').locator('.gi[data-file="fil-2"] [data-gal-end]').click();
   await expect.poll(() => sent.length).toBe(1);
