@@ -93,7 +93,7 @@
         'RR_WEB-ESTATE engine > Project Settings > Script Properties > ESTATE_SHOPIFY_TOKENS: one line per shop, "<shop key>=<token>".',
         'Shopify has no bandwidth quota, so this shows visits only.'] },
     { id: 'ga4', test: /ga4|google analytics/i, source: 'Google Analytics 4', property: 'ESTATE_GA4_PROPERTIES',
-      steps: ['No token needed: the engine reads GA4 as Lisa. In the RR_WEB-ESTATE engine editor: Services > + > Google Analytics Data API > Add.',
+      steps: ['No token needed: the engine reads GA4 as the Owner. In the RR_WEB-ESTATE engine editor: Services > + > Google Analytics Data API > Add.',
         'GA4 > Admin > Property details: copy the property id (numbers only).',
         'Script Properties > ESTATE_GA4_PROPERTIES: one line per site, "<site key>=<property id>". Visits only; GA4 has no bandwidth quota.'] }
   ];

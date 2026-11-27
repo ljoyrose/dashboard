@@ -133,7 +133,7 @@
   details.tdet dt { color: var(--muted); }
   details.tdet dd { margin: 0; overflow-wrap: anywhere; }
   details.tdet ol { margin: 6px 0 0; padding-left: 20px; font-size: var(--fs-small); }
-  details.tdet .lisa { margin: 8px 0 0; font-size: var(--fs-small); font-weight: 600; }
+  details.tdet .owner-step { margin: 8px 0 0; font-size: var(--fs-small); font-weight: 600; }
   /* DNS & Email cards (#/mail) */
   .mailc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-width: 0; overflow-wrap: anywhere; }
   .mailc .m { font-size: var(--fs-small); color: var(--muted); margin: 0; }
@@ -341,7 +341,7 @@
   // details fold. No stats: "Traffic stats not connected" and the the owner-only setup step. Free plans stay free: no upgrade words.
   function trafficBlock(r) {
     var t = TR.trafficFor(r, extra.Traffic, today()), id = 'tr-' + String(r.key).replace(/[^a-z0-9]+/gi, '-');
-    var steps = function (s) { return '<p class="lisa">Lisa-only step' + (s.property ? ' (Script Property ' + esc(s.property) + ')' : ' (typed by hand)') + '</p><ol data-tr-steps>' + s.steps.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>'; };
+    var steps = function (s) { return '<p class="owner-step">Owner-only step' + (s.property ? ' (Script Property ' + esc(s.property) + ')' : ' (typed by hand)') + '</p><ol data-tr-steps>' + s.steps.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>'; };
     if (!t.connected) {
       return '<div class="traffic" data-traffic="' + esc(r.key) + '" data-level="none"><div class="tline"><span class="badge" data-tr="none"><b>Traffic</b>stats not connected</span></div>' +
         '<details class="tdet" data-tr-details><summary aria-controls="' + id + '">Traffic details</summary><div id="' + id + '"><dl>' +
