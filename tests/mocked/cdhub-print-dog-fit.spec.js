@@ -21,7 +21,7 @@ function open(page, tables, deny) {
 const dogs = {
   area: [{ id: 'r01', code: 'R01', area_value: '16.3', area_unit_id: 'u-m2' }],
   subject: [
-    { id: 'd01', name: 'Abe', sex: 'Female', size_band: 'medium', photo: 'FAKEPHOTO1' },
+    { id: 'd01', name: 'Dog A', sex: 'Female', size_band: 'medium', photo: 'FAKEPHOTO1' },
     { id: 'd02', name: 'Longwordlongword', sex: 'Male', size_band: 'medium' }
   ],
   occupancy: [

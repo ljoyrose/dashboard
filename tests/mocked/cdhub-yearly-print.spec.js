@@ -90,7 +90,7 @@ test('screenshots: a health-check month, a sparse month, and a medicines month',
       { id: 'ct-h', type_key: 'health_check_all', label: 'Health check', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-01-01' },
       { id: 'ct-p', type_key: 'parasites', label: 'Parasites', target: 'dog', every_days: '90', effective_from: '2026-01-01' }
     ];
-    const dogs = [{ id: 'd1', name: 'Ada', dob: '2024-01-01', onSite: true }, { id: 'd2', name: 'Bob', dob: '2024-06-01', onSite: true }];
+    const dogs = [{ id: 'd1', name: 'Dog A', dob: '2024-01-01', onSite: true }, { id: 'd2', name: 'Dog B', dob: '2024-06-01', onSite: true }];
     const logs = [
       { id: 'l1', check_type_id: 'ct-h', subject_id: 'd1', outcome: 'ok', happened_at: '2026-03-02T09:00:00Z', taken_by: 'Sample Staff' },
       { id: 'l2', check_type_id: 'ct-h', subject_id: 'd2', outcome: 'part_done', happened_at: '2026-03-02T09:00:00Z', taken_by: 'Sample Staff', note: 'half the check' },
@@ -99,7 +99,7 @@ test('screenshots: a health-check month, a sparse month, and a medicines month',
     const ctx = { today: today, kennel: 'Sample Kennel', printed: '15 Mar 2026', types: types, logs: logs, dogs: dogs, tables: {}, dogName: (id) => (dogs.find((d) => d.id === id) || {}).name || '' };
     const health = Y.build({ period: 'month', year: 2026, month: 2, ids: ['check:health_check_all'], today: today }, ctx).html;
     const sparse = Y.build({ period: 'month', year: 2026, month: 1, ids: ['check:parasites'], today: today }, ctx).html;
-    const lines = R.build([{ id: 'dsp', subject_id: 'd1', given_on: '2026-03-04', product: 'Med C', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: '2026-03', dog: () => ({ name: 'Ada', chip: '' }) });
+    const lines = R.build([{ id: 'dsp', subject_id: 'd1', given_on: '2026-03-04', product: 'Med C', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: '2026-03', dog: () => ({ name: 'Dog A', chip: '' }) });
     const meds = R.toHtml({ kennel: 'Sample Kennel', month: '2026-03', printed: '15 Mar 2026' }, lines);
     const wrap = (inner) => '<!doctype html><html><head><meta charset="utf-8"><style>' + Y.CSS + 'body{margin:0;background:#fff}#ypReport{display:block}</style></head><body><div id="ypReport">' + inner + '</div></body></html>';
     return { health: wrap(health), sparse: wrap(sparse), meds: meds.replace(/<script[\s\S]*?<\/script>/gi, '') };
@@ -120,30 +120,30 @@ test('exercise rows on another type and round rows still fill the year grid @reg
     { id: 'cty-play-9', type_key: 'exercise_and_play', label: 'Exercise and play', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-11-01' },
     { id: 'cty-exercise_all-1', type_key: 'exercise_all', label: 'Exercise all', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-01-01' }
   ];
-  const dogs = [{ id: 'ada', name: 'Ada', dob: '2020-01-01', onSite: true, kind: 'Breeding Female' }];
+  const dogs = [{ id: 'dogA', name: 'Dog A', dob: '2020-01-01', onSite: true, kind: 'Breeding Female' }];
   const logs = [];
-  for (let d = 1; d <= 31; d++) logs.push({ id: 'p' + d, check_type_id: 'cty-exercise_all-1', subject_id: 'ada', outcome: 'ok', happened_at: '2026-10-' + String(d).padStart(2, '0') + 'T12:00:00Z' });
-  logs.push({ id: 'round', check_type_id: 'cty-exercise_all-1', covered_ids: 'ada', outcome: 'recorded', happened_at: '2026-09-15T12:00:00Z' });
+  for (let d = 1; d <= 31; d++) logs.push({ id: 'p' + d, check_type_id: 'cty-exercise_all-1', subject_id: 'dogA', outcome: 'ok', happened_at: '2026-10-' + String(d).padStart(2, '0') + 'T12:00:00Z' });
+  logs.push({ id: 'round', check_type_id: 'cty-exercise_all-1', covered_ids: 'dogA', outcome: 'recorded', happened_at: '2026-09-15T12:00:00Z' });
   const ctx = { today, kennel: 'Pretend Kennel', types, logs, dogs, tables: {}, dogName: (id) => (dogs.find((d) => d.id === id) || {}).name || '' };
   const src = YPrint.catalogue(ctx).find((s) => s.id === 'check:exercise_all');
   expect(src.typeIds.sort()).toEqual(['cty-exercise_all-1', 'cty-play-9']);
   const oct = YPrint.gridMonth(src, '2026-10', ctx);
-  expect(oct.marks.ada['2026-10-01']).toBe('tick');
-  expect(oct.marks.ada['2026-10-31']).toBe('tick');
+  expect(oct.marks.dogA['2026-10-01']).toBe('tick');
+  expect(oct.marks.dogA['2026-10-31']).toBe('tick');
   const sep = YPrint.gridMonth(src, '2026-09', ctx);
-  expect(sep.marks.ada['2026-09-15']).toBe('tick');
+  expect(sep.marks.dogA['2026-09-15']).toBe('tick');
 });
 
 test('a litter puppy is left off the exercise grid @regression', () => {
   const today = '2026-11-25';
   const types = [{ id: 'cty-exercise_all-1', type_key: 'exercise_all', label: 'Exercise and play', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-01-01' }];
   const dogs = [
-    { id: 'ada', name: 'Ada', dob: '2020-01-01', onSite: true, kind: 'Breeding Female' },
-    { id: 'pup', name: 'Marble x Sammy 2026 - Black male 1', dob: '2026-06-01', kind: 'Pup', birth_litter_id: 'lit-1', onSite: true }
+    { id: 'dogA', name: 'Dog A', dob: '2020-01-01', onSite: true, kind: 'Breeding Female' },
+    { id: 'pup', name: 'Dog C x Dog D 2026 - Black male 1', dob: '2026-06-01', kind: 'Pup', birth_litter_id: 'lit-1', onSite: true }
   ];
   const ctx = { today, kennel: 'Pretend Kennel', types, logs: [{ id: 'lp', check_type_id: 'cty-exercise_all-1', subject_id: 'pup', outcome: 'ok', happened_at: '2026-11-02T12:00:00Z' }], dogs, tables: {}, dogName: (id) => (dogs.find((d) => d.id === id) || {}).name || '' };
   const nov = YPrint.gridMonth(YPrint.catalogue(ctx).find((s) => s.typeKey === 'exercise_all'), '2026-11', ctx);
-  expect(nov.rows.map((r) => r.name)).toEqual(['Ada']);
+  expect(nov.rows.map((r) => r.name)).toEqual(['Dog A']);
   expect(nov.rows.find((r) => r.id === 'pup')).toBeFalsy();
 });
 
@@ -181,7 +181,7 @@ test('room temperatures print as one daily min and max sheet a month @regression
 });
 
 test('an empty medicines month says no records and optional fields stay blank @regression', () => {
-  const [line] = MedsReg.build([{ id: 'd', subject_id: 'a', given_on: '2026-02-03', product: 'Wormer', dose_volume: '1 tablet' }], { month: '2026-02', dog: () => ({ name: 'Ada', chip: '' }) });
+  const [line] = MedsReg.build([{ id: 'd', subject_id: 'a', given_on: '2026-02-03', product: 'Wormer', dose_volume: '1 tablet' }], { month: '2026-02', dog: () => ({ name: 'Dog A', chip: '' }) });
   expect(MedsReg.cell(line, 'dose')).toBe('1 tablet');
   expect(MedsReg.cell(line, 'given_by')).toBe('Lisa Carson');
   expect(MedsReg.cell(line, 'time')).toBe('');
@@ -314,26 +314,26 @@ test('a month with exercise records paints marks in the yearly grid @regression'
     { id: 'cty-exercise_all-1', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-11-17', includes: 'exercise' }
   ];
   const dogs = [
-    { id: 'ada', name: 'Ada', dob: '2020-01-01', onSite: true, kind: 'Breeding Female' },
-    { id: 'pup', name: 'Marble x Sammy 2026 - Black male 1', dob: '2026-06-01', onSite: true, kind: 'Pup' }
+    { id: 'dogA', name: 'Dog A', dob: '2020-01-01', onSite: true, kind: 'Breeding Female' },
+    { id: 'pup', name: 'Dog C x Dog D 2026 - Black male 1', dob: '2026-06-01', onSite: true, kind: 'Pup' }
   ];
   const logs = [
-    { id: 'e1', check_type_id: 'cty-exercise_all-1', subject_id: 'ada', outcome: 'ok', happened_at: '2026-10-01T12:00:00Z' },
-    { id: 'e2', check_type_id: 'cty-exercise_all-1', covered_ids: 'ada', outcome: 'recorded', happened_at: '2026-10-02T12:00:00Z' }
+    { id: 'e1', check_type_id: 'cty-exercise_all-1', subject_id: 'dogA', outcome: 'ok', happened_at: '2026-10-01T12:00:00Z' },
+    { id: 'e2', check_type_id: 'cty-exercise_all-1', covered_ids: 'dogA', outcome: 'recorded', happened_at: '2026-10-02T12:00:00Z' }
   ];
   const ctx = { today, kennel: 'Pretend Kennel', types, logs, dogs, tables: {}, dogName: (id) => (dogs.find((d) => d.id === id) || {}).name || '' };
   const src = YPrint.catalogue(ctx).find((s) => s.id === 'check:exercise_all');
   const oct = YPrint.gridMonth(src, '2026-10', ctx);
-  expect(oct.rows.map((r) => r.name)).toEqual(['Ada']);
-  expect(oct.marks.ada['2026-10-01']).toBe('tick');
-  expect(oct.marks.ada['2026-10-02']).toBe('tick');
-  expect(oct.marks.ada['2026-10-03']).toBe('miss');
+  expect(oct.rows.map((r) => r.name)).toEqual(['Dog A']);
+  expect(oct.marks.dogA['2026-10-01']).toBe('tick');
+  expect(oct.marks.dogA['2026-10-02']).toBe('tick');
+  expect(oct.marks.dogA['2026-10-03']).toBe('miss');
   const jan = YPrint.build({ period: 'month', year: 2026, month: 0, ids: ['check:exercise_all'], today }, ctx);
   expect(jan.html).not.toContain('data-mark="tick"');
   expect(jan.html).toContain('Not tracked yet this month.');
   expect(jan.html).toContain('Pretend Kennel');
   expect(jan.html).not.toContain('Kennel not recorded');
-  expect(jan.html).not.toContain('Marble x Sammy');
+  expect(jan.html).not.toContain('Dog C x Dog D');
   const year = YPrint.build({ period: 'year', year: 2026, ids: ['check:exercise_all'], today }, ctx);
   expect(year.pages).toHaveLength(11);
   expect(year.pages.every((p) => p.layout === 'dogs')).toBe(true);
