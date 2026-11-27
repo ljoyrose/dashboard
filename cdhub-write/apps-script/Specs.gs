@@ -3,7 +3,7 @@
  *
  * Column names come from the BLD design (bld-schema.js, 23 Sep 2026) and the live
  * BLD-*.csv headers read on 15 Oct 2026. Every column NOT in the design is tagged
- * proposed:true and is raised with Lisa in the Q&A slip. Nothing is renamed.
+ * proposed:true and is raised with the owner in the Q&A slip. Nothing is renamed.
  *
  * `file` is the ONLY name the sink will ever write to for that table. The browser
  * sends a table key (or the exact file name), never a path.
@@ -21,7 +21,7 @@ var READ_METHODS_ = ['camera', 'typed', 'photo'];   // photo (11 Nov 2026): type
 var TABLES = {
 
   // ---------------------------------------------------------------- area_reading
-  // Temperature log. File ABSENT on Drive on 15 Oct 2026: Lisa creates it (decision 2).
+  // Temperature log. File ABSENT on Drive on 15 Oct 2026: the owner creates it (decision 2).
   area_reading: {
     key: 'area_reading',
     file: 'BLD-area_reading.csv',
@@ -29,7 +29,7 @@ var TABLES = {
     // id + tenant_id are the standard first two columns on every live BLD table.
     columns: [
       'id', 'tenant_id',
-      // '' = the live Sheet's 7th column, which has no name and holds max_c - min_c (Lisa to name it; see PR)
+      // '' = the live Sheet's 7th column, which has no name and holds max_c - min_c (to name it; see PR)
       'area_id', 'reading_type', 'min_c', 'max_c', '', 'spot_c', 'precision_dp',
       'period_start', 'taken_at', 'taken_by', 'device_id', 'reset_after_reading',
       'applied_limit_id', 'in_range', 'compliant', 'mitigation_required',
@@ -42,19 +42,19 @@ var TABLES = {
     ],
     proposedColumns: ['corrects_id', 'mitigation_note', 'read_method', 'camera_value_changed', 'room_empty', 'thermometer_id'],
     computedColumns: ['applied_limit_id', 'in_range', 'compliant', 'mitigation_required'],
-    // Lisa 15 Nov 2026 ("issues with text and numbers"): written as real values like the 30,866 rows typed by hand, not
+    // Report 15 Nov 2026 ("issues with text and numbers"): written as real values like the 30,866 rows typed by hand, not
     // text - temperatures as numbers (1 decimal place), times as real dates shown as UK time. Only this table (Store.gs).
     // The 7th column is '' here and may be named variance_c in the live header (sameHeader_ accepts either).
     sheetTypes: { min_c: 'num1', max_c: 'num1', '': 'num1', variance_c: 'num1', spot_c: 'num1', precision_dp: 'int', period_start: 'datetime', taken_at: 'datetime' },
     // thermometer: id -> its area_id (valCol), so a reading can only name a thermometer in its own room
     lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }, { name: 'thermometer', file: 'BLD-thermometer.csv', idCol: 'id', valCol: 'area_id' }],
-    // Lisa 16 Oct (S02-4): staff see NO past entries, so they cannot point at one. A wrong entry is reported to
+    // Report 16 Oct (S02-4): staff see NO past entries, so they cannot point at one. A wrong entry is reported to
     // the owner, who fixes it with the owner edit (or an OWNER code sends a correction row).
     perms: { add: ROLE_ALL, correct: ['OWNER'] },
     ownerEditable: true,
     alwaysPending: false,
     defaultMode: 'direct',   // Lisa 16 Oct: temperature readings go straight in; corrections always wait
-    // Lisa 11 Nov 2026 ("remove 7 day limit on readings"): any role may send a period_start older than 7 days, back as
+    // Report 11 Nov 2026 ("remove 7 day limit on readings"): any role may send a period_start older than 7 days, back as
     // far as temperature records are kept (BLD-retention_setting row for section temperature, else the default in
     // Config.gs). Never a future time. taken_at/taken_by still show when it was typed.
     ageCap: { retentionSection: 'temperature', field: 'period_start' },
@@ -70,11 +70,11 @@ var TABLES = {
       mitigation_note:     { type: 'text' },
       read_method:         { type: 'enum', values: READ_METHODS_, dflt: 'typed' },
       camera_value_changed: { type: 'bool' },
-      // Lisa 11 Nov 2026: a room with no dog in it. The slot counts as covered and is shown flagged "Room empty", never
+      // Report 11 Nov 2026: a room with no dog in it. The slot counts as covered and is shown flagged "Room empty", never
       // as non-compliant. A reading is optional then (staff may still read it: a dog may move in later), but both
       // min and max or neither. in_range / compliant stay blank: the save never judges a reading.
       room_empty:          { type: 'enum', values: ['yes'] },
-      // Lisa 11 Nov 2026: "room H5/6 has 2 named thermometers". Optional: blank = one reading per room per slot, as before.
+      // Report 11 Nov 2026: "room H5/6 has 2 named thermometers". Optional: blank = one reading per room per slot, as before.
       thermometer_id:      { type: 'ref', lookup: 'thermometer' }
     },
     // duplicate guard: same tenant + same area + same thermometer (blank = none named) + same period (morning/afternoon
@@ -112,7 +112,7 @@ var TABLES = {
   // ---------------------------------------------------------------- guest_reading
   // A visitor's own temperature readings (8 Nov 2026). A separate file on purpose: a guest reading can never count
   // as, block, or overwrite a staff reading, because it never touches BLD-area_reading. Only a GUEST code can add
-  // here and a GUEST code can add nowhere else. Lisa creates the file (header row only); own switch, OFF by default.
+  // here and a GUEST code can add nowhere else. the owner creates the file (header row only); own switch, OFF by default.
   // taken_by is the guest's label and public code id. A guest can read the room list and nothing else (Read.gs).
   guest_reading: {
     key: 'guest_reading',
@@ -154,7 +154,7 @@ var TABLES = {
   // ---------------------------------------------------------------- sensor_reading
   // One room's daily low and high from a plug-in sensor (Govee export), added by the OWNER from the year report
   // page (NEW: TEMPS, 11 Nov 2026). A separate file: a sensor day never counts as, or overwrites, a staff reading.
-  // samples = how many sensor readings made that day's low and high. Lisa creates the file (header row only);
+  // samples = how many sensor readings made that day's low and high. the owner creates the file (header row only);
   // own switch TABLE_ON_sensor_reading, OFF by default. The same room, day and source twice is a repeat, not a new day.
   sensor_reading: {
     key: 'sensor_reading',
@@ -192,7 +192,7 @@ var TABLES = {
   // One thermometer per place (a room or a corridor, never a field), so the round lists the thermometers, not the
   // rooms (NEW: TEMPS, 11 Nov 2026). How many there are is rows, never code. The OWNER adds one; its QR card is made on
   // the print page like a room sign (qr_tag kind thermometer). Readings still save against area_id. A thing carries no
-  // dates (Lisa 11 Nov 2026, "A standard"): when it is needed is BLD-requirement rows (need_type reading.temperature).
+  // dates (11 Nov 2026, "A standard"): when it is needed is BLD-requirement rows (need_type reading.temperature).
   // To fix a row the owner edits it in place (name, area_id). Own switch, OFF by default.
   thermometer: {
     key: 'thermometer',
@@ -220,7 +220,7 @@ var TABLES = {
   },
 
   // ---------------------------------------------------------------- requirement
-  // Need rows (Lisa 11 Nov 2026, "A standard"): when a thing is needed or in use. need_type is a row value
+  // Need rows (11 Nov 2026, "A standard"): when a thing is needed or in use. need_type is a row value
   // (reading.temperature on a thermometer, room.in_use on an area; more later as rows, never columns). A target with no
   // rows of a need_type is always needed; with rows, only on days a row covers (from_date..to_date, both inclusive,
   // blank to_date = no end). To end one, the owner fills in to_date; rows are never deleted. Own switch, OFF by default.
@@ -256,7 +256,7 @@ var TABLES = {
   },
 
   // ---------------------------------------------------------------- area_link
-  // Room links (Lisa 12 Nov 2026, option B via NEW: TEMPS): for from_date..to_date (both inclusive, blank to_date =
+  // Room links (12 Nov 2026, option B via NEW: TEMPS): for from_date..to_date (both inclusive, blank to_date =
   // no end) a reading taken in from_area_id also counts for to_area_id, e.g. while one thermometer covers two rooms.
   // A link row, never dates on the room ("A standard"); readings are never copied or changed, the pages count them
   // through BLDAreaLink.expand. To end one, the owner fills in to_date; rows are never deleted. Own switch, OFF by default.
@@ -537,7 +537,7 @@ var TABLES = {
       if ((row.outcome === 'concern' || row.outcome === 'not_done' || row.outcome === 'part_done') && row.note === '' && !errors.note) {
         errors.note = row.outcome === 'part_done' ? 'Say briefly what is left to do.' : 'Say briefly what the concern is or why it was not done.';
       }
-      // a note added to a record already saved (Lisa 13 Nov 2026: "in addition to done rather than instead")
+      // a note added to a record already saved (13 Nov 2026: "in addition to done rather than instead")
       if (row.outcome === 'note') {
         if (row.note === '' && !errors.note) errors.note = 'Type the note.';
         var target = lookups && lookups.check_log_outcome ? lookups.check_log_outcome[row.note_for_id] : undefined;
@@ -572,7 +572,7 @@ var TABLES = {
   },
 
   // ---------------------------------------------------------------- readings
-  // 14 Nov 2026 (Lisa READINGS = B; TEMPS plan AA_TEMPS_2026-11-14-0033 §1; ITEMS item tests): ONE record for any
+  // 14 Nov 2026 (READINGS = B; TEMPS plan AA_TEMPS_2026-11-14-0033 §1; ITEMS item tests): ONE record for any
   // measured value. What is measured is an owner row (BLD-reading_kinds: label, unit); limits are dated owner rows
   // (BLD-reading_limits), so a past reading is judged by the limit then. An out-of-limit value is NEVER refused
   // (readings are evidence): in_range is worked out here from the limit row, never trusted from the page.
@@ -756,7 +756,7 @@ var TABLES = {
   // A move APPENDS a new row (subject_id, area_id, moved_in = today). moved_out is NEVER written and no
   // existing row is ever edited: the current room is the row with the latest moved_in.
   // Own switch (TABLE_ON_occupancy), OFF by default. Occupancy moves go straight in for every staff code
-  // (Lisa 12 Nov 2026). MOVES_QUEUE_UNTIL and MODE_occupancy are ignored for moves. Corrections on other tables may still queue.
+  // (12 Nov 2026). MOVES_QUEUE_UNTIL and MODE_occupancy are ignored for moves. Corrections on other tables may still queue.
   // There is no corrects_id column here, so a wrong room is fixed by moving the dog again.
   occupancy: {
     key: 'occupancy',
@@ -801,7 +801,7 @@ var TABLES = {
 
   // ---------------------------------------------------------------- occupancy_out
   // A dog taken out of its room (staff page, 8 Nov 2026). A second way in to BLD-occupancy.csv: the same file and
-  // columns, area_id blank, moved_in = today. Every one waits for Lisa, because a dog recorded as gone stops being asked about.
+  // columns, area_id blank, moved_in = today. Every one waits for the owner, because a dog recorded as gone stops being asked about.
   occupancy_out: {
     key: 'occupancy_out',
     file: 'BLD-occupancy.csv',
@@ -886,10 +886,10 @@ var TABLES = {
   },
 
   // ---------------------------------------------------------------- code_vaults
-  // Codes vault (Lisa 14 Nov 2026, option B). Each code is sealed in the browser (staff/lib/code-vault.js) with the
+  // Codes vault (14 Nov 2026, option B). Each code is sealed in the browser (staff/lib/code-vault.js) with the
   // admins' shared vault password: this table holds only hex and the public code id, never a code or the password.
   // code_id 'vault-check' is the password check row. A new seal for the same code is a new row; the newest open row counts.
-  // NEW table: Lisa creates BLD-code_vaults.csv (header row only); own switch TABLE_ON_code_vaults, OFF by default.
+  // NEW table: the owner creates BLD-code_vaults.csv (header row only); own switch TABLE_ON_code_vaults, OFF by default.
   // Who may: OWNER codes today; BLD-permission rows (code_vault / open) once the script serves them (Grace: a person row).
   code_vaults: {
     key: 'code_vaults',
@@ -924,9 +924,9 @@ var TABLES = {
   },
 
   // ---------------------------------------------------------------- occupancy_check
-  // The daily "All the rest unmoved" confirmation (Lisa 16 Oct, S02-1). ONE row per tap: who confirmed, when,
+  // The daily "All the rest unmoved" confirmation (16 Oct, S02-1). ONE row per tap: who confirmed, when,
   // and the list of dogs confirmed where they were last recorded. Moves are separate: they still append
-  // BLD-occupancy rows. NEW table (not in the BLD design, not on Drive): Lisa creates the file, and it has its
+  // BLD-occupancy rows. NEW table (not in the BLD design, not on Drive): the owner creates the file, and it has its
   // own switch (TABLE_ON_occupancy_check), OFF by default. confirmed_at and confirmed_by are set by the script.
   // dog_ids is pipe-separated (sorted); 500 dogs at most per row.
   occupancy_check: {
@@ -953,7 +953,7 @@ var TABLES = {
   },
 
   // ---------------------------------------------------------------- check_setting
-  // How the owner records each check (Lisa, settings steps 1 and 2). A change is a new row from a date, so a past
+  // How the owner records each check (settings steps 1 and 2). A change is a new row from a date, so a past
   // print uses the row in force that day. No row = today's behaviour: logged, the check's own how-often and one line
   // per dog where the check already says so. The live check_type row is the legal floor: more often is allowed, less
   // often is not, and some checks cannot be print only.
@@ -1049,8 +1049,8 @@ var TABLES = {
   },
 
   // ---------------------------------------------------------------- breeding_rule
-  // The breeder's own breeding limits (Lisa 8 Nov 2026): typed in by the OWNER when setting up the app, never
-  // hard-coded, because they differ by country, licence and kennel club. NEW table: Lisa creates BLD-breeding_rule
+  // The breeder's own breeding limits (8 Nov 2026): typed in by the OWNER when setting up the app, never
+  // hard-coded, because they differ by country, licence and kennel club. NEW table: the owner creates BLD-breeding_rule
   // (header row only); own switch TABLE_ON_breeding_rule, OFF by default.
   // A change is a NEW row with its own effective_from, never an edit, so an old litter is judged by the rule in
   // force on its own date. The rule for a date = the row for that key with the latest effective_from on or before it.
@@ -1058,7 +1058,7 @@ var TABLES = {
     key: 'breeding_rule',
     file: 'BLD-breeding_rule.csv',
     idPrefix: 'brl',
-    // to_date (Lisa 12 Nov 2026: every limit is a dated row): blank = no end; the last day the rule applies, inclusive.
+    // to_date (12 Nov 2026: every limit is a dated row): blank = no end; the last day the rule applies, inclusive.
     columns: ['id', 'tenant_id', 'rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'to_date'],
     proposedColumns: ['rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'to_date'],
     computedColumns: [],
@@ -1271,7 +1271,7 @@ var BREEDING_RULE_LIMITS_ = {
   min_months_between_litters:  [1, 36, 'months']
 };
 
-/** Permanently not on site (Lisa 16 Oct, S02-7): sold, owned_by_family, Collected or deceased. Such a dog is never asked to move. */
+/** Permanently not on site (16 Oct, S02-7): sold, owned_by_family, Collected or deceased. Such a dog is never asked to move. */
 function permanentlyGone_(row) {
   if (!row) return false;
   var kind = String(row.off_site_kind || '').toLowerCase(), cls = String(row.classification || '').toLowerCase();
@@ -1295,7 +1295,7 @@ function occupancyLatest_(records, subjectId) {
 
 /**
  * PROPOSED tables. NOT on the allow-list: the script refuses these files today, whatever switches are set.
- * They are kept here, complete and tested, so a later decision (Lisa, Q&A slip) is a one-line change:
+ * They are kept here, complete and tested, so a later decision (Q&A slip) is a one-line change:
  * move an entry from PROPOSED_TABLES into TABLES. Until then nothing can write to them.
  */
 var PROPOSED_TABLES = {
@@ -1329,9 +1329,9 @@ var PROPOSED_TABLES = {
     }
   },
 
-  // ================================================================ BLD schema v2 (15 Nov 2026, Lisa Q5, Q6, Q8)
+  // ================================================================ BLD schema v2 (15 Nov 2026, the owner Q5, Q6, Q8)
   // Designed only. Refused today whatever switches say; promoting one is a one-line move into TABLES plus its own
-  // TABLE_ON_ switch, OFF, plus Lisa's yes for the live file. Neutral names, plural (13 Nov), S4.15 dates, S4.3 reserved
+  // TABLE_ON_ switch, OFF, plus the owner's yes for the live file. Neutral names, plural (13 Nov), S4.15 dates, S4.3 reserved
   // names. Kinds of thing (dose types, certificate kinds, party roles) are row values, never column names.
 
   // ---------------------------------------------------------------- parties (Q6)
@@ -1678,13 +1678,13 @@ function checkDates_(row, errors) {
 
 /**
  * RETIRED tables. Kept for the record, never written to, refused like the proposed ones. Nothing was deleted.
- * round_event (16 Oct 2026, Lisa): replaced by occupancy_check (now on the allow-list, own switch) + the live occupancy table.
+ * round_event (16 Oct 2026, the owner): replaced by occupancy_check (now on the allow-list, own switch) + the live occupancy table.
  */
 var RETIRED_TABLES = {
 
   // ---------------------------------------------------------------- round_event
   // Placement / cabin-access log from "The round". DESIGN ONLY: not in the BLD design,
-  // not on Drive. Proposed by this job. Switched off until Lisa creates the file.
+  // not on Drive. Proposed by this job. Switched off until the owner creates the file.
   round_event: {
     key: 'round_event',
     file: 'BLD-round_event.csv',
@@ -1825,7 +1825,7 @@ var READABLE = {
   coat_pattern:    { file: 'BLD-coat_pattern.csv',    vis: 'coat_pattern',    authorCol: '',            dateCol: '' },
   nose_pigment:    { file: 'BLD-nose_pigment.csv',    vis: 'nose_pigment',    authorCol: '',            dateCol: '' },
   microchip:       { file: 'BLD-microchip.csv',       vis: 'microchip',       authorCol: '',            dateCol: '' },
-  // temperature limits by age (and, if area_id is filled, for one room): rows Lisa enters, read by the staff page
+  // temperature limits by age (and, if area_id is filled, for one room): rows the owner enters, read by the staff page
   temperature_band: { file: 'BLD-temperature_band.csv', vis: 'temperature_band', authorCol: '',          dateCol: '' },
   sensor_reading:  { file: 'BLD-sensor_reading.csv',  vis: 'sensor_reading',  authorCol: 'taken_by',    dateCol: 'taken_at' },
   thermometer:     { file: 'BLD-thermometer.csv',     vis: 'thermometer',     authorCol: 'made_by',     dateCol: 'made_at' },
@@ -1833,7 +1833,7 @@ var READABLE = {
   area_link:       { file: 'BLD-area_link.csv',       vis: 'area_link',       authorCol: 'set_by',      dateCol: 'set_on' },
   // the owner types rows here in the Sheet (over_capacity_action = refuse or reason); no row = a reason is required
   capacity_setting: { file: 'BLD-capacity_setting.csv', vis: 'capacity_setting', authorCol: '',          dateCol: '' },
-  // 12 Nov 2026 (Lisa): size is worked out from the latest weight, never kept as its own field. The room scan needs
+  // 12 Nov 2026 (the owner): size is worked out from the latest weight, never kept as its own field. The room scan needs
   // the weights to do that; read only as far as visibility rows allow (one row: table_name weight, staff, all rows).
   weight:          { file: 'BLD-weight.csv',          vis: 'weight',          authorCol: '',            dateCol: 'performed_on' },
   // 13 Nov 2026 (DOGCARD): BFFs / Fren. links between two dogs; read only as far as visibility rows allow
@@ -1842,7 +1842,7 @@ var READABLE = {
   items:           { file: 'BLD-items.csv',           vis: 'items',           authorCol: 'created_by',  dateCol: 'created_at' },
   item_kinds:      { file: 'BLD-item_kinds.csv',      vis: 'item_kinds',      authorCol: 'set_by',      dateCol: 'set_on' },
   links:           { file: 'BLD-links.csv',           vis: 'links',           authorCol: 'set_by',      dateCol: 'set_on' },
-  // 22 Nov 2026 (DOGCARD, Lisa: printed dog cards showed an empty Photo box): the files a main-photo link points at,
+  // 22 Nov 2026 (DOGCARD, the owner: printed dog cards showed an empty Photo box): the files a main-photo link points at,
   // read only as far as visibility rows allow (owner print rows exist; no staff rows)
   files:           { file: 'BLD-files.csv',           vis: 'files',           authorCol: 'set_by',      dateCol: 'set_on' }
 };
