@@ -71,7 +71,7 @@ test('Checked today adds the check type once, then one check_log', () => {
 test('Print records for a month keeps that month’s mating and leaves last month out', () => {
   const ctx = {
     today: '2026-11-25', types: [], logs: [],
-    dogName: (id) => (id === 'd1' ? 'Ada' : ''),
+    dogName: (id) => (id === 'd1' ? 'Dog A' : ''),
     tables: { 'BLD-mating.csv': [
       { id: 'm1', dam_subject_id: 'd1', mated_on: '2026-11-02', method: 'natural' },
       { id: 'm0', dam_subject_id: 'd1', mated_on: '2026-10-02', method: 'natural' }
@@ -80,7 +80,7 @@ test('Print records for a month keeps that month’s mating and leaves last mont
   const pack = R.printPack(ctx, 'Mating Plan', { month: '2026-11', printed: '25 Nov 2026' });
   expect(pack.head.which).toBe('Mating Plan');
   expect(pack.lines).toHaveLength(1);
-  expect(pack.lines[0]).toMatchObject({ date: '2026-11-02', check: 'Mating', subject: 'Ada' });
+  expect(pack.lines[0]).toMatchObject({ date: '2026-11-02', check: 'Mating', subject: 'Dog A' });
   const cat = [
     { id: 'check:mating_plan', kind: 'check', typeKey: 'mating_plan' },
     { id: 'mating', kind: 'table' },
