@@ -726,7 +726,7 @@ test('Print / PDF: outside-limit lines say who took the reading; a save that arr
   await expect(tbl).not.toContainText(/late/i);
 });
 
-test('a corrected temperature replaces the original on the page and the print; the original is not shown @regression', async ({ page, guard }) => {
+test('a corrected temperature replaces the original on the page and the print; the original is not shown @regression @live', async ({ page, guard }) => {
   await open(page, guard);
   // R1 AM on 5 Jan was saved as 9.0-15.0 (outside); a correction saved on 6 Jan, with no period_start, makes it 12.0-15.0
   const rows = 'id,area_id,taken_at,period_start,min_c,max_c,read_method,taken_by,corrects_id\n'
