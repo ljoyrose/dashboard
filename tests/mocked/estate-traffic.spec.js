@@ -60,7 +60,7 @@ for (const size of [{ name: 'desktop', vp: { width: 1280, height: 900 } }, { nam
       await expect(none.locator('[data-tr="none"]')).toContainText('stats not connected');
       await none.locator('details summary').click();
       await expect(none.locator('[data-tr-steps] li').first()).toBeVisible();
-      await expect(none.locator('.lisa')).toContainText('Lisa-only step');
+      await expect(none.locator('.owner-step')).toContainText('Owner-only step');
 
       // Every web property has a traffic line; DNS zones, email domains and ads accounts do not.
       await expect(page.locator('[data-traffic]')).toHaveCount(4);
