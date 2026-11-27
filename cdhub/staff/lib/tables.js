@@ -1,4 +1,4 @@
-/* One table look for every app (Lisa 14 Nov 2026: "no jumping about on columns"). A table with class "house-table"
+/* One table look for every app (14 Nov 2026: "no jumping about on columns"). A table with class "house-table"
    gets column widths set once from its headers, never from its rows, so columns stay put as rows load, filter or fold.
    Numbers sit right in even-width figures. On a phone each row becomes label / value lines (house.css).
    A header can set its own width in em: <th data-w="14">. Helpers only add the class: this file finds the tables itself. */

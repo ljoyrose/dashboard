@@ -1,4 +1,4 @@
-/* ---------- presend stamp (proposal approved by Lisa's default A, 30 Oct 2026; deploy by the Mac route after the Send gate PR merges) ----------
+/* ---------- presend stamp (proposal approved by the owner's default A, 30 Oct 2026; deploy by the Mac route after the Send gate PR merges) ----------
  * AF › requests › stamp-<draft>-<time>.json, written by tools/presend/prompt-lint.py --presend:
  *   { kind: 'stamp', taskId, line, sha256, ready, at, by }
  * Posts `line` as ONE comment on that Sends task, exactly as written (no "Claude: " prefix, so the Factory

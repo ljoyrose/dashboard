@@ -1,7 +1,7 @@
 /**
  * Web entry points. Two deployments of this one project (see docs/SETUP.md):
- *   A) "Save" deployment  - runs as Lisa, open to anyone WITH THE URL; every save still needs a staff code.
- *   B) "Approve" deployment - runs as the person using it, only Lisa; shows the approvals queue.
+ *   A) "Save" deployment  - runs as the owner, open to anyone WITH THE URL; every save still needs a staff code.
+ *   B) "Approve" deployment - runs as the person using it, only the owner; shows the approvals queue.
  */
 
 function jsonOut_(obj) {
@@ -49,6 +49,7 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'subject_create') return jsonOut_({ ok: true, result: sinkSubjectCreate_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_link') return jsonOut_({ ok: true, result: sinkSubjectLink_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_link_end') return jsonOut_({ ok: true, result: sinkSubjectLinkEnd_(req) });
+    if (req && typeof req === 'object' && req.action === 'subject_video') return jsonOut_({ ok: true, result: sinkSubjectVideo_(req) });
     // visits (V9, Visit.gs; OWNER code, OFF until TABLE_ON_visit is true)
     if (req && typeof req === 'object' && req.action === 'grant_type_save') return jsonOut_({ ok: true, result: sinkVisitTypeSave_(req) });
     if (req && typeof req === 'object' && req.action === 'card_add') return jsonOut_({ ok: true, result: sinkCardAdd_(req) });
@@ -58,7 +59,7 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'delegation_give') return jsonOut_({ ok: true, result: sinkDelegationGive_(req) });
     if (req && typeof req === 'object' && req.action === 'delegation_end') return jsonOut_({ ok: true, result: sinkDelegationEnd_(req) });
     if (req && typeof req === 'object' && req.action === 'file_add') return jsonOut_({ ok: true, result: sinkFileAdd_(req) });   // one file store (14 Nov 2026), OFF until TABLE_ON_files
-    // record-to-record links (14 Nov 2026, Lisa decision C; OFF until TABLE_ON_links is true)
+    // record-to-record links (14 Nov 2026, the owner decision C; OFF until TABLE_ON_links is true)
     if (req && typeof req === 'object' && req.action === 'link_add') return jsonOut_({ ok: true, result: sinkLinkAdd_(req) });
     if (req && typeof req === 'object' && req.action === 'link_end') return jsonOut_({ ok: true, result: sinkLinkEnd_(req) });
     // edit / archive / delete a saved row with a code, logged (Q1/Q2, 15 Nov 2026; Edit.gs). OFF until RECORD_EDIT_ON is true
@@ -125,7 +126,7 @@ function lastTimings_() {
 }
 
 /**
- * Lisa 17 Nov 2026: readings were turned down and nobody could see why. Keep the last 20 refusals for 24 hours in the
+ * Report 17 Nov 2026: readings were turned down and nobody could see why. Keep the last 20 refusals for 24 hours in the
  * script cache for ?status=1: when, the reason code and message, which table, which room and slot, and the names of the
  * fields that need fixing. Never the staff code, the Google token, who it was, or any other field's value.
  */

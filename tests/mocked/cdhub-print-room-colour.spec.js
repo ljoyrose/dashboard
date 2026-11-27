@@ -16,7 +16,7 @@ const tables = {
   qr_tag: [{ tag: 'ROOM0001', kind: 'area', ref_id: 'r01', active: 'true' }]
 };
 
-test('room card dog icons stay coloured and the room size prints from the device copy @regression', async ({ page }) => {
+test('room card dog icons stay coloured and the room size prints from the device copy @regression @live', async ({ page }) => {
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }], version: 'test' } });
     const b = JSON.parse(route.request().postData());
