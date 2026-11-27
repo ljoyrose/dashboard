@@ -385,8 +385,12 @@
       clearScreen(); setTabs(params && params.tab || 'home');
       screen.appendChild(h('p', { class: 'msg', role: 'status', text: 'Loading...' }));
       ensure(id).then(function () {
-        if ((location.hash || '') !== want) return;
         var now = modules.filter(function (x) { return x.id === id && !x.lazy; })[0];
+        if ((location.hash || '') !== want) {
+          // left before the screen loaded: a scanned tag still counts (a room scan is remembered), drawn off-screen
+          if (now && id === 'moves' && params && params.tag) now.open(h('div'), Object.assign({}, ctx, { params: params }));
+          return;
+        }
         if (!now) { loadFail(function () { if (LAZY[id]) LAZY[id].done = null; openModule(id, params); }, params && params.tab); return; }
         openReal(now, params);
       }).catch(function () { if ((location.hash || '') === want) loadFail(function () { if (LAZY[id]) LAZY[id].done = null; openModule(id, params); }, params && params.tab); });

@@ -372,17 +372,17 @@
     /** Plain-English state for the banner and for disabling buttons. */
     function banner(tableKey) {
       var tb = status.tables[tableKey];
-      if (!scriptUrl) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. User switches it on when it is ready.' };
+      if (!scriptUrl) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. The owner switches it on when it is ready.' };
       if (status.checked && status.reachable === false) return { kind: 'off', canSave: false, text: 'Cannot reach the save service right now, so nothing can be saved. Try again in a moment.' };
       if (!status.checked) return { kind: 'checking', canSave: false, text: 'Checking whether saving is on...' };
-      if (!status.saveEnabled) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. User switches it on when it is ready.' };
+      if (!status.saveEnabled) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. The owner switches it on when it is ready.' };
       if (tableKey && !tb && status.proposed && status.proposed.indexOf(tableKey) >= 0) {
-        return { kind: 'off', canSave: false, text: '"' + ((TABLES[tableKey] || {}).label || tableKey) + '" is only a proposal so far. Nothing can be saved to it until User agrees it.' };
+        return { kind: 'off', canSave: false, text: '"' + ((TABLES[tableKey] || {}).label || tableKey) + '" is only a proposal so far. Nothing can be saved to it until the owner agrees it.' };
       }
       if (tableKey && (!tb || !tb.on)) {
         return { kind: 'off', canSave: false, text: 'Saving to "' + ((TABLES[tableKey] || {}).label || tableKey) + '" is not switched on yet.' };
       }
-      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving on. User approves each entry.' };
+      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving on. The owner approves each entry.' };
       return { kind: 'on', canSave: true, text: 'Saving on. If one is wrong, tell the owner.' };
     }
 
@@ -503,7 +503,7 @@
           res.ok = true;
           res.requestId = body.request_id;
           res.message = res.status === 'queued'
-            ? 'Sent. It is in the approvals queue until User approves it; then it joins the records.'
+            ? 'Sent. It is in the approvals queue until the owner approves it; then it joins the records.'
             : 'Saved.';
           return res;
         }
@@ -550,13 +550,9 @@
      * Read one list through the script, as far as the owner has allowed THIS staff code (no Google sign-in).
      * Optional filter {area_id, from, to} (London days YYYY-MM-DD) narrows the rows; it never widens them.
      * Resolves (never rejects): {ok:true, table, fields, rows, count, scope} or {ok:false, code, message}.
-     * The same list and filter shares one request for a minute. area, thermometer, qr_tag, temperature_band and area_link draw from this phone, then refresh.
+     * The same list and filter asked for while a read is running shares that request. area, thermometer, qr_tag, temperature_band and
+     * area_link are kept in this page's memory for a minute (never in the phone's storage); a save to a list, or dropReads(), reads it again.
      */
-    function hashKey(s) {
-      var h = 0;
-      for (var i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) >>> 0;
-      return h.toString(36);
-    }
     function authTag() { return getCode() || (googleFn() ? 'g' : ''); }
     function cacheKey(table, filter) {
       var keys = filter && typeof filter === 'object' ? Object.keys(filter).sort() : [];
@@ -567,17 +563,6 @@
       if (res && typeof res.role === 'string') lastRole = res.role;
       if (res && typeof res.name === 'string') lastName = res.name;
     }
-    function lsKey(table, filter) { return 'bld.rd.' + table + '.' + hashKey(cacheKey(table, filter)); }
-    function lsRead(k) {
-      if (!local) return null;
-      try { var o = JSON.parse(get(local, k) || ''); return o && o.res && o.res.ok ? o.res : null; } catch (e) { return null; }
-    }
-    function lsWrite(k, res) {
-      if (!local || !res || !res.ok) return;
-      var o = { ok: true, rows: res.rows || [] };
-      ['table', 'fields', 'count', 'scope', 'role', 'name', 'truncated'].forEach(function (n) { if (res[n] !== undefined) o[n] = res[n]; });
-      try { put(local, k, JSON.stringify({ res: o })); } catch (e) { /* storage full: the page still reads from the network */ }
-    }
     function fetchRead(tableKey, filter) {
       return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -587,40 +572,24 @@
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
       }).catch(function () { return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' }; });
     }
+    /** Forget kept lists so the next read asks the script: one list after a save to it, or every list (no argument) for Refresh. */
     function dropReads(table) {
+      if (!table) { pageCache = {}; return; }
       var prefix = table + '\n';
       Object.keys(pageCache).forEach(function (k) { if (k.slice(0, prefix.length) === prefix) delete pageCache[k]; });
-      if (!local || typeof local.key !== 'function') return;
-      try {
-        var p = 'bld.rd.' + table + '.', gone = [], i, k;
-        for (i = 0; i < local.length; i++) { k = local.key(i); if (k && k.indexOf(p) === 0) gone.push(k); }
-        gone.forEach(function (key) { local.removeItem(key); });
-      } catch (e) { /* the next read still asks the network if this fails */ }
     }
     function read(tableKey, filter) {
-      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. User switches it on when it is ready.' });
+      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. The owner switches it on when it is ready.' });
       if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
       if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
       var key = cacheKey(tableKey, filter), now = Date.now(), hit = pageCache[key];
       if (hit && (hit.pending || now - hit.at < CACHE_MS)) { if (hit.res) remember(hit.res); return hit.p; }
       var stable = !!STABLE[tableKey] && !(filter && typeof filter === 'object' && Object.keys(filter).length);
-      var stored = stable ? lsRead(lsKey(tableKey, filter)) : null;
-      var net = fetchRead(tableKey, filter);
-      if (stored) {
-        remember(stored);
-        var cached = Promise.resolve(stored);
-        pageCache[key] = { at: now, p: cached, pending: false, res: stored };
-        net.then(function (res) {
-          if (res && res.ok) { lsWrite(lsKey(tableKey, filter), res); pageCache[key] = { at: Date.now(), p: Promise.resolve(res), pending: false, res: res }; }
-          else if (pageCache[key] && pageCache[key].p === cached) delete pageCache[key];
-        });
-        return cached;
-      }
-      var p = net.then(function (res) {
+      var p = fetchRead(tableKey, filter).then(function (res) {
         var cur = pageCache[key];
         if (!(res && res.ok)) { if (cur && cur.p === p) delete pageCache[key]; return res; }
-        if (stable) { lsWrite(lsKey(tableKey, filter), res); pageCache[key] = { at: Date.now(), p: Promise.resolve(res), pending: false, res: res }; }
+        if (stable) { if (cur && cur.p === p) pageCache[key] = { at: Date.now(), p: Promise.resolve(res), pending: false, res: res }; }
         else if (cur && cur.p === p) delete pageCache[key];
         return res;
       });
@@ -709,7 +678,7 @@
       sending: function () { return sending; },
       loadConfigFromDrive: loadConfigFromDrive,
       act: act, linkAdd: linkAdd, linkEnd: linkEnd,
-      read: read, readMany: readMany, codeCheck: codeCheck, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
+      read: read, dropReads: dropReads, readMany: readMany, codeCheck: codeCheck, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
     };
   }
 
