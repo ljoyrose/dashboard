@@ -1,5 +1,4 @@
-// Breed Better grading stays in Breed Better (Lisa 22 Nov 2026: "anything from breed better grading is BB only not
-// compliance"). A check type whose row says it is Breed Better's (group "Breed Better", or a note starting "Breed Better:")
+// Breed Better grading stays in Breed Better, never on Compliance. A check type whose row says it is Breed Better's (group "Breed Better", or a note starting "Breed Better:")
 // never shows on Compliance, nor do its records; other jobs still do, and the rows themselves stay. Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
