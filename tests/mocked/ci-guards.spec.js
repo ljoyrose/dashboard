@@ -145,17 +145,42 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
 
   test('the publish job needs the gate job, and the gate runs the same suite as the required check', () => {
     const wf = pages();
-    expect(wf).toMatch(/publish:[\s\S]*?needs:\s*gate/);
+    expect(wf).toMatch(/publish:[\s\S]*?needs:\s*gate\n/);
     expect(wf).toMatch(/npx playwright test --project=mocked --project=phone/);
     expect(read('.github/workflows/tests.yml')).toMatch(/npx playwright test --project=mocked --project=phone/);
+  });
+
+  // 27 Nov 2026: one job ran about 53 of its 60 minutes (#814 was cut off at 60), so the suite runs in shards.
+  // Every shard runs the whole mocked+phone command with its own --shard=i/N; one job merges and carries the required name.
+  test('the suite runs in at least 3 shards, each with at least 2x a quarter-suite of time, merged into the one required check', () => {
+    const tests = read('.github/workflows/tests.yml');
+    const shards = (wf, job) => {
+      const m = new RegExp('\\n  ' + job + ':[\\s\\S]*?\\n        shard: \\[([\\d, ]+)\\]').exec(wf);
+      return m ? m[1].split(',').map((x) => Number(x.trim())) : [];
+    };
+    for (const [wf, job] of [[tests, 'shards'], [pages(), 'gate-shards']]) {
+      const list = shards(wf, job);
+      expect(list.length, job + ': at least 3 shards').toBeGreaterThanOrEqual(3);
+      expect(list, job + ': shards are 1..N, none missing (a missing one would skip tests)').toEqual(list.map((_, i) => i + 1));
+      expect(wf).toContain('npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/' + list.length);
+      // 53 min in one job on 27 Nov: a shard needs at least 2x its share of that.
+      const t = Number(new RegExp('\\n  ' + job + ':[\\s\\S]*?\\n    timeout-minutes:\\s*(\\d+)').exec(wf)[1]);
+      expect(t, job + ' timeout').toBeGreaterThanOrEqual(Math.ceil((2 * 53) / list.length));
+    }
+    // The required check: the merge job keeps the name, waits for every shard, still reports when one fails, and is red unless all passed.
+    expect(tests).toMatch(/\n  tests:\n    name: Browser tests \(pretend Google and Drive\)\n    needs: shards\n    if: \$\{\{ !cancelled\(\) \}\}/);
+    expect(tests).toContain('test "${{ needs.shards.result }}" = success');
+    expect(tests).toMatch(/fail-fast: false/);
+    expect(pages()).toContain('test "${{ needs.gate-shards.result }}" = success');
   });
 
   // 20-22 Nov 2026: the gate's 35-minute limit cut off every publish once the suite ran past it, so github.io (where
   // the printed QR codes point) went stale for two days while main moved on. The gate runs the same suite as the
   // required check, so it gets at least the same time limit.
   test('the publish gate has at least as long as the required check to run the suite @regression', () => {
+    // Since 27 Nov 2026 the suite runs in shards: each gate shard gets at least as long as each required-check shard.
     const minutes = (wf, job) => Number(new RegExp('\\n  ' + job + ':[\\s\\S]*?\\n    timeout-minutes:\\s*(\\d+)').exec(wf)[1]);
-    expect(minutes(pages(), 'gate')).toBeGreaterThanOrEqual(minutes(read('.github/workflows/tests.yml'), '[a-z-]+'));
+    expect(minutes(pages(), 'gate-shards')).toBeGreaterThanOrEqual(minutes(read('.github/workflows/tests.yml'), 'shards'));
   });
 
   test('nothing can bypass the gate: no always(), no continue-on-error, only push to main or a manual run', () => {
@@ -210,7 +235,8 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(scope('workflow_dispatch', 'refs/heads/main', 'true')).toBe('browser=true');
     expect(scope('push', 'refs/heads/main', 'false')).toBe('browser=true');
     expect(read('.github/workflows/tests.yml')).toMatch(/REPO_PRIVATE: \$\{\{ github\.event\.repository\.private \}\}/);
-    expect(pages()).toMatch(/gate:[\s\S]*?if: \$\{\{ !github\.event\.repository\.private \}\}/);
+    expect(pages()).toMatch(/\n  gate-shards:[\s\S]*?if: \$\{\{ !github\.event\.repository\.private \}\}/);
+    expect(pages()).toMatch(/\n  gate:[\s\S]*?if: \$\{\{ !cancelled\(\) && !github\.event\.repository\.private \}\}/);
   });
 
   // Minutes trim (20 Nov 2026): the suite runs for pull requests and nightly, never on a plain push, and never twice for main.

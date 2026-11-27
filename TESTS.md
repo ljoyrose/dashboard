@@ -244,6 +244,8 @@ Because Drive is pretend, a green tick does **not** prove your real Drive folder
 - **Every night about 03:17 UTC**, unless main has had no new commit for 26 hours.
 - **Whenever you press the button:** GitHub > the **Actions** tab > **Dashboard tests** > **Run workflow**.
 
+**Shards (27 Nov 2026):** the suite runs as 4 parallel jobs ("Browser tests shard 1/4" to "4/4", Playwright `--shard`), each about a quarter of the tests with a 40-minute limit. One last job merges their results and is the only one called "Browser tests (pretend Google and Drive)", the check branch protection requires; it is red unless every shard passed. The publish gate in `pages.yml` is split the same way. Every test still runs, in exactly one shard. A ci-guard keeps at least 3 shards.
+
 Each run writes a short table at the top of its page in the Actions tab: one line per page, with passed and failed counts.
 
 There is also a small **optional** check of the three live web addresses. It opens them signed out and confirms they are up. It runs **a minute or so after every publish to the live site** (so a bad merge is noticed in minutes), on Mondays, and on the button. It never blocks anything, because GitHub Pages can have a slow day. It also checks that **what is live is exactly the file that was merged** (compared byte for byte, waiting up to 90 seconds for GitHub Pages to finish). It has run after the last two publishes and passed.
