@@ -3,7 +3,7 @@
  * priority 2 "legally compliant exports"). Read only: it never writes a row.
  * One line per medicine given. Every column an inspector asks for is always printed; a detail the record does not hold
  * says "not recorded" only for a legally required detail: the date, the dog, the medicine and the dose.
- * A blank name in Given by shows Lisa Carson while those blanks are filled in on the sheet. The sheet still keeps the name column.
+ * A blank Given by shows the name in the Settings row meds.given_by.default (passed in as opts.givenBy), else "not recorded".
  * Time, batch, expiry, route, reason and the vet instruction are left blank when the record does not hold them.
  * Where the row was recorded (dog card or staff job) stays on the line for other code. It is not a column.
  * A column is read only by its own name (listed in FROM below); nothing is worked out from another column.
@@ -18,9 +18,8 @@
   var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var NR = 'not recorded';
-  /* Only these say "not recorded" when empty. The rest stay blank. A blank Given by shows NAMED instead. */
-  var REQUIRED = { date: 1, dog: 1, product: 1, dose: 1 };
-  var NAMED = 'Lisa Carson';
+  /* Only these say "not recorded" when empty. The rest stay blank. A blank Given by first takes the Settings default. */
+  var REQUIRED = { date: 1, dog: 1, product: 1, dose: 1, given_by: 1 };
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   /* The register's columns, in print order: [key, heading]. */
@@ -130,12 +129,12 @@
 
   /**
    * The register lines for one month, oldest first.
-   * opts: { month: 'YYYY-MM', dog: function(subject_id) -> {name, chip} | null }
+   * opts: { month: 'YYYY-MM', dog: function(subject_id) -> {name, chip} | null, givenBy: Settings default for a blank Given by }
    * Each line: { id, date, time, dog, chip, product, ..., missing: [keys], offList: bool }
    */
   function build(rows, opts) {
     opts = opts || {};
-    var ym = str(opts.month), dogOf = typeof opts.dog === 'function' ? opts.dog : function () { return null; };
+    var ym = str(opts.month), givenBy = who(opts.givenBy), dogOf = typeof opts.dog === 'function' ? opts.dog : function () { return null; };
     var out = [];
     (rows || []).forEach(function (r) {
       var w = when(r);
@@ -151,8 +150,8 @@
         product: unnamed(r.product, r.ruling_needed) ? '' : str(r.product)
       };
       Object.keys(FROM).forEach(function (k) { line[k] = pick(r, FROM[k]); });
-      line.note = Show.human(clean(line.note)); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by) || NAMED;
-      line.missing = ['date', 'dog', 'product', 'dose'].filter(function (k) { return !line[k]; });
+      line.note = Show.human(clean(line.note)); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by) || givenBy;
+      line.missing = ['date', 'dog', 'product', 'dose', 'given_by'].filter(function (k) { return !line[k]; });
       out.push(line);
     });
     out.sort(function (a, b) { return a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : (a.id < b.id ? -1 : 1); });
@@ -224,7 +223,7 @@
       + '<h1>' + esc(title) + '</h1>'
       + '<p class="meta">' + (kennel ? '<span><b>Kennel:</b> ' + esc(kennel) + '</span>' : '<span>Set the kennel name in Settings.</span>') + '<span><b>Printed:</b> ' + esc(head.printed) + '</span>'
       + '<span><b>Entries:</b> ' + lines.length + '</span></p>'
-      + '<p class="meta">Date, dog, medicine and dose say <i>' + NR + '</i> when the record does not hold them. A blank name shows ' + esc(NAMED) + '. Other details are left blank.</p>'
+      + '<p class="meta">Date, dog, medicine, dose and given by say <i>' + NR + '</i> when the record does not hold them.' + (str(head.givenBy) ? ' A blank name shows ' + esc(head.givenBy) + ' (Settings).' : '') + ' Other details are left blank.</p>'
       + body
       + (gk.length ? '<p class="gaps"><b>Not recorded:</b> ' + gk.map(function (k) { return esc(heading(k)) + ' ' + g[k] + ' of ' + lines.length; }).join(' · ') + '</p>' : '')
       + '<p class="sign"><span>Checked by</span><span>Date</span></p></section>';

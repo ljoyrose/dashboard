@@ -183,7 +183,7 @@ test('room temperatures print as one daily min and max sheet a month @regression
 test('an empty medicines month says no records and optional fields stay blank @regression', () => {
   const [line] = MedsReg.build([{ id: 'd', subject_id: 'a', given_on: '2026-02-03', product: 'Wormer', dose_volume: '1 tablet' }], { month: '2026-02', dog: () => ({ name: 'Ada', chip: '' }) });
   expect(MedsReg.cell(line, 'dose')).toBe('1 tablet');
-  expect(MedsReg.cell(line, 'given_by')).toBe('Lisa Carson');
+  expect(MedsReg.cell(line, 'given_by')).toBe(MedsReg.NR);   // no Settings default given
   expect(MedsReg.cell(line, 'time')).toBe('');
   expect(MedsReg.cell(line, 'batch')).toBe('');
   expect(MedsReg.cell(line, 'expiry')).toBe('');

@@ -5444,16 +5444,16 @@ function compMedsHtml(){
 }
 function medsLib(){ return window.BLDMedsRegister?Promise.resolve(window.BLDMedsRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='meds-register.js'; s.onload=function(){ ok(window.BLDMedsRegister); }; s.onerror=no; document.head.appendChild(s); }); }
 function medsMake(R){ var period=(document.getElementById('medsPeriod')||{}).value||'month';
- var kennel=kennelNow(), printed=dmy(todayISO())+' '+hhmmNow();
+ var kennel=kennelNow(), givenBy=medsGivenByNow(), printed=dmy(todayISO())+' '+hhmmNow();
  var rows=R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO());
  if(period==='year'){ var y=(document.getElementById('medsYear')||{}).value||todayISO().slice(0,4), sheets=[], mi, flat=[];
   for(mi=1;mi<=12;mi++){ var ym=y+'-'+(mi<10?'0':'')+mi; if(ym+'-01'>todayISO()) continue;
-   sheets.push({month:ym,lines:R.build(rows,{month:ym,dog:regDog})}); }
+   sheets.push({month:ym,lines:R.build(rows,{month:ym,dog:regDog,givenBy:givenBy})}); }
   sheets.forEach(function(s){ flat=flat.concat(s.lines); });
-  return {period:'year',year:y,ym:y,sheets:sheets,lines:flat,head:{kennel:kennel,year:y,printed:printed}}; }
+  return {period:'year',year:y,ym:y,sheets:sheets,lines:flat,head:{kennel:kennel,year:y,printed:printed,givenBy:givenBy}}; }
  var ym=(document.getElementById('medsMonth')||{}).value||'';
- var lines=R.build(rows,{month:ym,dog:regDog});
- return {ym:ym,lines:lines,head:{kennel:kennel,month:ym,printed:printed}}; }
+ var lines=R.build(rows,{month:ym,dog:regDog,givenBy:givenBy});
+ return {ym:ym,lines:lines,head:{kennel:kennel,month:ym,printed:printed,givenBy:givenBy}}; }
 function bindMeds(){ var p=document.getElementById('medsPrint'), c=document.getElementById('medsCsv'), msg=document.getElementById('medsMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; };
  medsLib().catch(function(){});   /* fetched now, so Print can open its tab inside the press and is not blocked */
@@ -5806,6 +5806,18 @@ function kennelNow(){
  for(i=0;i<cols.length;i++){ v=ok(t[cols[i]]); if(v) return v; }
  return '';
 }
+/* A blank Given by on the medicines register: the Settings row meds.given_by.default in force today, else '' (prints not recorded). */
+function medsGivenByNow(){
+ var today=todayISO(), best=null;
+ (T['BLD-breeding_rule.csv']||[]).forEach(function(r){
+  if(String(r.rule_key||'').trim()!=='meds.given_by.default') return;
+  var v=String(r.value||'').trim(); if(!v) return;
+  var from=String(r.effective_from||''); if(from&&from>today) return;
+  if(r.to_date&&String(r.to_date)<today) return;
+  if(!best||from>=String(best.effective_from||'')) best=r;
+ });
+ return best?String(best.value).trim():'';
+}
 function ypCtx(R){
  var dogs=[], seen={};
  function addDog(id,name,dob,area,on,kind,litter){ if(!id) return;
@@ -5836,7 +5848,7 @@ function ypCtx(R){
   areaName:function(id){ var a=byId(areas,id); return a&&a.name?a.name:''; },
   itemName:function(id){ var it=byId(items,id); return it&&it.name?it.name:''; },
   litterName:function(id){ var l=null; litters.forEach(function(x){ if(x.id===id) l=x; }); return l&&typeof litName==='function'?'Litter '+litName(l):''; },
-  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO()),{month:ym,dog:regDog});
+  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO()),{month:ym,dog:regDog,givenBy:medsGivenByNow()});
    return {columns:R.COLUMNS,lines:lines,cell:function(l,k){ return R.cell(l,k); }}; }:null };
 }
 function pageYearly(){
