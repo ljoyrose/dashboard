@@ -336,9 +336,9 @@ test.describe('Medicines register: no internal codes, nothing counted twice', ()
   });
 });
 
-test('with no default name set, a blank Given by says not recorded and the print names nobody @regression', () => {
+test('with no default name set, a blank Given by stays blank and the print names nobody', () => {
   const [l] = R.build([{ id: 'a', subject_id: 'sub-test-dog-1', given_on: '2026-02-03', product: 'Sample Wormer', dose_volume: '1 tablet' }], { month: '2026-02', dog });
-  expect(R.cell(l, 'given_by')).toBe('not recorded');
+  expect(R.cell(l, 'given_by')).toBe('');
   const html = R.toHtml({ kennel: 'Sample Kennel', month: '2026-02', printed: '27 Nov 2026' }, [l]);
   expect(html).not.toContain('A blank name shows');
 });
