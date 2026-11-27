@@ -1137,7 +1137,7 @@
   // Merge a freshly read version of a row into the stored one. Blanks never overwrite values; the owner's own fields
   // (stage set by her tap, owner, next step, flag) are kept; the stage only moves forward unless the new one is lost or
   // parked; received_uk keeps the earliest time. Returns a new object; neither input is changed.
-  var LISA_FIELDS = ['owner', 'next_step', 'next_due_uk', 'lost_reason', 'flag', 'litter_ref', 'pup_ref'];
+  var OWNER_FIELDS = ['owner', 'next_step', 'next_due_uk', 'lost_reason', 'flag', 'litter_ref', 'pup_ref'];
   function mergeRow(stored, incoming) {
     var out = {}, k;
     stored = stored || {}; incoming = incoming || {};
@@ -1147,7 +1147,7 @@
       var v = incoming[k];
       if (v === '' || v == null) continue;
       if (k === 'stage' || k === 'received_uk') continue;
-      if (LISA_FIELDS.indexOf(k) >= 0 && stored[k]) continue;
+      if (OWNER_FIELDS.indexOf(k) >= 0 && stored[k]) continue;
       if (k === 'do_not_contact') { out[k] = stored[k] === true || stored[k] === 'TRUE' || v === true || v === 'TRUE'; continue; }
       out[k] = v;
     }
