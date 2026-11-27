@@ -28,7 +28,7 @@ async function open(page, rules) {
   await page.goto('cdhub/staff/print/');
 }
 
-const STAFF = 'https://ljoyrose.github.io/dashboard/cdhub/staff.html';
+const STAFF = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
 
 test('printed QRs use the staff page when no rule is set', async ({ page }) => {
   await open(page);

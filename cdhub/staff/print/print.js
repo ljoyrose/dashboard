@@ -6,7 +6,7 @@
   'use strict';
   var CODE_KEY = 'bld.device.code', ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', LEN = 8;
   var screen = document.getElementById('screen'), save = BLDSave.create({});
-  var STAFF_FALLBACK = 'https://ljoyrose.github.io/dashboard/cdhub/staff.html';
+  var STAFF_FALLBACK = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
   function qrBase() {
     var day = typeof BLDNeeds !== 'undefined' ? BLDNeeds.today() : '', best = null;
     ((T && T.breeding_rule) || []).forEach(function (r) {
@@ -22,7 +22,8 @@
   function h(t, a, k) { var e = document.createElement(t); Object.keys(a || {}).forEach(function (x) { if (x === 'text') e.textContent = a[x]; else if (x === 'class') e.className = a[x]; else if (x === 'html') e.innerHTML = a[x]; else if (x.slice(0, 2) === 'on') e.addEventListener(x.slice(2), a[x]); else e.setAttribute(x, a[x]); }); (k || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
   /* tags and which tag an item already has: the one shared helper (staff/lib/qr-rules.js), also used by the back-fill tool */
   function newTag() { var taken = {}; (T && T.qr_tag || []).forEach(function (t) { taken[t.tag] = 1; }); return BLDQrRules.newTag(taken, function (n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return a; }); }
-  function say(t, k) { msg.className = 'msg noprint ' + (k || ''); msg.textContent = t; }   // noprint kept: the status line never prints
+  var saidN = 0;   // counts messages, so a late 'cards ready' never covers a newer one (a save, an error)
+  function say(t, k) { saidN++; msg.className = 'msg noprint ' + (k || ''); msg.textContent = t; }   // noprint kept: the status line never prints
   var msg = h('p', { class: 'msg noprint', role: 'status' });
   screen.appendChild(h('h1', { class: 'noprint', text: 'Print QR cards' }));
   var code = ''; try { code = localStorage.getItem(CODE_KEY) || ''; } catch (e) { /* no storage */ }
@@ -148,9 +149,10 @@
         if (t) sheet.appendChild(draw ? draw(t.tag, it) : card(t.tag, it.label, kind === 'area', it.room));
       });
       var left = items.filter(function (it) { return !current(kind, it.id); }).length;
+      var saidAt = saidN;
       photosReady(sheet).then(function () {
         if (gen !== makeGen) return;
-        say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
+        if (saidN === saidAt) say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
           : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
         if (done) done();
       });
@@ -220,7 +222,7 @@
      loads for whoever is signed in to Google with access to the photos folder; otherwise the empty Photo box stays. */
   function photoId(v) { v = String(v == null ? '' : v).trim(); var m = /\/file\/d\/([A-Za-z0-9_-]+)/.exec(v) || /[?&]id=([A-Za-z0-9_-]+)/.exec(v);
     return m ? m[1] : (!/^https?:/i.test(v) && /^[A-Za-z0-9_-]{8,}$/.test(v) ? v : ''); }
-  /* the main photo is the 'main' link row in force (Lisa 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
+  /* the main photo is the 'main' link row in force (the owner 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
   function photoRef(s, table) {
     var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
     var id = (m && photoId(m.drive_file_id || m.file_id)) || photoId(s.photo);
@@ -229,10 +231,6 @@
     if (id) url = '';
     return { id: id, url: url };
   }
-  /* Lisa 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
-  /* the main photo is the 'main' link row in force (the owner 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
-  function mainPhoto(s, table) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
-    return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
   /* the owner 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
      address (which needs them) fails. With the CD Hub Google sign-in on this browser, the page asks Drive for the photo the
      way the hub does: the file's thumbnail link with that sign-in, else the picture itself. No sign-in: the plain address. */
@@ -293,19 +291,14 @@
      A saved turn (photo.rotate.<file>) is drawn on top; the stored picture never changes. */
   function photoBox(s, table) {
     var ref = photoRef(s, table), on = !!(ref.id || ref.url), box = h('div', { class: 'photo' + (on ? '' : ' none'), 'data-k': 'photo' });
+    var deg = ref.id && typeof BLDPhotos !== 'undefined' && BLDPhotos.rotation ? BLDPhotos.rotation(T.files || [], T.breeding_rule || [], ref.id, BLDNeeds.today()) : 0;
     if (on) {
-      var img = h('img', { alt: '', referrerpolicy: 'no-referrer', 'data-loading': '1' });
-      box.appendChild(img);
-      loadPhoto(img, ref, function () { box.textContent = ''; box.classList.add('none'); });
-    var id = mainPhoto(s, table), box = h('div', { class: 'photo' + (id ? '' : ' none'), 'data-k': 'photo' });
-    var deg = id && typeof BLDPhotos !== 'undefined' && BLDPhotos.rotation ? BLDPhotos.rotation(T.files || [], T.breeding_rule || [], id, BLDNeeds.today()) : 0;
-    if (id) {
-      var img = h('img', { alt: '', referrerpolicy: 'no-referrer', 'data-rot': String(deg) });
+      var img = h('img', { alt: '', referrerpolicy: 'no-referrer', 'data-loading': '1', 'data-rot': String(deg) });
       box.appendChild(img);
       img.addEventListener('load', function () {
         if (deg && BLDPhotos.turnStyle) { box.style.position = 'relative'; img.style.cssText = BLDPhotos.turnStyle(deg, box.clientWidth, box.clientHeight); }
       });
-      loadPhoto(img, id, function () { box.textContent = ''; box.classList.add('none'); });
+      loadPhoto(img, ref, function () { box.textContent = ''; box.classList.add('none'); });
     }
     return box; }
   /* the owner's dog card, her APPROVED v4 design (15 Nov 2026, re-confirmed 20 Nov 18:26): name large top-left with no label; Sex (with

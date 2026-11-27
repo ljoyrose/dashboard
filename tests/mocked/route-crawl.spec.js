@@ -51,7 +51,7 @@ test('shipped files do not point internal links at the old host or a /dashboard/
   files.forEach((file) => {
     const text = fs.readFileSync(file, 'utf8');
     const rel = path.relative(ROOT, file);
-    const staffOnly = text.split('https://ljoyrose.github.io/dashboard/cdhub/staff.html').join('');
+    const staffOnly = text.split('https://ljoyrose.github.io/dashboard/cdhub/staff/').join('');
     if (staffOnly.includes('https://ljoyrose.github.io')) bad.push(rel + ' still links the old host');
     const hrefs = text.match(/(?:href|src)\s*=\s*["']\/dashboard\//g) || [];
     hrefs.forEach(() => bad.push(rel + ' has a root /dashboard/ link'));

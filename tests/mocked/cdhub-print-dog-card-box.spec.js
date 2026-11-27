@@ -2,7 +2,7 @@ const { test, expect } = require('../support/test');
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
-const STAFF = 'https://ljoyrose.github.io/dashboard/cdhub/staff.html';
+const STAFF = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
 const LAYOUTS = ['Full A4', '2 per A4', '4 per A4'];
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 

@@ -98,7 +98,7 @@ var AdminView = (function () {
     return /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) ? u : '';
   }
   function staffBase() { return location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/'; }
-  var STAFF_FALLBACK = 'https://ljoyrose.github.io/dashboard/cdhub/staff.html';
+  var STAFF_FALLBACK = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
   function qrBase(T, today) {
     var best = null;
     rows(T, 'BLD-breeding_rule.csv').forEach(function (r) {

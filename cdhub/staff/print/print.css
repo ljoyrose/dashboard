@@ -19,7 +19,6 @@
 :root{--sz-orange:var(--ljr-3-icon);--sz-green:var(--ljr-5-icon);--sz-blue:var(--ljr-6-icon);--sz-purple:var(--ljr-7-icon)}
 .per{display:inline-flex;gap:6px}.per [aria-pressed="true"],.opts>.btn[aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px}
 @media screen and (min-width:1000px){.screen{max-width:none}}
-/* Lisa's dog card (18 Nov 2026). --c is the size colour from the owner's size_colour rows. */
 /* the owner's dog card (18 Nov 2026). --c is the size colour from the owner's size_colour rows. */
 .sheet.dogs{display:grid;gap:10px;grid-template-columns:1fr}
 .sheet.dogs.per2{grid-template-columns:1fr}

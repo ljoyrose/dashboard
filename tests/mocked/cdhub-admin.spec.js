@@ -68,7 +68,7 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await expect(page.locator('[data-adm-open]').first()).toHaveAttribute('data-adm-open', 'codes');
     await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
     await page.locator('[data-adm-open="phone"]').click();
-    const staff = 'https://ljoyrose.github.io/dashboard/cdhub/staff.html';
+    const staff = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
     await expect(page.locator('#adm-phone')).toContainText('github.io');
     await page.locator('[data-adm-qr]').click();
     await expect(page.locator('.adm-qr svg')).toBeVisible();
