@@ -152,8 +152,11 @@
       var saidAt = saidN;
       photosReady(sheet).then(function () {
         if (gen !== makeGen) return;
-        if (saidN === saidAt) say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
-          : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
+        if (saidN !== saidAt) { if (done) done(); return; }
+        var ready = sheet.children.length + ' cards ready. Use your browser’s Print.';
+        function sayReady() { var note = photoNote(sheet); say(ready + note, note ? 'warn' : 'good'); readySaid = saidN; }
+        if (failed) say('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.', 'bad');
+        else { sayReady(); resay = sayReady; }
         if (done) done();
       });
     }());
@@ -274,6 +277,16 @@
       .then(function (m) { var link = m && m.thumbnailLink; if (link && /^https:\/\//i.test(link)) { arm(img); img.src = link.replace(/=s\d+$/, '=s800'); } else bytes(); })
       .catch(bytes);
   }
+  /* Photos that cannot show are named on screen (never on paper): the photo records cannot be read with this sign-in,
+     or some photos did not load. */
+  var resay = null, readySaid = -1;
+  function photoNote(root) {
+    var boxes = root.querySelectorAll('[data-k="photo"]');
+    if (!boxes.length) return '';
+    if (readBlock.files || readBlock.links) return ' Photos are not shown: this sign-in cannot read photo records (sign in to CD Hub as owner on this address).';
+    var n = root.querySelectorAll('[data-k="photo"][data-failed]').length;
+    return n ? ' ' + n + ' photo' + (n === 1 ? '' : 's') + ' did not load: sign in to CD Hub on this browser, or the photo is not shared.' : '';
+  }
   function photosReady(root) {
     var imgs = (root || document).querySelectorAll('[data-k="photo"] img');
     return Promise.all(Array.prototype.map.call(imgs, function (img) {
@@ -298,7 +311,7 @@
       img.addEventListener('load', function () {
         if (deg && BLDPhotos.turnStyle) { box.style.position = 'relative'; img.style.cssText = BLDPhotos.turnStyle(deg, box.clientWidth, box.clientHeight); }
       });
-      loadPhoto(img, ref, function () { box.textContent = ''; box.classList.add('none'); });
+      loadPhoto(img, ref, function () { box.textContent = ''; box.classList.add('none'); box.setAttribute('data-failed', '1'); if (resay && saidN === readySaid) resay(); });
     }
     return box; }
   /* the owner's dog card, her APPROVED v4 design (15 Nov 2026, re-confirmed 20 Nov 18:26): name large top-left with no label; Sex (with

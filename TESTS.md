@@ -448,6 +448,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | Full A4 printed a three-column grid and left the card fields off the page | "each layout prints that many cards a page, and the fields are on the page @regression" (tests/mocked/cdhub-print-pages.spec.js) |
 | 25 Nov 2026 | Room card size icons printed grey, and the square metres were missing when the live row omitted them | "room card dog icons stay coloured and the room size prints from the device copy @regression" (tests/mocked/cdhub-print-room-colour.spec.js) |
 | 26 Nov 2026 | Dog card name column collapsed and the chip number ran into the next card | "dog card name stays wide, the chip stays inside the card, and the birth date stays one line @regression" (tests/mocked/cdhub-print-dog-card-box.spec.js) |
+| 27 Nov 2026 | Every dog card showed an empty photo box with no reason when the photo records could not be read | "when the photo records cannot be read, the page says so instead of blank photos @regression @live" (tests/mocked/cdhub-print-dog-card-box.spec.js) |
 | 26 Nov 2026 | Dog cards printed with no photo | "dog card photo is a loaded square in every layout and in print @regression" (tests/mocked/cdhub-print-dog-card-box.spec.js) |
 | 26 Nov 2026 | Printed QR codes used the old host | "every print QR uses the staff rule or the staff page @regression @live" (tests/mocked/cdhub-print-dog-card-box.spec.js) |
 

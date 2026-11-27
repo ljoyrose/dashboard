@@ -180,3 +180,26 @@ test('every print QR uses the staff rule or the staff page @regression @live', a
   expect(marks).toContain('#s');
   expect(marks).toContain('#setup');
 });
+
+test('when the photo records cannot be read, the page says so instead of blank photos @regression @live', async ({ page }) => {
+  await open(page);
+  await page.route(SCRIPT, (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action === 'read' && (b.table === 'files' || b.table === 'links')) return route.fulfill({ headers: CORS, json: { ok: false, code: 'NOT_ALLOWED', message: 'Not allowed.' } });
+    return route.fallback();
+  });
+  await page.goto('cdhub/staff/print/');
+  await page.getByRole('button', { name: 'Dog cards', exact: true }).click();
+  await expect(page.locator('article.dcard')).toHaveCount(3);
+  await expect(page.locator('.msg')).toContainText('Photos are not shown: this sign-in cannot read photo records');
+});
+
+test('a photo that does not load is counted on screen @regression', async ({ page, allowedConsole }) => {
+  allowedConsole.push(/status of 404/);   // the pretend photo address answers 404 on purpose
+  await open(page);
+  await page.route(/example\.com\/dog-b\.png/, (route) => route.fulfill({ status: 404, body: '' }));
+  await page.goto('cdhub/staff/print/');
+  await page.getByRole('button', { name: 'Dog cards', exact: true }).click();
+  await expect(page.locator('.msg')).toContainText('1 photo did not load');
+  await expect(page.locator('.sheet')).not.toContainText('did not load');
+});
