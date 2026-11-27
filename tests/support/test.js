@@ -12,6 +12,10 @@ const { buildWorld } = require('./world');
 
 // Outside addresses the pages use for looks only. Answered with empty files so they never hit the internet.
 // Looks only (fonts and the Factory page's icon font): answered empty, never a data call.
+// LIVE_FEATURES=1 (the live-features project): the live site's own files load from the network, so the DEPLOYED pages run.
+// Everything else (Google sign-in, Drive, the save script, any other address) stays pretend exactly as below.
+const LIVE_PREFIX = process.env.LIVE_FEATURES ? require('./site').LIVE.replace(/\/?$/, '/') : '';
+
 const LOOKS_ONLY = [/^https:\/\/fonts\.googleapis\.com\//, /^https:\/\/fonts\.gstatic\.com\//, /^https:\/\/cdn\.jsdelivr\.net\/npm\/@tabler\/icons-webfont@[\d.]+\/dist\//];
 
 const test = base.test.extend({
@@ -28,6 +32,8 @@ const test = base.test.extend({
       const problems = [];
       const outside = [];
       const consoleSeen = [];
+      const liveLoads = []; // LIVE_FEATURES only: the live site's files this test loaded
+      const live = LIVE_PREFIX && base.test.info().project.name === 'live-features' ? LIVE_PREFIX : '';
 
       await context.addInitScript(
         ({ mode, today }) => { window.__GIS_MODE = mode; window.__MONEY_TODAY = today; },
@@ -49,6 +55,7 @@ const test = base.test.extend({
       // Anything else that leaves the machine: record it, answer it empty.
       await context.route(/^https?:\/\/(?!127\.0\.0\.1|localhost).*/, (route) => {
         const url = route.request().url();
+        if (live && url.startsWith(live)) { liveLoads.push(url); return route.fallback(); }
         if (/^https:\/\/(accounts\.google\.com\/gsi\/client|www\.googleapis\.com\/drive\/v3\/)/.test(url)) return route.fallback();
         if (LOOKS_ONLY.some((re) => re.test(url))) {
           return route.fulfill({ status: 200, contentType: url.includes('fonts.googleapis') || /\.css(\?|$)/.test(url) ? 'text/css' : 'font/woff2', body: '' });
@@ -105,6 +112,8 @@ const test = base.test.extend({
       const unexpected = consoleSeen.filter((t) => !/Service Worker registration blocked by Playwright/.test(t) && !allowedConsole.some((re) => re.test(t)));
       base.expect(problems, 'Uncaught errors on the page').toEqual([]);
       base.expect(unexpected, 'Unexpected console errors or warnings').toEqual([]);
+      // A live feature check that loaded nothing from the live site checked nothing live.
+      if (live) base.expect(liveLoads.length, 'LIVE_FEATURES: no file came from the live site ' + live).toBeGreaterThan(0);
       base.expect(outside, 'The page tried to call an outside address that is not mocked').toEqual([]);
     },
     { auto: true },

@@ -21,7 +21,7 @@ const BREAKS = [
   { id: 'sideways-scroll', what: 'Money Hub becomes wider than a phone screen', file: 'money/index.html',
     find: '</head>', replace: '<style>body{min-width:700px}</style></head>', project: 'phone', spec: 'phone' },
   { id: 'publish-ungated', what: 'The publish job stops waiting for the tests (the live site would go out untested)', file: '.github/workflows/pages.yml',
-    find: 'needs: gate', replace: 'needs: []', project: 'mocked', spec: 'ci-guards' },
+    find: 'needs: gate\n', replace: 'needs: []\n', project: 'mocked', spec: 'ci-guards' },
   { id: 'publish-too-much', what: 'The publish copies the tests folder onto the live site', file: '.github/workflows/pages.yml',
     find: 'cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio estate enquiries breed-better _site/', replace: 'cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio estate enquiries breed-better tests _site/', project: 'mocked', spec: 'ci-guards' },
 ];

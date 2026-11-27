@@ -165,7 +165,7 @@ function rowValues_(columns, row) {
 }
 
 /**
- * A new row's id: the table prefix and 8 random letters/digits, e.g. "sub-7k2q9xbm" (Lisa, 15 Nov 2026, Q4: every record
+ * A new row's id: the table prefix and 8 random letters/digits, e.g. "sub-7k2q9xbm" (15 Nov 2026, Q4: every record
  * has a permanent meaningless id; the name is a separate, editable column). Never built from a name or a date, so the id
  * says nothing about the row and never needs to change. Existing ids are kept as they are. The second argument is
  * ignored (it was the date). Random bytes from two UUIDs, skipping their fixed version and variant digits.
