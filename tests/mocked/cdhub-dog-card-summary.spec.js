@@ -47,9 +47,9 @@ test('a parasite dose is on the dog card medications, once, newest first @regres
     'ct-med,t,medicine,Medicine given,dog,true,2026-01-01'
   ]));
   put(w, 'BLD-check_log.csv', csv('id,tenant_id,check_type_id,subject_id,item,amount,outcome,happened_at,note,taken_by', [
-    'clg-1,t,cty-parasites-1,sub-x1,Moxiclear,1 pipette,ok,2026-11-01T12:00:00Z,backfill Lisa 25 Nov,Lisa Carson',
-    'clg-2,t,cty-parasites-1,sub-x1,Panacur,4.5 ml,ok,2026-11-20T12:00:00Z,with food,Lisa Carson',
-    'clg-3,t,ct-med,sub-x1,Propofol,2 ml,ok,2026-11-21T12:00:00Z,vet procedure,Lisa Carson'
+    'clg-1,t,cty-parasites-1,sub-x1,Moxiclear,1 pipette,ok,2026-11-01T12:00:00Z,backfill 25 Nov,Owner A',
+    'clg-2,t,cty-parasites-1,sub-x1,Panacur,4.5 ml,ok,2026-11-20T12:00:00Z,with food,Owner A',
+    'clg-3,t,ct-med,sub-x1,Propofol,2 ml,ok,2026-11-21T12:00:00Z,vet procedure,Owner A'
   ]));
   await HUBS.cdhub.open(page, guard);
   await page.evaluate(() => go('dogs/sub-x1'));
