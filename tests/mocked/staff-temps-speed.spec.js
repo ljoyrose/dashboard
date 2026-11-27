@@ -1,4 +1,4 @@
-// Staff Temps, Jobs and the checks page (Lisa 22 Nov 2026: Temps "Loading..." 45-110 s on EVERY open; checks blank).
+// Staff Temps, Jobs and the checks page (22 Nov 2026: Temps "Loading..." 45-110 s on EVERY open; checks blank).
 // - Slow lists (rooms, dogs, bands, thermometers...) are read once a session and shared by every screen; readings and
 //   job records are always read, and the round reads readings from yesterday on only.
 // - A screen that waits for the records gives up after 45 s with a plain line and Try again; nothing is a blank page.

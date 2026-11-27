@@ -190,8 +190,8 @@
           : [h('p', { class: 'sub', text: 'No dogs here.' })])));
       }
       /* this code cannot read past records (no read rows for check_log): say so, never a silent "Due" */
-      /* Lisa 17 Nov 2026: jobs she had just saved still said Due. 22 Nov 2026: one neutral line whatever the reason (no
-         answer in time, or no read rows for check_log yet), always with Try again; never "Ask Lisa", never blame. */
+      /* 17 Nov 2026: jobs the owner had just saved still said Due. 22 Nov 2026: one neutral line whatever the reason (no
+         answer in time, or no read rows for check_log yet), always with Try again; never "Ask <name>", never blame. */
       if (!v[2].ok) {
         host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', 'data-why': String(v[2].code || ''), text: 'Couldn\u2019t check what\u2019s done yet. Try again.' }));
         host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));

@@ -250,6 +250,7 @@
   }
   /** Read where the dogs are again (occupancy only, never the other lists). {ok, asOf} or the read's refusal. */
   function refreshOccupancy() {
+    if (save.dropCache) save.dropCache('occupancy');   // the list cache keeps lists for the session: Refresh must read this one fresh
     return save.read('occupancy').then(function (r) {
       if (!r.ok) return r;
       if (dataObj) { dataObj.raw.occupancy = r.rows || []; rebuild(dataObj); dataObj.asOf = Date.now(); }
