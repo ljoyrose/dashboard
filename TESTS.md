@@ -460,6 +460,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | A photo frame was wider than it was tall, and the chosen print type did not stay marked | "the chosen card type stays pressed, and photo frames stay square @regression" (tests/mocked/cdhub-print-dog-fit.spec.js) |
 | 25 Nov 2026 | Full A4 printed a three-column grid and left the card fields off the page | "each layout prints that many cards a page, and the fields are on the page @regression" (tests/mocked/cdhub-print-pages.spec.js) |
 | 25 Nov 2026 | Room card size icons printed grey, and the square metres were missing when the live row omitted them | "room card dog icons stay coloured and the room size prints from the device copy @regression" (tests/mocked/cdhub-print-room-colour.spec.js) |
+| 27 Nov 2026 | Temperatures: a corrected reading was shown beside or instead of the correction (history kept the later save in the slot without reading corrects_id; the staff year view dropped the correction and kept the old reading); owner rule: the correction replaces the original | "a corrected temperature replaces the original on the page and the print; the original is not shown @regression" (tests/mocked/history-calm.spec.js) and the year-report unit test in cdhub/staff/modules/temperature/test/year-report.test.mjs |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

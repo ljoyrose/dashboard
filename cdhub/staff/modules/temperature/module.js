@@ -832,14 +832,29 @@
       r.breach = hadNote || outside;
     }
   }
+  /* A correction replaces the reading it corrects (owner 27 Nov 2026): the original is not shown, and a correction with no
+     period_start of its own takes its original's slot. Rows are never changed; this only picks which one to show. */
+  function inForce(rows) {
+    var byId = {}, replaced = {};
+    (rows || []).forEach(function (r) { if (r.id) byId[r.id] = r; if (r.corrects_id) replaced[r.corrects_id] = 1; });
+    return (rows || []).filter(function (r) { return !replaced[r.id]; }).map(function (r) {
+      if (!r.corrects_id || r.period_start) return r;
+      var o = byId[r.corrects_id], n = 0;
+      while (o && !o.period_start && o.corrects_id && n++ < 20) o = byId[o.corrects_id];
+      if (!o || !(o.period_start || o.taken_at)) return r;
+      var c = {}, k; for (k in r) if (Object.prototype.hasOwnProperty.call(r, k)) c[k] = r[k];
+      c.period_start = o.period_start || o.taken_at;
+      return c;
+    });
+  }
   /** Rows of one room and year from the three lists, oldest first. Guest and sensor rows are labelled, never merged. */
   function yearRows(staff, guest, sensor, areaId, year, codeOf) {
     codeOf = codeOf || function (id) { return id; };
     var out = [];
     function slotOf(iso) { var hr = parseInt(String(iso).slice(11, 13), 10); return isNaN(hr) ? '' : (hr < 12 ? 'AM' : 'PM'); }
-    staff.forEach(function (r) {
+    inForce(staff).forEach(function (r) {
       var at = String(r.period_start || r.taken_at || '');
-      if (r.area_id !== areaId || at.slice(0, 4) !== year || r.corrects_id) return;
+      if (r.area_id !== areaId || at.slice(0, 4) !== year) return;
       // the owner, 11 Nov 2026: how a reading was taken (read_method, camera_value_changed) is saved only, never shown.
       var empty = String(r.room_empty || '').toLowerCase() === 'yes';
       out.push({ kind: 'staff', kindLabel: 'Staff', date: at.slice(0, 10), slot: slotOf(at), sort: at, min: num(r.min_c), max: num(r.max_c), spot: r.spot_c || '', empty: empty,
