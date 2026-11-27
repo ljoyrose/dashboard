@@ -208,7 +208,7 @@ function store_readTail_(title, n, fullCols) {
            tail: true, tailFrom: from, full: full, complete: from === 2 };
 }
 
-/* FAST APPEND CHECKS (Lisa 16 Nov 2026: saves took about 25 s each and a second person got "Someone else is saving").
+/* FAST APPEND CHECKS (Owner 16 Nov 2026: saves took about 25 s each and a second person got "Someone else is saving").
  * An append used to read the WHOLE tab three times (once to read, once before writing, once after). The temperature
  * log is over 30,000 rows, so the lock was held for most of that time. Now, after the one full read, an append checks
  * only what an append can disturb: the row count, the header row and the last row before writing, then reads back
