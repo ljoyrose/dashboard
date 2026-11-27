@@ -255,6 +255,7 @@ There is also a small **optional** check of the three live web addresses. It ope
 - **What runs:** every test with `@live` in its name (about 12: print page dog, room and thermometer cards, owner sign-in photo, The Round temperature save, temperature, daily checks and medicines registers, QR scan routing, staff Jobs done, gallery remove). Project `live-features` in `playwright.config.js`, only defined when `LIVE_FEATURES=1`.
 - **Where:** `.github/workflows/live-after-deploy.yml`, right after the live-smoke step on `main`. The page files (HTML, JS, CSS) come from the **live site**; Google sign-in, Drive and the save script stay **pretend** (`tests/support/test.js`), so it uses invented data, no credentials, and touches no real record. A test that loads nothing from the live site fails.
 - **What red means:** the deployed site does not do what the merged tests expect. It opens or updates the one `live-site-red` Issue ("cdhub: live feature check failed", with the merged commit and the failed test names). Green closes it. It never blocks a merge.
+- **Which commit:** the job checks out the commit the publish run deployed (`workflow_run.head_sha`), not main HEAD, and names it in the Issue. A hand-started run checks out the branch it was started on.
 - **On your computer:** `LIVE_FEATURES=1 npx playwright test --project=live-features`. `LIVE_URL` points it elsewhere; if the site moves to the root, also set `SITE_BASE=/`.
 - **New feature?** Put `@live` in the title of the test that covers it, if that test opens pages by relative address.
 
@@ -460,6 +461,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | A photo frame was wider than it was tall, and the chosen print type did not stay marked | "the chosen card type stays pressed, and photo frames stay square @regression" (tests/mocked/cdhub-print-dog-fit.spec.js) |
 | 25 Nov 2026 | Full A4 printed a three-column grid and left the card fields off the page | "each layout prints that many cards a page, and the fields are on the page @regression" (tests/mocked/cdhub-print-pages.spec.js) |
 | 25 Nov 2026 | Room card size icons printed grey, and the square metres were missing when the live row omitted them | "room card dog icons stay coloured and the room size prints from the device copy @regression" (tests/mocked/cdhub-print-room-colour.spec.js) |
+| 27 Nov 2026 | Live check after deploy (issue #847): it checked out main HEAD, newer than the deployed commit after a cancelled publish, so @live tests failed against older pages; an apt 403 in install-deps then skipped the live-smoke step, so the issue could not close | "the live check after deploy tests the deployed commit, reports it, and an apt outage cannot skip the checks @regression" (tests/mocked/ci-guards.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
