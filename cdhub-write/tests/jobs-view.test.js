@@ -27,7 +27,7 @@ test('a Problem-button job (target optional) shows on its SOP panel with its own
   assert.match(V.sopHtml(v, 'Lost Dog'), /<b>lost_dog<\/b><span class="mut" data-every>When it happens<\/span>[\s\S]*Problem button/);
 });
 
-test('the summary uses each age band for the times a day; one done entry counts for the day (#820)', () => {
+test('the summary uses each age band for the times a day; one done entry counts for the day (PR 820)', () => {
   const types = [
     Object.assign(T('feeding', 'dog', '1'), { sop: 'checks' }),
     Object.assign(T('food_bowls', 'none', '1'), { sop: 'checks', site_scope: 'one_line' }),
@@ -48,7 +48,7 @@ test('the summary uses each age band for the times a day; one done entry counts 
   const dogs = [{ id: 'sub-test-a', dob: '2026-03-01', area_id: 'area-a' }, { id: 'sub-test-b', dob: '2020-01-01', area_id: 'area-a' }];
   const rows = V.summary({ today: day, logs: logs, litters: [], types: types, dogs: dogs, areas: [], rules: rules, esc: (s) => String(s) });
   const row = (k) => rows.find((r) => r.key === k);
-  // one done entry counts for the whole day, even where the day needs more (multi-per-day rule, #820)
+  // one done entry counts for the whole day, even where the day needs more (multi-per-day rule, PR 820)
   assert.equal(row('feeding').due, 0);
   assert.equal(row('feeding').ok, 2);
   assert.equal(row('food_bowls').ok, 1);
