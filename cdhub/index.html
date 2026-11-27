@@ -1060,6 +1060,8 @@ function onCdToken(resp){
   if(!google.accounts.oauth2.hasGrantedAllScopes(resp,SCOPE)){ LOAD.state='signin'; LOAD.err='Read access was not granted, so nothing can be shown yet.'; render(); return; }
   TOKEN=resp.access_token; TOKEN_EXP=DashAuth.expiryFrom(resp.expires_in);
   DashAuth.save(TOKEN, TOKEN_EXP, resp.scope||SCOPE);
+  /* a quiet renewal while the page is in use: keep the screen as it is (nothing typed is lost) and send what waits */
+  if(hubRenewing){ hubRenewing=false; if(LOAD.state==='ok'){ hubBoxDraw(); hubFlush(); return; } }
   load();
 }
 function onCdError(e){ var t=(e&&e.type)||'';
@@ -1067,6 +1069,7 @@ function onCdError(e){ var t=(e&&e.type)||'';
   if(LOAD.state!=='ok') LOAD.state='signin'; render();
 }
 function onCdSilentFail(hadExpired){
+  if(hubRenewing){ hubRenewing=false; hubBoxDraw(); return; }   /* the outbox line keeps asking to sign in again; the screen stays */
   if(TOKEN&&Date.now()<TOKEN_EXP) return;
   if(!hadExpired) return;
   LOAD.state='signin'; LOAD.err='Sign-in expired. Sign in again.'; render();
@@ -4876,7 +4879,7 @@ var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code', SAVE_KEEP_KE
    and the address kept on this device, and stops the staff page's copy being reused here (15 Nov 2026).
    #join=<code>&url=<address> still fills the card. */
 var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.save.off', SINK_OFF_OLD='cdhub.sink.off';
-/* Storage tidy, stage 2 (owner 15 Nov 2026, "go with recommendation"): "Switch off here" is now kept as cdhub.save.off.
+/* Storage tidy, stage 2: "Switch off here" is now kept as cdhub.save.off.
    A phone switched off before this still has the old cdhub.sink.off, so either one means off. Only the new one is written;
    switching back on clears both, or the old flag would keep the phone off for good. Old keys are removed in the last stage. */
 function offHere(){ return !!(sinkRaw(SINK_OFF_KEY)||sinkRaw(SINK_OFF_OLD)); }
@@ -5107,6 +5110,18 @@ function hubDelivered(item,j){
 /* Send every kept entry again, oldest first. They are all queued first, so Send now is one list (up to 20) rather than
    one request per row. A script that has no list save yet (before v24) still answers once and they go one by one.
    {old:true} also sends those past 5 hours. Resolves to how many are still kept. */
+/* QUIET RENEWAL: a Google sign-in lasts about an hour. While this page is open and the owner saves with Google (no
+   staff code), it is renewed quietly from 5 minutes before it ends, and as soon as a kept save waits for it, so the save
+   goes within about a minute without a reload. At most one try every 5 minutes. If Google cannot renew it quietly, the
+   outbox line keeps asking to sign in again and nothing on screen changes. */
+var hubRenewAt=0, hubRenewing=false, HUB_RENEW_EARLY=5*60000, HUB_RENEW_GAP=5*60000;
+function hubQuietRenew(){
+ if(hubRenewing||!TOKEN||staffCodeNow()||offHere()) return false;
+ var now=Date.now(); if(TOKEN_EXP-now>HUB_RENEW_EARLY||now-hubRenewAt<HUB_RENEW_GAP) return false;
+ hubRenewAt=now; hubRenewing=true;
+ if(!auth.requestSilent()){ hubRenewing=false; return false; }
+ return true; }
+setInterval(hubQuietRenew,60000);
 function hubFlush(o){
  if(hubFlushing) return hubFlushing;
  if(o&&o.ask) hubStop=false;
@@ -5115,7 +5130,7 @@ function hubFlush(o){
  hubFlushing=(async function(){
   /* by itself (every minute, on open, signal back): never asks for a code, and waits while no one is signed in */
   if(hubStop) return;
-  if(!(o&&o.ask)&&!hubCanSend()) return;
+  if(!(o&&o.ask)&&!hubCanSend()){ hubQuietRenew(); return; }
   var g=await sinkGate(); if(!g.ok||hubStop) return;
   var auth=hubAuthNow(), jobs=[];
   for(var i=0;i<due.length;i++){ if(hubStop) break; var it=due[i]; if(hubInFlight[it.id]) continue;
