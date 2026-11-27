@@ -2,7 +2,7 @@
  * The save logic. Order of checks (cheapest and least revealing first):
  *   switch on? -> request shape -> who are you? -> which table? (allow-list) -> table switched on?
  *   -> may your role do this? -> repeat request? -> lock -> file + header -> lookups -> field checks
- *   -> duplicate guard -> route: appended now (direct) or queued for Lisa (pending).
+ *   -> duplicate guard -> route: appended now (direct) or queued for the owner (pending).
  * Corrections are ALWAYS queued, never written straight in.
  */
 
@@ -36,7 +36,7 @@ function todayLondon_(d) { return Utilities.formatDate(d || new Date(), BLD.TZ, 
  * A missing or unreadable date means "queue" (the safe side). Everything else uses the table's own default.
  */
 function modeFor_(spec, now) {
-  // Lisa 12 Nov 2026: occupancy moves go straight in for every staff code. MOVES_QUEUE_UNTIL and MODE_occupancy are ignored for moves.
+  // Report 12 Nov 2026: occupancy moves go straight in for every staff code. MOVES_QUEUE_UNTIL and MODE_occupancy are ignored for moves.
   if (spec && spec.key === 'occupancy') return 'direct';
   var m = prop_(BLD.PROP.MODE_PREFIX + spec.key);
   if (m === 'direct' || m === 'pending') return m;
@@ -80,7 +80,7 @@ function appendPendingEvent_(ev) {
   store_append_(BLD.PENDING_FILE, BLD.PENDING_COLUMNS, rowValues_(BLD.PENDING_COLUMNS, full), p);
 }
 
-/** If the read-back check failed, record it in the approvals queue (append-only) so Lisa can see it. */
+/** If the read-back check failed, record it in the approvals queue (append-only) so the owner can see it. */
 function logWriteFailure_(e, spec, rowId, by, now, pendingId) {
   if (!e || e.code !== 'VERIFY_FAILED') return;
   try {
@@ -170,9 +170,9 @@ function newestDuplicate_(spec, clean, rows, nowMs) {
 }
 
 /**
- * Readings (Lisa 11 Nov 2026): no 7-day limit for any role. A table with ageCap takes a period_start back as far as
+ * Readings (11 Nov 2026): no 7-day limit for any role. A table with ageCap takes a period_start back as far as
  * its section's records are kept. Returns { oldestMs, keepYears, field } for those tables, else null (the 7-day rule).
- * The kept years are the retention row in force on the record's own date (Lisa 12 Nov 2026), else today's.
+ * The kept years are the retention row in force on the record's own date (12 Nov 2026), else today's.
  */
 function ageCap_(spec, tenant, nowMs, fields) {
   var cap = spec.ageCap;
@@ -185,7 +185,7 @@ function ageCap_(spec, tenant, nowMs, fields) {
 }
 
 /**
- * Rows in force on a day (Lisa 12 Nov 2026: every limit is a dated, editable row; a past record is judged by the row
+ * Rows in force on a day (12 Nov 2026: every limit is a dated, editable row; a past record is judged by the row
  * in force on its own date). The start is fromKey (default from_date); a blank or missing start = in force from
  * always, a blank or missing to_date = no end. Both ends count (inclusive), compared as YYYY-MM-DD, so a missing
  * column is safe before the header has it. The same reading as BLDCapacity.inForce in cdhub/staff/lib/capacity.js.
@@ -885,7 +885,7 @@ function merge_(a, b) {
 }
 
 /* ------------------------------------------------------------------------------------------------
- * OWNER EDIT. Lisa only, from the owner-only approval page (her own signed-in Google account).
+ * OWNER EDIT. the owner only, from the owner-only approval page (her own signed-in Google account).
  * It overwrites a wrong entry IN PLACE. No copy of the old value and no log of the change is kept by
  * this script (Drive's own file history is the only trace, and the optional daily backup if it is on).
  * Staff can NEVER edit or delete: a staff code has no way to reach this, sinkHandle_ only knows add and

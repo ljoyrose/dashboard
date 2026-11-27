@@ -62,7 +62,7 @@ function authStaff_(code) {
     throw err_('NOT_SET_UP', 'No staff codes have been set up yet. Ask Lisa.');
   }
   // Codes are made in capitals with no spaces. A code typed in small letters or with spaces/dashes is tried as made too
-  // (15 Nov 2026: Lisa's new hub code was refused). The exact code is tried first, so an older code is never changed.
+  // (15 Nov 2026: the owner's new hub code was refused). The exact code is tried first, so an older code is never changed.
   var entry = reg[hashCode_(code.trim(), salt)];
   if (!entry) {
     var plain = code.replace(/[\s-]+/g, '').toUpperCase();
@@ -88,7 +88,7 @@ function authStaff_(code) {
 }
 
 /* -----------------------------------------------------------------------------------------------
- * OWNERS SAVE WITH THEIR GOOGLE SIGN-IN (Lisa 16 Nov 2026, option A). Staff keep codes.
+ * OWNERS SAVE WITH THEIR GOOGLE SIGN-IN (16 Nov 2026, option A). Staff keep codes.
  * The CD Hub page sends the Google access token it already holds for reading Drive (google_token). This script asks
  * Google two things about it:
  *   1. tokeninfo: is it live, and was it issued to HUB_CLIENT_ID (the hub's own sign-in)? A token any other app
