@@ -102,7 +102,7 @@
     screen.innerHTML = h;
   }
 
-  /* Add existing code: the owner or Grace types or pastes a code from her current list. The save script checks it against
+  /* Add existing code: the owner or a permitted person types or pastes a code from their current list. The save script checks it against
      that person's sign-in (ok or no only) before it is sealed, so a typo is never kept. */
   function addHtml(list) {
     var todo = list.filter(function (r) { return !sealedFor(r.code_id); });
