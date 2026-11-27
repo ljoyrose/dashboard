@@ -51,6 +51,9 @@
 .vcard .code{grid-area:code;align-self:end;justify-self:center;width:100%}
 .vcard .code svg{max-width:240px}
 .vcard .chipline{grid-area:chip;display:block;color:#141413}
+.dcard.vcard{position:relative}
+.vqr{position:absolute;right:4mm;bottom:4mm;width:22mm;height:22mm;background:#fff;z-index:1}
+.vqr svg{width:100%;height:100%;display:block}
 .vcard .chipline span{display:block;font-size:13px;color:#57504A}.vcard .chipline b{display:block;font-size:34px;letter-spacing:.08em;word-spacing:.25em}
 .dcard.vcard.icard{grid-template-areas:"name name" "photo facts" "photo code"}
 .vcard.icard .facts{grid-template-columns:1fr;justify-content:stretch;align-self:start}.vcard.icard .facts dd{font-size:18px}

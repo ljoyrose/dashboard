@@ -39,6 +39,13 @@
   if (!save.getScriptUrlSet() && owner) { ['cdhub.sink.url', 'cdhub.save.url'].some(function (k) { var u = ''; try { u = localStorage.getItem(k) || ''; } catch (e) { u = ''; } return u && save.setScriptUrl(u, true).ok; }); }
   if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: owner ? 'The save address is not on this phone yet. Open CD Hub while signed in, then open this page again. An owner is not asked for a staff code.' : 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
   if (code) save.setCode(code, false);
+  /* Owner mode (no staff code, Google sign-in at load): the access token lasts about an hour and this page cannot renew it.
+     When it runs out mid-visit, say so plainly instead of the script's "Enter your staff code." A renewal in another tab
+     is picked up at the next button press (the token is read from browser storage each time). */
+  var ownerStart = !code && !!owner;
+  var SIGNIN_GONE = 'Your Google sign-in has run out (it lasts about an hour). Open CD Hub in another tab so it signs you in again, then press the button again. No staff code is needed.';
+  function signInGone() { return ownerStart && !(save.getCode && save.getCode()) && !(BLDSave.ownerToken && BLDSave.ownerToken()); }
+  function saveMsg(r, dflt) { return (r && r.code === 'NO_CODE' && ownerStart) ? SIGNIN_GONE : ((r && r.message) || dflt); }
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
   var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' }), pick = h('div', { class: 'pick noprint' }), pickBox = h('div', { class: 'noprint' });
   screen.appendChild(opts); screen.appendChild(pickBox); screen.appendChild(pick); screen.appendChild(msg); screen.appendChild(sheet);
@@ -51,7 +58,7 @@
   var NEEDS = {
     site: BASE,
     rooms: BASE.concat(['area', 'requirement', 'area_capacity', 'area_access', 'check_type']),
-    dogs: BASE.concat(SITE, ['area_capacity', 'area_access', 'weight', 'links', 'files', 'microchip', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type']),
+    dogs: BASE.concat(SITE, ['area_capacity', 'area_access', 'weight', 'links', 'files', 'microchip', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type', 'subject_video']),
     litters: BASE.concat(SITE, ['litter', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type']),
     thermo: BASE.concat(['thermometer', 'requirement', 'area']),
     items: BASE.concat(['items', 'item_kinds', 'links', 'files'])   /* item cards (print any item, the owner 15 Nov 2026) */
@@ -66,11 +73,12 @@
     asOf.textContent = '';
     if (!readAt) return;
     asOf.appendChild(document.createTextNode('Lists as of ' + hhmm(readAt) + ' '));
-    asOf.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Refresh', 'data-print-refresh': '', onclick: function () { T = {}; readAt = 0; showAsOf(); say('Lists will be read again when you choose a card.'); } }));
+    asOf.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Refresh', 'data-print-refresh': '', onclick: function () { T = {}; readAt = 0; if (save.dropCache) save.dropCache(); showAsOf(); say('Lists will be read again when you choose a card.'); } }));
   }
   function need(what) {
     var keys = NEEDS[what].filter(function (k, i, a) { return a.indexOf(k) === i && !(k in T); });
     if (!keys.length) return Promise.resolve(true);
+    if (signInGone()) { say(SIGNIN_GONE, 'bad'); return Promise.resolve(false); }
     var left = keys.slice(), done = 0, fail = null;
     say('Loading ' + keys.length + ' list' + (keys.length === 1 ? '' : 's') + '...');
     function worker() {
@@ -87,7 +95,8 @@
     return Promise.all([worker(), worker(), worker(), worker()]).then(function () {
       if (fail) {
         var said = fail.message || 'Could not load the lists.';
-        if (save.usingGoogle && save.usingGoogle() && (fail.code === 'NO_CODE' || /staff code/i.test(said))) said = 'Sign in again on CD Hub, then open this page. An owner is not asked for a staff code.';
+        if ((fail.code === 'NO_CODE' && ownerStart) || signInGone()) said = SIGNIN_GONE;
+        else if (save.usingGoogle && save.usingGoogle() && (fail.code === 'NO_CODE' || /staff code/i.test(said))) said = 'Sign in again on CD Hub, then open this page. An owner is not asked for a staff code.';
         say(said, 'bad'); return false;
       }
       readAt = Date.now(); showAsOf(); say(''); return true;
@@ -126,6 +135,7 @@
       if (done) done();
       return;
     }
+    if (missing.length && signInGone()) { say(SIGNIN_GONE, 'bad'); if (done) done(); return; }
     (function next() {
       if (gen !== makeGen) return;
       if (i < missing.length && !failed) {
@@ -139,7 +149,7 @@
           delete tagSave[key];
           if (r.ok) { if (!current(kind, it.id)) T.qr_tag.push({ tag: tag, kind: kind, ref_id: it.id, active: 'true' }); }
           if (gen !== makeGen) return;
-          if (!r.ok) failed = r.message;
+          if (!r.ok) failed = r.code === 'NO_CODE' && ownerStart ? 'your Google sign-in has run out: open CD Hub in another tab, then press the button again.' : r.message;
           i++;
           next();
         });
@@ -293,6 +303,18 @@
     if (!young) return n;
     return BLDDisplay.marblePupName(n, '') || n;
   }
+  /* The main RoseQuest clip only. No video: nothing extra is printed. The dog's own code stays as it is. */
+  function mainVideoUrl(id) {
+    var rows = (T.subject_video || []).filter(function (r) { return r && r.subject_id === id; });
+    var replaced = {};
+    rows.forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = 1; });
+    var live = rows.filter(function (r) {
+      return r.id && !replaced[r.id] && String(r.active || '') !== 'no' && /^https:\/\/share\.puppyclassroom\.com\/v\/[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/.test(String(r.video_url || ''));
+    }).sort(function (a, b) { return String(b.created_at || '').localeCompare(String(a.created_at || '')); });
+    var mains = live.filter(function (r) { return String(r.is_main) === 'yes'; });
+    var main = mains[0] || live[0] || null;
+    return main ? main.video_url : '';
+  }
   function dogCard(tag, it) {
     var s = it.s, sz = sizeOfDog(s), col = dogColour(s, sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || ''), nm = cardName(s);
     var facts = [];
@@ -304,6 +326,7 @@
       photoBox(s),
       (function (w) { return w ? h('div', { class: 'szb', 'data-size': sz || 'puppy', 'data-k': 'size' }, [h('span', { class: 'lab', text: 'Size' }), h('b', { text: w })]) : null; })(tileWord(s, sz)),
       qrBox(qrBase() + '#s/' + tag, 'QR code for ' + (s.name || s.id)),
+      (function () { var url = mainVideoUrl(s.id); return url ? h('div', { class: 'vqr', 'data-k': 'video-qr', 'data-url': url, html: BLDQr.svg(url, 'Watch video') }) : null; })(),
       chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, [h('span', { text: 'Microchip' }), h('b', { text: chip })]) : null]);
   }
   /* Item cards (print any item, the owner 15 Nov 2026): one card layout for any BLD-items row, e.g. a fire extinguisher. The fields
@@ -373,7 +396,7 @@
       var row = { rule_key: 'print.fields.item', value: cols.join('|'), effective_from: BLDNeeds.today(), source: 'CD Hub print page' };
       save.submit('breeding_rule', row).then(function (res) {
         if (res.ok) { T.breeding_rule.push(row); itemPick = null; make('item', itemList(), itemCard); say('Saved. Item cards print these fields from today.', 'good'); }
-        else say('Not saved: ' + (res.message || 'the save did not go through.') + ' These fields are used for this print only.', 'bad');
+        else say('Not saved: ' + saveMsg(res, 'the save did not go through.') + ' These fields are used for this print only.', 'bad');
       });
     });
     pickBox.appendChild(h('fieldset', { class: 'picks' }, [h('legend', { text: 'Fields on item cards' })].concat(boxes, [use, keep])));
@@ -522,7 +545,7 @@
       var f = { name: name.value.trim(), area_id: room.value };
       save.submit('thermometer', f).then(function (r) {
         go.disabled = false;
-        if (!r.ok) { say(r.message || 'Not saved.', 'bad'); return; }
+        if (!r.ok) { say(saveMsg(r, 'Not saved.'), 'bad'); return; }
         if (r.status !== 'saved' || !r.id) { say(r.message, 'good'); return; }
         var id = r.id;
         T.thermometer.push({ id: id, name: f.name, area_id: f.area_id });
