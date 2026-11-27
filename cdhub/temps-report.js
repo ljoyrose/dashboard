@@ -19,26 +19,14 @@
      rows fit, the table sizes its text to the days and rooms, and fit() shrinks any page that would still run over. */
   var PAGE_W = 281, PAGE_H = 194, BODY_H = 170;   // mm; BODY_H leaves room for the title, key, totals and signature line
   function e(s) { return window.esc ? window.esc(s) : String(s || ''); }
-  /* When a reading was entered, in UK time: {date:'YYYY-MM-DD', time:'HH:MM'}. Blank when taken_at is blank or unreadable. */
-  var FMT = null;
-  function entered(at) {
-    var s = String(at || '').trim(), d = new Date(s);
-    if (!s || isNaN(d.getTime())) return { date: '', time: '' };
-    if (!/(Z|[+-]\d{2}:?\d{2})$/.test(s)) { var m = /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}))?/.exec(s); return m ? { date: m[1], time: m[2] || '' } : { date: '', time: '' }; }
-    if (!FMT) FMT = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-    var p = {}; FMT.formatToParts(d).forEach(function (x) { p[x.type] = x.value; });
-    return { date: p.year + '-' + p.month + '-' + p.day, time: p.hour + ':' + p.minute };
-  }
-  /* A reading entered on a later day than its slot (from paper, or imported) is marked late. */
-  function lateOf(iso, s) { if (!s || !READ[s.k]) return null; var w = entered(s.at); return w.date && w.date > iso ? w : null; }
-  /* Who entered it: a name; a record id (e.g. stf-1) is not printed. */
+  /* Who took it: a name; a record id (e.g. stf-1) is not printed. No late mark: taken_at can be the time the save arrived,
+     hours after the reading (owner ruling 27 Nov), so only who is shown. */
   function who(v) { return String(v || '').replace(/\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/gi, '').trim(); }
-  function dMon(iso) { return +iso.slice(8) + ' ' + MON[+iso.slice(5, 7) - 1].slice(0, 3); }
   function days(y, m) { var n = window.mdays(y)[m], out = []; for (var d = 1; d <= n; d++) out.push(window.ds(y, m, d)); return out; }
 
   /** One month: {rooms:[{aid, name, days:{iso:{am,pm}}}], totals, outside:[...]}, all from the page's day rules. */
   function monthData(y, m) {
-    var rooms = {}, order = [], t = { read: 0, miss: 0, out: 0, empty: 0, late: 0 }, outside = [], late = [];
+    var rooms = {}, order = [], t = { read: 0, miss: 0, out: 0, empty: 0 }, outside = [];
     days(y, m).forEach(function (iso) {
       if (iso > window.TODAY_STR) return;
       window.dayRooms(iso).forEach(function (x) {
@@ -49,13 +37,11 @@
           if (READ[s.k]) t.read++;
           if (s.k === 'miss') t.miss++;
           if (s.k === 'empty' || s.empty) t.empty++;
-          var lw = lateOf(iso, s);
-          if (lw) { t.late++; late.push({ iso: iso, room: rooms[x.aid].name, slot: p[0], on: lw.date, time: lw.time, by: who(s.by) }); }
           if (s.k === 'out' || s.k === 'swap') { t.out++; outside.push({ iso: iso, room: rooms[x.aid].name, slot: p[0], lo: s.lo, hi: s.hi, note: s.note || '', by: who(s.by), why: s.k === 'swap' ? (s.unread ? 'not a number' : 'max lower than min') : '' }); }
         });
       });
     });
-    return { y: y, m: m, rooms: order.map(function (a) { return rooms[a]; }), totals: t, outside: outside, late: late };
+    return { y: y, m: m, rooms: order.map(function (a) { return rooms[a]; }), totals: t, outside: outside };
   }
 
   /* a day for one room, for the summary: done (all read inside), out, miss, part (some read, rest due), none */
@@ -106,13 +92,12 @@
     return h + '</div>' + totalsLine(md) + foot() + '</section>';
   }
 
-  function cell(s, iso) {
+  function cell(s) {
     if (!s || s.k === 'none' || s.k === 'due') return '<td></td>';
     if (s.k === 'miss') return '<td class="miss">MISS</td>';
     if (s.k === 'empty') return '<td class="empty">empty</td>';
     var bad = s.k === 'out' || s.k === 'swap';
-    var lt = lateOf(iso, s);
-    return '<td class="' + (bad ? 'out' : 'in') + (lt ? ' late' : '') + '">' + e(s.lo || '–') + '–' + e(s.hi || '–') + (bad ? '!' : '') + (lt ? '*' : '') + '</td>';
+    return '<td class="' + (bad ? 'out' : 'in') + '">' + e(s.lo || '–') + '–' + e(s.hi || '–') + (bad ? '!' : '') + '</td>';
   }
 
   /** A: rooms down the side, days across, AM and PM rows. */
@@ -128,7 +113,7 @@
     md.rooms.forEach(function (r) {
       ['am', 'pm'].forEach(function (slot, i) {
         h += '<tr' + (i ? ' class="pm"' : '') + '>' + (i ? '' : '<th rowspan="2">' + e(r.name) + '</th>') + '<th class="sl">' + slot.toUpperCase() + '</th>'
-          + ds.map(function (iso) { var dd = r.days[iso]; return cell(dd && dd[slot], iso); }).join('') + '</tr>';
+          + ds.map(function (iso) { var dd = r.days[iso]; return cell(dd && dd[slot]); }).join('') + '</tr>';
       });
     });
     h += '</tbody></table>' + totalsLine(md);
@@ -138,18 +123,13 @@
           + (o.why ? ' (' + e(o.why) + ')' : '') + ' · ' + (o.note ? e(o.note) : '<i>nothing recorded</i>') + (o.by ? ' · by ' + e(o.by) : '') + '</li>';
       }).join('') + '</ul></div>';
     }
-    if (md.late.length) {
-      h += '<div class="rp-out rp-late" data-rp-late><b>* Entered later than its day</b><ul>' + md.late.map(function (o) {
-        return '<li>' + e(dMon(o.iso)) + ' · ' + e(o.room) + ' · ' + o.slot + ' · entered ' + e(dMon(o.on) + (o.time ? ' ' + o.time : '')) + ' · by ' + (o.by ? e(o.by) : '<i>not recorded</i>') + '</li>';
-      }).join('') + '</ul></div>';
-    }
     return h + foot() + '</section>';
   }
 
   function totalsLine(md) {
     var t = md.totals;
     return '<p class="rp-tot" data-rp-totals>Readings taken: <b>' + t.read + '</b> · missed: <b>' + t.miss + '</b> · outside the limit: <b>' + t.out + '</b>'
-      + (t.empty ? ' · room empty: <b>' + t.empty + '</b>' : '') + (t.late ? ' · entered later: <b>' + t.late + '</b>' : '') + '</p>';
+      + (t.empty ? ' · room empty: <b>' + t.empty + '</b>' : '') + '</p>';
   }
 
   /** The report for the choice: {period:'month'|'year', year, month (0-11), summary:bool, table:bool}. */
