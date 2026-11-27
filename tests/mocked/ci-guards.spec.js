@@ -14,6 +14,9 @@ const read = (rel) => fs.readFileSync(path.join(REPO, rel), 'utf8');
 const specFiles = () => ['mocked', 'phone', 'live'].flatMap((d) => fs.readdirSync(path.join(REPO, 'tests', d)).filter((f) => f.endsWith('.spec.js')).map((f) => `tests/${d}/${f}`));
 const allSpecText = () => specFiles().map(read).join('\n');
 
+const SAME_SUITE = /npx playwright test \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\}\/\$\{\{ matrix\.of \}\}/;
+const matrixRows = (wf) => (wf.match(/- \{ lane: \w+, shard: \d+, of: \d+, projects: '[^']+' \}/g) || []).join('\n');
+
 test.describe('Learning loop is mechanical @ci-guard', () => {
   const caught = () => {
     const md = read('TESTS.md');
@@ -146,27 +149,45 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
   test('the publish job needs the gate job, and the gate runs the same suite as the required check', () => {
     const wf = pages();
     expect(wf).toMatch(/publish:[\s\S]*?needs:\s*gate\n/);
-    expect(wf).toMatch(/npx playwright test --project=mocked --project=phone/);
-    expect(read('.github/workflows/tests.yml')).toMatch(/npx playwright test --project=mocked --project=phone/);
+    // Same suite: both run the same matrix command over the same lane/shard rows (desktop + phone, every spec).
+    expect(wf).toMatch(SAME_SUITE);
+    expect(read('.github/workflows/tests.yml')).toMatch(SAME_SUITE);
+    expect(matrixRows(wf)).toBe(matrixRows(read('.github/workflows/tests.yml')));
+    expect(matrixRows(wf)).not.toBe('');
   });
 
   // 27 Nov 2026: one job ran about 53 of its 60 minutes (#814 was cut off at 60), so the suite runs in shards.
   // Every shard runs the whole mocked+phone command with its own --shard=i/N; one job merges and carries the required name.
-  test('the suite runs in at least 3 shards, each with at least 2x a quarter-suite of time, merged into the one required check', () => {
+  test('the suite runs in at least 3 shards (a crawl lane and a rest lane), each with at least 2x its share of time, merged into the one required check', () => {
     const tests = read('.github/workflows/tests.yml');
-    const shards = (wf, job) => {
-      const m = new RegExp('\\n  ' + job + ':[\\s\\S]*?\\n        shard: \\[([\\d, ]+)\\]').exec(wf);
-      return m ? m[1].split(',').map((x) => Number(x.trim())) : [];
+    // Matrix rows: { lane: rest|crawl, shard: i, of: N, projects: '...' }. Each lane must list shards 1..N with none missing
+    // (a missing one would silently skip tests); together at least 3 shards.
+    const rows = (wf, job) => {
+      const sec = wf.slice(wf.indexOf('\n  ' + job + ':'));
+      return [...sec.slice(0, sec.indexOf('    steps:')).matchAll(/- \{ lane: (\w+), shard: (\d+), of: (\d+), projects: '([^']+)' \}/g)]
+        .map((m) => ({ lane: m[1], shard: Number(m[2]), of: Number(m[3]), projects: m[4] }));
     };
     for (const [wf, job] of [[tests, 'shards'], [pages(), 'gate-shards']]) {
-      const list = shards(wf, job);
+      const list = rows(wf, job);
       expect(list.length, job + ': at least 3 shards').toBeGreaterThanOrEqual(3);
-      expect(list, job + ': shards are 1..N, none missing (a missing one would skip tests)').toEqual(list.map((_, i) => i + 1));
-      expect(wf).toContain('npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/' + list.length);
+      expect([...new Set(list.map((r) => r.lane))].sort(), job + ': the two lanes').toEqual(['crawl', 'rest']);
+      for (const lane of ['crawl', 'rest']) {
+        const l = list.filter((r) => r.lane === lane);
+        expect(l.map((r) => r.shard), job + ' ' + lane + ': shards 1..N, none missing').toEqual(l.map((_, i) => i + 1));
+        expect(new Set(l.map((r) => r.of)), job + ' ' + lane + ': one N').toEqual(new Set([l.length]));
+      }
+      expect(list.filter((r) => r.lane === 'rest').every((r) => r.projects === '--project=mocked --project=phone'), job + ': rest runs desktop and phone').toBe(true);
+      expect(list.filter((r) => r.lane === 'crawl').every((r) => r.projects === '--project=mocked'), job + ': crawl runs the desktop crawl').toBe(true);
+      expect(wf).toContain('npx playwright test ${{ matrix.projects }} --shard=${{ matrix.shard }}/${{ matrix.of }}');
+      expect(wf).toContain('PW_LANE: ${{ matrix.lane }}');
       // 53 min in one job on 27 Nov: a shard needs at least 2x its share of that.
       const t = Number(new RegExp('\\n  ' + job + ':[\\s\\S]*?\\n    timeout-minutes:\\s*(\\d+)').exec(wf)[1]);
       expect(t, job + ' timeout').toBeGreaterThanOrEqual(Math.ceil((2 * 53) / list.length));
     }
+    // The lanes split on one regex, used both ways, so every test is in exactly one lane (unset = everything, for local runs).
+    const cfg = read('playwright.config.js');
+    expect(cfg).toContain("LANE === 'crawl' ? { testMatch: CRAWL } : LANE === 'rest' ? { testIgnore: CRAWL } : {}");
+    expect(cfg).toMatch(/name: 'mocked',\n\s+testDir: '\.\/tests\/mocked',\n\s+\.\.\.laneFilter,/);
     // The required check: the merge job keeps the name, waits for every shard, still reports when one fails, and is red unless all passed.
     expect(tests).toMatch(/\n  tests:\n    name: Browser tests \(pretend Google and Drive\)\n    needs: shards\n    if: \$\{\{ !cancelled\(\) \}\}/);
     expect(tests).toContain('test "${{ needs.shards.result }}" = success');
@@ -251,7 +272,7 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(read('.github/workflows/tests.yml')).toMatch(/group: tests-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n {2}cancel-in-progress: true/);
     // The publish gate still runs the full suite on every push to main while the repo is public.
     expect(pages()).toMatch(/push:\n\s+branches: \[main\]/);
-    expect(pages()).toMatch(/npx playwright test --project=mocked --project=phone/);
+    expect(pages()).toMatch(SAME_SUITE);
     // Small checks: once per pull request push and on main, not on every branch push as well.
     for (const f of ['gate.yml', 'lint.yml']) {
       expect(on(f), f).toMatch(/\n {2}push:\n {4}branches: \[main\]\n/);
