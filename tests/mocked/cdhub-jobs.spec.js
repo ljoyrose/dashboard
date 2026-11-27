@@ -170,7 +170,7 @@ test.describe('CD Hub: record an SOP check', () => {
     await expect(body.locator('[data-sop-save="pup_microchip"]')).toHaveText('Done');
   });
 
-  test('a Jobs row tick saves like a Board tap, and a dog job opens the chooser @regression', async ({ page, guard }) => {
+  test('a Jobs row tick saves like a Board tap, and a dog job opens the chooser @regression @live', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, [
       't-bowls,t,bowls,Pretend bowls,none,true,2020-01-01,,1,,,Cleaning',
       't-nails,t,nails,Pretend nails,dog,true,2020-01-01,,28,,,Care Check'
