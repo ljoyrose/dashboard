@@ -1,4 +1,4 @@
-// Photo turn (Lisa 15 Nov 2026): the owner turns a dog's main photo left or right; Save keeps the turn as the owner setting
+// Photo turn (15 Nov 2026): the owner turns a dog's main photo left or right; Save keeps the turn as the owner setting
 // row photo.rotate.<file> from today. The stored picture never changes; every place the photo is drawn shows the turn.
 // Invented rows only.
 const { test, expect } = require('../support/test');
