@@ -331,7 +331,7 @@ const read = (p) => fs.readFileSync(path.join(CODE, p), 'utf8');
 /** A Bloodline-like page: its own palette variables, a #main, and the wiring scripts loaded as the patch loads them. */
 function bloodlinePage(fakeFetch) {
   const dom = new JSDOM('<!doctype html><html><head></head><body><main id="main"></main></body></html>',
-    { runScripts: 'outside-only', url: 'https://ljoyrose.github.io/dashboard/bloodline/' });
+    { runScripts: 'outside-only', url: 'https://dashboard-eyo.pages.dev/bloodline/' });
   const w = dom.window;
   if (fakeFetch) w.fetch = fakeFetch;
   // load exactly the scripts the patch adds to Bloodline, in the order it adds them
@@ -398,7 +398,7 @@ domTest('Bloodline: pasting a wrong address is refused; a right one turns saving
   d.querySelector('#bw-url').value = 'https://script.google.com/macros/s/AKfycbxTESTTEST/exec';
   d.querySelector('#bw-on').click();
   await tick();
-  assert.match(d.querySelector('.bs-banner').textContent, /Lisa approves each entry/);
+  assert.match(d.querySelector('.bs-banner').textContent, /owner approves each entry/);
   const card = d.querySelector('.bs-card[data-area="area-t1"]');
   assert.equal(card.querySelector('.bs-btn').disabled, false);
 
@@ -571,7 +571,7 @@ test('banners for the live occupancy list, the daily check log and the still-pro
   const srv = scriptFake();
   const s = mkSave(srv); await s.checkStatus();
   assert.equal(s.banner('occupancy').kind, 'pending');
-  assert.match(s.banner('occupancy').text, /Lisa approves each entry/);
+  assert.match(s.banner('occupancy').text, /owner approves each entry/);
   assert.equal(s.banner('occupancy_check').canSave, true);                          // on the allow-list now, straight in
   assert.equal(s.banner('occupancy_check').kind, 'on');
   assert.equal(s.banner('staff').canSave, false);                                      // still only a proposal

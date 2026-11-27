@@ -413,17 +413,17 @@
     /** Plain-English state for the banner and for disabling buttons. */
     function banner(tableKey) {
       var tb = status.tables[tableKey];
-      if (!scriptUrl) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. Lisa switches it on when it is ready.' };
+      if (!scriptUrl) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. The owner switches it on when it is ready.' };
       if (status.checked && status.reachable === false) return { kind: 'off', canSave: false, text: 'Cannot reach the save service right now, so nothing can be saved. Try again in a moment.' };
       if (!status.checked) return { kind: 'checking', canSave: false, text: 'Checking whether saving is on...' };
-      if (!status.saveEnabled) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. Lisa switches it on when it is ready.' };
+      if (!status.saveEnabled) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. The owner switches it on when it is ready.' };
       if (tableKey && !tb && status.proposed && status.proposed.indexOf(tableKey) >= 0) {
-        return { kind: 'off', canSave: false, text: '"' + ((TABLES[tableKey] || {}).label || tableKey) + '" is only a proposal so far. Nothing can be saved to it until Lisa agrees it.' };
+        return { kind: 'off', canSave: false, text: '"' + ((TABLES[tableKey] || {}).label || tableKey) + '" is only a proposal so far. Nothing can be saved to it until the owner agrees it.' };
       }
       if (tableKey && (!tb || !tb.on)) {
         return { kind: 'off', canSave: false, text: 'Saving to "' + ((TABLES[tableKey] || {}).label || tableKey) + '" is not switched on yet.' };
       }
-      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving on. Lisa approves each entry.' };
+      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving on. The owner approves each entry.' };
       return { kind: 'on', canSave: true, text: 'Saving on. If one is wrong, tell the owner.' };
     }
 
@@ -545,7 +545,7 @@
           dropCache(tableKey);   // the kept copy of this list is out of date now
           res.requestId = body.request_id;
           res.message = res.status === 'queued'
-            ? 'Sent. It is in the approvals queue until Lisa approves it; then it joins the records.'
+            ? 'Sent. It is in the approvals queue until the owner approves it; then it joins the records.'
             : 'Saved.';
           return res;
         }
@@ -636,7 +636,7 @@
       });
     }
     function read(tableKey, filter, o) {
-      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. Lisa switches it on when it is ready.' });
+      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. The owner switches it on when it is ready.' });
       if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
       if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
