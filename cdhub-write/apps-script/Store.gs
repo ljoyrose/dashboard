@@ -255,7 +255,7 @@ function store_appendSheet_(title, rowValues, read) {
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED',
     restored
-      ? 'The table did not read back as expected after saving, so the added row was taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
+      ? 'The table did not read back as expected after saving, so the added row was taken out again and nothing was saved. Try again; if it repeats, tell the owner.'
       : 'The table did not read back as expected after saving AND taking the row out again could not be confirmed. Tell Lisa now; do not save again. The earlier version is in the Sheet\'s version history.',
     { restored: restored, file: title });
 }
@@ -311,8 +311,8 @@ function store_replaceSheetRow_(title, index, rowValues, read) {
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED',
     restored
-      ? 'The table did not read back as expected after the edit, so the old values were put back and nothing was changed. Try again; if it repeats, tell Lisa.'
-      : 'The table did not read back as expected after the edit AND putting the old values back could not be confirmed. Tell Lisa now. The earlier version is in the Sheet\'s version history.',
+      ? 'The table did not read back as expected after the edit, so the old values were put back and nothing was changed. Try again; if it repeats, tell the owner.'
+      : 'The table did not read back as expected after the edit AND putting the old values back could not be confirmed. Tell the owner now. The earlier version is in the Sheet\'s version history.',
     { restored: restored, file: title });
 }
 
@@ -401,7 +401,7 @@ function store_appendManySheet_(title, rows, read) {
     restored = store_tailSame_(sh, read);
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED', restored
-    ? 'The table did not read back as expected after saving, so the added rows were taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
+    ? 'The table did not read back as expected after saving, so the added rows were taken out again and nothing was saved. Try again; if it repeats, tell the owner.'
     : 'The table did not read back as expected after saving and could not be put back. Do not save again. Tell Lisa.');
 }
 
@@ -442,7 +442,7 @@ function store_commit_(file, title, before, beforeHash, after, unchangedOk) {
     } catch (e) { restored = false; }
     throw err_('VERIFY_FAILED',
       restored
-        ? 'The file did not read back as expected after saving, so the earlier text was put back exactly and nothing was saved. Try again; if it repeats, tell Lisa.'
+        ? 'The file did not read back as expected after saving, so the earlier text was put back exactly and nothing was saved. Try again; if it repeats, tell the owner.'
         : 'The file did not read back as expected after saving AND putting the earlier text back could not be confirmed. Tell Lisa now; do not save again. The earlier version is in the file history.',
       { restored: restored, file: title });
   }
@@ -511,8 +511,8 @@ function store_deleteRow_(title, expectedHeader, index, read) {
     try { sh.insertRowBefore(rowNum); sh.getRange(rowNum, 1, 1, w).setValues(old); SpreadsheetApp.flush();
       restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash; } catch (e) { restored = false; }
     throw err_('VERIFY_FAILED', restored
-      ? 'The table did not read back as expected after the delete, so the row was put back and nothing was changed. Try again; if it repeats, tell Lisa.'
-      : 'The table did not read back as expected after the delete AND putting the row back could not be confirmed. Tell Lisa now. The earlier version is in the Sheet\'s version history.',
+      ? 'The table did not read back as expected after the delete, so the row was put back and nothing was changed. Try again; if it repeats, tell the owner.'
+      : 'The table did not read back as expected after the delete AND putting the row back could not be confirmed. Tell the owner now. The earlier version is in the Sheet\'s version history.',
       { restored: restored, file: title });
   }
   var file = read.file, before = read.text, bh = textHash_(before);
