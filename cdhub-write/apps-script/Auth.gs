@@ -52,14 +52,14 @@ function authNoteFailure_() {
  */
 function authStaff_(code) {
   if (authBlocked_()) {
-    throw err_('TOO_MANY_TRIES', 'Too many wrong codes recently. Saving is paused for a few minutes. Ask Lisa if this keeps happening.');
+    throw err_('TOO_MANY_TRIES', 'Too many wrong codes recently. Saving is paused for a few minutes. Ask the owner if this keeps happening.');
   }
   if (!code || typeof code !== 'string') {
     throw err_('NO_CODE', 'Enter your staff code.');
   }
   var salt = prop_(BLD.PROP.SALT), reg = registry_();
   if (!salt || !Object.keys(reg).length) {
-    throw err_('NOT_SET_UP', 'No staff codes have been set up yet. Ask Lisa.');
+    throw err_('NOT_SET_UP', 'No staff codes have been set up yet. Ask the owner.');
   }
   // Codes are made in capitals with no spaces. A code typed in small letters or with spaces/dashes is tried as made too
   // (15 Nov 2026: the owner's new hub code was refused). The exact code is tried first, so an older code is never changed.
@@ -79,7 +79,7 @@ function authStaff_(code) {
     return { who: entry.who, role: entry.role, id: String(entry.id || ''), ends: entry.expires_at || '', link_id: String(entry.link_id || '') };
   }
   if (entry.role === ROLE_GUEST) {
-    if (guestExpired_(entry)) throw err_('BAD_CODE', 'This visitor code has ended. Ask Lisa for a new one.');
+    if (guestExpired_(entry)) throw err_('BAD_CODE', 'This visitor code has ended. Ask the owner for a new one.');
     if (externalNotYet_(entry)) throw err_('NOT_YET', 'This visitor code opens ' + externalShow_(entry.starts_at) + '.');
     // id stays empty so no person:<id> permission row can ever open a list to a guest; the label carries the id instead
     return { who: entry.who + ' (' + entry.id + ')', role: entry.role, id: '' };

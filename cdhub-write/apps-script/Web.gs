@@ -18,7 +18,7 @@ function errorBody_(ex) {
   Logger.log('Unexpected error: ' + (ex && ex.stack ? ex.stack : ex));
   return {
     ok: false, code: 'UNEXPECTED',
-    message: 'Something went wrong. It may or may not have saved, so check the list before trying again, and tell Lisa.'
+    message: 'Something went wrong. It may or may not have saved, so check the list before trying again, and tell the owner.'
   };
 }
 

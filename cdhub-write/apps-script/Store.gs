@@ -36,7 +36,7 @@ function store_findOne_(title) {
   var it = store_folder_().getFilesByName(title), found = [];
   while (it.hasNext()) found.push(it.next());
   if (found.length > 1) {
-    throw err_('DUPLICATE_TITLE', 'There are two files called ' + title + ' in the folder. Lisa needs to rename one before saving can use it.');
+    throw err_('DUPLICATE_TITLE', 'There are two files called ' + title + ' in the folder. The owner needs to rename one before saving can use it.');
   }
   if (found.length && cache) { try { cache.put(key, found[0].getId(), 300); } catch (e) { /* remembering is only a speed-up */ } }
   return found.length ? found[0] : null;
@@ -162,7 +162,7 @@ function store_readSheet_(file) {
  */
 function store_readTail_(title, n, fullCols) {
   var file = store_findOne_(title);
-  if (!file) throw err_('FILE_MISSING', title + ' does not exist yet. Lisa needs to create it before this can be saved.');
+  if (!file) throw err_('FILE_MISSING', title + ' does not exist yet. The owner needs to create it before this can be saved.');
   if (!store_isSheet_(file)) { var all = store_read_(title, true); all.complete = true; return all; }
   var sh = store_tab_(file), lr = sh.getLastRow(), lc = sh.getLastColumn();
   if (!lr || !lc) return store_readSheet_(file);
@@ -255,8 +255,8 @@ function store_appendSheet_(title, rowValues, read) {
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED',
     restored
-      ? 'The table did not read back as expected after saving, so the added row was taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
-      : 'The table did not read back as expected after saving AND taking the row out again could not be confirmed. Tell Lisa now; do not save again. The earlier version is in the Sheet\'s version history.',
+      ? 'The table did not read back as expected after saving, so the added row was taken out again and nothing was saved. Try again; if it repeats, tell the owner.'
+      : 'The table did not read back as expected after saving AND taking the row out again could not be confirmed. Tell the owner now; do not save again. The earlier version is in the Sheet\'s version history.',
     { restored: restored, file: title });
 }
 
@@ -295,8 +295,8 @@ function store_replaceSheetRow_(title, index, rowValues, read) {
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED',
     restored
-      ? 'The table did not read back as expected after the edit, so the old values were put back and nothing was changed. Try again; if it repeats, tell Lisa.'
-      : 'The table did not read back as expected after the edit AND putting the old values back could not be confirmed. Tell Lisa now. The earlier version is in the Sheet\'s version history.',
+      ? 'The table did not read back as expected after the edit, so the old values were put back and nothing was changed. Try again; if it repeats, tell the owner.'
+      : 'The table did not read back as expected after the edit AND putting the old values back could not be confirmed. Tell the owner now. The earlier version is in the Sheet\'s version history.',
     { restored: restored, file: title });
 }
 
@@ -309,7 +309,7 @@ function csvRecordsRows_(read) {
 function store_read_(title, must) {
   var file = store_findOne_(title);
   if (!file) {
-    if (must) throw err_('FILE_MISSING', title + ' does not exist yet. Lisa needs to create it before this can be saved.');
+    if (must) throw err_('FILE_MISSING', title + ' does not exist yet. The owner needs to create it before this can be saved.');
     return null;
   }
   if (store_isSheet_(file)) return store_readSheet_(file);
@@ -349,7 +349,7 @@ function textHash_(text) {
 function store_appendMany_(title, expectedHeader, rows, read) {
   if (allowedFiles_().indexOf(title) < 0) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   if (!sameHeader_(read.header, expectedHeader)) {
-    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was saved. The owner needs to check the file header.');
   }
   if (read.kind === 'sheet') return store_appendManySheet_(title, rows, read);
   var file = read.file, before = read.text, beforeHash = textHash_(before);
@@ -385,8 +385,8 @@ function store_appendManySheet_(title, rows, read) {
     restored = store_tailSame_(sh, read);
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED', restored
-    ? 'The table did not read back as expected after saving, so the added rows were taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
-    : 'The table did not read back as expected after saving and could not be put back. Do not save again. Tell Lisa.');
+    ? 'The table did not read back as expected after saving, so the added rows were taken out again and nothing was saved. Try again; if it repeats, tell the owner.'
+    : 'The table did not read back as expected after saving and could not be put back. Do not save again. Tell the owner.');
 }
 
 function store_append_(title, expectedHeader, rowValues, read) {
@@ -394,7 +394,7 @@ function store_append_(title, expectedHeader, rowValues, read) {
     throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   }
   if (!sameHeader_(read.header, expectedHeader)) {
-    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was saved. The owner needs to check the file header.');
   }
   if (read.kind === 'sheet') return store_appendSheet_(title, rowValues, read);   // a tail read (store_readTail_) has the same shape
   var file = read.file;
@@ -426,8 +426,8 @@ function store_commit_(file, title, before, beforeHash, after, unchangedOk) {
     } catch (e) { restored = false; }
     throw err_('VERIFY_FAILED',
       restored
-        ? 'The file did not read back as expected after saving, so the earlier text was put back exactly and nothing was saved. Try again; if it repeats, tell Lisa.'
-        : 'The file did not read back as expected after saving AND putting the earlier text back could not be confirmed. Tell Lisa now; do not save again. The earlier version is in the file history.',
+        ? 'The file did not read back as expected after saving, so the earlier text was put back exactly and nothing was saved. Try again; if it repeats, tell the owner.'
+        : 'The file did not read back as expected after saving AND putting the earlier text back could not be confirmed. Tell the owner now; do not save again. The earlier version is in the file history.',
       { restored: restored, file: title });
   }
   return after;
@@ -445,7 +445,7 @@ function store_replaceRow_(title, expectedHeader, index, rowValues, read) {
     throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   }
   if (!sameHeader_(read.header, expectedHeader)) {
-    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was changed. Lisa needs to check the file header.');
+    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was changed. The owner needs to check the file header.');
   }
   if (read.kind === 'sheet') return store_replaceSheetRow_(title, index, rowValues, read);
   var file = read.file, before = read.text, beforeHash = textHash_(before);
@@ -474,7 +474,7 @@ function store_deleteRow_(title, expectedHeader, index, read) {
     throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   }
   if (!sameHeader_(read.header, expectedHeader)) {
-    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was changed. Lisa needs to check the file header.');
+    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was changed. The owner needs to check the file header.');
   }
   if (index < 0 || index >= read.records.length) {
     throw err_('UNEXPECTED_LAYOUT', title + ' is laid out in a way the delete cannot handle safely, so nothing was changed.');
@@ -495,8 +495,8 @@ function store_deleteRow_(title, expectedHeader, index, read) {
     try { sh.insertRowBefore(rowNum); sh.getRange(rowNum, 1, 1, w).setValues(old); SpreadsheetApp.flush();
       restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash; } catch (e) { restored = false; }
     throw err_('VERIFY_FAILED', restored
-      ? 'The table did not read back as expected after the delete, so the row was put back and nothing was changed. Try again; if it repeats, tell Lisa.'
-      : 'The table did not read back as expected after the delete AND putting the row back could not be confirmed. Tell Lisa now. The earlier version is in the Sheet\'s version history.',
+      ? 'The table did not read back as expected after the delete, so the row was put back and nothing was changed. Try again; if it repeats, tell the owner.'
+      : 'The table did not read back as expected after the delete AND putting the row back could not be confirmed. Tell the owner now. The earlier version is in the Sheet\'s version history.',
       { restored: restored, file: title });
   }
   var file = read.file, before = read.text, bh = textHash_(before);

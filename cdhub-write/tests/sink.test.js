@@ -385,7 +385,7 @@ test('a table file that does not exist yet is said plainly (the sink never creat
   const env = standardEnv({ noTargets: true, props: { MODE_area_reading: 'direct' } });
   const r = save(env, req(env));
   assert.equal(r.code, 'FILE_MISSING');
-  assert.match(r.message, /needs to create it before this can be saved/);
+  assert.match(r.message, /The owner needs to create it before this can be saved/);
   assert.equal(env.created.length, 0);
 });
 
@@ -445,7 +445,7 @@ test('read-back check fails AND the restore cannot be confirmed: say so loudly',
   env.breakSetContent = true;
   const r = save(env, req(env));
   assert.equal(r.code, 'VERIFY_FAILED');
-  assert.match(r.message, /Tell \S+ now; do not save again/);
+  assert.match(r.message, /Tell the owner now; do not save again/);
   assert.match(r.message, /could not be confirmed/);
 });
 

@@ -792,7 +792,7 @@ var TABLES = {
       var cur = occupancyLatest_(records, clean.subject_id);
       if (!cur) return;
       if (permanentlyGone_(cur)) {
-        errors.subject_id = 'This dog is recorded as no longer on site. Ask Lisa before moving it.';
+        errors.subject_id = 'This dog is recorded as no longer on site. Ask the owner before moving it.';
       } else if (cur.area_id && cur.area_id === clean.area_id) {
         errors.area_id = 'That dog is already recorded in that room, so it has not moved.';
       }
