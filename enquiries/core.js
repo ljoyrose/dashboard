@@ -662,7 +662,8 @@
   }
   // The official page for buyers abroad: the owner keeps a country=URL list in Settings (import_pages). With no page on
   // file the draft points to the UK government pet travel page and says "the owner to confirm" for the country's rules.
-  function importLine(country, pages) {
+  function importLine(country, pages, me) {
+    me = me || 'Owner';
     var map = {};
     String(pages || '').split(/[\n;]+/).forEach(function (p) {
       var m = p.match(/^\s*([^=]+?)\s*=\s*(https:\/\/\S+)\s*$/);
@@ -670,7 +671,7 @@
     });
     var own = map[String(country || '').toLowerCase()];
     if (own) return { text: 'The official rules for bringing a puppy to ' + country + ' are here: ' + own, link: own };
-    return { text: 'For travel from the UK the government page is ' + UK_PET_TRAVEL + '. The rules for ' + (country || 'your country') + ' are: Lisa to confirm.', link: UK_PET_TRAVEL };
+    return { text: 'For travel from the UK the government page is ' + UK_PET_TRAVEL + '. The rules for ' + (country || 'your country') + ' are: ' + me + ' to confirm.', link: UK_PET_TRAVEL };
   }
   // Pick the case for an enquiry with no reply yet. ctx: { now, missedDays (7) }.
   function chooseCase(e, ctx) {
@@ -684,100 +685,101 @@
     if (e.country && HOME_COUNTRIES.indexOf(e.country) < 0) return 'first-abroad';
     return 'first-uk';
   }
-  function sign(lines) { return lines.concat(['', 'Kind regards,', '', 'Lisa', '', BRAND_LINE]); }
-  // Build one case as { email: { subject, text }, whatsapp, links }. o: { name, country, prefs, importPages }.
+  function sign(lines, me) { return lines.concat(['', 'Kind regards,', '', me || 'Owner', '', BRAND_LINE]); }
+  // Build one case as { email: { subject, text }, whatsapp, links }. o: { name, country, prefs, importPages, signName }.
+  // signName is the sign-off name from Settings (sign_off_name); it defaults to "Owner" so no name lives in this file.
   function buildDraft(kase, o) {
     o = o || {};
-    var fn = firstName(o.name), hi = fn ? 'Hi ' + fn + ',' : 'Hi there,', links = linksFor(kase, o.prefs), list = links.join('\n');
+    var me = String(o.signName || '').trim() || 'Owner', fn = firstName(o.name), hi = fn ? 'Hi ' + fn + ',' : 'Hi there,', links = linksFor(kase, o.prefs), list = links.join('\n');
     var subject = 'Your puppy enquiry with Australian Labradoodles/Cobberdogs', body, wa, stop = false;
     switch (kase) {
       case 'first-uk':
       case 'first-abroad':
-        var imp = kase === 'first-abroad' ? importLine(o.country, o.importPages) : null;
+        var imp = kase === 'first-abroad' ? importLine(o.country, o.importPages, me) : null;
         if (imp && links.indexOf(imp.link) < 0) links.push(imp.link);
         body = [hi, '', 'Thank you for getting in touch about our puppies. I\'d love to help.', '',
           'These pages explain the breed and how we health test:', '', list].concat(imp ? ['', imp.text] : [])
           .concat(['', 'Just reply and tell me what you\'re looking for and when, and I\'ll let you know what we have coming up. If it\'s easier, we can have a short WhatsApp call.']);
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa from Australian Labradoodles/Cobberdogs. Thank you for your enquiry, I\'d love to help. The breed: ' + links[0]
-          + (imp ? '. Travel: ' + imp.link + ' (rules for ' + (o.country || 'your country') + ': Lisa to confirm)' : '') + '. What are you looking for, and when?';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + ' from Australian Labradoodles/Cobberdogs. Thank you for your enquiry, I\'d love to help. The breed: ' + links[0]
+          + (imp ? '. Travel: ' + imp.link + ' (rules for ' + (o.country || 'your country') + ': ' + me + ' to confirm)' : '') + '. What are you looking for, and when?';
         break;
       case 'after-call':
         subject = 'Lovely to talk to you';
         body = [hi, '', 'Thank you for your time on the call today. As promised, here are the pages we talked about:', '', list, '',
           'Have a read, and just reply with any questions. I\'ll be in touch about the next step.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', lovely to talk today. Here is the breed page we mentioned: ' + links[0] + '. Any questions, just message me. Lisa';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', lovely to talk today. Here is the breed page we mentioned: ' + links[0] + '. Any questions, just message me. ' + me;
         break;
       case 'waiting-list':
         subject = 'Our waiting list';
         body = [hi, '', 'Thank you for waiting so patiently. We have a place on our waiting list for you if you would like it.', '',
           'The pages about the breed and our health testing are here:', '', list, '', 'Just reply if you\'d like me to put your name down, and I\'ll send you the details.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. We have a place on our waiting list for you if you\'d like it. Breed info: ' + links[0] + '. Shall I send you the details?';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + '. We have a place on our waiting list for you if you\'d like it. Breed info: ' + links[0] + '. Shall I send you the details?';
         break;
       case 'pup-offer':
         subject = 'A puppy for you';
-        body = [hi, '', 'I think we may have the right puppy for you: [Lisa: which pup and why].', '', 'The pages about the breed and our health testing are here:', '', list, '',
+        body = [hi, '', 'I think we may have the right puppy for you: [Owner: which pup and why].', '', 'The pages about the breed and our health testing are here:', '', list, '',
           'Just reply and I\'ll send you the details.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. I think we may have the right puppy for you: [Lisa: which pup]. Breed info: ' + links[0] + '. Shall I send you the details?';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + '. I think we may have the right puppy for you: [Owner: which pup]. Breed info: ' + links[0] + '. Shall I send you the details?';
         break;
       case 'no-fit-now':
         body = [hi, '', 'Thank you for getting in touch. I don\'t have a puppy that fits what you\'re looking for just now, but I\'d love to keep you in mind for our next litters.', '',
           'These pages explain the breed and how we health test:', '', list, '', 'Just reply if you\'d like me to keep you posted.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. I don\'t have a puppy that fits just now, but I\'d love to keep you posted about our next litters. Breed info: ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + '. I don\'t have a puppy that fits just now, but I\'d love to keep you posted about our next litters. Breed info: ' + links[0];
         break;
       case 'adult-dog':
         subject = 'Our adult dogs';
         body = [hi, '', 'Thank you for asking about our adult dogs. Prices are on request, and I\'m happy to send you the details of any dog you\'re interested in.', '',
           'You can read about the breed and our health testing here:', '', list, '', 'Just reply and tell me what you\'re looking for.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Thank you for asking about our adult dogs. Price on request: I\'m happy to send details. Breed info: ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + '. Thank you for asking about our adult dogs. Price on request: I\'m happy to send details. Breed info: ' + links[0];
         break;
       case 'breeder':
         stop = true;
         subject = 'Cobberdogs from Australian Labradoodles/Cobberdogs';
-        body = [hi, '', 'I\'m Lisa from Australian Labradoodles/Cobberdogs in Wales. Thank you for your interest in our breeding dogs.', '',
+        body = [hi, '', 'I\'m ' + me + ' from Australian Labradoodles/Cobberdogs in Wales. Thank you for your interest in our breeding dogs.', '',
           'You can read about the breed and our health testing here:', '', list, '', 'Prices are on request. Just reply and I\'ll send you the details, or message me on WhatsApp.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa from Australian Labradoodles/Cobberdogs. Thank you for your interest in our breeding dogs; price on request. Breed info: ' + links[0] + '. Reply STOP and I won\'t contact you again.';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + ' from Australian Labradoodles/Cobberdogs. Thank you for your interest in our breeding dogs; price on request. Breed info: ' + links[0] + '. Reply STOP and I won\'t contact you again.';
         break;
       case 'missed':
         stop = true;
         body = [hi, '', 'Thank you for getting in touch through our website, and I\'m so sorry for the very slow reply. A problem with our website form meant your message never reached me, and that has now been put right.', '',
           'If you are still looking for a puppy, I\'d love to help. These pages explain the breed, sizes, colours, coats and our health testing:', '', list, '',
           'Just reply and tell me what you\'re looking for, and I\'ll let you know what we have coming up.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa from Australian Labradoodles/Cobberdogs. I\'m so sorry for the very slow reply: a website problem meant your message never reached me. If you\'re still looking, I\'d love to help. Breed info: ' + links[0] + '. Reply STOP and I won\'t contact you again.';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + ' from Australian Labradoodles/Cobberdogs. I\'m so sorry for the very slow reply: a website problem meant your message never reached me. If you\'re still looking, I\'d love to help. Breed info: ' + links[0] + '. Reply STOP and I won\'t contact you again.';
         break;
       case 'gentle-close':
         subject = 'Still looking?';
         body = [hi, '', 'I just wanted to check in. If you\'re still looking for a puppy I\'d love to help, and if your plans have changed that\'s absolutely fine.', '',
           'The breed pages are here if useful:', '', list];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking in: if you\'re still looking I\'d love to help, and if plans have changed that\'s fine. ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + '. Just checking in: if you\'re still looking I\'d love to help, and if plans have changed that\'s fine. ' + links[0];
         break;
       // Stage 12 follow-ups: short check-ins. Never a price, never a new offer (offers are the owner's alone).
       case 'check-in':
         subject = 'Just checking in';
         body = [hi, '', 'I just wanted to check my last message reached you. If you\'re still looking for a puppy I\'d love to help, and if now isn\'t the right time that\'s absolutely fine.', '',
           'The breed pages are here if useful:', '', list];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking my last message reached you. If you\'re still looking I\'d love to help. ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + '. Just checking my last message reached you. If you\'re still looking I\'d love to help. ' + links[0];
         break;
       case 'call-check-in':
         subject = 'Following up on our call';
         body = [hi, '', 'Thank you again for your time on the call. I just wanted to see if you had any questions after reading the pages I sent.', '',
           'They are here again if useful:', '', list, '', 'Just reply, or message me on WhatsApp, and I\'ll help with the next step.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Following up on our call: any questions after reading ' + links[0] + '? Happy to help with the next step.';
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + '. Following up on our call: any questions after reading ' + links[0] + '? Happy to help with the next step.';
         break;
       case 'offer-check-in':
         subject = 'The puppy I mentioned';
         body = [hi, '', 'I just wanted to check you saw my message about the puppy. There\'s no pressure at all: just let me know either way when you can, so I can keep my list fair to everyone.', '',
           'The breed pages are here if useful:', '', list];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking you saw my message about the puppy. No pressure: let me know either way when you can. ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + '. Just checking you saw my message about the puppy. No pressure: let me know either way when you can. ' + links[0];
         break;
       case 'waiting-check-in':
         subject = 'News from our waiting list';
-        body = [hi, '', 'A quick hello from our waiting list. [Lisa: litter news, or "no news yet"]. You are still on our list, and I\'ll be in touch as soon as I have more.', '',
+        body = [hi, '', 'A quick hello from our waiting list. [Owner: litter news, or "no news yet"]. You are still on our list, and I\'ll be in touch as soon as I have more.', '',
           'The breed pages are here if useful:', '', list, '', 'If anything has changed for you, just reply and let me know.'];
-        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa with a quick waiting-list hello: [Lisa: litter news]. You are still on our list. Breed info: ' + links[0];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s ' + me + ' with a quick waiting-list hello: [Owner: litter news]. You are still on our list. Breed info: ' + links[0];
         break;
       default: return null;
     }
-    var text = sign(body).concat(stop ? ['', STOP_LINE] : []).join('\n');
+    var text = sign(body, me).concat(stop ? ['', STOP_LINE] : []).join('\n');
     return { email: { subject: subject, text: text }, whatsapp: wa, links: links };
   }
 
@@ -819,7 +821,7 @@
     var names = (opts.names || []).map(String).join(' ').split(/[\s,<>"]+/).filter(function (n) { return /^[A-Za-zÀ-ɏ'-]{2,}$/.test(n); });
     if (gm && names.indexOf(gm[3]) < 0) names.push(gm[3]);
     names.forEach(function (n) {
-      if (/^(lisa|there|all|everyone)$/i.test(n)) return;
+      if (/^(there|all|everyone)$/i.test(n) || (opts.ownerName && n.toLowerCase() === String(opts.ownerName).toLowerCase())) return;
       t = t.replace(new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g'), '<name>');
     });
     var first = (t.split('\n')[0] || '').trim(), tail = t.split('\n').filter(function (x) { return x.trim(); }).slice(-3).join(' / ');
@@ -1135,7 +1137,7 @@
   // Merge a freshly read version of a row into the stored one. Blanks never overwrite values; the owner's own fields
   // (stage set by her tap, owner, next step, flag) are kept; the stage only moves forward unless the new one is lost or
   // parked; received_uk keeps the earliest time. Returns a new object; neither input is changed.
-  var LISA_FIELDS = ['owner', 'next_step', 'next_due_uk', 'lost_reason', 'flag', 'litter_ref', 'pup_ref'];
+  var OWNER_FIELDS = ['owner', 'next_step', 'next_due_uk', 'lost_reason', 'flag', 'litter_ref', 'pup_ref'];
   function mergeRow(stored, incoming) {
     var out = {}, k;
     stored = stored || {}; incoming = incoming || {};
@@ -1145,7 +1147,7 @@
       var v = incoming[k];
       if (v === '' || v == null) continue;
       if (k === 'stage' || k === 'received_uk') continue;
-      if (LISA_FIELDS.indexOf(k) >= 0 && stored[k]) continue;
+      if (OWNER_FIELDS.indexOf(k) >= 0 && stored[k]) continue;
       if (k === 'do_not_contact') { out[k] = stored[k] === true || stored[k] === 'TRUE' || v === true || v === 'TRUE'; continue; }
       out[k] = v;
     }
@@ -1742,6 +1744,8 @@
       followups: fus, actions: acts
     };
   }
+  // One value from the Settings tab rows ({ setting, value }), '' when absent.
+  function settingOf(tabs, name) { var r = ((tabs && tabs.Settings) || []).filter(function (x) { return x.setting === name; })[0]; return r ? String(r.value == null ? '' : r.value).trim() : ''; }
   // The page's own copy of a tap, applied at once so the owner sees the result; the engine makes it real from the request
   // file. built: what a *Request() function returned. Changes tabs in place and returns it.
   function applyRequest(tabs, built, nowIso) {
@@ -1755,7 +1759,7 @@
       var person = (tabs.People || []).filter(function (p) { return p.person_key === e.person_key; })[0] || {};
       var has = (tabs.Drafts || []).some(function (d) { return d.enquiry_key === e.key && d.case === 'after-call'; });
       if (!has && mayContact(person, e).ok) {
-        var d = buildDraft('after-call', { name: person.name, country: e.country, prefs: extractPrefs(e.question_summary, e) });
+        var d = buildDraft('after-call', { name: person.name, country: e.country, prefs: extractPrefs(e.question_summary, e), signName: settingOf(tabs, 'sign_off_name') });
         (tabs.Drafts = tabs.Drafts || []).push({ draft_key: 'DR-' + hash(e.key + '|after-call'), enquiry_key: e.key, person_key: e.person_key || '', case: 'after-call',
           version: 1, text: d.whatsapp, links: d.links.join(' '), made_uk: at, status: 'ready', blocked_by: '' });
       }
@@ -2092,7 +2096,7 @@
   function openWorkRows(alerts, nowIso) {
     var at = toUk(nowIso || Date.now());
     return (alerts || []).map(function (a) {
-      return { key: a.key, area: 'Puppy Enquiries Hub', item: a.text, next_step: a.todo, owner: 'Lisa', raised_uk: at, source: 'enquiries alerts (' + a.kind + ')' };
+      return { key: a.key, area: 'Puppy Enquiries Hub', item: a.text, next_step: a.todo, owner: 'Owner', raised_uk: at, source: 'enquiries alerts (' + a.kind + ')' };
     });
   }
 
@@ -2250,7 +2254,7 @@
     hubView: hubView, enquiryDetail: enquiryDetail, applyRequest: applyRequest, PAGE_FILTERS: PAGE_FILTERS,
     RESULT_COUNTS: RESULT_COUNTS, RESULT_STEPS: RESULT_STEPS, median: median, pct: pct, resultsRows: resultsRows, resultRates: resultRates,
     monthsBetween: monthsBetween, resultsView: resultsView, hubspotStage: hubspotStage, hubspotHistoryFrom: hubspotHistoryFrom,
-    depositHistoryFrom: depositHistoryFrom, ALERT_KINDS: ALERT_KINDS, lastRun: lastRun, alertsView: alertsView, openWorkRows: openWorkRows,
+    depositHistoryFrom: depositHistoryFrom, settingOf: settingOf, ALERT_KINDS: ALERT_KINDS, lastRun: lastRun, alertsView: alertsView, openWorkRows: openWorkRows,
     PLAIN_STAGES: PLAIN_STAGES, OPTIONAL_TAIL: OPTIONAL_TAIL, BLD_COLUMNS: BLD_COLUMNS,
     bldLitterFor: bldLitterFor, bldSubjectFor: bldSubjectFor, plainStage: plainStage,
     bldPersonRow: bldPersonRow, bldHouseholdRow: bldHouseholdRow, bldHouseholdMemberRow: bldHouseholdMemberRow,

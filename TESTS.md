@@ -244,6 +244,8 @@ Because Drive is pretend, a green tick does **not** prove your real Drive folder
 - **Every night about 03:17 UTC**, unless main has had no new commit for 26 hours.
 - **Whenever you press the button:** GitHub > the **Actions** tab > **Dashboard tests** > **Run workflow**.
 
+**Shards (27 Nov 2026):** the suite runs as 4 parallel jobs ("Browser tests shard 1/4" to "4/4", Playwright `--shard`), each about a quarter of the tests with a 40-minute limit. One last job merges their results and is the only one called "Browser tests (pretend Google and Drive)", the check branch protection requires; it is red unless every shard passed. The publish gate in `pages.yml` is split the same way. Every test still runs, in exactly one shard. A ci-guard keeps at least 3 shards.
+
 Each run writes a short table at the top of its page in the Actions tab: one line per page, with passed and failed counts.
 
 There is also a small **optional** check of the three live web addresses. It opens them signed out and confirms they are up. It runs **a minute or so after every publish to the live site** (so a bad merge is noticed in minutes), on Mondays, and on the button. It never blocks anything, because GitHub Pages can have a slow day. It also checks that **what is live is exactly the file that was merged** (compared byte for byte, waiting up to 90 seconds for GitHub Pages to finish). It has run after the last two publishes and passed.
@@ -442,6 +444,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | Whole-site code with Full A4 drew the one site code three times, three across the page | "whole-site code on Full A4 is one card, and a second click stays one card @regression" (tests/mocked/cdhub-print-site-card.spec.js) |
 | 25 Nov 2026 | A code run kept its progress line after another card type was opened | "switching card type stops the previous code run @regression" (tests/mocked/cdhub-print-run.spec.js) |
 | 25 Nov 2026 | One thermometer code was drawn once for every finished pass, so the print held seven of each | "one card per ticked item for every kind and layout @regression" (tests/mocked/cdhub-print-count.spec.js) |
+| 25 Nov 2026 | A dog card can list several external video clips. The main clip stays first and the rest follow newest first. Print shows one QR for that main clip only | "dog card lists every clip: main first, then newest, with Show all past five @regression" (tests/mocked/cdhub-dog-videos.spec.js) and "printed dog card: one QR for the main clip, none when there is no RoseQuest video @regression" (tests/mocked/cdhub-print-dog-video.spec.js) |
 | 25 Nov 2026 | A dog card name wrapped one letter at a time and the card collapsed when the photo was empty | "dog cards keep a whole word, a square photo and a size badge at every layout @regression" (tests/mocked/cdhub-print-dog-fit.spec.js) |
 | 25 Nov 2026 | Item cards said 0 cards ready when the item list was empty or refused | "an empty item list warns, and item rows print a card @regression" (tests/mocked/cdhub-print-dog-fit.spec.js) |
 | 25 Nov 2026 | A photo frame was wider than it was tall, and the chosen print type did not stay marked | "the chosen card type stays pressed, and photo frames stay square @regression" (tests/mocked/cdhub-print-dog-fit.spec.js) |

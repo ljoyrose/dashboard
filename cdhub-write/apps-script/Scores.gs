@@ -1,5 +1,5 @@
 /**
- * Saved dated scores (15 Nov 2026, DRAFT names from Breed Better THE-DOCUMENT Stage 4; gate PENDING; OV11 for Lisa).
+ * Saved dated scores (15 Nov 2026, DRAFT names from Breed Better THE-DOCUMENT Stage 4; gate PENDING; OV11 for the owner).
  *
  *   action 'score_save'  keeps what the Breed Better page worked out for ONE animal on ONE date: one
  *                        BLD-score_assessment row and one BLD-score_line row per line, in the same save.
@@ -7,8 +7,8 @@
  * Scores are still worked out when the page loads; a saved score is the record of what it said then, so a later
  * rule or record change never rewrites the past. Nothing is edited or deleted: saving again for the same animal and
  * scheme adds a new assessment whose replaces_id points at the one before.
- * Owner only. Both files need their headers (made by Lisa); the switch TABLE_ON_score_assessment covers both and is
- * OFF until Lisa says go. Rows follow STANDARD S4 as far as the draft names allow: _at UTC, _by paired.
+ * Owner only. Both files need their headers (made by the owner); the switch TABLE_ON_score_assessment covers both and is
+ * OFF until the owner says go. Rows follow STANDARD S4 as far as the draft names allow: _at UTC, _by paired.
  */
 var SCORES_ = {
   on: 'score_assessment',

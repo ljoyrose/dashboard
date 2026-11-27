@@ -16,7 +16,7 @@
     var row = function (n, o) {
       return Object.assign({ key: K(n), person_key: 'P-x' + n, source: 'Example', source_ref: '', received_uk: uk(-72), channel: 'email', kind: 'puppy',
         brand: 'Cobberdogs', country: 'United Kingdom', country_basis: 'stated', breed_interest: 'Cobberdog', size: '', colour: '', coat: '', sex: '',
-        timing: '', household_flags: '', question_summary: '', score: 0, band: 'cool', stage: 'new', next_step: '', next_due_uk: '', owner: 'Lisa',
+        timing: '', household_flags: '', question_summary: '', score: 0, band: 'cool', stage: 'new', next_step: '', next_due_uk: '', owner: 'Owner',
         do_not_contact: '', consent: 'ok', litter_ref: '', pup_ref: '', lost_reason: '', flag: '', ref: 'E-000' + n, score_reasons: '', updated_uk: uk(-1) }, o);
     };
     var person = function (n, o) {
@@ -51,8 +51,8 @@
         { event_key: 'V-x3', enquiry_key: K(3), person_key: 'P-x3', at_uk: uk(-96), channel: 'email', type: 'replied', detail: '', source_ref: '' }
       ],
       Drafts: [
-        draft(2, 'first-abroad', 'Hi Example2,\n\nThank you for getting in touch about our puppies. I\'d love to help.\n\n' + info + '\n\nKind regards,\n\nLisa'),
-        draft(4, 'first-uk', 'Hi Example4,\n\nThank you for getting in touch about our puppies. I\'d love to help.\n\n' + info + '\n\nKind regards,\n\nLisa'),
+        draft(2, 'first-abroad', 'Hi Example2,\n\nThank you for getting in touch about our puppies. I\'d love to help.\n\n' + info + '\n\nKind regards,\n\nOwner'),
+        draft(4, 'first-uk', 'Hi Example4,\n\nThank you for getting in touch about our puppies. I\'d love to help.\n\n' + info + '\n\nKind regards,\n\nOwner'),
         draft(5, 'first-uk', 'Hi Example5, this draft must never show. ' + info)
       ],
       FollowUps: [
