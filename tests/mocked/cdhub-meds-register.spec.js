@@ -49,7 +49,7 @@ test.describe('Medicines register: the rules', () => {
   });
 
   test('one month, oldest first; a missing detail is "not recorded", never filled in', () => {
-    const lines = R.build(ROWS, { month: '2026-02', dog });
+    const lines = R.build(ROWS, { month: '2026-02', dog, named: 'Owner A' });
     expect(lines.map((l) => l.id)).toEqual(['dsp-2', 'dsp-1', 'dsp-3']);
     const one = lines[1];
     expect(R.cell(one, 'date')).toBe('3 Feb 2026');
@@ -59,8 +59,8 @@ test.describe('Medicines register: the rules', () => {
     expect(R.cell(one, 'dose')).toBe('1 tablet');
     expect(R.cell(one, 'reason')).toBe('routine');
     expect(R.cell(one, 'note')).toBe('with food');
-    // Dose and given by are required: with no Settings default a blank name is not recorded. Time, batch, expiry and the vet note are left blank.
-    expect(R.cell(one, 'given_by')).toBe(R.NR);
+    // Dose is required. A blank name shows the default name passed in. Time, batch, expiry and the vet note are left blank.
+    expect(R.cell(one, 'given_by')).toBe('Owner A');
     ['time', 'batch', 'expiry', 'vet'].forEach((k) => expect(R.cell(one, k)).toBe(''));
     // "NOT STATED" is not a medicine's name
     expect(R.cell(lines[0], 'product')).toBe(R.NR);
@@ -122,15 +122,15 @@ test.describe('Medicines register: the rules', () => {
   });
 
   test('print page: kennel, month, printed date, every column, the gaps counted', () => {
-    const lines = R.build(ROWS, { month: '2026-02', dog });
-    const html = R.toHtml({ kennel: 'Sample <Kennel>', month: '2026-02', printed: '21 Nov 2026 10:00' }, lines);
+    const lines = R.build(ROWS, { month: '2026-02', dog, named: 'Owner A' });
+    const html = R.toHtml({ kennel: 'Sample <Kennel>', month: '2026-02', printed: '21 Nov 2026 10:00', named: 'Owner A' }, lines);
     expect(html).toContain('<title>Medicines register · February 2026</title>');
     expect(html).toContain('Sample &lt;Kennel&gt;');
     R.COLUMNS.forEach((c) => expect(html).toContain('<th scope="col">' + c[1] + '</th>'));
     expect(html).not.toContain('Batch 3 of 3');
     expect(html).not.toContain('Recorded in');
     expect(html).not.toContain('dog card');
-    expect(html).toContain('Given by 3 of 3');
+    expect(html).toContain('Owner A');
     expect(R.toHtml({ kennel: 'K', month: '2026-05', printed: '' }, [])).toContain('No records this month.');
   });
 });
@@ -179,12 +179,11 @@ test.describe('Medicines register: the staff "Medicine given" job counts too', (
 });
 
 test.describe('CD Hub: Medicines register on Compliance', () => {
-  test('pick a month, download the CSV and open the print page; nothing is written; a blank Given by shows the Settings default @live', async ({ page, guard, context }) => {
+  test('pick a month, download the CSV and open the print page; nothing is written @live', async ({ page, guard, context }) => {
     setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
     setFile(guard.world, 'BLD-microchip.csv', CHIPS);
+    setFile(guard.world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\nbr-gb,ten-test,meds.given_by.default,Owner A,2020-01-01,invented,,,\n');
     setFile(guard.world, 'BLD-check_type.csv', 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit\nct-med,ten-test,medicine,Medicine given,dog,true,Medicine,true,dose\n');
-    const rule = guard.world.files.find((x) => x.name === 'BLD-breeding_rule.csv');
-    setFile(guard.world, 'BLD-breeding_rule.csv', rule.content.replace(/\n?$/, '\n') + 'gb1,,meds.given_by.default,Owner,2020-01-01,Test kennel,invented,,\n');   // the Settings default for a blank Given by
     setFile(guard.world, 'BLD-check_log.csv', 'id,tenant_id,check_type_id,subject_id,item,amount,outcome,happened_at,taken_at,taken_by,note,note_for_id,corrects_id,time_given\njb-1,ten-test,ct-med,sub-test-dog-2,Sample Drops,2,ok,2026-02-12T09:30:00Z,2026-02-12T09:30:00Z,Sample Staff A,,,,\n');
     await context.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
     await page.goto('cdhub/');
@@ -202,7 +201,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     const csv = fs.readFileSync(await dl.path(), 'utf8');
     expect(csv).toContain('Medicines register,Sample Kennel (invented)');
     expect(csv).toContain('Month,February 2026');
-    expect(csv).toContain('2026-02-03,,Test Dog One,900000000000001,Med C,,,1 tablet,Oral,routine,,Owner,with food');
+    expect(csv).toContain('2026-02-03,,Test Dog One,900000000000001,Med C,,,1 tablet,Oral,routine,,Owner A,with food');
     expect(csv).not.toContain('dog card');
     expect(csv).not.toContain('Recorded in');
     expect(csv).toContain('Dog not on the current list');
@@ -220,7 +219,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await expect(pop.locator('.meta').first()).toContainText('Sample Kennel (invented)');
     await expect(pop.locator('.gaps')).not.toContainText('Batch');
     await expect(pop.locator('.gaps')).not.toContainText('Given by');
-    await expect(pop.locator('tbody')).toContainText('Owner');
+    await expect(pop.locator('tbody')).toContainText('Owner A');
     await expect(pop.locator('table')).not.toContainText('Recorded in');
     await expect(card.locator('#medsMsg')).toHaveText('Opened 4 entries to print.');
     await pop.close();
@@ -277,7 +276,7 @@ test('a parasite dose joins the medicines register once, and a vet procedure dru
     { id: 'cty-parasites-1', type_key: 'parasites', label: 'Flea, worm and tapeworm treatment', amount_unit: '' }
   ];
   const logs = [
-    { id: 'clg-par-1', check_type_id: 'cty-parasites-1', subject_id: 'sub-test-dog-1', item: 'Moxiclear', amount: '1 pipette', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill Owner 25 Nov', taken_by: 'Owner' },
+    { id: 'clg-par-1', check_type_id: 'cty-parasites-1', subject_id: 'sub-test-dog-1', item: 'Moxiclear', amount: '1 pipette', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill 25 Nov', taken_by: 'Owner A' },
     { id: 'clg-par-2', check_type_id: 'cty-parasites-1', subject_id: 'sub-test-dog-1', item: 'Moxiclear', amount: '1 pipette', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'same dose again' },
     { id: 'clg-op', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Propofol', amount: '2 ml', outcome: 'ok', happened_at: '2026-11-09T12:00:00Z', note: 'vet procedure' }
   ];
@@ -289,22 +288,21 @@ test('a parasite dose joins the medicines register once, and a vet procedure dru
   expect(R.toHtml({ kennel: 'Sample Kennel', month: '2026-11', printed: '25 Nov 2026' }, lines)).not.toMatch(/Propofol|backfill/i);
 });
 
-test('the medicines register does not show where it was recorded; a blank name takes the Settings default, else not recorded @regression', () => {
+test('the medicines register does not show where it was recorded, and a blank name is the default name @regression', () => {
   const [blank, named] = R.build([
     { id: 'a', subject_id: 'sub-test-dog-1', given_on: '2026-02-03', product: 'Sample Wormer', dose_volume: '1 tablet' },
     { id: 'b', subject_id: 'sub-test-dog-1', given_on: '2026-02-04', product: 'Sample Wormer', dose_volume: '1 tablet', given_by: 'Sample Staff' }
-  ], { month: '2026-02', dog, givenBy: 'Owner' });
-  expect(R.cell(blank, 'given_by')).toBe('Owner');
-  expect(R.cell(R.build([{ id: 'c', subject_id: 'sub-test-dog-1', given_on: '2026-02-03', product: 'Sample Wormer', dose_volume: '1 tablet' }], { month: '2026-02', dog })[0], 'given_by')).toBe(R.NR);
+  ], { month: '2026-02', dog, named: 'Owner A' });
+  expect(R.cell(blank, 'given_by')).toBe('Owner A');
   expect(R.cell(named, 'given_by')).toBe('Sample Staff');
   expect(R.COLUMNS.some((c) => c[0] === 'source')).toBe(false);
-  const html = R.toHtml({ kennel: 'Sample Kennel', month: '2026-02', printed: '25 Nov 2026' }, [blank, named]);
+  const html = R.toHtml({ kennel: 'Sample Kennel', month: '2026-02', printed: '25 Nov 2026', named: 'Owner A' }, [blank, named]);
   const csv = R.toCsv({ kennel: 'Sample Kennel', month: '2026-02', printed: '25 Nov 2026' }, [blank, named]);
   expect(html).not.toContain('Recorded in');
   expect(html).not.toContain('dog card');
-  expect(html).toContain('Owner');
+  expect(html).toContain('Owner A');
   expect(csv).not.toContain('dog card');
-  expect(csv).toContain('Owner');
+  expect(csv).toContain('Owner A');
   expect(csv).toContain('Sample Staff');
 });
 
@@ -336,4 +334,11 @@ test.describe('Medicines register: no internal codes, nothing counted twice', ()
     expect(R.toCsv(head, lines)).not.toMatch(ID_PATTERN);
     expect(R.toHtml(head, lines).replace(/<[^>]+>/g, ' ')).not.toMatch(ID_PATTERN);
   });
+});
+
+test('with no default name set, a blank Given by says not recorded and the print names nobody @regression', () => {
+  const [l] = R.build([{ id: 'a', subject_id: 'sub-test-dog-1', given_on: '2026-02-03', product: 'Sample Wormer', dose_volume: '1 tablet' }], { month: '2026-02', dog });
+  expect(R.cell(l, 'given_by')).toBe('not recorded');
+  const html = R.toHtml({ kennel: 'Sample Kennel', month: '2026-02', printed: '27 Nov 2026' }, [l]);
+  expect(html).not.toContain('A blank name shows');
 });

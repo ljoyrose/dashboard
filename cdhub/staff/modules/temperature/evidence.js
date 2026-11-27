@@ -31,7 +31,7 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var KEY = 'job.temps_keep_photo', MAX_SIDE = 1600, QUALITY = 0.75;
+  var KEY = 'job.temps_keep_photo';
 
   function ymd(v) { var s = String(v == null ? '' : v).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
 
@@ -52,29 +52,11 @@
     return (rules || []).some(function (r) { return r && String(r.rule_key || '').trim() === KEY; });
   }
 
-  /* ------------------------------------------------------------------ browser only below */
-  function h(tag, attrs, kids) {
-    var e = document.createElement(tag);
-    Object.keys(attrs || {}).forEach(function (k) {
-      var v = attrs[k];
-      if (k === 'text') e.textContent = v;
-      else if (k === 'class') e.className = v;
-      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
-      else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v);
-    });
-    (kids || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
-    return e;
-  }
-  function setMsg(el, text, kind) { el.className = 'msg ' + (kind || ''); el.textContent = text || ''; }
-
-  /** Draw a video frame or image onto a canvas no bigger than MAX_SIDE, return base64 JPEG (no data: prefix). */
-  function toJpeg(src, w, hgt) {
-    var s = Math.min(1, MAX_SIDE / Math.max(w, hgt)), c = document.createElement('canvas');
-    c.width = Math.round(w * s); c.height = Math.round(hgt * s);
-    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
-    var url = c.toDataURL('image/jpeg', QUALITY);
-    c.width = 0; c.height = 0;
-    return url.slice(url.indexOf(',') + 1);
+  /* The camera, the picture and the two saves are the shared helper (cdhub/staff/lib/evidence-photo.js);
+     this file keeps the Temps words, so what staff see is unchanged. */
+  function helper() {
+    if (typeof self !== 'undefined' && self.BLDEvidencePhoto) return self.BLDEvidencePhoto;
+    return typeof require === 'function' ? require('../../lib/evidence-photo.js') : null;
   }
 
   /**
@@ -84,79 +66,17 @@
    * Returns stop(): turns the camera off if it is open.
    */
   function offer(host, o) {
-    var stream = null, busy = false;
-    var msg = h('p', { class: 'msg', role: 'status' });
-    var camBox = h('div');
-    var takeBtn = h('button', { class: 'btn', type: 'button', text: 'Take photo', onclick: startCam });
-    var file = h('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', hidden: true });
-    var chooseBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Choose photo', onclick: function () { file.click(); } });
-    var skipBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Skip', onclick: function () { stop(); box.remove(); } });
-    var box = h('div', { class: 'card tg-evidence', 'data-evidence': o.fromTable || 'area_reading' }, [
-      h('div', { class: 'nm', text: o.title || 'Photo for the records' }),
-      h('p', { class: 'sub', text: o.sub || (o.past ? 'Add the photo this reading came from.' : 'Photograph the thermometer screen before pressing CLR.') }),
-      h('div', { class: 'tg-row' }, [o.past ? null : takeBtn, chooseBtn, skipBtn].filter(Boolean)),
-      file, camBox, msg
-    ]);
-    host.appendChild(box);
-
-    function stop() {
-      if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
-      stream = null; camBox.textContent = '';
-    }
-    function startCam() {
-      if (busy) return;
-      stop();
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { setMsg(msg, 'This phone cannot use the camera here. Use Choose photo.', 'warn'); return; }
-      var video = h('video', { playsinline: true, muted: true, autoplay: true, 'aria-label': 'Camera view for the photo' });
-      video.muted = true;
-      var snap = h('button', { class: 'btn', type: 'button', text: 'Keep this photo', onclick: function () {
-        if (!video.videoWidth) return;
-        var b64 = toJpeg(video, video.videoWidth, video.videoHeight);
-        stop(); send(b64);
-      } });
-      camBox.appendChild(h('div', { class: 'tg-cam' }, [video])); camBox.appendChild(snap);
-      navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } })
-        .then(function (s) { stream = s; video.srcObject = s; var p = video.play(); if (p && p.catch) p.catch(function () {}); setMsg(msg, 'Fit the whole thermometer in view.'); })
-        .catch(function () { stop(); setMsg(msg, 'Camera not allowed. Use Choose photo.', 'warn'); });
-    }
-    file.addEventListener('change', function () {
-      var f = file.files && file.files[0]; file.value = '';
-      if (!f || busy) return;
-      var img = new Image(), rd = new FileReader();
-      rd.onload = function () {
-        img.onload = function () { send(toJpeg(img, img.naturalWidth, img.naturalHeight)); img.src = ''; };
-        img.onerror = function () { setMsg(msg, 'That picture could not be read.', 'bad'); };
-        img.src = rd.result;
-      };
-      rd.readAsDataURL(f);
+    var P = helper(), what = o.what || 'the reading';
+    /* o.fromTable / fromIds / title / sub / fileName / source / what: the diary-page photo for job records (PR 755) */
+    return P.offer(host, {
+      send: P.staffSender(o.save), fromTable: o.fromTable || 'area_reading', fromIds: o.fromIds || [o.readingId], day: o.day, past: o.past,
+      name: o.fileName || 'thermometer.jpg', source: o.source || ('Temperature reading' + (o.areaLabel ? ', ' + o.areaLabel : '')), cls: 'tg-evidence',
+      title: o.title || 'Photo for the records',
+      hint: o.sub || (o.past ? 'Add the photo this reading came from.' : 'Photograph the thermometer screen before pressing CLR.'),
+      camHint: 'Fit the whole thermometer in view.',
+      kept: '\u2713 Photo kept with ' + what + '.',
+      notKept: function (why) { return (what === 'the reading' ? 'The reading is' : 'The record is') + ' saved, but the photo was not kept: ' + (why || 'something went wrong') + ' Try again or skip.'; }
     });
-
-    function send(b64) {
-      busy = true; setMsg(msg, 'Keeping photo...');
-      [takeBtn, chooseBtn, skipBtn].forEach(function (b) { b.disabled = true; });
-      var fileReq = o.save.newRequestId(), linkReq = o.save.newRequestId();
-      // 22 Nov 2026: also a diary page for job records entered Earlier (o.fromTable check_log, o.fromIds = every record
-      // that save made, e.g. one per dog): one stored photo, one evidence link per record, one at a time.
-      var table = o.fromTable || 'area_reading', ids = o.fromIds || [o.readingId], what = o.what || 'the reading';
-      o.save.act('file_add', { kind: 'photo', mime: 'image/jpeg', data_base64: b64, name: o.fileName || 'thermometer.jpg', taken_on: o.day,
-        source: o.source || ('Temperature reading' + (o.areaLabel ? ', ' + o.areaLabel : '')) }, fileReq).then(function (r) {
-        if (!r.ok) throw r;
-        var fileId = r.id, chain = Promise.resolve({ ok: true });
-        ids.forEach(function (id, i) {
-          chain = chain.then(function (prev) { if (!prev.ok) throw prev;
-            return o.save.linkAdd({ from_table: table, from_id: id, role: 'evidence', to_table: 'files', to_id: fileId, from_date: o.day }, i ? o.save.newRequestId() : linkReq); });
-        });
-        return chain;
-      }).then(function (r) {
-        if (!r.ok) throw r;
-        busy = false; [takeBtn, chooseBtn, skipBtn].forEach(function (b) { b.hidden = true; });
-        setMsg(msg, '✓ Photo kept with ' + what + '.', 'good');
-      }).catch(function (r) {
-        busy = false; [takeBtn, chooseBtn, skipBtn].forEach(function (b) { b.disabled = false; });
-        setMsg(msg, (what === 'the reading' ? 'The reading is' : 'The record is') + ' saved, but the photo was not kept: ' + ((r && r.message) || 'something went wrong') + ' Try again or skip.', 'bad');
-      });
-    }
-    return stop;
   }
 
   return { KEY: KEY, on: on, mentioned: mentioned, offer: offer };

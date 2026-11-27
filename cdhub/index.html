@@ -17,6 +17,7 @@
 <script src="staff/lib/temp-judge.js"></script>
 <script src="staff/lib/thermometer.js"></script>
 <script src="staff/lib/capacity.js"></script>
+<script src="staff/lib/evidence-photo.js"></script>
 <script src="staff/lib/temp-pair.js"></script>
 <script src="staff/lib/display.js"></script>
 <script src="staff/lib/area-temp-line.js"></script>
@@ -5270,12 +5271,21 @@ async function tempSave(areaId,slot,which,raw,el,msgEl,th){
   var cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
   var nv={min:t.min,max:t.max,at:r.result.at||new Date().toISOString()};
   cur['t_'+slot]=nv; if(multi) cur[sk]=nv; delete TYPED[tk];
-  keptRow(areaId,ps,th?{min_c:t.min,max_c:t.max,thermometer_id:th}:{min_c:t.min,max_c:t.max},r); roundRefresh(date); }
+  keptRow(areaId,ps,th?{min_c:t.min,max_c:t.max,thermometer_id:th}:{min_c:t.min,max_c:t.max},r); roundRefresh(date); roundPhoto(areaId,slot,th,r,date,msgEl); }
 }
 /* After a save (the owner 12 Nov 2026: "0 with a temperature" and "No readings" right after an H1 reading that HAD saved):
    the new row joins the page's copy of the sheet, and the count and Kept readings are drawn again at once. */
 function keptRow(areaId,ps,f,r){ var rows=T['BLD-area_reading.csv']||(T['BLD-area_reading.csv']=[]);
  rows.push(Object.assign({id:(r.result&&r.result.id)||'',area_id:areaId,period_start:ps,taken_at:(r.result&&r.result.at)||new Date().toISOString()},f)); }
+/* After a Round reading or Empty mark is saved, offer a photo of it (shared helper staff/lib/evidence-photo.js). The reading
+   is already saved; the photo joins it as evidence. Same switch as staff Temps: rule row job.temps_keep_photo = yes (no row = off). */
+function roundPhoto(areaId,slot,th,r,date,msgEl){
+ var P=window.BLDEvidencePhoto, id=r&&r.result&&r.result.id;
+ if(!P||!id||r.result.status!=='saved'||!msgEl||!P.ruleOn(T['BLD-breeding_rule.csv']||[],'job.temps_keep_photo',date,false)) return;
+ var row=msgEl.closest('.tmp'); if(!row) return;
+ var host=document.createElement('div'); host.setAttribute('data-round-photo',areaId+'|'+slot+(th?'|'+th:'')); row.parentNode.insertBefore(host,row.nextSibling);
+ P.offer(host,{send:hubPhotoSender(),fromTable:'area_reading',fromIds:[id],day:date,past:date!==todayISO(),name:'reading-'+areaId+'-'+slot+'.jpg',source:'Round reading',title:'Add photo',hint:'A photo of the thermometer, or skip.'});
+}
 function roundRefresh(date){
  var st=document.getElementById('rstat'); if(st){ var rows=liveCabins(), n=rows.filter(function(a){ var x=ROUND[roundKey(date,a.id)]||{}; return x.t_am||x.t_pm; }).length; st.textContent=rows.length+' cabins \u00b7 '+n+' with a temperature'; }
  var kr=document.getElementById('kept-readings'); if(kr) kr.outerHTML=keptReadings(date); }
@@ -5296,7 +5306,7 @@ async function roomEmptySave(areaId,slot,msgEl,th){
   var ev={min:'',max:'',at:r.result.at||new Date().toISOString(),empty:true};
   cur['t_'+slot]=ev; if(multi) cur[sk]=ev;
   keptRow(areaId,ps,th?{room_empty:'yes',thermometer_id:th}:{room_empty:'yes'},r); roundRefresh(date);
-  if(msgEl) msgEl.textContent='empty, saved'; }
+  if(msgEl) msgEl.textContent='empty, saved'; roundPhoto(areaId,slot,th,r,date,msgEl); }
 }
 /* a whole litter (and its dam) into one cabin: one move row each, through the same save as one dog */
 async function roundAddLitter(areaId,litterId,msgEl){
@@ -5882,24 +5892,29 @@ function compMedsHtml(){
  while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
  var years=[]; list.forEach(function(k){ var yy=k.slice(0,4); if(years.indexOf(yy)<0) years.push(yy); });
  if(years.length<2) years.push(String(Number(years[0]||todayISO().slice(0,4))-1));
- return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine and dose say \u201cnot recorded\u201d when the record does not hold them. A blank name shows Lisa Carson. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
+ return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine and dose say \u201cnot recorded\u201d when the record does not hold them. A blank name shows the default name in your rules (meds.given_by.default), else \u201cnot recorded\u201d. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
   +'<div class="frow"><label for="medsPeriod">Period</label> <select id="medsPeriod" aria-label="Period"><option value="month" selected>One month</option><option value="year">Whole year</option></select></div>'
   +'<div class="frow"><label for="medsMonth">Month</label> <select id="medsMonth">'+list.map(function(k){ return '<option value="'+k+'">'+esc(UKMON[Number(k.slice(5))-1]+' '+k.slice(0,4))+' ('+(ms[k]||'none')+')</option>'; }).join('')+'</select> '
   +'<label for="medsYear">Year</label> <select id="medsYear" aria-label="Year">'+years.map(function(yy){ return '<option value="'+yy+'">'+yy+'</option>'; }).join('')+'</select> '
   +'<button type="button" class="btn" id="medsPrint">Print</button> <button type="button" class="btn" id="medsCsv">Download CSV</button></div><p id="medsMsg" class="mut" aria-live="polite"></p>');
 }
 function medsLib(){ return window.BLDMedsRegister?Promise.resolve(window.BLDMedsRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='meds-register.js'; s.onload=function(){ ok(window.BLDMedsRegister); }; s.onerror=no; document.head.appendChild(s); }); }
+/* The name a blank Given by shows: the owner's rule row meds.given_by.default (older key register.given_by_default) in force
+   today (latest from-date wins). Read at run time so no name is written in the code (public repo rule). No row: "not recorded". */
+function medsNamed(){ var t=todayISO(), best=null;
+ (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ if((r.rule_key==='meds.given_by.default'||r.rule_key==='register.given_by_default')&&r.effective_from&&r.effective_from<=t&&(!r.to_date||r.to_date>=t)&&(!best||r.effective_from>best.effective_from)) best=r; });
+ return best?String(best.value||'').trim():''; }
 function medsMake(R){ var period=(document.getElementById('medsPeriod')||{}).value||'month';
- var kennel=kennelNow(), givenBy=medsGivenByNow(), printed=dmy(todayISO())+' '+hhmmNow();
+ var kennel=kennelNow(), printed=dmy(todayISO())+' '+hhmmNow(), named=medsNamed();
  var rows=R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO());
  if(period==='year'){ var y=(document.getElementById('medsYear')||{}).value||todayISO().slice(0,4), sheets=[], mi, flat=[];
   for(mi=1;mi<=12;mi++){ var ym=y+'-'+(mi<10?'0':'')+mi; if(ym+'-01'>todayISO()) continue;
-   sheets.push({month:ym,lines:R.build(rows,{month:ym,dog:regDog,givenBy:givenBy})}); }
+   sheets.push({month:ym,lines:R.build(rows,{month:ym,dog:regDog,named:named})}); }
   sheets.forEach(function(s){ flat=flat.concat(s.lines); });
-  return {period:'year',year:y,ym:y,sheets:sheets,lines:flat,head:{kennel:kennel,year:y,printed:printed,givenBy:givenBy}}; }
+  return {period:'year',year:y,ym:y,sheets:sheets,lines:flat,head:{kennel:kennel,year:y,printed:printed,named:named}}; }
  var ym=(document.getElementById('medsMonth')||{}).value||'';
- var lines=R.build(rows,{month:ym,dog:regDog,givenBy:givenBy});
- return {ym:ym,lines:lines,head:{kennel:kennel,month:ym,printed:printed,givenBy:givenBy}}; }
+ var lines=R.build(rows,{month:ym,dog:regDog,named:named});
+ return {ym:ym,lines:lines,head:{kennel:kennel,month:ym,printed:printed,named:named}}; }
 function bindMeds(){ var p=document.getElementById('medsPrint'), c=document.getElementById('medsCsv'), msg=document.getElementById('medsMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; };
  medsLib().catch(function(){});   /* fetched now, so Print can open its tab inside the press and is not blocked */
@@ -6004,8 +6019,22 @@ document.addEventListener('click',async function(ev){
   if(res.session) rows.push({id:res.id||'',check_type_id:f.check_type_id,subject_id:'',covered_ids:res.covered_ids||f.dog_ids||'',exceptions:f.exceptions||'',outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who});
   else ids.forEach(function(d,i){ rows.push({id:(res.ids&&res.ids[i])||((res.id||'jcal')+'-'+i),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who}); });
   var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml();
+  donePhotoHub(key,res);
  } else { b.disabled=false; b.textContent='Done today'; var p=document.createElement('p'); p.className='msg bad'; p.setAttribute('data-jcal-msg',''); p.textContent=sinkMsg(r||{},''); b.closest('.jcal').appendChild(p); }
 });
+/* After Done today, offer a photo (shared helper staff/lib/evidence-photo.js). The record is already saved; the photo
+   joins each saved row as evidence. Switch: rule rows job.done_photo(.<type_key>), default on. */
+function hubPhotoSender(){
+ function norm(j){ return j&&j.ok?{ok:true,id:(j.result||{}).id}:{ok:false,message:(j&&j.message)||'Not saved.'}; }
+ return {fileAdd:function(f){ return sinkSend({action:'file_add',fields:f}).then(norm); },
+  linkAdd:function(f){ return sinkSend({action:'link_add',fields:f}).then(function(j){ if(j&&j.ok) (T['BLD-links.csv']=T['BLD-links.csv']||[]).push(Object.assign({id:(j.result||{}).id||''},f)); return norm(j); }); }};
+}
+function donePhotoHub(key,res){
+ var P=window.BLDEvidencePhoto, ids=res&&res.ids&&res.ids.length?res.ids:[res&&res.id];
+ if(!P||!ids[0]||(res.status==='queued')||!P.doneOn(T['BLD-breeding_rule.csv']||[],key,todayISO())) return;
+ var card=[].slice.call(document.querySelectorAll('[data-jcal]')).filter(function(x){return x.getAttribute('data-jcal')===key;})[0]; if(!card) return;
+ P.offer(card,{send:hubPhotoSender(),fromTable:'check_log',fromIds:ids,day:todayISO(),name:key+'.jpg',source:'Job done: '+key,title:'Add photo',hint:'A photo of the job done, or skip.'});
+}
 /* Checks register (priority 2, 21 Nov 2026): print or CSV of one month's check records for an inspector. Read only.
    checks-register.js is fetched when Compliance opens (not on first load). Every month from the first record to this one
    is offered, a month with none too, so its nil record can be printed. Printing is inside this page, as Temperatures. */
@@ -6252,18 +6281,6 @@ function kennelNow(){
  for(i=0;i<cols.length;i++){ v=ok(t[cols[i]]); if(v) return v; }
  return '';
 }
-/* A blank Given by on the medicines register: the Settings row meds.given_by.default in force today, else '' (prints not recorded). */
-function medsGivenByNow(){
- var today=todayISO(), best=null;
- (T['BLD-breeding_rule.csv']||[]).forEach(function(r){
-  if(String(r.rule_key||'').trim()!=='meds.given_by.default') return;
-  var v=String(r.value||'').trim(); if(!v) return;
-  var from=String(r.effective_from||''); if(from&&from>today) return;
-  if(r.to_date&&String(r.to_date)<today) return;
-  if(!best||from>=String(best.effective_from||'')) best=r;
- });
- return best?String(best.value).trim():'';
-}
 function ypCtx(R){
  var dogs=[], seen={};
  function addDog(id,name,dob,area,on,kind,litter){ if(!id) return;
@@ -6294,7 +6311,7 @@ function ypCtx(R){
   areaName:function(id){ var a=byId(areas,id); return a&&a.name?a.name:''; },
   itemName:function(id){ var it=byId(items,id); return it&&it.name?it.name:''; },
   litterName:function(id){ var l=null; litters.forEach(function(x){ if(x.id===id) l=x; }); return l&&typeof litName==='function'?'Litter '+litName(l):''; },
-  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO()),{month:ym,dog:regDog,givenBy:medsGivenByNow()});
+  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO()),{month:ym,dog:regDog,named:medsNamed()});
    return {columns:R.COLUMNS,lines:lines,cell:function(l,k){ return R.cell(l,k); }}; }:null };
 }
 function pageYearly(){
