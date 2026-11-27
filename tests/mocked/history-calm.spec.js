@@ -704,7 +704,7 @@ test('Print / PDF: summary and room table for a month, totals and outside list f
   if (process.env.RP_SAMPLE) await page.pdf({ path: process.env.RP_SAMPLE, format: 'A4', landscape: true, printBackground: true });
 });
 
-test('Print / PDF: outside-limit lines say who took the reading; a save that arrives days later is never marked late @regression', async ({ page, guard }) => {
+test('Print / PDF: outside-limit lines say who took the reading; a save that arrives days later is never marked late @regression @live', async ({ page, guard }) => {
   await open(page, guard);
   // R3 PM on 7 Jan: the save arrived on 9 Jan (taken_at). R1 AM on 8 Jan is outside the limit, taken by Staff A.
   const extra = 'rdg-x1,area-r3,2026-01-09T10:15:00Z,2026-01-07T12:00:00+00:00,12.0,15.0,typed,,Staff A,\n'
