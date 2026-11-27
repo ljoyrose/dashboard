@@ -240,6 +240,23 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await pop.close();
   });
 
+  test('a dose recorded from paper says so in the downloaded CSV @live', async ({ page, guard }) => {
+    setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
+    setFile(guard.world, 'BLD-microchip.csv', CHIPS);
+    setFile(guard.world, 'BLD-check_type.csv', 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit\nct-med,ten-test,medicine,Medicine given,dog,true,Medicine,true,dose\n');
+    setFile(guard.world, 'BLD-check_log.csv', 'id,tenant_id,check_type_id,subject_id,item,amount,outcome,happened_at,taken_at,taken_by,note,note_for_id,corrects_id,time_given,how_recorded\njb-p,ten-test,ct-med,sub-test-dog-2,Sample Drops,2,ok,2026-02-12T09:30:00Z,2026-02-14T18:00:00Z,Sample Staff A,,,,,paper\n');
+    await page.goto('cdhub/');
+    await signIn(page);
+    await tabClick(page, '#nav button[data-go="compliance"]');
+    const card = page.locator('#compMeds');
+    await card.locator('#medsMonth').selectOption('2026-02');
+    const [dl] = await Promise.all([page.waitForEvent('download'), card.locator('#medsCsv').click()]);
+    const csv = fs.readFileSync(await dl.path(), 'utf8');
+    expect(csv).toContain('Sample Drops');
+    expect(csv).toContain('Recorded from paper.');
+    expect(csv).not.toMatch(/late/i);
+  });
+
   test('a month with nothing given prints and downloads a nil record', async ({ page, guard, context }) => {
     setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
     await page.goto('cdhub/');
