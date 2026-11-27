@@ -460,6 +460,10 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | A photo frame was wider than it was tall, and the chosen print type did not stay marked | "the chosen card type stays pressed, and photo frames stay square @regression" (tests/mocked/cdhub-print-dog-fit.spec.js) |
 | 25 Nov 2026 | Full A4 printed a three-column grid and left the card fields off the page | "each layout prints that many cards a page, and the fields are on the page @regression" (tests/mocked/cdhub-print-pages.spec.js) |
 | 25 Nov 2026 | Room card size icons printed grey, and the square metres were missing when the live row omitted them | "room card dog icons stay coloured and the room size prints from the device copy @regression" (tests/mocked/cdhub-print-room-colour.spec.js) |
+| 27 Nov 2026 | Checks register header printed "not recorded" for the kennel when the name was set as the Settings row kennel.name (it read only the tenant row) | "the header names the kennel from the Settings row kennel.name, as Medicines does @regression" (tests/mocked/cdhub-checks-register.spec.js) |
+| 27 Nov 2026 | The Round: no way to keep a photo with a saved reading or an Empty mark | "a saved reading offers a photo; a chosen photo is kept and linked to the reading @regression" (tests/mocked/cdhub-round-photo.spec.js) |
+| 27 Nov 2026 | Temperature report: a reading entered on a later day was not marked, and outside-limit lines did not say who entered them | "Print / PDF: outside-limit lines say who took the reading; a save that arrives days later is never marked late @regression" (tests/mocked/history-calm.spec.js) |
+| 27 Nov 2026 | (found in review) the "every @regression test is listed" guard only matched titles ending in @regression, so the three rows above (titles ending "@regression @live") were never required | "every @regression test is listed in "Caught after merge"" (tests/mocked/ci-guards.spec.js, now matches @regression anywhere in the closing tag list) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

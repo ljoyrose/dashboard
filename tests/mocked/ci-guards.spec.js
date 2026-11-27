@@ -39,7 +39,8 @@ test.describe('Learning loop is mechanical @ci-guard', () => {
     const table = caught().join('\n');
     const unlisted = [];
     specFiles().forEach((f) => {
-      read(f).split('\n').filter((l) => /^\s*test\(/.test(l) && /@regression['"`]\s*,/.test(l)).forEach((l) => {
+      // @regression anywhere in the closing tag list counts ("… @regression @live'" too, 27 Nov 2026).
+      read(f).split('\n').filter((l) => /^\s*test\(/.test(l) && /@regression(?:\s+@[\w-]+)*\s*['"`]\s*,/.test(l)).forEach((l) => {
         const m = /test\((['"`])(.*?)\s*@regression/.exec(l);
         const start = (m ? m[2] : l).replace(/\\'/g, "'").slice(0, 40);
         if (!table.includes(start)) unlisted.push(`${f}: "${start}…" is tagged @regression but is not in the "Caught after merge" table in TESTS.md`);
