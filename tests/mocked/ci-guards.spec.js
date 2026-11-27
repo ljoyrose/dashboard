@@ -107,6 +107,25 @@ test.describe('Alarm wiring @ci-guard', () => {
     expect(evaluate({ protected: true, protection: on }, wf, null).problems).toEqual([]); // could not read: no false alarm
   });
 
+  // 27 Nov 2026: packages.microsoft.com answered 403 in `playwright install-deps` and failed the publish gate (#818 merged
+  // but not published) and the live check. Every browser install goes through tools/ci-local/browser-deps.sh instead.
+  test('no workflow installs the browser libraries without the apt-403 guard (third-party source removed, two tries) @regression', () => {
+    const direct = [];
+    fs.readdirSync(path.join(REPO, '.github', 'workflows')).forEach((f) => {
+      read('.github/workflows/' + f).split('\n').forEach((l, i) => {
+        if (/npx playwright install(-deps| --with-deps)/.test(l)) direct.push(`${f}:${i + 1}: ${l.trim()}`);
+      });
+    });
+    expect(direct, 'use bash tools/ci-local/browser-deps.sh (deps|install) instead').toEqual([]);
+    const sh = read('tools/ci-local/browser-deps.sh');
+    expect(sh).toMatch(/packages\\\.microsoft\\\.com/);
+    expect(sh).toMatch(/for attempt in 1 2; do/);
+    expect(sh).toMatch(/npx playwright install-deps chromium/);
+    expect(sh).toMatch(/npx playwright install --with-deps chromium/);
+    for (const f of ['tests.yml', 'pages.yml', 'live-after-deploy.yml']) expect(read('.github/workflows/' + f), f).toContain('bash tools/ci-local/browser-deps.sh deps');
+    execFileSync('bash', ['-n', path.join(REPO, 'tools/ci-local/browser-deps.sh')]);
+  });
+
   test('the alarm message is one technical line', () => {
     const out = execFileSync('node', ['tests/support/report-issue.js', '--state', 'red', '--label', 'x', '--results', 'none', '--note', 'drill', '--dry-run'], {
       cwd: REPO, encoding: 'utf8', env: { ...process.env, GITHUB_REPOSITORY: 'o/r', GITHUB_RUN_ID: '1' },

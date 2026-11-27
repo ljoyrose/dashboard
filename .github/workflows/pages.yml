@@ -53,10 +53,10 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Install the test browser (first time, or after a version change)
         if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+        run: bash tools/ci-local/browser-deps.sh install # drops a third-party apt source that 403s; tries twice
       - name: Install the browser's system libraries (browser itself came from the cache)
         if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: bash tools/ci-local/browser-deps.sh deps # drops a third-party apt source that 403s; tries twice
       - name: Run the same tests as the required check (this shard)
         # Same suite as the required check, including the route crawl (tests/mocked/route-crawl.spec.js).
         run: npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/4

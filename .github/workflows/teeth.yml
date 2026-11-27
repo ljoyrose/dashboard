@@ -40,9 +40,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+        run: bash tools/ci-local/browser-deps.sh install # drops a third-party apt source that 403s; tries twice
       - if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: bash tools/ci-local/browser-deps.sh deps # drops a third-party apt source that 403s; tries twice
       - name: Break things on purpose and check the tests notice
         id: teeth
         run: node tests/teeth/run-teeth.js

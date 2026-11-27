@@ -76,11 +76,11 @@ jobs:
 
       - name: Install the test browser (first time, or after a version change)
         if: steps.scope.outputs.browser == 'true' && steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+        run: bash tools/ci-local/browser-deps.sh install # drops a third-party apt source that 403s; tries twice
 
       - name: Install the browser's system libraries (browser itself came from the cache)
         if: steps.scope.outputs.browser == 'true' && steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: bash tools/ci-local/browser-deps.sh deps # drops a third-party apt source that 403s; tries twice
 
       - name: Run tests (this shard of the desktop suite and the small phone-sized set)
         if: steps.scope.outputs.browser == 'true'
@@ -206,9 +206,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+        run: bash tools/ci-local/browser-deps.sh install # drops a third-party apt source that 403s; tries twice
       - if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: bash tools/ci-local/browser-deps.sh deps # drops a third-party apt source that 403s; tries twice
       - name: Check the live pages
         id: live
         continue-on-error: true

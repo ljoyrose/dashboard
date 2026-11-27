@@ -466,6 +466,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 26 Nov 2026 | Dog cards printed with no photo | "dog card photo is a loaded square in every layout and in print @regression" (tests/mocked/cdhub-print-dog-card-box.spec.js) |
 | 26 Nov 2026 | Printed QR codes opened the print page or a missing staff page instead of the staff page on this site | "every print QR uses the staff rule or the staff page @regression @live" (tests/mocked/cdhub-print-dog-card-box.spec.js) |
 | 27 Nov 2026 | Medicines register: a staff-job dose recorded from paper, with several days at once or by import did not say so; saved times are not used, because a save can reach the sheet hours after the dose | "a dose typed from paper or imported says how it was recorded; a late save is never marked late @regression" and "a dose recorded from paper says so in the downloaded CSV @live" (tests/mocked/cdhub-meds-register.spec.js) |
+| 27 Nov 2026 | The publish gate for #818 failed before any test ran: `playwright install-deps` exited 100 because a third-party apt source (packages.microsoft.com) answered 403, so a merged fix was not published | "no workflow installs the browser libraries without the apt-403 guard (third-party source removed, two tries) @regression" (tests/mocked/ci-guards.spec.js; tools/ci-local/browser-deps.sh) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
