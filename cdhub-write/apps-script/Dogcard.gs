@@ -40,7 +40,7 @@ function dogcardFiles_() {
   if (prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.subject_create.on) === 'true') {
     [DOGCARD_.subject_create.file, CHIP_FILE_, STATUS_FILE_].forEach(function (x) { if (out.indexOf(x) < 0) out.push(x); });
   }
-  return out.concat(subjectLinkFiles_(), typeof filesStoreFiles_ === 'function' ? filesStoreFiles_() : []);
+  return out.concat(subjectLinkFiles_(), subjectVideoFiles_(), typeof filesStoreFiles_ === 'function' ? filesStoreFiles_() : []);
 }
 
 function dogcardText_(v, name, errors, max) {
@@ -456,5 +456,87 @@ function sinkSubjectLinkEnd_(req) {
     var row = read.header.map(function (h) { return h === 'to_date' ? to : (rec[h] == null ? '' : String(rec[h])); });
     store_replaceRow_(spec.file, read.header, idx, row, read);
     return { status: 'saved', id: rowId, ended: to };
+  });
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Dog videos (25 Nov 2026). The picture stays on RoseQuest. This list stores only the share link
+ * (https://share.puppyclassroom.com/v/<id>), never a copy and never a Drive file.
+ *   action 'subject_video'  Adds one row, or a new row whose corrects_id points at an older one.
+ *                           Nothing is overwritten. Remove sets active to no. Make main sets is_main
+ *                           on the chosen clip and clears it on the previous main, each as its own new row.
+ * Switch: TABLE_ON_subject_video, OFF until the sheet exists and the owner turns it on.
+ * --------------------------------------------------------------------------------------------------------------- */
+DOGCARD_.subject_video = { file: 'BLD-subject_video.csv', on: 'subject_video', idPrefix: 'svd',
+  need: ['id', 'subject_id', 'video_url', 'title', 'is_main', 'created_at', 'corrects_id', 'active'] };
+var VIDEO_URL_RE_ = /^https:\/\/share\.puppyclassroom\.com\/v\/[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/;
+
+function subjectVideoFiles_() {
+  return prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.subject_video.on) === 'true' ? [DOGCARD_.subject_video.file] : [];
+}
+
+function videoStamp_(now) { return Utilities.formatDate(now, 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'"); }
+
+function videoLive_(records, subjectId) {
+  var replaced = {};
+  records.forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = 1; });
+  return records.filter(function (r) {
+    return r.subject_id === subjectId && r.id && !replaced[r.id] && String(r.active || '') !== 'no';
+  });
+}
+
+function videoWrite_(spec, base, over) {
+  var values = {
+    subject_id: base.subject_id || '',
+    video_url: base.video_url || '',
+    title: over.title != null ? over.title : (base.title || ''),
+    is_main: over.is_main != null ? over.is_main : (base.is_main || ''),
+    created_at: over.created_at || base.created_at || '',
+    corrects_id: over.corrects_id || '',
+    active: over.active != null ? over.active : (base.active || 'yes')
+  };
+  values.id = dogcardAppend_(spec, values);
+  return values;
+}
+
+function sinkSubjectVideo_(req) {
+  return sinkDogcard_(req, 'subject_video', function (spec, f, who, now) {
+    var errors = {}, subjectId = String(f.subject_id || '').trim();
+    var corrects = String(f.corrects_id || '').trim();
+    var url = String(f.video_url || '').trim(), title = dogcardText_(f.title, 'title', errors, 80);
+    var wantMain = String(f.is_main || '') === 'yes', remove = String(f.active || '') === 'no';
+    if (url && !VIDEO_URL_RE_.test(url)) errors.video_url = 'Paste a RoseQuest share link, like https://share.puppyclassroom.com/v/abc123';
+    if (corrects && !ID_RE_.test(corrects)) errors.corrects_id = 'Say which video this changes.';
+    if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
+    dogcardSubject_(subjectId);
+    var read = store_read_(spec.file, true);
+    dogcardHeader_(read, spec.need, spec.file);
+    var live = videoLive_(read.records, subjectId), wrote = [];
+    if (corrects) {
+      var orig = null;
+      live.forEach(function (r) { if (r.id === corrects) orig = r; });
+      if (!orig) {
+        var gone = read.records.some(function (r) { return r.id === corrects && r.subject_id === subjectId; });
+        throw err_('INVALID', gone ? 'That video already has a change. Use the newer one.' : 'That video was not found for this dog.', { fields: { corrects_id: 'That video was not found for this dog.' } });
+      }
+      if (remove) {
+        wrote.push(videoWrite_(spec, orig, { active: 'no', is_main: '', corrects_id: orig.id }));
+        if (String(orig.is_main) === 'yes') {
+          var next = live.filter(function (r) { return r.id !== orig.id; }).sort(function (a, b) { return String(b.created_at).localeCompare(String(a.created_at)); })[0];
+          if (next) wrote.push(videoWrite_(spec, next, { is_main: 'yes', active: 'yes', corrects_id: next.id }));
+        }
+      } else if (wantMain) {
+        if (String(orig.is_main) === 'yes') return { status: 'saved', id: orig.id, already: true, subject_id: subjectId, rows: [] };
+        live.forEach(function (r) { if (r.id !== orig.id && String(r.is_main) === 'yes') wrote.push(videoWrite_(spec, r, { is_main: '', active: 'yes', corrects_id: r.id })); });
+        wrote.push(videoWrite_(spec, orig, { is_main: 'yes', active: 'yes', corrects_id: orig.id }));
+      } else throw err_('INVALID', 'Say whether to remove this video or make it the main one.');
+    } else {
+      if (!VIDEO_URL_RE_.test(url)) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { video_url: 'Paste a RoseQuest share link, like https://share.puppyclassroom.com/v/abc123' } });
+      if (live.some(function (r) { return r.video_url === url; })) throw err_('DUPLICATE', 'That video is already on this dog.');
+      var main = wantMain || !live.some(function (r) { return String(r.is_main) === 'yes'; });
+      if (main) live.forEach(function (r) { if (String(r.is_main) === 'yes') wrote.push(videoWrite_(spec, r, { is_main: '', active: 'yes', corrects_id: r.id })); });
+      wrote.push(videoWrite_(spec, { subject_id: subjectId, video_url: url, title: title, created_at: videoStamp_(now), active: 'yes' }, { is_main: main ? 'yes' : '', active: 'yes', created_at: videoStamp_(now) }));
+    }
+    return { status: 'saved', id: wrote.length ? wrote[wrote.length - 1].id : '', subject_id: subjectId, rows: wrote };
   });
 }
