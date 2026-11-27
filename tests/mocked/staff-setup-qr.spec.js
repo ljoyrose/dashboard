@@ -189,7 +189,7 @@ test('dog kennel cards are only for dogs on site: none for a dog that has left',
   await expect(page.locator('.dcard .name')).toHaveText(['Test here', 'Test offsite']);
 });
 
-test('thermometer cards: one per thermometer whose need rows have not all ended, by name; adding one saves it and makes its card', async ({ page }) => {
+test('thermometer cards: one per thermometer whose need rows have not all ended, by name; adding one saves it and makes its card @live', async ({ page }) => {
   const tables = {
     area: [{ id: 'area-t1', code: 'T1' }, { id: 'area-old', code: '3A.1' }], subject: [], subject_status: [], litter: [], occupancy: [], qr_tag: [],
     thermometer: [{ id: 'thm-1', name: 'Hall', area_id: 'area-t1' }, { id: 'thm-4', name: 'Ended', area_id: 'area-t1' }],
