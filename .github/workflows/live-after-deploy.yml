@@ -2,6 +2,8 @@ name: Live check after deploy
 
 # Right after the site is published (by "Publish site (after tests)", or by the old branch publishing until the owner switches it), open the three LIVE pages (signed out only) and check they are up.
 # A bad merge is then noticed within minutes, not at the next Monday run.
+# Then the live feature check: the @live tests from the main suite run against the DEPLOYED pages (project live-features),
+# with Google sign-in, Drive and the save script still pretend (invented data, no real records touched).
 # It never signs in, never blocks anything, and never touches the main test suite or branch protection.
 # No secrets: it uses only the run's own built-in token to open/close one issue.
 #
@@ -27,7 +29,7 @@ jobs:
     name: Live site check after deploy (never blocks)
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     continue-on-error: true
     permissions:
       contents: read
@@ -58,17 +60,34 @@ jobs:
         env:
           LIVE_SMOKE: '1'
           LIVE_MATCH_REPO: ${{ github.ref == 'refs/heads/main' && '1' || '' }}
+      - name: Keep the live-smoke results (the next run clears test-results)
+        if: always()
+        run: cp test-results/results.json smoke-results.json || true
+      - name: Live feature check (@live tests against the deployed pages, pretend Google and Drive)
+        id: features
+        if: always()
+        continue-on-error: true
+        run: npx playwright test --project=live-features --retries=2
+        env:
+          LIVE_FEATURES: '1'
       - name: Write the short summary
         if: always()
-        run: node tests/support/summary.js test-results/results.json
-      - name: Live site red? Open or update the one live-site issue
-        if: ${{ steps.live.outcome == 'failure' }}
+        run: node tests/support/summary.js smoke-results.json && node tests/support/summary.js test-results/results.json
+      - name: Live feature check red? Open or update the one live-site issue
+        if: ${{ always() && steps.features.outcome == 'failure' }}
         continue-on-error: true
-        run: 'node tests/support/report-issue.js --state red --label live-site-red --title-prefix "cdhub: check failed" --results test-results/results.json --note "Technical check failed."'
+        run: 'node tests/support/report-issue.js --state red --label live-site-red --title "cdhub: live feature check failed" --sha "$MERGED_SHA" --failed test-results/results.json'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Live site red? Open or update the one live-site issue
+        if: ${{ always() && steps.live.outcome == 'failure' && steps.features.outcome != 'failure' }}
+        continue-on-error: true
+        run: 'node tests/support/report-issue.js --state red --label live-site-red --title-prefix "cdhub: check failed" --results smoke-results.json --note "Technical check failed."'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Live site fine? Close the issue
-        if: ${{ steps.live.outcome == 'success' }}
+        if: ${{ steps.live.outcome == 'success' && steps.features.outcome == 'success' }}
         continue-on-error: true
         run: node tests/support/report-issue.js --state green --label live-site-red
         env:

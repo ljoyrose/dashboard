@@ -59,7 +59,7 @@ test.describe('Medicines register: the rules', () => {
     expect(R.cell(one, 'dose')).toBe('1 tablet');
     expect(R.cell(one, 'reason')).toBe('routine');
     expect(R.cell(one, 'note')).toBe('with food');
-    // Dose is required. A blank name shows Lisa Carson. Time, batch, expiry and the vet note are left blank.
+    // Dose is required. A blank name shows the owner Carson. Time, batch, expiry and the vet note are left blank.
     expect(R.cell(one, 'given_by')).toBe('Lisa Carson');
     ['time', 'batch', 'expiry', 'vet'].forEach((k) => expect(R.cell(one, k)).toBe(''));
     // "NOT STATED" is not a medicine's name
@@ -195,7 +195,7 @@ test.describe('Medicines register: the staff "Medicine given" job counts too', (
 });
 
 test.describe('CD Hub: Medicines register on Compliance', () => {
-  test('pick a month, download the CSV and open the print page; nothing is written', async ({ page, guard, context }) => {
+  test('pick a month, download the CSV and open the print page; nothing is written @live', async ({ page, guard, context }) => {
     setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
     setFile(guard.world, 'BLD-microchip.csv', CHIPS);
     setFile(guard.world, 'BLD-check_type.csv', 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit\nct-med,ten-test,medicine,Medicine given,dog,true,Medicine,true,dose\n');
