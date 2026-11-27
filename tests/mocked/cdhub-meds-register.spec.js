@@ -182,7 +182,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
   test('pick a month, download the CSV and open the print page; nothing is written @live', async ({ page, guard, context }) => {
     setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
     setFile(guard.world, 'BLD-microchip.csv', CHIPS);
-    setFile(guard.world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\nbr-gb,ten-test,register.given_by_default,Owner A,2020-01-01,invented,,,\n');
+    setFile(guard.world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\nbr-gb,ten-test,meds.given_by.default,Owner A,2020-01-01,invented,,,\n');
     setFile(guard.world, 'BLD-check_type.csv', 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit\nct-med,ten-test,medicine,Medicine given,dog,true,Medicine,true,dose\n');
     setFile(guard.world, 'BLD-check_log.csv', 'id,tenant_id,check_type_id,subject_id,item,amount,outcome,happened_at,taken_at,taken_by,note,note_for_id,corrects_id,time_given\njb-1,ten-test,ct-med,sub-test-dog-2,Sample Drops,2,ok,2026-02-12T09:30:00Z,2026-02-12T09:30:00Z,Sample Staff A,,,,\n');
     await context.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
