@@ -30,25 +30,27 @@ env:
   CI: 'true'
 
 jobs:
-  tests:
-    name: Browser tests (pretend Google and Drive)
+  # The suite runs in 4 parallel shards (Playwright --shard), then ONE job merges the results. Only that merge job is called
+  # "Browser tests (pretend Google and Drive)", so branch protection still sees the same single check (27 Nov 2026:
+  # one job ran about 53 of its 60 minutes; #814 was cut off at 60). Every test still runs; each runs in exactly one shard.
+  shards:
+    name: Browser tests shard ${{ matrix.shard }}/4
     runs-on: ubuntu-24.04
-    # 15 > 20 on 2 Nov 2026: the full suite already ran 14-15 minutes on main (one main run was cut off at 15), and the
-    # clickable-info checks (the owner's clickable picks) add about a minute.
-    # 20 > 30 on 4 Nov 2026 (the owner, Q5 A): the suite now runs 17-20+ minutes; four JOB 34 fix PRs were cut off at 20 with every test passing.
-    # 30 > 35 on 5 Nov 2026: runs take about 18-21 min, so 30 leaves too little headroom.
-    # 35 > 60 on 7 Nov 2026: dog-card-redesign adds accordion + med-form tests; suite now exceeds 35 min.
-    timeout-minutes: 60
+    # One shard is about a quarter of the suite (about 15 min at 53 min in total), so 40 leaves over 2x headroom.
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false # every shard finishes, so the merged report lists every failure
+      matrix:
+        shard: [1, 2, 3, 4]
     permissions:
       contents: read
-      issues: write # only used to open/close the one "tests are red" issue on scheduled runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # to compare the whole branch with main
 
       # Docs-only branch (only docs/ or *.md, never TESTS.md, .github/ or tests/): skip the browser, still run the
-      # no-browser checks (secret scan of every file, CI guards). main, schedules and hand-started runs always run everything.
+      # no-browser checks (secret scan of every file, CI guards) in shard 1. main, schedules and hand-started runs always run everything.
       - name: Docs-only branch? (the browser is skipped, the file checks still run)
         id: scope
         run: bash tools/ci-local/docs-only.sh
@@ -80,16 +82,69 @@ jobs:
         if: steps.scope.outputs.browser == 'true' && steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Run tests (desktop suite, then the small phone-sized set)
+      - name: Run tests (this shard of the desktop suite and the small phone-sized set)
         if: steps.scope.outputs.browser == 'true'
-        id: run
         # The desktop suite includes the route crawl (tests/mocked/route-crawl.spec.js): every top-level page,
         # and every hash route, tab, chip and SOP row, must stay on this origin and paint without hanging.
-        run: npx playwright test --project=mocked --project=phone
+        run: npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/4 --reporter=blob,dot
+        env:
+          PLAYWRIGHT_BLOB_OUTPUT_FILE: blob-report/report-${{ matrix.shard }}.zip
 
       - name: Docs-only branch or private-repo push - run the checks that need no browser (secret scan, CI guards)
-        if: steps.scope.outputs.browser == 'false'
-        run: npx playwright test --project=mocked tests/mocked/repo-hygiene.spec.js tests/mocked/ci-guards.spec.js
+        if: steps.scope.outputs.browser == 'false' && matrix.shard == 1
+        run: npx playwright test --project=mocked tests/mocked/repo-hygiene.spec.js tests/mocked/ci-guards.spec.js --reporter=blob,dot
+        env:
+          PLAYWRIGHT_BLOB_OUTPUT_FILE: blob-report/report-${{ matrix.shard }}.zip
+
+      - name: Keep this shard's drift notes (pretend-Drive calls it could not answer) for the summary
+        if: always()
+        run: mkdir -p drift && cp test-results/unhandled-drive.jsonl drift/unhandled-drive-${{ matrix.shard }}.jsonl 2>/dev/null || true
+
+      - name: Hand this shard's results to the merge job
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: blob-${{ matrix.shard }}
+          path: |
+            blob-report/
+            drift/
+          retention-days: 1
+          if-no-files-found: ignore
+
+  tests:
+    name: Browser tests (pretend Google and Drive)
+    needs: shards
+    if: ${{ !cancelled() }} # reports even when a shard failed, so the required check is red, never missing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write # only used to open/close the one "tests are red" issue on scheduled runs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install packages (exact versions from package-lock.json)
+        run: npm ci
+
+      - name: Collect the shard results
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: blob-*
+          path: shards
+          merge-multiple: true
+
+      - name: Merge the shards into one report (results.json and the HTML report)
+        run: |
+          mkdir -p test-results
+          cat shards/drift/*.jsonl > test-results/unhandled-drive.jsonl 2>/dev/null || true
+          if ls shards/blob-report/*.zip >/dev/null 2>&1; then npx playwright merge-reports --reporter=list,html,json shards/blob-report; else echo "No shard produced results."; fi
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/results.json
 
       - name: Write the short summary
         if: always()
@@ -105,6 +160,11 @@ jobs:
             test-results/
           retention-days: 14
           if-no-files-found: ignore
+
+      - name: Every shard passed? (this is what makes the required check red or green)
+        run: |
+          echo "Shards: ${{ needs.shards.result }}"
+          test "${{ needs.shards.result }}" = success
 
       # Failure surface. Scheduled (Monday) or hand-started runs on main only. No Slack, no webhooks, no new secrets:
       # the run's own built-in token opens ONE GitHub Issue (GitHub emails the owner) and closes it when green again.

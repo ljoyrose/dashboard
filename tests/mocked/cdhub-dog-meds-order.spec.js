@@ -1,4 +1,4 @@
-// Dog card medications (Lisa 25 Nov 2026): the list had the oldest at the top.
+// Dog card medications (25 Nov 2026): the list had the oldest at the top.
 // Newest date first. Two rows on the same date keep the order they were read in. Invented rows only.
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 

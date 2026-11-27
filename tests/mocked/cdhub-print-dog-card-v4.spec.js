@@ -6,7 +6,7 @@
 const { test, expect } = require('../support/test');
 const P = require('../support/print-a4');
 
-test('dog card v4, 2 per A4: photo, Size tile and 62 mm QR line up as approved; labels; no tag text @regression', async ({ page }) => {
+test('dog card v4, 2 per A4: photo, Size tile and 62 mm QR line up as approved; labels; no tag text @regression @live', async ({ page }) => {
   await P.openCards(page);
   await page.getByRole('button', { name: '2 per A4' }).click();
   await page.setViewportSize(P.PAPER.portrait);

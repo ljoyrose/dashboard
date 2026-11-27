@@ -1,13 +1,13 @@
 /**
  * INSPECTOR LINKS (Breed Better, 12 Nov 2026). A time-boxed, read-only link an inspector opens with no login.
- * Lisa decides, per link, which dogs and which fields it shows ("its for the breeder to decide what the inspector sees").
+ * the owner decides, per link, which dogs and which fields it shows ("its for the breeder to decide what the inspector sees").
  *
  * How it holds together:
  *   - The link is an ordinary code in the staff registry with role INSPECTOR, an end date (expires_at, as a visitor code)
  *     and the id of its link row. It ends by itself; Stop is the usual revoke. An unreadable end date counts as ended.
  *   - It can never save: sinkHandle_ refuses it before anything else.
  *   - What it can READ comes ONLY from the link's own rows, never from BLD-field_visibility.csv (that file stays read-only
- *     for this script, and stays Lisa's):
+ *     for this script, and stays the owner's):
  *         BLD-inspect_link_subject   the dogs, one row each, with from_date / to_date (blank to_date = no end)
  *         BLD-inspect_link_field     the columns, one row per list and column; redaction '' or 'last4'
  *     No rows = nothing. Only the lists in INSPECT.LISTS, and never a score list, whatever the rows say.
@@ -21,7 +21,7 @@ var ROLE_INSPECTOR = 'INSPECTOR';
 var INSPECT = {
   LINK_FILE: 'BLD-inspect_link.csv',
   // V9 (13 Nov 2026), the Regulatory-Core DisclosureGrant (map in AA_ACCESS_2026-11-13-1535): from_at / to_at (S4.15
-  // addition 14 Nov, UTC; Lisa: "now for a specific time or scheduled date time from to"); as_of_from / as_of_to
+  // addition 14 Nov, UTC; the owner: "now for a specific time or scheduled date time from to"); as_of_from / as_of_to
   // the data period. A row is never edited: an extension or a revoke is a NEW row whose supersedes_id names the row it
   // replaces; the current row is the one nothing points at. Child rows and the code or card stay on the ROOT row's id.
   // What a visit may see and do are rows (grant_scope, grant_right_link), not columns. inspect_link = the grant. Old 7-column files still read.
@@ -143,7 +143,7 @@ function inspectJobRows_(key, tenant) {
   });
 }
 
-/* 18 Nov 2026 (CD Hub demo, Lisa: "The inspector can see temperature logs, daily health checks, bowl and cleaning records").
+/* 18 Nov 2026 (CD Hub demo, the owner: "The inspector can see temperature logs, daily health checks, bowl and cleaning records").
    Temperatures and job records belong to a room or the whole site, so they are not cut down to the link's dogs, except that a
    job record about one dog shows only if that dog is on the link. The owner still ticks the columns, and may set the link's
    data_from_date / data_to_date to limit the days. Newest first; a corrected record shows only as its correction. Readable
@@ -583,7 +583,7 @@ function externalNotYet_(entry) {
   return !isNaN(s) && new Date().getTime() < s;
 }
 
-/** '2 Mar 2026 14:05' London, for messages (one date format everywhere, Lisa 13 Nov 2026; never DD/MM/YY). */
+/** '2 Mar 2026 14:05' London, for messages (one date format everywhere, Report 13 Nov 2026; never DD/MM/YY). */
 function externalShow_(iso) {
   var ms = Date.parse(iso || ''); if (isNaN(ms)) return '';
   var t = londonIso_(new Date(ms)), mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

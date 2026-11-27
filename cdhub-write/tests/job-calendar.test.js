@@ -109,7 +109,7 @@ test('a vet visit shows on the per-dog calendar day (marker and details), not on
   assert.match(html, /vet visit<\/p>/);                                // the key explains the marker
 });
 
-// Lisa 25 Nov 2026: Health check was red for all of September because a June paper row started the clock.
+// Report 25 Nov 2026: Health check was red for all of September because a June paper row started the clock.
 // The other cards start in October, so September is not tracked. A vet dot belongs on Health only.
 test('September before the daily run is not tracked, and a vet dot is only on Health @regression', () => {
   const extra = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' };

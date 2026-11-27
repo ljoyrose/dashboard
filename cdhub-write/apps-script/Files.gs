@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------------------------------------------------------------
- * One file store (Lisa 13 Nov 2026; DOGCARD plan AA_DOGCARD_2026-11-14-0055; STAFF agreed AA_STAFF_2026-11-14-0104).
+ * One file store (13 Nov 2026; DOGCARD plan AA_DOGCARD_2026-11-14-0055; STAFF agreed AA_STAFF_2026-11-14-0104).
  *   action 'file_add'  Who may: owner rule row file.who_may (pipe list of roles OWNER|STAFF and/or person:<code id>);
- *                      no row or blank = owner only (Lisa 13 Nov 2026: who may do X is an owner setting). Adds one BLD-files row: a photo or uploaded file (bytes stored in the
+ *                      no row or blank = owner only (13 Nov 2026: who may do X is an owner setting). Adds one BLD-files row: a photo or uploaded file (bytes stored in the
  *                      private folder named by Script Property FILES_FOLDER_ID) or a link (url only).
  *                      Returns {status, id}. What the file belongs to is a separate link row (link_add, decision C):
  *                      the page adds the gallery / main link after this save.
