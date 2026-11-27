@@ -9,7 +9,7 @@ const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
 const TABLES = {
   area: [{ id: 'ar-p1', code: 'P1', grouping: 'P - Place', group_sort: '1' }, { id: 'ar-p2', code: 'P2', grouping: 'P - Place', group_sort: '1' }],
-  subject: [{ id: 'dog-1', name: 'Pretend Bramble' }, { id: 'dog-2', name: 'Pretend Pepper' }, { id: 'dog-3', name: 'Fake Ramsey' }],
+  subject: [{ id: 'dog-1', name: 'Dog A-ram' }, { id: 'dog-2', name: 'Dog B' }, { id: 'dog-3', name: 'Ram Dog C' }],
   occupancy: [
     { id: 'occ-1', subject_id: 'dog-1', area_id: 'ar-p1', moved_in: '2026-11-01T09:00:00+00:00' },
     { id: 'occ-2', subject_id: 'dog-2', area_id: 'ar-p2', moved_in: '2026-11-01T09:00:00+00:00' },
@@ -42,12 +42,12 @@ test('find: any case, anywhere in the name, each dog keeps its room; nothing is 
   const find = page.getByRole('searchbox', { name: 'Find a dog' });
   expect(await find.evaluate((e) => parseFloat(getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(16);   // no zoom on iPhone
   await find.fill('RAM');
-  await expect(visible(page)).toHaveText(['Pretend Bramble', 'Fake Ramsey']);
+  await expect(visible(page)).toHaveText(['Dog A-ram', 'Ram Dog C']);
   await expect(page.locator('[data-dog="dog-1"] .bs-dog-was')).toHaveText('Last recorded: P1');
   await expect(page.locator('[data-dog="dog-3"] .bs-dog-was')).toHaveText('Last recorded: P2');
   await expect(page.locator('.bs-sticky')).toBeHidden();   // "All the rest unmoved" would confirm the hidden dogs too
-  await find.fill('pepper');
-  await expect(visible(page)).toHaveText(['Pretend Pepper']);
+  await find.fill('dog b');
+  await expect(visible(page)).toHaveText(['Dog B']);
   expect(posts).toEqual([]);
 });
 
@@ -56,7 +56,7 @@ test('find: Clear brings back every dog and the confirm button', async ({ page }
   const find = page.getByRole('searchbox', { name: 'Find a dog' });
   const clear = page.getByRole('button', { name: 'Clear' });
   await expect(clear).toBeHidden();
-  await find.fill('bramble');
+  await find.fill('a-ram');
   await expect(visible(page)).toHaveCount(1);
   await clear.click();
   await expect(find).toHaveValue('');
