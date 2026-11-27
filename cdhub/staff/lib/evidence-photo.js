@@ -143,7 +143,7 @@
       if (!f || busy) return;
       var img = new Image(), rd = new FileReader();
       rd.onload = function () {
-        img.onload = function () { send(toJpeg(img, img.naturalWidth, img.naturalHeight)); img.src = ''; };
+        img.onload = function () { img.onload = img.onerror = null; send(toJpeg(img, img.naturalWidth, img.naturalHeight)); img.src = ''; };   // clearing src can fire onerror: detach first
         img.onerror = function () { setMsg(msg, 'That picture could not be read.', 'bad'); };
         img.src = rd.result;
       };
