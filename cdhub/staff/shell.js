@@ -34,7 +34,7 @@
   var modules = [], cleanup = null, dataP = null, started = false, join = null, urlTried = false, ownerNote = '', pauseRoute = 0;
   var CFG = window.DASH_CONFIG || {}, SCOPE = (CFG.scopes && CFG.scopes.read) || 'https://www.googleapis.com/auth/drive.readonly';
   var HUB_URL_KEYS = ['cdhub.sink.url', 'cdhub.save.url'], SAVE_URL_FILE = 'BLD-save-webapp.json';
-  /* Storage tidy, stage 2 (owner 15 Nov 2026): a phone set up here also keeps CD Hub's copy (cdhub.staff.code and
+  /* Storage tidy, stage 2: a phone set up here also keeps CD Hub's copy (cdhub.staff.code and
      cdhub.save.url), so both pages share one code and one address. This page's own keys (bld.*) are still written and read. */
   var HUB_CODE_KEY = 'cdhub.staff.code', HUB_URL_KEEP = 'cdhub.save.url', HUB_OFF_KEYS = ['cdhub.save.off', 'cdhub.sink.off'];
   var URL_RE = /^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/;
