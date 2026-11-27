@@ -447,6 +447,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | A photo frame was wider than it was tall, and the chosen print type did not stay marked | "the chosen card type stays pressed, and photo frames stay square @regression" (tests/mocked/cdhub-print-dog-fit.spec.js) |
 | 25 Nov 2026 | Full A4 printed a three-column grid and left the card fields off the page | "each layout prints that many cards a page, and the fields are on the page @regression" (tests/mocked/cdhub-print-pages.spec.js) |
 | 25 Nov 2026 | Room card size icons printed grey, and the square metres were missing when the live row omitted them | "room card dog icons stay coloured and the room size prints from the device copy @regression" (tests/mocked/cdhub-print-room-colour.spec.js) |
+| 27 Nov 2026 | Temperatures: a needed slot with no reading was marked missed (MISS, a cross, an orange frame, "missed: N") on the print and the history page; owner ruling: nothing is marked, the slot is blank until missed readings are imported | "audit: each day matches its rows; a slot with no reading is blank, never marked missed" (tests/mocked/history-calm.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
