@@ -40,6 +40,8 @@ var BLDPhotos = (function () {
       return l && sameTable(l.from_table, fromTable) && l.from_id === id && l.to_table === 'files' && byId[l.to_id];
     });
     var main = null, gal = [], ended = [];
+    // Removed from the gallery today (the owner 16 Nov 2026): a link added today can only end today, so an end reason marks it
+    // ended at once instead of at midnight.
     function removedToday(l) { return ymd(l.to_date) === day && String(l.end_reason || '').trim() !== ''; }
     function hasEnded(l) { var t = ymd(l.to_date); return !!t && (t < day || removedToday(l)); }
     mine.forEach(function (l) {
@@ -49,13 +51,6 @@ var BLDPhotos = (function () {
         if (key === 'main') { if (!main || stamp(l) > stamp(main)) main = l; }
         else gal.push(l);
       } else if (hasEnded(l)) ended.push(l);
-      if (key === 'main') { if (on(l, day) && (!main || stamp(l) > stamp(main))) main = l; return; }
-      if (key !== 'gallery') return;
-      // Removed from the gallery today (the owner 16 Nov 2026): a link added today can only end today, so an end reason marks it
-      // ended at once instead of at midnight.
-      var removedToday = ymd(l.to_date) === day && String(l.end_reason || '').trim() !== '';
-      if (on(l, day) && !removedToday) gal.push(l);
-      else if (ymd(l.to_date) && (ymd(l.to_date) < day || removedToday)) ended.push(l);
     });
     gal.sort(function (a, b) {
       var sa = String(a.sort || '').trim(), sb = String(b.sort || '').trim();
