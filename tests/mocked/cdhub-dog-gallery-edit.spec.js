@@ -80,6 +80,7 @@ test('Make main sets another photo as the card photo; the main photo has no Make
 });
 
 // ✎ Crop or adjust (Owner 17 Nov 2026): the saved picture opens in the same crop tool; the edited picture is saved as a
+// ✎ Crop or adjust (17 Nov 2026): the saved picture opens in the same crop tool; the edited picture is saved as a
 // new file and takes the old one's place; the original is kept (its link ends, so it is in Ended).
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGP8z8DAwMDAxMDAwMAAACYABTxrpVkAAAAASUVORK5CYII=';
 async function driveBytes(page) {

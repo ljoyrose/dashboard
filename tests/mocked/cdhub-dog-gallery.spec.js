@@ -64,7 +64,7 @@ test('dog card: main photo from the main link, a gallery of photos, files and li
   await expect(p.locator('details[data-k="gallery"]')).toHaveCount(0);
 });
 
-// Show photo dates (Lisa 15 Nov 2026, J5): a per-person display setting. The owner's own row beats the everyone default;
+// Show photo dates (15 Nov 2026, J5): a per-person display setting. The owner's own row beats the everyone default;
 // no row shows dates as before. The button saves the owner's own row; sorting never changes. Invented rows only.
 for (const size of [{ name: 'phone', width: 390, height: 844 }, { name: 'laptop', width: 1280, height: 800 }]) {
   test(`dog card gallery (${size.name}): photo dates follow the owner's own setting, then the everyone default; the button saves the owner's own row`, async ({ page, guard }) => {
@@ -100,6 +100,7 @@ for (const size of [{ name: 'phone', width: 390, height: 844 }, { name: 'laptop'
     await expect(items.first()).toHaveAttribute('data-file', 'fil-1');   // order unchanged: newest first
     await expect(gal.locator('[data-k="photo-date"]')).toHaveCount(0);   // the owner's own row hides the dates
     // Owner 17 Nov 2026: a setting, not a button on the dog card. The button is in Admin -> Display.
+    // Report 17 Nov 2026: a setting, not a button on the dog card. The button is in Admin -> Display.
     await expect(gal.locator('[data-photo-dates]')).toHaveCount(0);
     await page.evaluate(() => go('admin'));
     await page.locator('[data-adm-open="display"]').click();

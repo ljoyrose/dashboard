@@ -2,14 +2,14 @@
  * BLD write sink - configuration.
  *
  * Nothing secret lives in this file. Secrets and switches live in Script
- * Properties (Project Settings > Script Properties), set by Lisa:
+ * Properties (Project Settings > Script Properties), set by the owner:
  *
  *   SAVE_ENABLED     'true' to switch saving on. Anything else (or missing) = OFF.
  *   TABLE_ON_<key>   'true' to let one table be written, e.g. TABLE_ON_area_reading, TABLE_ON_occupancy.
  *                    Every table is OFF until its own switch is 'true'.
  *   MODE_<key>       'direct' or 'pending'. Missing = the table's own default (temperature log: direct;
  *                    occupancy moves: pending). Corrections ALWAYS go to the approvals queue.
- *   OWNER_EDIT_ENABLED  'true' to let Lisa (signed in, owner page only) overwrite a wrong entry IN PLACE.
+ *   OWNER_EDIT_ENABLED  'true' to let the owner (signed in, owner page only) overwrite a wrong entry IN PLACE.
  *                    OFF by default. No record of the old value is kept by this script.
  *   READ_ENABLED     'true' to let staff codes READ lists (default OFF). What each role may see is
  *                    decided by rows in BLD-field_visibility.csv; no row = nothing (default deny).
@@ -18,19 +18,20 @@
  *   ADMIN_EMAILS     comma list of Google accounts allowed to approve pending rows.
  *   CODE_SALT        random text, created by adminSetup(). Never share.
  *   STAFF_REGISTRY   JSON of hashed staff codes, managed by adminAddStaffCode().
- *   ALLOW_CREATE     'true' only while Lisa runs adminCreateEmptyTables().
+ *   ALLOW_CREATE     'true' only while the owner runs adminCreateEmptyTables().
  *   BACKUP_ON        'true' to let the optional daily backup copy run (see adminInstallDailyBackup).
- *   MOVES_QUEUE_UNTIL  kept for older deploys. Occupancy moves now always go straight in (Lisa 12 Nov 2026);
+ *   MOVES_QUEUE_UNTIL  kept for older deploys. Occupancy moves now always go straight in (12 Nov 2026);
  *                    this date and MODE_occupancy are ignored for moves. Corrections on other tables may still queue.
  *   DOG_PHOTOS_FOLDER_ID  Shared Drive folder id for dog photos. Never a My Drive folder. Missing = photo upload is refused.
  *                    The id stays in Script Properties. It is not written in the repository and is not sent to the page.
- *   FILES_FOLDER_ID  Shared Drive folder id for the one file store (photos, uploads; Lisa 13 Nov 2026). Never the tables
+ *   FILES_FOLDER_ID  Shared Drive folder id for the one file store (photos, uploads; Report 13 Nov 2026). Never the tables
  *                    folder. Missing = file_add of a photo or upload is refused; links still save.
  *   INSPECT_PAGE_URL  https address of the inspector page (.../cdhub/staff/inspect/). The owner page builds each link as
  *                    this address + #s=<INSPECT_SCRIPT_ID>&c=<code>. Not secret. Missing = the owner page shows the code only.
  *   INSPECT_SCRIPT_ID  the Save deployment's id (between /macros/s/ and /exec). Not secret; the inspector's phone needs it.
  *   HUB_CLIENT_ID    the CD Hub's Google sign-in client id (the hub page's DASH_CONFIG.clientId; not secret). Set =
  *                    owners save with their Google sign-in, no code (Owner 16 Nov 2026, option A; owner list = ADMIN_EMAILS,
+ *                    owners save with their Google sign-in, no code (16 Nov 2026, option A; owner list = ADMIN_EMAILS,
  *                    a personal Gmail counts). Missing = codes only, as before. See authOwnerGoogle_ in Auth.gs.
  *
  * NOBODY should hand-edit the files this script writes to. Edits in Drive can collide with a save and
@@ -71,7 +72,7 @@ var BLD = {
     DUP_WINDOW_MIN: 30,     // a second reading for the same room inside this window is refused
     PERIOD_MAX_AGE_HOURS: 168,
     SAVE_TAIL_ROWS: 200,    // a fast append (Specs fastAppend) reads this many of the last rows in full; the rest only the checked columns
-    // Lisa 9 Nov 2026: how long records are kept is user-set per section (BLD-retention_setting rows); with no row for
+    // Report 9 Nov 2026: how long records are kept is user-set per section (BLD-retention_setting rows); with no row for
     // a section, the legal period, else this many years. Used only as that fallback.
     RETENTION_DEFAULT_YEARS: 6,
     REQUEST_CACHE_SEC: 86400,   // 24 h: the phone may resend for up to 23 h (OV13, 24 Nov 2026)
@@ -95,7 +96,7 @@ var BLD = {
 };
 
 /* ---------------------------------------------------------------------------------------------------------------
- * Time zone (14 Nov 2026; Lisa: "international app"; OV11: the locale row, not a new table). Live since 14 Nov 20:45.
+ * Time zone (14 Nov 2026; the owner: "international app"; OV11: the locale row, not a new table). Live since 14 Nov 20:45.
  * tzOn_(tenant, day) = the IANA time zone on the tenant's BLD-locale row in force on `day` (S4.15 from_date/to_date;
  * latest from_date wins). No row in force: the Apps Script project time zone (a setting), never a fixed city.
  * BLD.TZ is a getter for today's zone, so every existing BLD.TZ / todayLondon_ / londonIso_ / inspectEndOfDay_ call

@@ -1,5 +1,5 @@
 /**
- * Record-to-record links (14 Nov 2026, DRAFT; Lisa decision C, 13 Nov: one link table, shown on both sides,
+ * Record-to-record links (14 Nov 2026, DRAFT; the owner decision C, 13 Nov: one link table, shown on both sides,
  * addable from either side; free tags are links of a kind that carries no rule meaning).
  *
  *   action 'link_add'  adds one BLD-links row: from_table/from_id -> to_table/to_id with a role.
@@ -18,7 +18,7 @@
  * One links table: the spec is ITEMS' TABLES.links (PR 568); the owner's generic add path writes the same file.
  * A second open row with the same from, to and kind is refused as DUPLICATE.
  * Rows follow STANDARD S4: from_date/to_date, source, set_by, set_on, created_at/updated_at (UTC).
- * Switch: TABLE_ON_links, OFF until Lisa says go.
+ * Switch: TABLE_ON_links, OFF until the owner says go.
  */
 var LINKS_ = {
   file: 'BLD-links.csv', on: 'links', idPrefix: 'lnk',

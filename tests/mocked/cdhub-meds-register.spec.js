@@ -59,7 +59,7 @@ test.describe('Medicines register: the rules', () => {
     expect(R.cell(one, 'dose')).toBe('1 tablet');
     expect(R.cell(one, 'reason')).toBe('routine');
     expect(R.cell(one, 'note')).toBe('with food');
-    // Dose is required. A blank name shows Lisa Carson. Time, batch, expiry and the vet note are left blank.
+    // Dose is required. A blank name shows the owner Carson. Time, batch, expiry and the vet note are left blank.
     expect(R.cell(one, 'given_by')).toBe('Lisa Carson');
     ['time', 'batch', 'expiry', 'vet'].forEach((k) => expect(R.cell(one, k)).toBe(''));
     // "NOT STATED" is not a medicine's name

@@ -71,7 +71,7 @@ function adminStartMovesQueue() {
 
 /**
  * 5. Creates EMPTY, header-only files - ONLY the ones listed, ONLY if they do not exist, and ONLY while
- * the Script Property ALLOW_CREATE is 'true'. This is Lisa's decision (2): creating the temperature log
+ * the Script Property ALLOW_CREATE is 'true'. This is the owner's decision (2): creating the temperature log
  * and the approvals queue on Drive. Set ALLOW_CREATE back to anything else afterwards.
  */
 function adminCreateEmptyTables() {
@@ -144,13 +144,13 @@ function adminCheckSetup() {
 }
 
 /* ------------------------------------------------------------------------------------------------
- * OPTIONAL daily backup copy. Off unless Lisa turns it on. It never deletes anything.
+ * OPTIONAL daily backup copy. Off unless the owner turns it on. It never deletes anything.
  * Copies each existing allow-listed file into a sub-folder BLD-backups, once a day, named
  * <file>.pre-daily-<YYYY-MM-DD>.bak (the pattern in the naming protocol, N-14). The copies are .bak
  * files in a sub-folder, so CD Hub (which reads .csv files in the main folder) never loads them.
  * After each run, older <file>.pre-daily-<date>.bak copies go to Drive TRASH (setTrashed, never deleted for ever):
  * the newest copy of each file is kept. Only that exact pattern is touched; BACKUP_*, BAK_*, *.pre-cdhub-core-* and
- * anything else in BLD-backups are left alone (Lisa, 15 Nov 2026, card answer A).
+ * anything else in BLD-backups are left alone (15 Nov 2026, card answer A).
  * ---------------------------------------------------------------------------------------------- */
 
 var BACKUP_FOLDER_NAME = 'BLD-backups';
