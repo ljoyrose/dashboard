@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------------------------------------------------
- * DELEGATED ADMIN (V9, 13 Nov 2026; Lisa via OV10: giving access is a permission in itself, conferred only by the owner,
+ * DELEGATED ADMIN (V9, 13 Nov 2026; the owner via OV10: giving access is a permission in itself, conferred only by the owner,
  * as dated, limited rows. Design: AA_ACCESS_2026-11-13-1535 "Delegated admin", agreed with ADMIN; holders keyed on code id).
  *
  *   BLD-delegation: one row per conferral. A role never implies a power. parent_id blank = conferred by the owner.

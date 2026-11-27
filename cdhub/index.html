@@ -577,6 +577,10 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs[open]>summary::after{transform:rotate(90deg)}
 .dcs-bd{padding:8px 12px 10px;display:flex;flex-direction:column;gap:5px;font-size:var(--fs-small)}
 .dcs-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.vids .btn{align-self:flex-start}
+.vclips{display:flex;flex-direction:column;gap:4px;max-height:240px;overflow:auto}
+.vclip span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vmain{display:flex;align-items:center;gap:8px;min-height:44px}
 .dcs-line{display:flex;align-items:center;gap:7px;padding:0 12px;font-size:var(--fs-small);color:var(--ink);min-width:0;height:var(--house-btn);border-top:1px solid var(--press);box-sizing:border-box}
 .dcs-line svg{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dcs-line .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -613,13 +617,14 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 @media (max-width: 600px) { #nav.house-tabs > .ht, #nav.house-tabs > .ht-more { max-width: calc(var(--house-tabs-h) - 2 * var(--house-tabs-gap)); } }
 /* Print (13 Nov 2026): A4 from the browser's Print or Save as PDF. Bars, buttons and forms stay off the paper; no card
    splits across pages. The round prints as a two-column round sheet with blank min/max boxes; Dogs prints two cards a row.
-   Inline-block, not grid, so Safari and Chrome break pages the same way. Screen is unchanged. */
+   The Videos section stays off this paper (the kennel card carries the one video QR). Inline-block, not grid, so Safari
+   and Chrome break pages the same way. Screen is unchanged. */
 @media print{
 @page{size:A4;margin:0}   /* no room for the browser's header and footer: no page address on the paper */
 html,body{background:#fff!important;color:var(--ljr-8)!important;margin:0!important}
 body{padding:10mm!important;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 *{box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.top,#nav,#chips,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.phmenu,.wedit,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.whor{display:none!important}
+.top,#nav,#chips,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.phmenu,.wedit,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.vids,.whor{display:none!important}
 .wrap{padding:0!important;margin:0!important;max-width:none!important}
 #main{max-width:none!important;margin:0!important;padding:0!important}
 #main [data-house-folded]>[data-fold-part]{display:revert!important}
@@ -735,7 +740,8 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
 WANT.push('BLD-subject_link.csv');
 WANT.push('BLD-links.csv','BLD-files.csv');   /* main photo + gallery : one file store, link rows (decision C); absent until the files exist */   /* BFFs / Fren. links ; absent until the file exists */
-var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-links.csv':1,'BLD-files.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
+WANT.push('BLD-subject_video.csv');   /* external video share links; absent until the sheet exists */
+var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-subject_video.csv':1,'BLD-links.csv':1,'BLD-files.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
 /* LATER: tables the first screen does not need (owner speed, 13 Nov 2026). They are read straight after the first
    screen shows; a page that needs them (LATER_PAGES) says it is getting them ready until they land. */
 var LATER={};
@@ -786,7 +792,7 @@ function compJobsV(){ var v=jobsV(), keys={}, ids={};
  v.types=v.types.filter(function(t){ var off=bbOnlyType(t)||!!keys[String(t.type_key||'').trim()]; if(off) ids[t.id]=1; return !off; });
  v.logs=v.logs.filter(function(r){ return !ids[r.check_type_id]; });
  return v; }
-var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1,yearly:1};
+var LATER_PAGES={items:1,dogs:1,work:1,decide:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1,yearly:1};
 /* LIVE_PAGES: Compliance ("What was true on", the inspection export) and Yearly print show a read at most COMP_FRESH_MS old, always with its "As of" time; older waits for the live read */
 var LIVE_PAGES={compliance:1,yearly:1};
 var COMP_FRESH_MS=5*60*1000;   /* Compliance shows a read at most 5 minutes old, always with its "As of" time */
@@ -1401,6 +1407,8 @@ function build(){
   CD.sizeLabel=BLDCapacity.sizeLabels(T['BLD-breeding_rule.csv']||[],todayISO());   /* shared with the print cards (staff/lib/capacity.js) */
   CD.sizeCut=BLDCapacity.sizeCutoffs(T['BLD-breeding_rule.csv']||[],_day);
   CD.dogs.forEach(sizeFromWeight);
+  /* a pup under the owner's puppy.under_weeks rows shows in the size_colour.puppy colour (shared rule, staff/lib/capacity.js puppy) */
+  CD.dogs.forEach(function(d){ var p=BLDCapacity.puppy(T['BLD-breeding_rule.csv']||[],todayISO(),d.dob); d.pupColour=p.colour; });
   CD.tempBands=(T['BLD-temperature_band.csv']||[]).map(function(r){
     return {band:r.band,from:parseInt(r.age_from_days,10),to:r.age_to_days===''?99999:parseInt(r.age_to_days,10),
             min:(r.min_temp==null||r.min_temp==='')?null:parseFloat(r.min_temp),max:(r.max_temp==null||r.max_temp==='')?null:parseFloat(r.max_temp),
@@ -2962,6 +2970,38 @@ function galleryItem(f,mainId,dates,ended){
  if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
+/* RoseQuest clips (25 Nov 2026). The file stays on RoseQuest; the card stores only the share link. */
+var VIDEO_MORE={}, VIDEO_SHOW=5;
+function videoUrlOk(u){ return /^https:\/\/share\.puppyclassroom\.com\/v\/[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/.test(String(u||'').trim()); }
+function dogVideoList(id){
+ var rows=(T['BLD-subject_video.csv']||[]).filter(function(r){ return r&&r.subject_id===id; });
+ var replaced={}; rows.forEach(function(r){ if(r.corrects_id) replaced[r.corrects_id]=1; });
+ var live=rows.filter(function(r){ return r.id&&!replaced[r.id]&&String(r.active||'')!=='no'&&videoUrlOk(r.video_url); });
+ live.sort(function(a,b){ return String(b.created_at||'').localeCompare(String(a.created_at||'')); });
+ var mains=live.filter(function(r){ return String(r.is_main)==='yes'; });
+ var main=mains[0]||live[0]||null;
+ return {main:main, rest:live.filter(function(r){ return r!==main; }), n:live.length};
+}
+function videoReopen(id,text){ var c=document.querySelector('#rows article.dc[data-dog="'+id+'"]'); if(!c) return;
+ var w=c.querySelector('details.vids'); if(w) w.open=true;
+ var m=w&&w.querySelector('[data-video-msg]'); if(m&&text) m.textContent=text; }
+function videoHtml(d){
+ var v=dogVideoList(d.id), rest=v.rest, open=!!VIDEO_MORE[d.id], shown=open?rest:rest.slice(0,VIDEO_SHOW);
+ function row(r){ var title=r.title||'Video';
+  return '<div class="dcs-row vclip" data-k="vrow"><a class="cb" href="'+esc(r.video_url)+'" target="_blank" rel="noopener noreferrer">'+esc(title)+'</a>'
+   +'<button type="button" class="cb" data-video-main="'+esc(r.id)+'" data-dog="'+esc(d.id)+'">Make main</button>'
+   +'<button type="button" class="cb" data-video-remove="'+esc(r.id)+'" data-dog="'+esc(d.id)+'">Remove</button></div>'; }
+ return '<details class="dcs vids" data-k="videos" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label" data-k="videos-n">Videos'+(v.n?' ('+v.n+')':'')+'</span></summary><div class="dcs-bd">'
+  +(v.main?'<a class="btn" data-k="watch" href="'+esc(v.main.video_url)+'" target="_blank" rel="noopener noreferrer">Watch video</a>'+(v.main.title?' <span class="mut">'+esc(v.main.title)+'</span>':''):'<span class="mut">No video yet</span>')
+  +(rest.length?'<div class="vclips" data-k="vlist">'+shown.map(row).join('')+'</div>':'')
+  +(rest.length>VIDEO_SHOW&&!open?'<button type="button" class="btn" data-video-all="'+esc(d.id)+'">Show all ('+rest.length+')</button>':'')
+  +'<form class="dcs-form" data-video-form="'+esc(d.id)+'" novalidate><div class="dcs-row">'
+  +'<label>RoseQuest link<input name="url" type="url" inputmode="url" autocomplete="off" placeholder="https://share.puppyclassroom.com/v/" required></label>'
+  +'<label>Title<input name="title" type="text" maxlength="80" autocomplete="off"></label></div>'
+  +'<label class="vmain"><input type="checkbox" name="main"> Main video</label>'
+  +'<button type="submit">Add video</button><p class="mut" data-video-msg role="status"></p></form>'
+  +'</div></details>';
+}
 function galleryHtml(d,ph){
  if(!ph.gallery.length) return '';   /* ended photos stay in the sheet; the card does not list them  */
  var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
@@ -3022,6 +3062,20 @@ function linkEndsApply(){
  if(drop) linkEndsSet(o);
 }
 document.addEventListener('click',async function(ev){
+ var all=ev.target&&ev.target.closest?ev.target.closest('[data-video-all]'):null;
+ if(all){ VIDEO_MORE[all.getAttribute('data-video-all')]=1; var det=all.closest('details'); drawDogs();
+  var again=document.querySelector('details.vids[data-dog="'+all.getAttribute('data-video-all')+'"]'); if(again) again.open=true; return; }
+ var vb=ev.target&&ev.target.closest?ev.target.closest('[data-video-main],[data-video-remove]'):null;
+ if(vb){ ev.preventDefault();
+  var dog=vb.getAttribute('data-dog'), id=vb.getAttribute('data-video-main')||vb.getAttribute('data-video-remove');
+  var box=vb.closest('details.vids'), msg=box&&box.querySelector('[data-video-msg]');
+  vb.disabled=true; if(msg) msg.textContent='Saving\u2026';
+  var fields={subject_id:dog,corrects_id:id}; if(vb.hasAttribute('data-video-remove')) fields.active='no'; else fields.is_main='yes';
+  var j=await sinkAct('subject_video',fields);
+  if(!(j.ok&&j.result&&j.result.status==='saved')){ if(msg) msg.textContent='Not saved: '+((j&&j.message)||'try again.'); vb.disabled=false; return; }
+  var list=T['BLD-subject_video.csv']=T['BLD-subject_video.csv']||[];
+  (j.result.rows||[]).forEach(function(row){ list.push(row); });
+  drawDogs(); videoReopen(dog,'\u2713 Saved'); return; }
  var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-end],[data-gal-back],[data-gal-main]'):null; if(!b) return;
  var g=b.closest('details.gal'), dog=g?g.getAttribute('data-dog'):'', msg=g&&g.querySelector('[data-gal-msg]'), day=todayLondon(), j;
  var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]);
@@ -3380,6 +3434,17 @@ document.addEventListener('submit',async function(ev){
    if(typeof sizeFromWeight==='function') sizeFromWeight(dd);
   }
   db.disabled=false; drawDogs(); return; }
+ if(f.matches('[data-video-form]')){ ev.preventDefault();
+  var vid=f.getAttribute('data-video-form'), vmsg=f.querySelector('[data-video-msg]'), vbtn=f.querySelector('button[type=submit]');
+  var vurl=String(f.url.value||'').trim(), vtitle=String(f.title.value||'').trim();
+  if(!videoUrlOk(vurl)){ vmsg.textContent='Paste a RoseQuest share link, like https://share.puppyclassroom.com/v/abc123'; return; }
+  vbtn.disabled=true; vmsg.textContent='Saving\u2026';
+  var vr=await sinkAct('subject_video',{subject_id:vid,video_url:vurl,title:vtitle,is_main:f.main.checked?'yes':''});
+  vbtn.disabled=false;
+  if(!(vr.ok&&vr.result&&vr.result.status==='saved')){ vmsg.textContent='Not saved: '+((vr&&vr.message)||'try again.'); return; }
+  var vlist=T['BLD-subject_video.csv']=T['BLD-subject_video.csv']||[];
+  (vr.result.rows||[]).forEach(function(row){ vlist.push(row); });
+  drawDogs(); videoReopen(vid,'\u2713 Saved'); return; }
  if(f.matches('[data-weigh-form]')){ ev.preventDefault();
   var id=f.getAttribute('data-weigh-form'), msg=f.querySelector('[data-weigh-msg]'), btn=f.querySelector('button[type=submit]');
   var on=f.on.value, kg=String(f.kg.value||'').trim(), bcs=f.bcs.value;
@@ -3525,9 +3590,9 @@ function drawDogs(){
    var gSex=d.sex==='Female'?(isEntire(d)?'f':'fn'):d.sex==='Male'?(isEntire(d)?'m':'mn'):'u';
    var gSym=d.sex==='Female'?'#i-female':d.sex==='Male'?'#i-male':'#i-paw';
    var gTitle=(d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered/spayed');
-   var szC=d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'';
+   var szC=d.pupColour||(d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'');
    var ph=dogPhotos(d), pic=cardPhotoId(d,ph);
-   h+='<article class="dc '+cls+(d.sizeWord?' sz':'')+'"'+(d.sizeWord?' data-size="'+esc(d.sizeWord)+'" data-size-from="'+esc(d.sizeFrom)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')+' data-dog="'+esc(d.id)+'">'
+   h+='<article class="dc '+cls+(szC?' sz':'')+'"'+(d.pupColour?' data-pup="1"':'')+(d.sizeWord?' data-size="'+esc(d.sizeWord)+'" data-size-from="'+esc(d.sizeFrom)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')+' data-dog="'+esc(d.id)+'">'
 
   +'<div class="dc-top">'
     +'<div class="dogphoto-col">'
@@ -3579,6 +3644,7 @@ function drawDogs(){
 
   +'<div class="dc-sects">'
     +galleryHtml(d,ph)
+    +videoHtml(d)
 
     +'<details class="dcs wtc" data-dog="'+esc(d.id)+'"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg>'
@@ -3737,7 +3803,7 @@ function capFor(aid,band,access){ var a=CD.cap[aid]; if(!a||!access) return null
 function hideSource(s){ return BLDDisplay.hideSource(s); }
 function dogMoveChip(d, fromId, sid){
  if(!d) return '<span class="pill i">'+esc(sid)+'</span>';
- var szC=d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'';
+ var szC=d.pupColour||(d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'');
  var col=(typeof colourLabel==='function'?colourLabel(d):'')||'';
  return '<button type="button" class="dchip" data-move-dog="'+esc(d.id)+'" data-from="'+esc(fromId||'')+'"'
   +(d.sizeWord?' data-size="'+esc(d.sizeWord)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')
@@ -4938,6 +5004,15 @@ function sinkCard(){
   +'<button type="button" class="btn" id="sinkon">Use these</button> <button type="button" class="btn" id="sinkoff">Switch off here</button>'
   +'<span class="mut" id="sinkmsg" role="status"></span></div></div>';
 }
+/* Decide: the records waiting on the owner, each with one action. A medicine ask shows the record; anything else opens Do at that item. */
+function pageDecide(){
+ var n=needsToday().filter(function(x){ return x.kind==='record'; });
+ var h='<h2>Decide</h2>';
+ if(!(CD.work||[]).length) return h+'<div class="card acc2"><h4>The work list did not load</h4></div>';
+ if(!n.length) return h+'<section class="mcard" id="decideCard"><p class="mut">Nothing is waiting on you.</p></section>';
+ return h+'<section class="mcard need-card" id="decideCard" style="--hc:var(--ljr-1-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Waiting on you'+cntPill(n.length,'')+'</h3>'
+  +n.map(function(x){ return needRow(x,false); }).join('')+'</section>';
+}
 function pageWork(){
  var W=CD.work||[];
  if(!W.length) return '<h2>Outstanding</h2>'+needsCard()+'<div class="card acc2"><h4>The work list did not load</h4></div>';
@@ -5944,8 +6019,8 @@ document.addEventListener('change',function(ev){
  if(id==='ypPeriod'||id==='ypMonth'||id==='ypYear') ypApplyCounts();
 });
 window.addEventListener('afterprint',function(){ document.body.classList.remove('yp-printing'); });
-var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,buyers:pageBuyers,sops:pageSops,compliance:pageCompliance,yearly:pageYearly};
-var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['buyers','Assocs'],['sops','SOPs'],['compliance','Compliance'],['yearly','Yearly print']];
+var PAGES={decide:pageDecide,work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,buyers:pageBuyers,sops:pageSops,compliance:pageCompliance,yearly:pageYearly};
+var SECTIONS=[['map','Live feed'],['decide','Decide'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['buyers','Assocs'],['sops','SOPs'],['compliance','Compliance'],['yearly','Yearly print']];
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
@@ -6074,6 +6149,7 @@ function navHtml(){
 function chipCounts(){
  var nd=needsToday();
  return {today:nd.length,work:(CD.work||[]).filter(function(r){return r.status==='BLOCKED'&&r.owner==='Lisa';}).length,
+  decide:nd.filter(function(x){return x.kind==='record';}).length,
   dogs:(CD.dogs||[]).filter(function(d){return !d.off;}).length,areas:(CD.areas||[]).length,litters:(CD.litters||[]).length,
   sops:SOP.rows?SOP.rows.length:null};
 }
@@ -6183,7 +6259,7 @@ function goBody(id,push){
    +'<p class="cd-retry"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
- /* Report 20 Nov 2026: the Bin page is gone. An old #/bin address opens Settings, or Main when this sign-in has no Settings. */
+ /* The Bin page is gone. An old #/bin address opens Settings, or Main when this sign-in has no Settings. */
  if(id==='bin'&&LOAD.later==='wait'){ id='admin'; full='admin'; sub=null; main.setAttribute('data-view',id); }   /* Settings' rows still loading: wait; SHOWN stays #/bin, so the redraw when they land decides */
  else if(id==='bin'){
   var binTo=navHas('admin')?'admin':'map';
@@ -6414,6 +6490,7 @@ document.addEventListener('click',function(e){
 document.addEventListener('click',function(e){
  var j=e.target.closest&&e.target.closest('[data-jump]'); if(!j) return;
  var row=document.getElementById(j.dataset.jump);
+ if(!row&&/^work-/.test(j.dataset.jump)){ go('work'); row=document.getElementById(j.dataset.jump); }
  if(row){ row.setAttribute('tabindex','-1'); row.focus(); if(row.scrollIntoView) row.scrollIntoView({block:'nearest'}); }
 });
 document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus();

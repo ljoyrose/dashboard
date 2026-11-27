@@ -156,7 +156,7 @@ function sinkCodeRegisterSync_() {
 }
 
 /**
- * Codes vault: is this typed code the one held for this public id? (Lisa 14 Nov 2026, option B; OV11: the hash and its
+ * Codes vault: is this typed code the one held for this public id? (14 Nov 2026, option B; OV11: the hash and its
  * salt never go to a browser, because short codes could be guessed offline.) Sent once, like a sign-in; the reply is
  * match true or false only. The typed code is never logged, stored or sent back. A miss counts towards the same
  * wrong-code limit as sign-in, so it cannot be used to guess.
