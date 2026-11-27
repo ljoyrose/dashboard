@@ -42,17 +42,19 @@ async function setup(page, over) {
 }
 
 test('a read that never answers shows try again within the read timeout', async ({ page }) => {
-  test.setTimeout(40000);
+  await page.clock.install({ time: new Date('2026-11-12T09:00:00Z') });
+  let asked = 0;
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
+    asked++;
     return new Promise(function () {});
   });
   await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-CODE-1', SCRIPT]);
-  const started = Date.now();
   await page.goto('cdhub/staff/#scan');
-  await expect(page.getByText('Could not load. Check signal.')).toBeVisible({ timeout: 25000 });
+  await expect.poll(() => asked).toBeGreaterThan(0);   // the hung read is out, so its 45 s read limit has started
+  await page.clock.runFor(46000);
+  await expect(page.getByText('Could not load. Check signal.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
-  expect(Date.now() - started).toBeLessThan(25000);
 });
 
 test('a thermometer scan opens temps with few reads', async ({ page }) => {

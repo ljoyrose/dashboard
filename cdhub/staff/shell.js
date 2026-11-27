@@ -204,7 +204,6 @@
     return r;
   }
   var rawRead = save.read, rawSubmit = save.submit;
-  save.read = function (k, f) { return rawRead(k, f).then(guard); };
   save.read = function (k, f, o) { return rawRead(k, f, o).then(guard); };   // the filter goes through (it was dropped before 22 Nov 2026)
   save.submit = function (t, f, o) { return rawSubmit(t, f, o).then(guard); };
 

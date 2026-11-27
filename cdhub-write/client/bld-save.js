@@ -25,9 +25,6 @@
   var OWNER_SKIP_KEY = 'bld.owner.skip';   // this tab chose "Use a staff code instead" (sessionStorage)
   var READ_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
   var TIMEOUT_MS = 150000;  // live saves took 17-127 s (17 Nov 2026); a shorter wait said "could not reach" for saves that landed
-  var READ_MS = 20000;
-  var CACHE_MS = 60000;
-  var STABLE = { area: 1, thermometer: 1, qr_tag: 1, temperature_band: 1, area_link: 1 };
 
   /* ----- mirror of the server rules, for instant feedback only. The server is the judge. ----- */
   var TEMP_RE = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (the owner, 7 Nov 2026)
@@ -156,10 +153,8 @@
     if (opts.scriptUrl) setScriptUrl(opts.scriptUrl, false);
     else { var saved = get(local, URL_KEY); if (saved) setScriptUrl(saved, false); }
 
-    function setCode(c, keepForTab) { c = String(c || '').trim(); if (c !== inMemoryCode) pageCache = {}; lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; if (c && typeof scheduleRetry === 'function') scheduleRetry(1000); }
     function setCode(c, keepForTab) { c = String(c || '').trim(); if (c !== inMemoryCode && typeof dropCache === 'function') dropCache(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; if (c && typeof scheduleRetry === 'function') scheduleRetry(1000); }
     var inMemoryCode = get(session, CODE_KEY);
-    var pageCache = {};
     function getCode() { return inMemoryCode; }
     var googleFn = typeof opts.google === 'function' ? opts.google : (opts.google === false ? function () { return ''; } : ownerToken);
     /** A staff code, or an owner's Google sign-in. */
@@ -188,7 +183,6 @@
     function withGoogle(body) { var g = googleFn(); if (g) body.google_token = g; else delete body.google_token; return body; }
     var lastName = '';   // the name held against this code, from the last read (Welcome line only)
     var lastRole = '';   // the role the script reported for this code on the last read: OWNER, STAFF, GUEST... ('' until a read). For showing buttons only; the script still decides.
-    function clearCode() { inMemoryCode = ''; lastRole = ''; lastName = ''; pageCache = {}; put(session, CODE_KEY, ''); }
     function clearCode() { dropCache(); inMemoryCode = ''; lastRole = ''; lastName = ''; put(session, CODE_KEY, ''); }
 
     function setLookups(l) { lookups = l || {}; }
@@ -263,9 +257,9 @@
       });
     }
 
-    function withTimeout(p, ms) {
+    function withTimeout(p) {
       return new Promise(function (resolve, reject) {
-        var t = setTimeout(function () { reject(new Error('timeout')); }, ms == null ? TIMEOUT_MS : ms);
+        var t = setTimeout(function () { reject(new Error('timeout')); }, TIMEOUT_MS);
         p.then(function (v) { clearTimeout(t); resolve(v); }, function (e) { clearTimeout(t); reject(e); });
       });
     }
@@ -546,7 +540,6 @@
         j = answerFor(body.request_id, j);
         if (!settle(body.request_id, j, auth) && j && j.ok === false) j = keptAnswer(j);
         if (j && j.ok) {
-          dropReads(tableKey);
           var res = j.result || {};
           res.ok = true;
           dropCache(tableKey);   // the kept copy of this list is out of date now
@@ -599,27 +592,6 @@
      * Read one list through the script, as far as the owner has allowed THIS staff code (no Google sign-in).
      * Optional filter {area_id, from, to} (London days YYYY-MM-DD) narrows the rows; it never widens them.
      * Resolves (never rejects): {ok:true, table, fields, rows, count, scope} or {ok:false, code, message}.
-     * The same list and filter asked for while a read is running shares that request. area, thermometer, qr_tag, temperature_band and
-     * area_link are kept in this page's memory for a minute (never in the phone's storage); a save to a list, or dropReads(), reads it again.
-     */
-    function authTag() { return getCode() || (googleFn() ? 'g' : ''); }
-    function cacheKey(table, filter) {
-      var keys = filter && typeof filter === 'object' ? Object.keys(filter).sort() : [];
-      var f = keys.map(function (k) { return k + '=' + filter[k]; }).join('&');
-      return table + '\n' + f + '\n' + authTag();
-    }
-    function remember(res) {
-      if (res && typeof res.role === 'string') lastRole = res.role;
-      if (res && typeof res.name === 'string') lastName = res.name;
-    }
-    function fetchRead(tableKey, filter) {
-      return withTimeout(doFetch(scriptUrl, {
-        method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(withGoogle(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey }))
-      }), READ_MS).then(function (r) { return r.json(); }).then(function (j) {
-        if (j && j.ok && j.result) { var res = j.result; res.ok = true; remember(res); return res; }
-        return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
-      }).catch(function () { return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' }; });
      * 22 Nov 2026 (staff Temps 45-110 s on every open): lists that change slowly (rooms, dogs, bands, thermometers...)
      * are kept IN THIS PAGE'S MEMORY for the session, so a list is read once and every screen shares it; never stored
      * on the phone. Lists that change often (SHORT: readings, job records) are kept for 2 minutes only, so reopening a
@@ -664,7 +636,7 @@
       });
     }
     function read(tableKey, filter, o) {
-      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. Lisa switches it on when it is ready.' });
+      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. The owner switches it on when it is ready.' });
       if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
       if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
@@ -677,30 +649,6 @@
         return res;
       });
       inflight[k] = p;
-      return p;
-    }
-    /** Forget kept lists so the next read asks the script: one list after a save to it, or every list (no argument) for Refresh. */
-    function dropReads(table) {
-      if (!table) { pageCache = {}; return; }
-      var prefix = table + '\n';
-      Object.keys(pageCache).forEach(function (k) { if (k.slice(0, prefix.length) === prefix) delete pageCache[k]; });
-    }
-    function read(tableKey, filter) {
-      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. The owner switches it on when it is ready.' });
-      if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
-      if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
-      if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
-      var key = cacheKey(tableKey, filter), now = Date.now(), hit = pageCache[key];
-      if (hit && (hit.pending || now - hit.at < CACHE_MS)) { if (hit.res) remember(hit.res); return hit.p; }
-      var stable = !!STABLE[tableKey] && !(filter && typeof filter === 'object' && Object.keys(filter).length);
-      var p = fetchRead(tableKey, filter).then(function (res) {
-        var cur = pageCache[key];
-        if (!(res && res.ok)) { if (cur && cur.p === p) delete pageCache[key]; return res; }
-        if (stable) { if (cur && cur.p === p) pageCache[key] = { at: Date.now(), p: Promise.resolve(res), pending: false, res: res }; }
-        else if (cur && cur.p === p) delete pageCache[key];
-        return res;
-      });
-      pageCache[key] = { at: now, p: p, pending: true };
       return p;
     }
 
@@ -785,7 +733,6 @@
       sending: function () { return sending; },
       loadConfigFromDrive: loadConfigFromDrive,
       act: act, linkAdd: linkAdd, linkEnd: linkEnd,
-      read: read, dropReads: dropReads, readMany: readMany, codeCheck: codeCheck, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
       read: read, readMany: readMany, dropCache: dropCache, keptAt: keptAt, codeCheck: codeCheck, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
     };
   }

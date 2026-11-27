@@ -761,14 +761,7 @@
       function readArea(id) { var g = {}; Object.keys(f).forEach(function (k) { g[k] = f[k]; }); g.area_id = id;
         return c.save.read('area_reading', g).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.save.read('area_reading'); })
           .then(function (r) { return r.ok ? r : { ok: false, rows: [], code: r.code, message: r.message }; }); }
-      function yearFail() {
-        setMsg(msg, 'Could not load. Check signal.', 'bad');
-        if (!host.querySelector('[data-try-again]')) host.appendChild(h('button', { class: 'btn', type: 'button', 'data-try-again': '1', text: 'Try again', onclick: run }));
-      }
       Promise.all([readYear('area_reading'), readYear('guest_reading'), readYear('sensor_reading')].concat(from.map(readArea))).then(function (v) {
-        try { showYear(v); } catch (e) { yearFail(); }
-      }).catch(yearFail);
-      function showYear(v) {
         if (from.length) {
           var own = v[0].ok ? v[0].rows : [];
           var old = []; v.slice(3).forEach(function (x) { if (x.ok) old = old.concat(x.rows.filter(function (r) { return from.indexOf(r.area_id) >= 0; })); });
@@ -779,7 +772,7 @@
         setMsg(msg, (v[0].truncated ? 'Only the first ' + v[0].rows.length + ' readings came back: the list is longer than one read allows. ' : '') + (v[1].ok ? '' : 'Guest readings not shown. ') + (v[2].ok ? '' : 'Sensor back-up not shown.'), v[0].truncated ? 'warn' : '');
         draw(yearRows(thermoId ? v[0].rows.filter(function (r) { return String(r.thermometer_id || '') === thermoId; }) : v[0].rows,
           thermoId ? [] : (v[1].ok ? v[1].rows : []), thermoId ? [] : (v[2].ok ? v[2].rows : []), areaId, year.value, function (id) { var a = (areas || []).filter(function (x) { return x.id === id; })[0]; return a ? a.code || a.label : id; }), areaId);
-      }
+      });
     }
     function draw(rows, areaId) {
       var a = { label: room.options[room.selectedIndex].text };
@@ -902,15 +895,6 @@
       min_c: { type: 'temp', required: true, label: 'Lowest C' }, max_c: { type: 'temp', required: true, label: 'Highest C' },
       device_label: { type: 'text', label: 'Sensor' }
     } });
-    function tempFail() {
-      host.textContent = '';
-      host.appendChild(h0('p', { class: 'msg bad', role: 'status', text: 'Could not load. Check signal.' }));
-      host.appendChild(h0('button', { class: 'btn', type: 'button', text: 'Try again', onclick: function () { openStaff(host, c); } }));
-    }
-    Promise.all([c.data(), c.readOptional('temperature_band'), recentReadings(), c.readOptional('thermometer'), c.readOptional('area_link'), c.readOptional('breeding_rule')]).then(function (v) {
-      try { showTemp(v); } catch (e) { tempFail(); }
-    }).catch(tempFail);
-    function showTemp(v) {
     // 22 Nov 2026 (Temps took 45-110 s on every open): the slow lists are read once a session and shared (the save
     // library keeps them in this page's memory); readings are read fresh, only from yesterday on (taken_at), which is
     // all the round needs. Earlier reads further back when a past day is picked. An older script that refuses the
@@ -923,7 +907,6 @@
     var LISTS = ['area', 'subject', 'occupancy', 'subject_status', 'requirement', 'temperature_band', 'thermometer', 'area_link', 'breeding_rule'];
     (c.limit || function (p) { return p; })(Promise.all([c.data(), c.readOptional('temperature_band'), readSince(recentFrom), c.readOptional('thermometer'), c.readOptional('area_link'), c.readOptional('breeding_rule')]), host, function () { openStaff(host, c); }).then(function (v) {
       var d = v[0];
-      if (!d.ok && (d.code === 'NETWORK' || d.code === 'TIMEOUT')) { tempFail(); return; }
       if (!d.ok) { host.textContent = ''; host.appendChild(say(d.message, 'bad')); return; }
       var dob = {}; (d.raw.subject || []).forEach(function (s) { dob[s.id] = s.dob || ''; });
       var dogs = (d.dogs || []).map(function (x) { return { id: x.id, areaId: x.areaId, away: x.away, dob: dob[x.id] || '' }; });
@@ -968,7 +951,7 @@
         stop = rooms(inner, { save: c.save, areas: round, dogs: dogs, bands: bands, done: done, tools: tools, autoOpen: true, rules: rules });
       }
       start();
-    }
+    });
     return function () { if (stop) stop(); };
   }
 

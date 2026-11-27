@@ -73,7 +73,6 @@
     asOf.textContent = '';
     if (!readAt) return;
     asOf.appendChild(document.createTextNode('Lists as of ' + hhmm(readAt) + ' '));
-    asOf.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Refresh', 'data-print-refresh': '', onclick: function () { T = {}; readAt = 0; if (save.dropReads) save.dropReads(); showAsOf(); say('Lists will be read again when you choose a card.'); } }));
     asOf.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Refresh', 'data-print-refresh': '', onclick: function () { T = {}; readAt = 0; if (save.dropCache) save.dropCache(); showAsOf(); say('Lists will be read again when you choose a card.'); } }));
   }
   function need(what) {
