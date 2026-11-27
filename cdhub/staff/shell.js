@@ -12,7 +12,13 @@
 (function () {
   'use strict';
   var CODE_KEY = 'bld.device.code', SCAN_PREFIX = 's/', SETUP_PREFIX = 'setup=', JOIN_PREFIX = 'join=', JOIN_URL = '&url=', TAG_RE = /^[A-Z2-9]{4,12}$/;
-  var FILES = ['lib/due.js', '../checks/checks.js', 'modules/moves.js', 'modules/where.js', 'lib/thermometer.js', 'lib/area-link.js', 'lib/temp-judge.js', 'modules/temperature/module.js', 'modules/jobs/module.js'];
+  var LAZY = {
+    jobs: { files: ['lib/due.js', '../checks/checks.js', 'modules/jobs/module.js'] },
+    report: { files: ['lib/due.js', '../checks/checks.js', 'modules/jobs/module.js'] },
+    moves: { files: ['lib/scan.js', 'modules/moves.js'] },
+    where: { files: ['modules/moves.js', 'modules/where.js'] },
+    temperature: { files: ['lib/thermometer.js', 'lib/area-link.js', 'lib/temp-judge.js', 'modules/temperature/module.js'] }
+  };
   var ICONS = {
     report: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636-2.87L13.637 3.59a1.914 1.914 0 0 0-3.274 0z"/><path d="M12 16h.01"/></svg>',   // Tabler alert-triangle (Problem tab)
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>',
@@ -25,7 +31,7 @@
   var save = BLDSave.create({});
   save.deviceCode = true;
   if (window.BLDOutboxLine) BLDOutboxLine.mount(save, screen);   // never lose an entry: what this phone still holds to send (20 Nov 2026)
-  var modules = [], cleanup = null, dataP = null, started = false, join = null, urlTried = false, ownerNote = '';
+  var modules = [], cleanup = null, dataP = null, started = false, join = null, urlTried = false, ownerNote = '', pauseRoute = 0;
   var CFG = window.DASH_CONFIG || {}, SCOPE = (CFG.scopes && CFG.scopes.read) || 'https://www.googleapis.com/auth/drive.readonly';
   var HUB_URL_KEYS = ['cdhub.sink.url', 'cdhub.save.url'], SAVE_URL_FILE = 'BLD-save-webapp.json';
   /* Storage tidy, stage 2: a phone set up here also keeps CD Hub's copy (cdhub.staff.code and
@@ -402,14 +408,65 @@
     screen.appendChild(h('p', { class: 'sub help', text: 'This phone is set up with your staff code. If it is lost, tell the owner, who switches the code off everywhere.' }));
     screen.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Remove my code from this phone', onclick: function () { forget(); go('home'); } }));
   }
-  function openModule(id, params) {
-    var m = modules.filter(function (x) { return x.id === id; })[0];
-    if (!m) { go('home'); return; }
+  function loadFail(again, tab) {
+    clearScreen(); setTabs(tab || 'home');
+    screen.appendChild(h('p', { class: 'msg bad', role: 'status', text: 'Could not load. Check signal.' }));
+    screen.appendChild(h('button', { class: 'btn', type: 'button', text: 'Try again', onclick: again }));
+  }
+  function openReal(m, params) {
     clearScreen(); setTabs(params && params.tab || 'home');
     screen.appendChild(h('button', { class: 'back', type: 'button', text: '← Home', onclick: function () { go('home'); } }));
     var host = h('div'); screen.appendChild(host);
     var r = m.open(host, Object.assign({}, ctx, { params: params || {} }));
     if (typeof r === 'function') cleanup = r;
+  }
+  function moduleReady(id) {
+    var m = modules.filter(function (x) { return x.id === id && !x.lazy; })[0];
+    if (!m) return false;
+    if (id === 'moves' && !window.BLDScan) return false;
+    return true;
+  }
+  function openModule(id, params) {
+    var m = modules.filter(function (x) { return x.id === id; })[0];
+    if (!moduleReady(id) && LAZY[id]) {
+      var want = location.hash;
+      clearScreen(); setTabs(params && params.tab || 'home');
+      screen.appendChild(h('p', { class: 'msg', role: 'status', text: 'Loading...' }));
+      ensure(id).then(function () {
+        var now = modules.filter(function (x) { return x.id === id && !x.lazy; })[0];
+        if ((location.hash || '') !== want) {
+          // left before the screen loaded: a scanned tag still counts (a room scan is remembered), drawn off-screen
+          if (now && id === 'moves' && params && params.tag) now.open(h('div'), Object.assign({}, ctx, { params: params }));
+          return;
+        }
+        if (!now) { loadFail(function () { if (LAZY[id]) LAZY[id].done = null; openModule(id, params); }, params && params.tab); return; }
+        openReal(now, params);
+      }).catch(function () { if ((location.hash || '') === want) loadFail(function () { if (LAZY[id]) LAZY[id].done = null; openModule(id, params); }, params && params.tab); });
+      return;
+    }
+    if (!m) { go('home'); return; }
+    openReal(m, params);
+  }
+  function openTag(tag) {
+    clearScreen(); setTabs('scan');
+    screen.appendChild(h('p', { class: 'msg', role: 'status', text: 'Loading...' }));
+    save.read('qr_tag').then(function (r) {
+      if (!r || r.ok === false) {
+        if (!r || r.code === 'NETWORK' || r.code === 'TIMEOUT' || r.code === 'BUSY') { loadFail(function () { openTag(tag); }, 'scan'); return; }
+        openModule('moves', { tag: tag, tab: 'scan' });
+        return;
+      }
+      var row = (r.rows || []).filter(function (t) { return String(t.tag || '').toUpperCase() === tag && String(t.active).toLowerCase() !== 'false'; })[0];
+      var kind = row ? String(row.kind || '') : '';
+      if (kind === 'thermometer') {
+        try { localStorage.setItem('bld.temp.thermometer', JSON.stringify({ thermometerId: row.ref_id, at: Date.now() })); } catch (e) { /* the round still opens */ }
+        go('m/temperature');
+        return;
+      }
+      if (fillingRoom()) { openModule('moves', { tag: tag, tab: 'scan' }); return; }
+      if (kind === 'subject' || kind === 'area' || kind === 'litter' || kind === 'site') { openModule('jobs', { tag: tag, tab: 'scan' }); return; }
+      openModule('moves', { tag: tag, tab: 'scan' });
+    }).catch(function () { loadFail(function () { openTag(tag); }, 'scan'); });
   }
 
   /** While a room is being filled (moves.js remembers it for 30 minutes), every scan carries on moving dogs. */
@@ -437,7 +494,7 @@
     save.setCode(storeGet(CODE_KEY), false);
     if (hash.indexOf(SCAN_PREFIX) === 0) {
       var tag = hash.slice(SCAN_PREFIX.length).toUpperCase();
-      if (TAG_RE.test(tag)) { openModule(fillingRoom() ? 'moves' : 'jobs', { tag: tag, tab: 'scan' }); return; }
+      if (TAG_RE.test(tag)) { openTag(tag); return; }
       go('home'); return;
     }
     if (hash.indexOf('mv/') === 0 && TAG_RE.test(hash.slice(3))) { openModule('moves', { tag: hash.slice(3), tab: 'scan' }); return; }
@@ -449,25 +506,47 @@
 
   window.StaffPage = {
     /** Add a screen. id must be unique; open(host, ctx) draws into host and may return a tidy-up function. */
-    register: function (m) { modules = modules.filter(function (x) { return x.id !== m.id; }).concat([m]); if (started) route(); },
+    register: function (m) { modules = modules.filter(function (x) { return x.id !== m.id; }).concat([m]); if (started && !pauseRoute) route(); },
     ctx: ctx
   };
 
-  function loadAll() {
-    return Promise.all(FILES.map(function (f) {
-      return new Promise(function (done) { var s = document.createElement('script'); s.src = f; s.onload = done; s.onerror = done; document.body.appendChild(s); });
-    }));
+  var scriptP = {};
+  function loadScript(src) {
+    if (scriptP[src]) return scriptP[src];
+    scriptP[src] = new Promise(function (done) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = false;
+      s.onload = s.onerror = function () { pauseRoute--; done(); };
+      pauseRoute++;
+      document.body.appendChild(s);
+    });
+    return scriptP[src];
   }
-  loadAll().then(function () {
-    if (!modules.some(function (m) { return m.id === 'temperature'; })) {
-      window.StaffPage.register({ id: 'temperature', title: 'Temps', icon: ICONS.temp, order: 20, open: function (host, c) {
-        c.data().then(function (d) { BLDScreens.temperatureEntry(host, { save: c.save, areas: d.ok ? d.areas : [] }); });
-      } });
-    }
-    started = true;
-    window.addEventListener('hashchange', route);
-    if (window.DashAuth && DashAuth.onChange) DashAuth.onChange(function () { dataP = null; urlTried = false; route(); });   // signed in or out in CD Hub
-    ownerRefresh();
-    return save.checkStatus();
-  }).then(route);
+  function loadScripts(list) {
+    return (list || []).reduce(function (p, src) { return p.then(function () { return loadScript(src); }); }, Promise.resolve());
+  }
+  function ensure(id) {
+    var spec = LAZY[id];
+    if (!spec) return Promise.resolve();
+    if (spec.done) return spec.done;
+    spec.done = loadScripts(spec.files).then(function () {
+      if (id === 'temperature' && !modules.some(function (m) { return m.id === 'temperature' && !m.lazy; })) {
+        pauseRoute++;
+        window.StaffPage.register({ id: 'temperature', title: 'Temps', icon: ICONS.temp, order: 20, open: function (host, c) {
+          c.data().then(function (d) { BLDScreens.temperatureEntry(host, { save: c.save, areas: d.ok ? d.areas : [] }); });
+        } });
+        pauseRoute--;
+      }
+    });
+    return spec.done;
+  }
+  [{ id: 'jobs', title: 'Jobs', icon: ICONS.dogs, order: 5 }, { id: 'moves', title: 'Scan', icon: ICONS.scan, order: 10 }, { id: 'temperature', title: 'Temps', icon: ICONS.temp, order: 20 }, { id: 'where', title: 'Where', icon: ICONS.dogs, order: 30 }].forEach(function (s) {
+    window.StaffPage.register({ id: s.id, title: s.title, icon: s.icon, order: s.order, lazy: true, open: function () {} });
+  });
+  started = true;
+  window.addEventListener('hashchange', route);
+  if (window.DashAuth && DashAuth.onChange) DashAuth.onChange(function () { dataP = null; urlTried = false; route(); });   // signed in or out in CD Hub
+  ownerRefresh();
+  save.checkStatus().then(route);
 }());

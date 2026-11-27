@@ -26,10 +26,23 @@ for (const [name, url, title, selector] of PAGES) {
   });
 }
 
+// A scan link opens the staff page signed out: the page draws and its scan files load, with no script error.
+test('a scan link opens the staff page and its scan files load', async ({ page }) => {
+  const errors = [], bad = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('response', (r) => { if (/\/cdhub\/staff\/.*\.js(\?|$)/.test(r.url()) && r.status() >= 400) bad.push(r.status() + ' ' + r.url()); });
+  const res = await page.goto('cdhub/staff/#s/AAAAAAAA');
+  expect(res.status()).toBe(200);
+  await expect(page.locator('#screen')).not.toBeEmpty({ timeout: 15000 });
+  for (const f of ['cdhub/staff/lib/scan.js', 'cdhub/staff/lib/vendor/jsQR.js']) expect((await page.request.get(f)).status(), f).toBe(200);
+  expect(bad).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
 // Is what is LIVE exactly what was merged? Compares the live files with the repo files, byte for byte.
 // Only the workflows on `main` turn this on (LIVE_MATCH_REPO=1); on a feature branch the live site is rightly different.
 // Waits up to 90 s for GitHub Pages to finish publishing (LIVE_MATCH_WAIT_MS to change).
-const FILES = [['index.html', ''], ['cdhub/index.html', 'cdhub/'], ['money/index.html', 'money/'], ['money/core.js', 'money/core.js'], ['factory/index.html', 'factory/'], ['marketplace/index.html', 'marketplace/'], ['food/index.html', 'food/'], ['studio/index.html', 'studio/'], ['estate/index.html', 'estate/'], ['estate/core.js', 'estate/core.js'], ['auth.js', 'auth.js'], ['config.js', 'config.js'], ['toolkit.js', 'toolkit.js'], ['tokens.css', 'tokens.css'], ['house.css', 'house.css'], ['manifest.webmanifest', 'manifest.webmanifest'], ['sw.js', 'sw.js'], ['icons/icon.svg', 'icons/icon.svg']];
+const FILES = [['index.html', ''], ['cdhub/index.html', 'cdhub/'], ['money/index.html', 'money/'], ['money/core.js', 'money/core.js'], ['factory/index.html', 'factory/'], ['marketplace/index.html', 'marketplace/'], ['food/index.html', 'food/'], ['studio/index.html', 'studio/'], ['estate/index.html', 'estate/'], ['estate/core.js', 'estate/core.js'], ['cdhub/staff/shell.js', 'cdhub/staff/shell.js'], ['cdhub/staff/lib/scan.js', 'cdhub/staff/lib/scan.js'], ['cdhub/staff/lib/bld-save.js', 'cdhub/staff/lib/bld-save.js'], ['auth.js', 'auth.js'], ['config.js', 'config.js'], ['toolkit.js', 'toolkit.js'], ['tokens.css', 'tokens.css'], ['house.css', 'house.css'], ['manifest.webmanifest', 'manifest.webmanifest'], ['sw.js', 'sw.js'], ['icons/icon.svg', 'icons/icon.svg']];
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 test.describe('Live files match the repo', () => {
   test.skip(!process.env.LIVE_MATCH_REPO, 'Only checked by the workflows on main (LIVE_MATCH_REPO=1).');
