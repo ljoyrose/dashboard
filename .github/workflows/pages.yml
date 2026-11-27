@@ -26,17 +26,17 @@ env:
   CI: 'true'
 
 jobs:
-  # Same 4 shards as the required check in tests.yml, then one "gate" job that passes only if every shard passed.
+  # Same 6 shards as the required check in tests.yml, then one "gate" job that passes only if every shard passed.
   gate-shards:
-    name: Gate shard ${{ matrix.shard }}/4
+    name: Gate shard ${{ matrix.shard }}/6
     # GitHub Pages is only for the public repo. Once private, the site is on Cloudflare and this costs minutes for nothing.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40 # same limit as a tests.yml shard. History: one 35-min job cut off every publish from 20 Nov 22:47 (#715) to 22 Nov (#765), so github.io went stale.
+    timeout-minutes: 45 # same limit as a tests.yml shard. History: one 35-min job cut off every publish from 20 Nov 22:47 (#715) to 22 Nov (#765), so github.io went stale.
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -59,7 +59,7 @@ jobs:
         run: npx playwright install-deps chromium
       - name: Run the same tests as the required check (this shard)
         # Same suite as the required check, including the route crawl (tests/mocked/route-crawl.spec.js).
-        run: npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/4
+        run: npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/6
       - name: Write the short summary
         if: always()
         run: node tests/support/summary.js test-results/results.json

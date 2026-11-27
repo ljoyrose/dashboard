@@ -30,18 +30,19 @@ env:
   CI: 'true'
 
 jobs:
-  # The suite runs in 4 parallel shards (Playwright --shard), then ONE job merges the results. Only that merge job is called
+  # The suite runs in 6 parallel shards (Playwright --shard), then ONE job merges the results. Only that merge job is called
   # "Browser tests (pretend Google and Drive)", so branch protection still sees the same single check (27 Nov 2026:
   # one job ran about 53 of its 60 minutes; #814 was cut off at 60). Every test still runs; each runs in exactly one shard.
+  # 4 > 6 shards (27 Nov, #848): with 4, shard 1 took 28.6 min and shard 4 5.9 (the slow crawl specs sort first).
   shards:
-    name: Browser tests shard ${{ matrix.shard }}/4
+    name: Browser tests shard ${{ matrix.shard }}/6
     runs-on: ubuntu-24.04
-    # One shard is about a quarter of the suite (about 15 min at 53 min in total), so 40 leaves over 2x headroom.
-    timeout-minutes: 40
+    # A ci-guard keeps this at least 2x the slowest shard's last measured run.
+    timeout-minutes: 45
     strategy:
       fail-fast: false # every shard finishes, so the merged report lists every failure
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     permissions:
       contents: read
     steps:
@@ -86,7 +87,7 @@ jobs:
         if: steps.scope.outputs.browser == 'true'
         # The desktop suite includes the route crawl (tests/mocked/route-crawl.spec.js): every top-level page,
         # and every hash route, tab, chip and SOP row, must stay on this origin and paint without hanging.
-        run: npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/4 --reporter=blob,dot
+        run: npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/6 --reporter=blob,dot
         env:
           PLAYWRIGHT_BLOB_OUTPUT_FILE: blob-report/report-${{ matrix.shard }}.zip
 
