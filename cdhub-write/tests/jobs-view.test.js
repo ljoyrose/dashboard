@@ -175,9 +175,9 @@ const NOW = '2026-11-25T12:00:00.000Z';
 const esc = (s) => String(s == null ? '' : s);
 const world = (type, extra) => Object.assign({
   today: '2026-11-25', logs: [], links: [], rules: [], visits: [], esc, dmy: (s) => s,
-  dogs: [{ id: 'd1', name: 'Ada', area_id: 'r1' }, { id: 'd2', name: 'Bea', area_id: 'r1' }],
+  dogs: [{ id: 'd1', name: 'Dog A', area_id: 'r1' }, { id: 'd2', name: 'Dog B', area_id: 'r1' }],
   areas: [{ id: 'r1', code: 'H1' }, { id: 'r2', code: 'H2' }],
-  litters: [{ id: 'lit1', name: 'Litter of Ada', born_on: '2026-10-01' }],
+  litters: [{ id: 'lit1', name: 'Litter 1', born_on: '2026-10-01' }],
   types: [type],
 }, extra || {});
 const job = (key, extra) => Object.assign({ id: 'cty-' + key, type_key: key, label: key, target: 'dog', active: 'true', effective_from: '2026-01-01', sop: 'Microchip Audit', every_days: '365' }, extra || {});
