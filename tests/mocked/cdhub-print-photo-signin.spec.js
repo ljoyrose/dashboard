@@ -44,7 +44,7 @@ async function open(page, { thumbOk }) {
 const photo = (page) => page.locator('.dcard[data-dog="d1"] [data-k="photo"] img');
 const loaded = (page) => expect.poll(() => photo(page).evaluate((i) => i.complete && i.naturalWidth > 0)).toBe(true);
 
-test('signed in to CD Hub: the photo comes from the Drive thumbnail link, asked for with the sign-in, never the cookie address @regression', async ({ page }) => {
+test('signed in to CD Hub: the photo comes from the Drive thumbnail link, asked for with the sign-in, never the cookie address @regression @live', async ({ page }) => {
   const seen = await open(page, { thumbOk: true });
   await expect(photo(page)).toHaveAttribute('src', 'https://lh3.googleusercontent.com/FAKEthumb=s800');   // print size, not the 220px list size
   await loaded(page);
