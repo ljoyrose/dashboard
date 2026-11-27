@@ -1,4 +1,4 @@
-// CD Hub Bin is gone (20 Nov 2026: "I dont want this in the hub"). UI only: the sheets stay.
+// CD Hub Bin page is removed. UI only: the sheets stay.
 // #/bin opens Settings for the owner, and Main when Settings is not on this sign-in. Invented rows only.
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +13,7 @@ const RULES = [
   'r-4,ten-x,pretend.future_end,8,2020-01-01,Pretend,,2020-01-01T00:00:00Z,sc-aaaaaa,2099-01-01,',
 ].join('\n') + '\n';
 const FV = 'id,tenant_id,table_name,field_name,audience_id,visible,condition,redaction,set_by,set_on,reason\nfv-1,ten-x,area,*,aud-staff,yes,,,test,2026-10-16,every row\n';
-const CODES = 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by\ncr-1,ten-x,sc-aaaaaa,Test Person,STAFF,2026-10-01,,\ncr-2,ten-x,sc-bbbbbb,Old Helper,STAFF,2026-01-01,2026-06-30,Test Owner\n';
+const CODES = 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by\ncr-1,ten-x,sc-aaaaaa,Test Person,STAFF,2026-10-01,,\ncr-2,ten-x,sc-bbbbbb,Former Staff,STAFF,2026-01-01,2026-06-30,Test Owner\n';
 const LINKS = 'id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,end_reason\n'
   + 'lk-live,ten-x,subject,dog-1,gallery,files,fil-live,2026-01-01,,\n'
   + 'lk-end,ten-x,subject,dog-1,gallery,files,fil-end,2026-01-01,2026-02-01,Removed from gallery\n';
@@ -102,7 +102,7 @@ asOwner.describe('owner: Bin is gone', () => {
       await page.evaluate((h) => { location.hash = h; }, '#/' + id);
       await expect(page.locator('#main')).toHaveAttribute('data-view', id);
       const main = page.locator('#main');
-      await expect(main).not.toContainText('Old Helper');
+      await expect(main).not.toContainText('Former Staff');
       await expect(main).not.toContainText('pretend.old_rule');
       await expect(main).not.toContainText('Replaced by r-2');
       await expect(main).not.toContainText('fil-end');

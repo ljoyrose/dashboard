@@ -206,18 +206,12 @@
     if (/^var\(/i.test(c)) return c;
     return /^([a-z]+|#[0-9a-f]{3,6})$/i.test(c) ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : c;
   }
-  /* the owner 21 Nov 2026: a pup under puppy.under_weeks old on the print day prints in the size_colour.puppy colour, not its size
-     colour (the owner's dated rule rows; the newest in force wins). No date of birth, or no rows: the size colour. */
+  /* puppy colour and Size tile: the shared rule (staff/lib/capacity.js puppy): a pup under puppy.under_weeks on the print day
+     takes the size_colour.puppy colour, and puppy.size_tile says whether its tile reads Puppy. No date of birth: never a pup. */
   function colourVar(c) { return /^([a-z]+|#[0-9a-f]{3,6})$/i.test(c || '') ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : ''; }
-  function isPup(s) {
-    var wk = parseFloat(ruleNow('puppy.under_weeks')), b = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s.dob || '')), t = /^(\d{4})-(\d{2})-(\d{2})/.exec(BLDNeeds.today());
-    if (!(wk > 0) || !b || !t) return false;
-    var days = (Date.UTC(+t[1], +t[2] - 1, +t[3]) - Date.UTC(+b[1], +b[2] - 1, +b[3])) / 864e5;
-    return days >= 0 && days < wk * 7;
-  }
-  function dogColour(s, sz) { return (isPup(s) && colourVar(ruleNow('size_colour.puppy'))) || sizeColour(sz); }
-  /* what a pup's Size tile says: the owner's dated puppy.size_tile row, "size" (Small/Medium/Large, the default) or "puppy" */
-  function tileWord(s, sz) { return isPup(s) && /^puppy$/i.test(ruleNow('puppy.size_tile')) ? 'Puppy' : sizeWord(sz); }
+  function pupOf(dob) { return BLDCapacity.puppy(T.breeding_rule || [], BLDNeeds.today(), dob); }
+  function dogColour(s, sz) { return colourVar(pupOf(s.dob).colour) || sizeColour(sz); }
+  function tileWord(s, sz) { return pupOf(s.dob).tile === 'puppy' ? 'Puppy' : sizeWord(sz); }
   /* one date format everywhere: 2 Mar 2026 (the owner 13 Nov 2026; never DD/MM/YY) */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : ''; }
@@ -295,7 +289,7 @@
   function cardName(s) {
     var n = s.name || s.id;
     if (typeof BLDDisplay === 'undefined' || !BLDDisplay.marblePupName) return n;
-    var young = isPup(s) || !!s.birth_litter_id;
+    var young = pupOf(s.dob).pup || !!s.birth_litter_id;
     if (s.birth_litter_id && s.dob) {
       var wk = 26, born = Date.parse(String(s.dob).slice(0, 10) + 'T12:00:00Z'), today = Date.parse(BLDNeeds.today() + 'T12:00:00Z');
       if (!isNaN(born) && !isNaN(today) && (today - born) / 864e5 >= wk * 7) young = false;
@@ -403,7 +397,7 @@
   }
   /* Litter card in the kennel-card style (the owner's "Dog Card Print-outs" v4): band with the dam's size colour, photo, facts, one large code */
   function litterCard(tag, it) {
-    var l = it.l, dam = it.dam || {}, col = sizeColour(sizeOfDog(dam)), rows = [], born = l.born_on || l.dob || '';
+    var l = it.l, dam = it.dam || {}, rows = [], born = l.born_on || l.dob || '', col = colourVar(pupOf(born).colour) || sizeColour(sizeOfDog(dam));   // a litter of pups under the puppy age prints in the puppy colour
     if (it.sire) rows.push(['Sire', it.sire]);
     if (it.pups) rows.push(['Pups', String(it.pups)]);
     if (it.room) rows.push(['Room', it.room]);
