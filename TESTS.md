@@ -248,6 +248,14 @@ Each run writes a short table at the top of its page in the Actions tab: one lin
 
 There is also a small **optional** check of the three live web addresses. It opens them signed out and confirms they are up. It runs **a minute or so after every publish to the live site** (so a bad merge is noticed in minutes), on Mondays, and on the button. It never blocks anything, because GitHub Pages can have a slow day. It also checks that **what is live is exactly the file that was merged** (compared byte for byte, waiting up to 90 seconds for GitHub Pages to finish). It has run after the last two publishes and passed.
 
+### Live feature check after deploy
+
+- **What runs:** every test with `@live` in its name (about 12: print page dog, room and thermometer cards, owner sign-in photo, The Round temperature save, temperature, daily checks and medicines registers, QR scan routing, staff Jobs done, gallery remove). Project `live-features` in `playwright.config.js`, only defined when `LIVE_FEATURES=1`.
+- **Where:** `.github/workflows/live-after-deploy.yml`, right after the live-smoke step on `main`. The page files (HTML, JS, CSS) come from the **live site**; Google sign-in, Drive and the save script stay **pretend** (`tests/support/test.js`), so it uses invented data, no credentials, and touches no real record. A test that loads nothing from the live site fails.
+- **What red means:** the deployed site does not do what the merged tests expect. It opens or updates the one `live-site-red` Issue ("cdhub: live feature check failed", with the merged commit and the failed test names). Green closes it. It never blocks a merge.
+- **On your computer:** `LIVE_FEATURES=1 npx playwright test --project=live-features`. `LIVE_URL` points it elsewhere; if the site moves to the root, also set `SITE_BASE=/`.
+- **New feature?** Put `@live` in the title of the test that covers it, if that test opens pages by relative address.
+
 Every Tuesday a separate **"teeth check"** breaks things on purpose in a throw-away copy (a wrong link, a lost safety rule, a renamed column, a page too wide for a phone, and so on) and makes sure the tests go red each time. If one slips through, it turns red and opens an Issue. It cannot block a merge.
 
 ## How to run it on your own computer (optional)

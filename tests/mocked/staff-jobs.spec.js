@@ -41,7 +41,7 @@ async function setup(page, over) {
   return sent;
 }
 
-test('a dog scan shows that dog\'s jobs, groups them, and one tap saves as scanned', async ({ page }) => {
+test('a dog scan shows that dog\'s jobs, groups them, and one tap saves as scanned @live', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#s/DOG2TAG2');
   await expect(page.getByRole('heading', { name: 'Pretend A' })).toBeVisible();

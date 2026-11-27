@@ -259,6 +259,17 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(loose).toEqual([]);
   });
 
+  test('the live check after deploy runs the live feature check, and at least 8 tests carry the live tag', () => {
+    const wf = read('.github/workflows/live-after-deploy.yml');
+    expect(wf).toMatch(/npx playwright test --project=live-features/);
+    expect(wf).toMatch(/LIVE_FEATURES: '1'/);
+    expect(wf).toMatch(/report-issue\.js --state red --label live-site-red --title "cdhub: live feature check failed" --sha "\$MERGED_SHA" --failed /);
+    expect(read('playwright.config.js')).toMatch(/name: 'live-features'[\s\S]*?grep: \/@live\\b\//);
+    const live = fs.readdirSync(path.join(REPO, 'tests', 'mocked')).filter((f) => f.endsWith('.spec.js'))
+      .flatMap((f) => [...read('tests/mocked/' + f).matchAll(/^\s*test\((['`])(?:(?!\1).|\\\1)*@live\b/gm)]);
+    expect(live.length).toBeGreaterThanOrEqual(8);
+  });
+
   test('the live check after deploy listens for the new publish workflow by its exact name', () => {
     const name = /^name:\s*(.+)$/m.exec(pages())[1].trim();
     expect(read('.github/workflows/live-after-deploy.yml')).toContain(`'${name}'`);
