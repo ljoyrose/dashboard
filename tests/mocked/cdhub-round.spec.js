@@ -73,7 +73,7 @@ test.describe('The Round: the room list', () => {
 });
 
 test.describe('The Round: recording a reading', () => {
-  test('save OK: Saved, then CLR pressed finishes; the card ticks as soon as the reply is OK, before CLR is pressed', async ({ page }) => {
+  test('save OK: Saved, then CLR pressed finishes; the card ticks as soon as the reply is OK, before CLR is pressed @live', async ({ page }) => {
     const { script, errors } = await round(page);
     await openRoom(page, 'Room 5');
     await typeReading(page, '18.5', '12.0');

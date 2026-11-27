@@ -132,7 +132,7 @@ test.describe('Checks register: the rules', () => {
 });
 
 test.describe('CD Hub: Checks register on Compliance', () => {
-  test('pick a month, download the CSV and print it in the page; nothing is written', async ({ page, guard }) => {
+  test('pick a month, download the CSV and print it in the page; nothing is written @live', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-check_type.csv', TYPES);
     setFile(guard.world, 'BLD-check_log.csv', LOGS);
     await page.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
