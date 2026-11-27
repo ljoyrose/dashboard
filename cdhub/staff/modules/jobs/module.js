@@ -89,6 +89,10 @@
     wtP.then(function (r) { landed('wt', r); }, function () { landed('wt', null); });
     fastP.then(function (fast) { painted = true; paint(fast); }).catch(fail);
     function show(v) {
+    // 22 Nov 2026: the lists are shared for the session (save library), the job records are always read fresh, and the
+    // whole wait gives up after 45 s with Try again (shell limit).
+    (c.limit || function (p) { return p; })(Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field'), c.readOptional('breeding_rule'), c.readOptional('check_setting'),
+      tag ? c.readOptional('area_capacity') : { ok: true, rows: [] }, tag ? c.readOptional('area_access') : { ok: true, rows: [] }, tag ? c.readOptional('weight') : { ok: false, rows: [] }]), host, function () { open(host, c); }).then(function (v) {
       /* a visitor's records count here only when stamped counts_due true: this screen does not read the visit's grant */
       if (dead || !host.isConnected) return;
       var d = v[0], typesRead = v[1], logs = (v[2].rows || []).filter(function (l) { return !BLDDue.visitOf(l) || String(l.counts_due).toLowerCase() === 'true'; }), tags = v[3], off = !typesRead.ok || !c.save.banner('check_log').canSave || !d.ok;
@@ -220,14 +224,16 @@
           : [h('p', { class: 'sub', text: 'No dogs here.' })])));
       }
       /* this code cannot read past records (no read rows for check_log): say so, never a silent "Due" */
-      /* the owner 17 Nov 2026: jobs she had just saved still said Due. Say WHY the records were not read: not allowed for this
-         code (ask the owner), or no answer in time (slow saves: try again), with a Try again button for the second. */
+      /* 17 Nov 2026: jobs the owner had just saved still said Due. 22 Nov 2026: one neutral line whatever the reason (no
+         answer in time, or no read rows for check_log yet), always with Try again; never "Ask <name>", never blame. */
       if (!v[2].ok) {
         var slow = v[2].code === 'NETWORK' || v[2].code === 'BUSY' || v[2].code === 'TIMEOUT' || !v[2].code;
         host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', text: slow
           ? 'The past records did not load in time, so "Due" may already be done. Try again in a minute.'
           : 'This code cannot read past records' + (v[2].message ? ' (' + v[2].message + ')' : '') + ', so "Due" may already be done. Ask the owner.' }));
         if (slow) host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));
+        host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', 'data-why': String(v[2].code || ''), text: 'Couldn\u2019t check what\u2019s done yet. Try again.' }));
+        host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));
       }
       var status = h('p', { class: 'msg', role: 'status' }), list = h('div', { class: 'cards' }), group = '', more = false;
       var photoBox = h('div', { 'data-diary-photo': '1' });   // 22 Nov 2026: "Add the diary page" after an Earlier save; outside the list, so a redraw keeps it
@@ -655,6 +661,7 @@
       try { showReport(v); } catch (e) { loadFail(host, h, function () { openReport(host, c); }); }
     }).catch(function () { loadFail(host, h, function () { openReport(host, c); }); });
     function showReport(v) {
+    (c.limit || function (p) { return p; })(Promise.all([c.data(), c.readOptional('check_type')]), host, function () { openReport(host, c); }).then(function (v) {
       /* the kinds of report are the owner's job rows with target "optional" (incident, accident, lost dog...): no fixed key */
       var d = v[0];
       if (!d.ok && (d.code === 'NETWORK' || d.code === 'TIMEOUT')) { loadFail(host, h, function () { openReport(host, c); }); return; }

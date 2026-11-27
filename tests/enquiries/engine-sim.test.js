@@ -304,9 +304,9 @@ test('Stage 8: drafts in the Drafts tab only (email + WhatsApp), none for do-not
 test('Stage 8: styleSample() keeps only the owner\'s own stripped replies in the Style tab', { skip }, () => {
   const gmail = [
     // Invented sender on the owner's domain, assembled so the privacy guard does not read it as a real address.
-    { id: 'TH-S8-1', from: 'Lisa <lisa' + '@labradoodles.co.uk>', to: 'Buyerina Sample <buyer.s8@example.com>', subject: 'Re: puppy',
-      body: 'Hi Buyerina,\n\nThank you so much for getting in touch, I would love to help. Have a look at https://doc.labradoodles.co.uk/breed and tell me what you are looking for. You can call me on 07700 900511.\n\nKind regards,\nLisa\n\nOn Mon, 1 Sep 2026, Buyerina wrote:\n> Do you have puppies?' },
-    { id: 'TH-S8-2', from: 'Someone Else <someone@example.com>', to: 'x', subject: 'puppy', body: 'Not Lisa, long enough text to count as a reply here, really quite long indeed yes.' }
+    { id: 'TH-S8-1', from: 'Owner <owner' + '@labradoodles.co.uk>', to: 'Buyerina Sample <buyer.s8@example.com>', subject: 'Re: puppy',
+      body: 'Hi Buyerina,\n\nThank you so much for getting in touch, I would love to help. Have a look at https://doc.labradoodles.co.uk/breed and tell me what you are looking for. You can call me on 07700 900511.\n\nKind regards,\nOwner\n\nOn Mon, 1 Sep 2026, Buyerina wrote:\n> Do you have puppies?' },
+    { id: 'TH-S8-2', from: 'Someone Else <someone@example.com>', to: 'x', subject: 'puppy', body: 'Not the owner, long enough text to count as a reply here, really quite long indeed yes.' }
   ];
   const e = FAKE.load(src, { gmail, dryRun: false });
   e.ctx.setup();
@@ -385,7 +385,11 @@ test('Stage 10: Litters mirrors the allocation sheet read only, with matches and
 // ---- Stage 11: deposits and balances report ----------------------------------------------------------------------
 const DEP = require('../fixtures/enquiries/deposits.js');
 test('Stage 11: Deposits from the allocation sheet and a Xero CSV export, read only; a tap confirms a suggestion', { skip }, () => {
-  const others = { 'ALLOC-SAMPLE': { CURRENT: DEP.ledger } };
+  // The engine reads the real clock, so the two balance dates that decide "due in 30 days" are set from today:
+  // d1 due in 18 days, d4 not due for 120 days (fixed dates went stale on 20 Nov 2026).
+  const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  const ledger = DEP.ledger.map((r) => (r[1] === 'd1' ? r.map((v, i) => (i === 8 ? day(18) : v)) : r[1] === 'd4' ? r.map((v, i) => (i === 8 ? day(120) : v)) : r));
+  const others = { 'ALLOC-SAMPLE': { CURRENT: ledger } };
   const files = [req('FILE-S11-1', 'email', 'From: Buyer E One\nA puppy please e1@example.com'), req('FILE-S11-2', 'email', 'From: Buyer E Two\nA puppy please e2@example.com'),
     { id: 'FILE-S11-X', name: 'xero-invoices-2026-10.csv', text: DEP.xeroCsv }];
   const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, others, dryRun: false });
@@ -408,7 +412,7 @@ test('Stage 11: Deposits from the allocation sheet and a Xero CSV export, read o
   files.push({ id: 'FILE-S11-3', name: tap.name, text: JSON.stringify(tap.body) });
   e.ctx.runOnce();
   const conf = e.tab('Deposits').find((d) => d.deposit_key === sug[0].deposit_key);
-  assert.equal(conf.status, 'held'); assert.match(conf.basis, /confirmed by Lisa/);
+  assert.equal(conf.status, 'held'); assert.match(conf.basis, /confirmed by the owner/);
   assert.equal(e.tab('Enquiries').find((x) => x.key === e1.key).stage, 'deposit');
   assert.equal(e.tab('Deposits').length, dep.length, 'a re-run adds nothing');
 });
