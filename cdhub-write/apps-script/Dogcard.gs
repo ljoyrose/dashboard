@@ -5,9 +5,9 @@
  *                              pointing at the old one; the old row is never overwritten. The weight file needs a
  *                              corrects_id column for that, and this script has to be published before it takes effect.
  *   action 'vaccination'       adds one row to BLD-vaccination.csv (one row per vaccination; a dog can have many)
- *   action 'vaccination_void'  OWNER ONLY (Lisa 17 Nov 2026: "Archive"). Hides ANY one vaccination row of the dog by filling
+ *   action 'vaccination_void'  OWNER ONLY (17 Nov 2026: "Archive"). Hides ANY one vaccination row of the dog by filling
  *                              voided_on, voided_by. The row stays in the sheet.
- *   action 'vaccination_delete' OWNER ONLY (Lisa 17 Nov 2026: "Delete forever"; the records are the owner's). Takes ONE
+ *   action 'vaccination_delete' OWNER ONLY (17 Nov 2026: "Delete forever"; the records are the owner's). Takes ONE
  *                              vaccination row of the dog out of the sheet. Every other row must read back unchanged.
  *   action 'dog_details'       OWNER ONLY. Changes the dog card header in place: name, sex, date of birth, colour,
  *                              entire/neutered (BLD-subject.csv) and the microchip number (BLD-microchip.csv).
@@ -18,7 +18,7 @@
  *                              action do those afterwards. Sex and kind come from rows, never a list in this file.
  *
  * Every one needs SAVE_ENABLED = true AND its own switch: TABLE_ON_weighing or TABLE_ON_vaccination = true. Both are OFF
- * until Lisa sets them. Columns are found by header NAME, never by position; a missing column is refused, not guessed.
+ * until the owner sets them. Columns are found by header NAME, never by position; a missing column is refused, not guessed.
  * The page sends the same staff code as The round. Nothing here makes anything public.
  */
 var DOGCARD_ = {

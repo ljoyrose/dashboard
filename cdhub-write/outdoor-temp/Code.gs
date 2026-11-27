@@ -11,7 +11,7 @@
  *  - Rows with locked = Y are never touched, so any value can be hand-edited safely.
  *  - Optional email warning when today's low is below WARN_LOW or the high is above WARN_HIGH.
  *
- * IDS (17 Nov 2026, Lisa: "Clear all failures and ensure this is not repeated"; wx-0584 and wx-0585 were used twice)
+ * IDS (17 Nov 2026, the owner: "Clear all failures and ensure this is not repeated"; wx-0584 and wx-0585 were used twice)
  *  - A new row takes the next number after the HIGHEST wx- id ever used: the highest in the sheet or the highest
  *    this script has handed out before (Script Property WX_LAST_ID), whichever is larger. A deleted row's number is
  *    never given out again.
