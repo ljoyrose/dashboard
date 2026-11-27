@@ -193,7 +193,7 @@ test.describe('CD Hub: Checks register on Compliance', () => {
     await expect(two).toContainText('not here');
   });
 
-  test('the header names the kennel from the Settings row kennel.name, as Medicines does @regression', async ({ page, guard }) => {
+  test('the header names the kennel from the Settings row kennel.name, as Medicines does @regression @live', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-check_type.csv', TYPES);
     setFile(guard.world, 'BLD-check_log.csv', LOGS);
     const rule = guard.world.files.find((x) => x.name === 'BLD-breeding_rule.csv');
