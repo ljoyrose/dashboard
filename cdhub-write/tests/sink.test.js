@@ -258,19 +258,65 @@ test('a correction is a NEW row pointing at the old one, and always waits for ap
 
   env.email = 'owner@example.test';
   assert.equal(env.ctx.ui_decide(c.result.pending_id, 'approve', '').ok, true);
+  // owner 27 Nov 2026: once the correction is written, the reading it corrects is deleted; a copy is kept in the log
   const t2 = env.text('BLD-area_reading.csv');
-  assert.ok(t2.startsWith(t1));
-  assert.equal(lines(t2)[1], origLine);          // the original row is untouched
-  assert.equal(lines(t2).length, 3);
+  assert.equal(lines(t2).length, 2);
+  assert.ok(!t2.includes(origLine));
   const all = rows(env, 'BLD-area_reading.csv');
-  assert.equal(all[1].corrects_id, first.result.id);
-  assert.equal(all[1].min_c, '21.7');
-  assertAppendOnly(env);
+  assert.equal(all[0].corrects_id, first.result.id);
+  assert.equal(all[0].min_c, '21.7');
+  const log = rows(env, 'BLD-_pending.csv').filter((e) => e.pending_id === c.result.pending_id);
+  assert.deepEqual(Array.from(log, (e) => e.event), ['queued', 'approved', 'applied', 'original_copy', 'original_deleted']);
+  assert.equal(JSON.parse(log[3].payload_json).id, first.result.id);
 
-  // the original cannot be corrected a second time
+  // the original is gone, so it cannot be corrected a second time
   const c2 = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: first.result.id, reason: 'again', fields: { area_id: 'area-t1', min_c: '20', max_c: '21' } }));
   assert.equal(c2.ok, false);
-  assert.match(c2.fields.corrects_id, /already has a correction/);
+  assert.match(c2.fields.corrects_id, /not found/);
+});
+
+test('an approved correction deletes only its own original; other rows stay byte-identical @regression', () => {
+  const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
+  const a = save(env, req(env));
+  const b = save(env, req(env, { fields: { area_id: 'area-t2', min_c: '19.0', max_c: '22.0' } }));
+  const otherLine = lines(env.text('BLD-area_reading.csv')).find((l) => l.startsWith(b.result.id + ','));
+  const c = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: a.result.id, reason: 'wrong digit', fields: { area_id: 'area-t1', min_c: '21.7', max_c: '24.1' } }));
+  env.email = 'owner@example.test';
+  const d = env.ctx.ui_decide(c.result.pending_id, 'approve', '');
+  assert.equal(d.ok, true);
+  assert.equal(d.result.original, 'deleted');
+  const ids = rows(env, 'BLD-area_reading.csv').map((r) => r.id);
+  assert.ok(!ids.includes(a.result.id));
+  assert.ok(ids.includes(b.result.id) && ids.includes(c.result.id));
+  assert.ok(lines(env.text('BLD-area_reading.csv')).includes(otherLine));
+});
+
+test('a correction whose original now belongs to another kennel deletes nothing', () => {
+  const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
+  const a = save(env, req(env));
+  const c = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: a.result.id, reason: 'wrong digit', fields: { area_id: 'area-t1', min_c: '21.7', max_c: '24.1' } }));
+  const f = env.file('BLD-area_reading.csv')[0];
+  f.content = f.content.replace(a.result.id + ',' + fx.TENANT + ',', a.result.id + ',ten-other,');
+  env.email = 'owner@example.test';
+  const d = env.ctx.ui_decide(c.result.pending_id, 'approve', '');
+  assert.equal(d.ok, true);
+  assert.equal(d.result.original, 'not found');
+  assert.ok(rows(env, 'BLD-area_reading.csv').some((r) => r.id === a.result.id));
+  assert.equal(rows(env, 'BLD-_pending.csv').pop().event, 'original_not_found');
+});
+
+test('a correction that fails to save deletes nothing', () => {
+  const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
+  const a = save(env, req(env));
+  const c = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: a.result.id, reason: 'wrong digit', fields: { area_id: 'area-t1', min_c: '21.7', max_c: '24.1' } }));
+  env.email = 'owner@example.test';
+  const before = env.text('BLD-area_reading.csv');
+  env.breakSetContent = 'once'; env.breakTitle = 'BLD-area_reading.csv';
+  const d = env.ctx.ui_decide(c.result.pending_id, 'approve', '');
+  assert.equal(d.code, 'VERIFY_FAILED');
+  assert.equal(env.text('BLD-area_reading.csv'), before);
+  const events = rows(env, 'BLD-_pending.csv').filter((e) => e.pending_id === c.result.pending_id).map((e) => e.event);
+  assert.ok(!events.includes('original_copy') && !events.includes('original_deleted'));
 });
 
 test('a correction needs a real target row and a reason', () => {
