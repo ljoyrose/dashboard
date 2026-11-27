@@ -2,7 +2,6 @@ const { test, expect } = require('../support/test');
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
-const STAFF = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
 const LAYOUTS = ['Full A4', '2 per A4', '4 per A4'];
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
@@ -171,9 +170,9 @@ test('every print QR uses the staff rule or the staff page @regression @live', a
   }
   const qr = await page.evaluate(() => window.__qr.slice());
   expect(qr.length).toBeGreaterThanOrEqual(kinds.length);
+  const staff = new URL('../', page.url()).href;   // the staff page on this site, not the print page
   for (const text of qr) {
-    expect(text.indexOf(STAFF + '#'), text).toBe(0);
-    expect(text).not.toContain('pages.dev');
+    expect(text.indexOf(staff + '#'), text).toBe(0);
     expect(text).not.toContain('/print/');
   }
   const marks = qr.map((t) => new URL(t).hash.split(/[=/]/)[0]);

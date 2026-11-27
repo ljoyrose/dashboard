@@ -68,13 +68,17 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await expect(page.locator('[data-adm-open]').first()).toHaveAttribute('data-adm-open', 'codes');
     await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
     await page.locator('[data-adm-open="phone"]').click();
-    const staff = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
-    await expect(page.locator('#adm-phone')).toContainText('github.io');
+    const staff = await page.evaluate(() => {
+      var path = location.pathname, i = path.indexOf('/cdhub/');
+      return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
+    });
+    await expect(page.locator('#adm-phone')).toContainText(new URL(page.url()).host);
+    await expect(page.locator('#adm-phone')).not.toContainText('github.io');
     await page.locator('[data-adm-qr]').click();
     await expect(page.locator('.adm-qr svg')).toBeVisible();
     const held = await page.evaluate(() => { const b = BLDQr.svg; let t = ''; BLDQr.svg = (x, l) => { t = x; return b(x, l); }; go('admin', false); return new Promise((r) => setTimeout(() => r(t), 300)); });
     expect(held.indexOf(staff + '#setup=')).toBe(0);
-    expect(held).not.toContain('pages.dev');
+    expect(held).not.toContain('github.io');
     expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => /code/i.test(k)).map((k) => localStorage.getItem(k)).join(''))).toBe('');
   });
 

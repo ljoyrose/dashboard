@@ -28,35 +28,40 @@ async function open(page, rules) {
   await page.goto('cdhub/staff/print/');
 }
 
-const STAFF = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
-
-test('printed QRs use the staff page when no rule is set', async ({ page }) => {
+test('printed QRs open the staff page on this site, not a fixed host and not the print page', async ({ page }) => {
   await open(page);
+  const staff = await page.evaluate(() => {
+    var path = location.pathname, i = path.indexOf('/cdhub/');
+    return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
+  });
+  expect(staff).not.toContain('/print/');
   await page.getByRole('button', { name: 'Dog cards' }).click();
   await expect(page.locator('.dcard')).toHaveCount(1);
   await page.getByRole('button', { name: 'Room cards' }).click();
   await expect(page.locator('.rcard')).toHaveCount(1);
   await page.getByRole('button', { name: 'Phone set-up QR' }).click();
   const qr = await page.evaluate(() => window.__qr);
-  expect(qr).toContain(STAFF + '#s/AAAAAAAA');
-  expect(qr).toContain(STAFF + '#s/EEEEEEEE');
-  expect(qr.some((t) => t.indexOf(STAFF + '#setup=') === 0)).toBe(true);
-  expect(qr.filter((t) => /pages\.dev/.test(t) || /127\.0\.0\.1/.test(t) || t.indexOf('/print/') >= 0)).toEqual([]);
+  expect(qr).toContain(staff + '#s/AAAAAAAA');
+  expect(qr).toContain(staff + '#s/EEEEEEEE');
+  expect(qr.some((t) => t.indexOf(staff + '#setup=') === 0)).toBe(true);
+  expect(qr.filter((t) => /github\.io/.test(t) || t.indexOf('/print/') >= 0)).toEqual([]);
   expect(await page.locator('.sheet').innerText()).not.toMatch(/https?:|www\./);
 });
 
-test('a configured staff address does not replace the staff page', async ({ page }) => {
+test('a configured staff address wins over the host serving the page', async ({ page }) => {
   await open(page);
   await page.evaluate(() => { DASH_CONFIG.cdhub.publicStaffBase = 'https://example.test/staff/'; });
   await page.getByRole('button', { name: 'Dog cards' }).click();
   await expect(page.locator('.dcard')).toHaveCount(1);
-  expect(await page.evaluate(() => window.__qr)).toEqual([STAFF + '#s/AAAAAAAA']);
+  expect(await page.evaluate(() => window.__qr)).toEqual(['https://example.test/staff/#s/AAAAAAAA']);
 });
 
-test('the qr.base_url rule in force wins over the staff page', async ({ page }) => {
+test('the owner\'s qr.base_url row in force wins; a future row, an ended row and a bad address do not', async ({ page }) => {
   await open(page, [
     { rule_key: 'qr.base_url', value: 'https://example.org/old/', from_date: '2026-01-01', to_date: '2026-02-01', source: 'Pretend' },
-    { rule_key: 'qr.base_url', value: 'https://example.org/now/', from_date: '2026-03-01', source: 'Pretend' }]);
+    { rule_key: 'qr.base_url', value: 'https://example.org/now/', from_date: '2026-03-01', source: 'Pretend' },
+    { rule_key: 'qr.base_url', value: 'http://example.org/insecure/', from_date: '2026-04-01', source: 'Pretend' },
+    { rule_key: 'qr.base_url', value: 'https://example.org/later/', from_date: '2999-01-01', source: 'Pretend' }]);
   await page.getByRole('button', { name: 'Dog cards' }).click();
   await expect(page.locator('.dcard')).toHaveCount(1);
   expect(await page.evaluate(() => window.__qr)).toEqual(['https://example.org/now/#s/AAAAAAAA']);
