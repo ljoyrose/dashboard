@@ -40,11 +40,6 @@ var BLDPhotos = (function () {
       o.link_id = l.id || ''; o.link_to_date = ymd(l.to_date); o.link_end_reason = String(l.end_reason || '').trim();
       return o;
     }
-    function closedNow(l, day) {
-      var t = ymd(l.to_date), why = String(l.end_reason || '').trim();
-      if (t && t < day) return true;
-      return !!(why && t && t <= day);
-    }
     var mine = (links || []).filter(function (l) {
       return l && sameTable(l.from_table, fromTable) && l.from_id === id && l.to_table === 'files' && byId[l.to_id];
     });
@@ -55,13 +50,6 @@ var BLDPhotos = (function () {
     function hasEnded(l) { var t = ymd(l.to_date); return !!t && (t < day || removedToday(l)); }
     mine.forEach(function (l) {
       var key = String(l.role || '');
-      if (key === 'main') { if (on(l, day) && !closedNow(l, day) && (!main || stamp(l) > stamp(main))) main = l; return; }
-      if (key !== 'gallery') return;
-      // Removed from the gallery today (the owner 16 Nov 2026): a link added today can only end today, so an end reason marks it
-      // ended at once instead of at midnight.
-      var removedToday = ymd(l.to_date) === day && String(l.end_reason || '').trim() !== '';
-      if (on(l, day) && !closedNow(l, day)) gal.push(l);
-      else if (ymd(l.to_date) && (ymd(l.to_date) < day || removedToday)) ended.push(l);
       if (key !== 'main' && key !== 'gallery') return;
       if (on(l, day) && !removedToday(l)) {
         if (key === 'main') { if (!main || stamp(l) > stamp(main)) main = l; }

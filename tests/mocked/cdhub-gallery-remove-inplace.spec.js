@@ -65,7 +65,7 @@ function pair() {
 
 const gal = (page) => page.locator('.dc[data-dog="sub-a"] details[data-k="gallery"]');
 
-test('remove one photo in place, keep the card, and hide a removed photo', async ({ page, guard }) => {
+test('remove one photo in place, keep the card, and hide a removed photo @live', async ({ page, guard }) => {
   const sent = await setUp(page, guard, pair());
   const g = gal(page);
   await g.locator('> summary').click();

@@ -84,7 +84,6 @@ test('a removed photo is left off the card and the next open photo is printed', 
   await expect(page.locator('.dcard[data-dog="d1"]')).not.toContainText(/\bEnded\b/);
 });
 
-test('signed in to CD Hub: the photo comes from the Drive thumbnail link, asked for with the sign-in, never the cookie address @regression', async ({ page }) => {
 test('signed in to CD Hub: the photo comes from the Drive thumbnail link, asked for with the sign-in, never the cookie address @regression @live', async ({ page }) => {
   const seen = await open(page, { thumbOk: true });
   await expect(photo(page)).toHaveAttribute('src', 'https://lh3.googleusercontent.com/FAKEthumb=s800');   // print size, not the 220px list size

@@ -3002,8 +3002,6 @@ function loadPhotoImg(img){
 }
 /* Main photo + gallery : files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subject',d.id,todayISO()); }
-/* The card shows the chosen (main) photo. A photo that was removed stays off the card even if the old photo cell still names it. */
-function cardPhotoId(d,ph){ return BLDPhotos.shownPhoto(ph||{}, d&&d.photo); }
 /* The card shows the open main link. The old photo cell is used only when there is no open main, and never when that file has ended. */
 function cardPhotoId(d,ph){
  var main=ph&&ph.main&&dogPhotoId(ph.main.drive_file_id);
@@ -3019,17 +3017,15 @@ function cardPhotoId(d,ph){
    as before. Sorting never changes; only the label is hidden. */
 var PHOTO_DATES_ME='photos.show_dates.owner', PHOTO_DATES_ALL='photos.show_dates';
 function photoDatesOn(iso){ var r=breedRule(PHOTO_DATES_ME,iso)||breedRule(PHOTO_DATES_ALL,iso); return !r||String(r.value)!=='0'; }
-/* Remove and Make main. Nothing is deleted: Remove ends the photo's gallery link (it leaves the gallery and the card),
-   Make main adds a main link (the script ends the old main one). Ended photos are not listed. */
-function galleryTools(f,main){
+/* Remove, Make main and Put back . Nothing is deleted:
+   Remove ends the photo's gallery link (it moves to Ended), Put back adds a new gallery link from today, Make main adds a
+   main link (the script ends the old main one). ended = true for an item in the Ended list. */
+function galleryTools(f,main,ended){
  if(!f.link_id) return '';
+ if(ended) return ' <button type="button" class="cb" data-gal-back="'+esc(f.id)+'">Put back</button>';
  if(f.kind==='photo') return main?'':' <span class="gtools"><button type="button" class="cb" data-gal-main="'+esc(f.id)+'">Make main</button></span>';
  return ' <span class="gtools"><button type="button" class="cb" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this from the gallery">\u00d7 Remove</button></span>';
 }
-/* the × and ✎ that sit on a gallery photo */
-function galleryPhotoMarks(f){
- if(!f.link_id) return '';
- return '<button type="button" class="ged" data-gal-edit="'+esc(f.id)+'" aria-label="Crop or adjust this photo" title="Crop or adjust">\u270e</button>'
 /* the × and ✎ that sit on a gallery photo (not in the Ended list) */
 function galleryPhotoMarks(f,ended){
  if(ended||!f.link_id) return '';
@@ -3037,22 +3033,16 @@ function galleryPhotoMarks(f,ended){
   +'<button type="button" class="ged" data-gal-edit="'+esc(f.id)+'" aria-label="Crop or adjust this photo" title="Crop or adjust">\u270e</button>'
   +'<button type="button" class="gx" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this photo from the gallery" title="Remove">\u00d7</button>';
 }
-function galleryItem(f,mainId,dates){
+function galleryItem(f,mainId,dates,ended){
  var when=dmyShort(String(f.taken_on||f.set_on||f.created_at||'').slice(0,10)), main=mainId&&f.id===mainId;
- var cap=(dates===false?'':'<span class="mut" data-k="photo-date">'+esc(when)+'</span>')+(main?' <span class="pill" data-k="main">Main</span>':'')+galleryTools(f,main);
+ var cap=(dates===false?'':'<span class="mut" data-k="photo-date">'+esc(when)+'</span>')+(main?' <span class="pill" data-k="main">Main</span>':'')+galleryTools(f,main,ended);
  if(f.kind==='link'){ var u=BLDPhotos.safeUrl(f.url); if(!u) return '';
   var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
   return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
  var id=dogPhotoId(f.drive_file_id); if(!id) return '';
- if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f)+'</span>'+cap+'</li>';
  if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-link="'+esc(f.link_id||'')+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" loading="lazy" decoding="async" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
-function galleryLive(f){
- if(!f) return false;
- if(String(f.link_end_reason||'').trim()&&String(f.link_to_date||'')&&String(f.link_to_date||'')<=todayISO()) return false;
- if(f.kind==='photo'&&!dogPhotoId(f.drive_file_id)) return false;
- return true;
 /* RoseQuest clips (25 Nov 2026). The file stays on RoseQuest; the card stores only the share link. */
 var VIDEO_MORE={}, VIDEO_SHOW=5;
 function videoUrlOk(u){ return /^https:\/\/share\.puppyclassroom\.com\/v\/[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/.test(String(u||'').trim()); }
@@ -3086,14 +3076,6 @@ function videoHtml(d){
   +'</div></details>';
 }
 function galleryHtml(d,ph){
- var items=(ph.gallery||[]).filter(galleryLive);
- if(!items.length) return '';
- var show=BLDPhotos.shownPhoto(ph, d.photo);
- var mainItem=items.filter(function(f){ return dogPhotoId(f.drive_file_id)===show; })[0];
- var mainId=mainItem?mainItem.id:(ph.main&&ph.main.id);
- var word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
- return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+items.length+')</span></summary><div class="dcs-bd">'
-  +'<ul class="glist">'+items.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>'
  if(!ph.gallery.length) return '';
  var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO()), photos=ph.gallery.some(function(f){ return f.kind==='photo'; });
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
@@ -3101,7 +3083,7 @@ function galleryHtml(d,ph){
   +(photos?'<button type="button" class="btn" data-gal-select="'+esc(d.id)+'">Select</button><span class="gal-bulk"><button type="button" class="btn" data-gal-bulk="'+esc(d.id)+'">Remove selected</button></span><button type="button" class="btn" data-photo-sort="'+esc(d.id)+'">Sort photos</button>':'')
   +'<p class="mut" data-gal-msg role="status">'+esc(GAL_MSG[d.id]||'')+'</p></div></details>';
 }
-/* Remove / Make main on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
+/* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
    with the gallery still open. A photo added today can only end today (an end date cannot be before its start), so the
    end reason marks it removed and photos.js treats it as ended straight away. */
 var GAL_REMOVED='Removed from gallery', GAL_EDIT='Removed in gallery edit', GAL_PICK={};
@@ -3181,156 +3163,6 @@ function linkEndsApply(){
  });
  if(drop) linkEndsSet(o);
 }
-function dogSel(dog){ return window.CSS&&CSS.escape?CSS.escape(dog):String(dog||'').replace(/"/g,''); }
-function galBox(dog){ return document.querySelector('details.gal[data-dog="'+dogSel(dog)+'"]'); }
-function cardBox(dog){ return document.querySelector('.dc[data-dog="'+dogSel(dog)+'"]'); }
-function galSay(dog, text){
- GAL_MSG[dog]=text||'';
- var g=galBox(dog), m=g&&g.querySelector('[data-gal-msg]');
- if(m){ m.textContent=GAL_MSG[dog]; return; }
- var pm=cardBox(dog); pm=pm&&pm.querySelector('[data-photo-msg]');
- if(pm) pm.textContent=GAL_MSG[dog];
-}
-function linkEndForget(id){
- var o=linkEndsGet(); if(o[id]){ delete o[id]; linkEndsSet(o); }
- delete LINK_ENDS_MEM[id];
-}
-function endOpenLocal(row, to, reason){
- if(!row||!row.id||String(row.to_date||'').trim()) return;
- row.to_date=to; row.end_reason=reason; row._local=1;
- linkEndKeep(row.id, to, reason);
-}
-function undoLocalEnd(id){
- linkEndForget(id);
- (T['BLD-links.csv']||[]).forEach(function(l){
-  if(l&&l.id===id&&l._local){ l.to_date=''; l.end_reason=''; delete l._local; }
- });
-}
-function galRecount(g){
- if(!g||!g.isConnected) return;
- var n=g.querySelectorAll('.glist > .gi').length;
- var lab=g.querySelector('summary .dcs-label');
- if(lab) lab.textContent=String(lab.textContent||'Photos').replace(/\(\d+\)\s*$/,'('+n+')');
- if(!n) g.remove();
-}
-function putTile(dog, html, index){
- if(!html) return;
- var g=galBox(dog);
- if(!g){
-  var sect=cardBox(dog); sect=sect&&sect.querySelector('.dc-sects'); if(!sect) return;
-  var hold=document.createElement('div');
-  hold.innerHTML='<details class="dcs gal" data-k="gallery" data-dog="'+esc(dog)+'" open><summary><span class="dcs-label">Photos (0)</span></summary><div class="dcs-bd"><ul class="glist"></ul><p class="mut" data-gal-msg role="status"></p></div></details>';
-  g=hold.firstChild; sect.insertBefore(g, sect.firstChild);
- }
- var ul=g.querySelector('.glist'); if(!ul) return;
- var hold2=document.createElement('div'); hold2.innerHTML=html;
- var node=hold2.firstChild; if(!node) return;
- var kids=ul.children;
- if(index==null||index<0||index>=kids.length) ul.appendChild(node); else ul.insertBefore(node, kids[index]);
- g.open=true; GAL_OPEN[dog]=1; galRecount(g);
-}
-function cardPhotoNow(dog){
- var img=cardBox(dog); img=img&&img.querySelector('img.dogphoto');
- return img?img.getAttribute('data-photo-id')||'':'';
-}
-function tileDrive(tile){
- var im=tile&&tile.querySelector('img'); if(!im) return '';
- return im.getAttribute('data-gal-id')||im.getAttribute('data-photo-id')||'';
-}
-function setCardPhoto(dog, driveId){
- var card=cardBox(dog); if(!card) return;
- var btn=card.querySelector('[data-photo-open]'); if(!btn) return;
- var img=card.querySelector('img.dogphoto');
- var paw=card.querySelector('[data-paw]');
- if(!driveId){ if(img) img.remove(); if(paw) paw.classList.remove('off'); return; }
- if(!img){ img=document.createElement('img'); img.className='dogphoto off'; img.alt=''; img.setAttribute('referrerpolicy','no-referrer'); btn.appendChild(img); }
- img.setAttribute('data-photo-id', driveId);
- img.removeAttribute('data-fallback');
- if(paw) paw.classList.add('off');
- var src='';
- Array.prototype.forEach.call(card.querySelectorAll('.gi img'), function(im){
-  if(!src&&(im.getAttribute('data-gal-id')===driveId||im.getAttribute('data-photo-id')===driveId)) src=im.getAttribute('src')||'';
- });
- if(src){ img.src=src; showDogPhoto(img); }
- else loadPhotoImg(img);
-}
-function markMainTile(tile){
- if(!tile) return;
- var tools=tile.querySelector('.gtools'); if(tools) tools.remove();
- if(tile.querySelector('[data-k="main"]')) return;
- var pill=document.createElement('span'); pill.className='pill'; pill.setAttribute('data-k','main'); pill.textContent='Main';
- var date=tile.querySelector('[data-k="photo-date"]');
- if(date) date.insertAdjacentElement('afterend', pill); else tile.appendChild(pill);
-}
-async function dropGalleryLink(dog, linkId, tile, g){
- var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]), day=todayLondon();
- var row=links.filter(function(l){ return l.id===linkId; })[0]||{};
- var y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;
- var fileId=row.to_id||(tile&&tile.getAttribute('data-file'))||'';
- var ph=dogPhotos(CD._byId[dog]||{id:dog});
- var wasMain=!!(tile&&tile.querySelector('[data-k="main"]'))||!!(ph.main&&fileId&&ph.main.id===fileId);
- var cardWas=cardPhotoNow(dog);
- var html=tile?tile.outerHTML:'', index=-1, next=null, nextHtml='', nextId='';
- if(g){
-  var tiles=g.querySelectorAll('.glist > .gi[data-kind="photo"]');
-  for(var i=0;i<tiles.length;i++){ if(tiles[i]!==tile){ next=tiles[i]; break; } }
- }
- if(next){ nextHtml=next.outerHTML; nextId=next.getAttribute('data-file')||''; }
- if(tile&&tile.parentNode){ index=Array.prototype.indexOf.call(tile.parentNode.children, tile); tile.remove(); }
- galRecount(g);
- endOpenLocal(row, to, GAL_REMOVED);
- var endedMains=[];
- if(wasMain){
-  links.forEach(function(l){
-   if(l&&(l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&l.to_id===fileId&&!String(l.to_date||'').trim()){
-    endOpenLocal(l, to, GAL_REMOVED); endedMains.push(l.id);
-   }
-  });
-  if(next){ markMainTile(next); setCardPhoto(dog, tileDrive(next)); }
-  else setCardPhoto(dog, '');
- }
- var j=await sinkAct('link_end',{id:linkId,to_date:to,reason:GAL_REMOVED});
- if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:linkId,already:true}};
- if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
-  undoLocalEnd(linkId);
-  endedMains.forEach(undoLocalEnd);
-  if(nextId&&nextHtml){
-   var cur=(cardBox(dog)||document).querySelector('.gi[data-file="'+nextId+'"]');
-   if(cur){ var hold=document.createElement('div'); hold.innerHTML=nextHtml; if(hold.firstChild) cur.replaceWith(hold.firstChild); }
-  }
-  putTile(dog, html, index);
-  setCardPhoto(dog, cardWas);
-  galSay(dog, 'Not saved: '+((j&&j.message)||'try again.'));
-  var g2=galBox(dog); if(g2){ g2.open=true; GAL_OPEN[dog]=1; }
-  return;
- }
- if(wasMain&&nextId){
-  var add=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:'main',to_table:'files',to_id:nextId,from_date:day,source:'CD Hub, Make main'});
-  if(add&&add.ok&&add.result&&add.result.status==='saved'){
-   links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!String(l.to_date||'').trim()&&l.to_id!==nextId){ var yy=dayMinus(day,1); l.to_date=yy<String(l.from_date||'')?day:yy; } });
-   links.push({id:add.result.id||'',from_table:'subject',from_id:dog,role:'main',to_table:'files',to_id:nextId,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()});
-  }
- } else if(wasMain){
-  for(var mi=0;mi<endedMains.length;mi++){
-   if(endedMains[mi]===linkId) continue;
-   var mj=await sinkAct('link_end',{id:endedMains[mi],to_date:to,reason:GAL_REMOVED});
-   if(mj&&!mj.ok&&mj.code==='NOT_ALLOWED'&&/already ended/i.test(mj.message||'')) mj={ok:true,result:{status:'saved'}};
-   if(!(mj&&mj.ok&&mj.result&&mj.result.status==='saved')) undoLocalEnd(endedMains[mi]);
-  }
-  var d=CD._byId[dog]; if(d) d.photo='';
-  var sub=(T['BLD-subject.csv']||[]).filter(function(s){ return s.id===dog; })[0]; if(sub) sub.photo='';
- }
- galSay(dog, '\u2713 Saved');
- var g3=galBox(dog); if(g3){ g3.open=true; GAL_OPEN[dog]=1; }
-}
-function galleryRemove(b){
- var g=b.closest('details.gal'), dog=g?g.getAttribute('data-dog'):'';
- return dropGalleryLink(dog, b.getAttribute('data-gal-end'), b.closest('.gi'), g);
-}
-document.addEventListener('click',async function(ev){
- var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-end],[data-gal-main]'):null; if(!b) return;
- ev.preventDefault();
- if(b.hasAttribute('data-gal-end')){ galleryRemove(b); return; }
 var PHOTO_SORT=null;
 function galEndDate(row){ var day=todayLondon(), y=dayMinus(day,1); return String((row&&row.from_date)||'').slice(0,10)<=y?y:day; }
 function photoGalleryList(dog){ var ph=dogPhotos(CD._byId[dog]||{id:dog}); return (ph.gallery||[]).filter(function(f){ return f.kind==='photo'&&f.link_id; }); }
@@ -3471,16 +3303,69 @@ function galleryRetile(li,f,mainId,dates,ended){
 }
 function cardPhotoSync(dog,ph){
  var card=document.querySelector('.dc[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'); if(!card) return;
- var img=card.querySelector('img.dogphoto'); if(!img) return;
- var id=cardPhotoId(CD._byId[dog]||{id:dog},ph); if(!id) return;
+ var img=card.querySelector('img.dogphoto'), btn=card.querySelector('[data-photo-open]'), paw=card.querySelector('[data-paw]');
+ var id=cardPhotoId(CD._byId[dog]||{id:dog},ph);
+ if(!id){ if(img) img.remove(); if(paw) paw.classList.remove('off'); return; }
+ if(!img){ if(!btn) return; img=document.createElement('img'); img.className='dogphoto off'; img.alt=''; img.setAttribute('referrerpolicy','no-referrer'); btn.appendChild(img); }
  if(img.getAttribute('data-photo-id')===id&&img.getAttribute('src')) return;
  img.setAttribute('data-photo-id',id);
  var mem=PHOTO_MEM[id]; if(mem&&(mem.thumb||mem.full)){ photoShow(img,mem.thumb||mem.full,id); return; }
  loadGalleryThumb(img);
 }
+/* Remove one gallery photo in place: the tile goes at once, the dog list is not redrawn (the scroll position stays) and an
+   empty gallery leaves the card. When it was the main photo the next gallery photo becomes main (link_add main; the script
+   ends the old main link); with no next photo the main link ends too and the card shows none. A refused save puts it all
+   back and says why. Resolves true when saved. */
+function galleryOpenMains(dog){
+ return (T['BLD-links.csv']||[]).filter(function(l){ return l&&(l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!String(l.to_date||'').trim(); });
+}
+function gallerySay(dog,text){
+ GAL_MSG[dog]=text; var g=galBox(dog); if(g){ g.open=true; var m=g.querySelector('[data-gal-msg]'); if(m) m.textContent=text; }
+}
+async function galleryEnd(dog, id){
+ var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]), day=todayLondon(), j;
+ var row=links.filter(function(l){ return l.id===id; })[0]||{};
+ var ph=dogPhotos(CD._byId[dog]||{id:dog});
+ var wasMain=!!(ph.main&&row.to_id&&ph.main.id===row.to_id);
+ var next=wasMain?(ph.gallery||[]).filter(function(f){ return f.kind==='photo'&&f.id!==row.to_id&&dogPhotoId(f.drive_file_id); })[0]:null;
+ var to=galEndDate(row), wasTo=row.to_date||'', wasWhy=row.end_reason||'';
+ var oldMains=[], local='';
+ if(row.id&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); }
+ if(next){
+  galleryOpenMains(dog).forEach(function(l){ oldMains.push(l); l.to_date=to; l.end_reason=GAL_REMOVED; l._local=1; });
+  local='local-'+sinkRid();
+  links.push({id:local,from_table:'subject',from_id:dog,role:'main',to_table:'files',to_id:next.id,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString(),_local:1});
+ }
+ function mainBack(){
+  var ix=links.findIndex(function(l){ return l.id===local; }); if(local&&ix>=0) links.splice(ix,1);
+  oldMains.forEach(function(l){ l.to_date=''; l.end_reason=''; delete l._local; });
+ }
+ gallerySync(dog);
+ j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
+ if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
+ if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
+  linkEndDrop(id);
+  var back=(T['BLD-links.csv']||[]).filter(function(l){ return l.id===id; })[0];
+  if(back){ back.to_date=wasTo; back.end_reason=wasWhy; delete back._local; }
+  if(row.id&&row!==back){ row.to_date=wasTo; row.end_reason=wasWhy; }
+  mainBack();
+  if(galBox(dog)) gallerySync(dog); else drawDogs();
+  gallerySay(dog,'Not saved: '+((j&&j.message)||'try again.'));
+  return false; }
+ if(next){
+  var a=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:'main',to_table:'files',to_id:next.id,from_date:day,source:'CD Hub, Make main'});
+  if(!(a&&a.ok&&a.result&&a.result.status==='saved')){ mainBack(); gallerySync(dog); gallerySay(dog,'Not saved: '+((a&&a.message)||'try again.')); return false; }
+  var made=links.filter(function(l){ return l.id===local; })[0]; if(made&&a.result.id) made.id=a.result.id;
+ }
+ await clearCardPhoto(dog, row.to_id);
+ gallerySync(dog);
+ return true;
+}
 function gallerySync(dog){
- var g=galBox(dog); if(!g) return;
  var d=CD._byId[dog]||{id:dog}, ph=dogPhotos(d), dates=photoDatesOn(todayISO()), word=ph.galleryLabel||'Photos';
+ cardPhotoSync(dog,ph);
+ var g=galBox(dog); if(!g) return;
+ if(!ph.gallery.length){ g.remove(); return; }
  var label=g.querySelector(':scope > summary .dcs-label'); if(label) label.textContent=word+' ('+ph.gallery.length+')';
  var bd=g.querySelector(':scope > .dcs-bd'); if(!bd) return;
  var open=bd.querySelector(':scope > ul.glist');
@@ -3500,7 +3385,6 @@ function gallerySync(dog){
  }
  fill(ph.gallery,open,false);
  var det=bd.querySelector(':scope > details.gal-ended'); if(det) det.remove();
- cardPhotoSync(dog,ph);
 }
 function photoSortClose(){
  var dog=PHOTO_SORT&&PHOTO_SORT.dog, box=PHOTO_SORT&&PHOTO_SORT.box, key=PHOTO_SORT&&PHOTO_SORT.key;
@@ -3578,28 +3462,8 @@ document.addEventListener('click',async function(ev){
  var g=b.closest('details.gal'), dog=g?g.getAttribute('data-dog'):'', msg=g&&g.querySelector('[data-gal-msg]'), day=todayLondon(), j;
  var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]);
  b.disabled=true; if(msg) msg.textContent='Saving\u2026'; GAL_MSG[dog]='Saving\u2026';
- {
-  var fid=b.getAttribute('data-gal-main'), role='main';
-  j=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,source:'CD Hub, Make main'});
-  if(j.ok&&j.result&&j.result.status==='saved'){
-   if(role==='main') links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
-   links.push({id:j.result.id||'',from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()}); }
  if(b.hasAttribute('data-gal-end')){
-  var id=b.getAttribute('data-gal-end'), row=links.filter(function(l){ return l.id===id; })[0]||{};
-  var to=galEndDate(row), wasTo=row.to_date||'', wasWhy=row.end_reason||'';
-  if(row.id&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); }
-  gallerySync(dog);
-  j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
-  if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
-  if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
-   linkEndDrop(id);
-   var back=(T['BLD-links.csv']||[]).filter(function(l){ return l.id===id; })[0];
-   if(back){ back.to_date=wasTo; back.end_reason=wasWhy; delete back._local; }
-   if(row.id&&row!==back){ row.to_date=wasTo; row.end_reason=wasWhy; }
-   gallerySync(dog);
-   GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); var mBad=galBox(dog); if(mBad){ mBad.open=true; var mm=mBad.querySelector('[data-gal-msg]'); if(mm) mm.textContent=GAL_MSG[dog]; }
-   return; }
-  clearCardPhoto(dog, row.to_id);
+  if(!(await galleryEnd(dog, b.getAttribute('data-gal-end')))) return;
  } else {
   var fid=b.getAttribute('data-gal-back')||b.getAttribute('data-gal-main'), role=b.hasAttribute('data-gal-main')?'main':'gallery';
   if(role==='main') links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
@@ -3642,22 +3506,8 @@ async function photoEdit(dog,fileId,msg){
  var tour=photoTour(dog, f&&f.id);
  var pic=await photoCrop(img,'',{canDelete:true, tour:tour.list.length?tour:null});
  if(!pic) return;   /* Cancel: nothing is saved */
- if(pic.remove){
-  var gEl=galBox(dog);
-  var btn=gEl&&f&&gEl.querySelector('.gi[data-file="'+f.id+'"] [data-gal-end]');
-  if(btn){ galleryRemove(btn); return; }
-  var gl=f?links.filter(function(l){ return (l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='gallery'&&l.to_id===f.id&&!String(l.to_date||'').trim(); })[0]:null;
-  if(gl){ dropGalleryLink(dog, gl.id, null, gEl); return; }
-  var ml=f?links.filter(function(l){ return (l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&l.to_id===f.id&&!String(l.to_date||'').trim(); })[0]:null;
-  if(ml){ dropGalleryLink(dog, ml.id, null, gEl); return; }
-  say('Not saved: try again.'); return; }
- if(pic.galleryRemove){
-  var lid=pic.linkId, row=links.filter(function(l){ return l.id===lid; })[0]||{}, y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;
-  say('Removing the photo\u2026');
-  var jr=await sinkAct('link_end',{id:lid, to_date:to, reason:GAL_REMOVED});
-  if(jr&&jr.ok&&jr.result&&jr.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(lid, to, GAL_REMOVED); linkEndsApply(); }
-  gallerySync(dog);
-  var ag=galBox(dog); if(ag){ ag.open=true; var mm=ag.querySelector('[data-gal-msg]'); if(mm) mm.textContent=jr&&jr.ok?'\u2713 Removed':'Not saved: '+sinkMsg(jr); }
+ if(pic.galleryRemove&&pic.linkId){
+  if(await galleryEnd(dog, pic.linkId)) gallerySay(dog,'\u2713 Removed');
   return; }
  if(pic.remove){ say('Removing the photo\u2026'); await clearCardPhoto(dog,f&&f.id); gallerySync(dog);
   var gone=document.querySelector('.dc[data-dog="'+dog+'"]'), gm=gone&&gone.querySelector('[data-photo-msg]');
@@ -3739,8 +3589,6 @@ document.addEventListener('toggle',function(e){ var el=e.target;
  if(el&&el.matches&&el.matches('details.gal')&&el.isConnected){ var k=el.getAttribute('data-dog'); if(el.open) GAL_OPEN[k]=1; else delete GAL_OPEN[k]; } },true);
 /* gallery pictures load only when that gallery is opened (one Drive call each) */
 document.addEventListener('toggle',function(e){
- var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal')) return;
- Array.prototype.forEach.call(el.querySelectorAll('img.galph[data-gal-id]:not([data-photo-id])'),function(img){
  var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal,details.gal-ended')) return;
  Array.prototype.forEach.call(el.querySelectorAll('img.galph[data-gal-id]:not([data-loaded])'),function(img){
   if(img.closest('details')!==el) return;   /* an ended list loads only when it is opened itself */
@@ -3810,6 +3658,7 @@ function photoCrop(src,was,opts){
  return new Promise(function(resolve){
   var box=document.createElement('div');
   box.className='pcrop'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','pcropT');
+  var canRemove=!!(opts.canDelete||opts.tour);
   box.innerHTML='<div class="pcrop-in"><h3 id="pcropT">Crop and edit the photo</h3>'
    +'<button type="button" class="pcrop-x" data-crop-close aria-label="Close">\u00d7</button>'
    +'<div class="pcrop-view" data-crop-view><canvas data-crop-canvas></canvas></div>'
@@ -3818,10 +3667,10 @@ function photoCrop(src,was,opts){
    +'<div class="pcrop-edit"><label for="pcropB">Brightness</label><input id="pcropB" type="range" min="-50" max="50" step="1" value="0" data-crop-bright>'
    +'<label for="pcropC">Contrast</label><input id="pcropC" type="range" min="-50" max="50" step="1" value="0" data-crop-contrast></div>'
    +'<p class="mut pcrop-size" data-crop-size aria-live="polite"></p>'
-   +(opts.canDelete?'<p class="mut pcrop-ask" data-crop-ask hidden>Remove this photo?</p>':'')
-   +'<div class="pcrop-btns">'+(opts.canDelete?'<button type="button" class="btn danger" data-crop-remove>Remove</button>':'')
+   +(canRemove?'<p class="mut pcrop-ask" data-crop-ask hidden>Remove this photo?</p>':'')
+   +'<div class="pcrop-btns">'+(canRemove?'<button type="button" class="btn danger" data-crop-remove>Remove</button>':'')
    +'<button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><button type="button" class="btn" data-crop-reset>Reset</button><span class="pcrop-gap"></span>'
-   +(opts.tour?'<button type="button" class="btn" data-crop-prev>Previous</button><button type="button" class="btn" data-crop-next>Next</button><button type="button" class="btn" data-crop-remove>Remove</button>':'')
+   +(opts.tour?'<button type="button" class="btn" data-crop-prev>Previous</button><button type="button" class="btn" data-crop-next>Next</button>':'')
    +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Save</button></div></div>';
   document.body.appendChild(box);
   var view=box.querySelector('[data-crop-view]'), cv=box.querySelector('[data-crop-canvas]'), zoom=box.querySelector('[data-crop-zoom]');
@@ -3866,23 +3715,18 @@ function photoCrop(src,was,opts){
   document.addEventListener('keydown',key,true); window.addEventListener('resize',fit);
   box.querySelector('[data-crop-rotate]').addEventListener('click',function(){ rot=(rot+1)%4; fit(); });
   box.querySelector('[data-crop-cancel]').addEventListener('click',function(){ done(null); });
-  box.querySelector('[data-crop-close]').addEventListener('click',function(){ done(null); });
-  var remBtn=box.querySelector('[data-crop-remove]');
-  if(remBtn) remBtn.addEventListener('click',function(){
-   if(remBtn.getAttribute('data-crop-confirm')!=='1'){
-    remBtn.setAttribute('data-crop-confirm','1');
-    var ask=box.querySelector('[data-crop-ask]'); if(ask) ask.hidden=false;
-    return;
-   }
-   done({remove:true});
-  });
   var prevBtn=box.querySelector('[data-crop-prev]'), nextBtn=box.querySelector('[data-crop-next]'), remBtn=box.querySelector('[data-crop-remove]');
   if(prevBtn) prevBtn.addEventListener('click',function(){ go(-1); });
   if(nextBtn) nextBtn.addEventListener('click',function(){ go(1); });
-  if(remBtn) remBtn.addEventListener('click',function(){ var f=opts.tour&&opts.tour.file?opts.tour.file():null; done({galleryRemove:true, fileId:f&&f.id||'', linkId:f&&f.link_id||''}); });
+  box.querySelector('[data-crop-close]').addEventListener('click',function(){ done(null); });
+  if(remBtn) remBtn.addEventListener('click',function(){
+   if(remBtn.getAttribute('data-crop-confirm')!=='1'){   /* first tap asks; the second removes */
+    remBtn.setAttribute('data-crop-confirm','1');
+    var ask=box.querySelector('[data-crop-ask]'); if(ask) ask.hidden=false;
+    return; }
+   var f=opts.tour&&opts.tour.file?opts.tour.file():null;
+   done(f&&f.link_id?{galleryRemove:true, fileId:f.id||'', linkId:f.link_id}:{remove:true}); });
   nav();
-  var delBtn=box.querySelector('[data-crop-delete]');
-  if(delBtn) delBtn.addEventListener('click',function(){ done({remove:true}); });
   box.querySelector('[data-crop-use]').addEventListener('click',function(){
    var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
    var f=opts.tour&&opts.tour.file?opts.tour.file():null;
