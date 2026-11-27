@@ -704,6 +704,29 @@ test('Print / PDF: summary and room table for a month, totals and outside list f
   if (process.env.RP_SAMPLE) await page.pdf({ path: process.env.RP_SAMPLE, format: 'A4', landscape: true, printBackground: true });
 });
 
+test('Print / PDF: a reading entered on a later day is marked * with when and by whom; outside lines say who @regression', async ({ page, guard }) => {
+  await open(page, guard);
+  // R3 PM on 7 Jan was missed on the day; it is typed from paper on 9 Jan by Staff A
+  const extra = 'rdg-late,area-r3,2026-01-09T10:15:00Z,2026-01-07T12:00:00+00:00,12.0,15.0,typed,,Staff A,\n';
+  const f = guard.world.files.find((x) => x.name === 'BLD-area_reading.csv'); f.content = READINGS + extra; f.size = String(f.content.length);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await page.evaluate(() => { window.print = () => {}; });
+  await page.locator('[data-rp-open]').click();
+  const panel = page.locator('#rpPanel');
+  await panel.locator('#rpMonth').selectOption('0');
+  await panel.locator('#rpYear').selectOption('2026');
+  await panel.locator('#rpGo').click();
+  const tbl = page.locator('#report [data-rp="table"]');
+  await expect(tbl.locator('td.late')).toHaveCount(1);
+  await expect(tbl.locator('td.late')).toHaveText('12.0–15.0*');
+  await expect(tbl.locator('[data-rp-late] li')).toHaveText(['7 Jan · R3 · PM · entered 9 Jan 10:15 · by Staff A']);
+  await expect(tbl.locator('[data-rp-totals]')).toContainText('entered later: 1');
+  // an on-the-day reading is never marked; a staff id is not printed as a name
+  await expect(tbl.locator('.rp-out:not(.rp-late) li', { hasText: 'R1' }).first()).not.toContainText('stf-1');
+});
+
 // the owner 22 Nov 2026: "print pages for month ... fit on one page nicely for each type, particularly the tick versions".
 // A full month for 30 rooms: the summary is one A4 sheet and the room table is one A4 sheet, checked in a real PDF.
 test('Print / PDF: a 30-room month prints the summary on one page and the room table on one page', async ({ page, guard }, info) => {
