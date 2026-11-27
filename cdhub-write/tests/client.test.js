@@ -1223,6 +1223,7 @@ test('outbox: kept entries are sent at once when the page is shown again (tab ba
   const f = async (url, init = {}) => {
     if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
     if (!online) throw new TypeError('Load failed');   // the phone locked mid-save
+    if (init.keepalive) return { json: async () => ({ ok: true }) };   // the send on hide is tested on its own below
     posts.push(JSON.parse(init.body)); return { json: async () => ({ ok: true, result: { id: 'x' } }) };
   };
   const ev = () => { const h = {}; return { on: h, addEventListener: (n, fn) => { (h[n] = h[n] || []).push(fn); }, fire: (n) => (h[n] || []).forEach((fn) => fn()) }; };
@@ -1245,4 +1246,37 @@ test('outbox: kept entries are sent at once when the page is shown again (tab ba
   await new Promise((r) => setTimeout(r, 5));
   assert.deepEqual(posts.map((p) => p.request_id), ['r-wake-0001', 'r-wake-0002', 'r-wake-0003']);
   assert.equal(s.outbox.count(), 0);
+});
+
+test('outbox: as the page is hidden, kept entries are handed to the browser with keepalive; they stay kept until answered @regression', async () => {
+  const local = memStore(), posts = [];
+  let online = false;
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    posts.push({ keepalive: !!init.keepalive, type: init.headers && init.headers['Content-Type'], body: JSON.parse(init.body) });
+    if (!online) throw new TypeError('Load failed');
+    const b = JSON.parse(init.body);
+    return { json: async () => (b.request_id === 'r-hide-0001' ? { ok: false, code: 'DUPLICATE', message: 'already saved' } : { ok: true, result: { id: 'x' } }) };
+  };
+  const ev = () => { const h = {}; return { addEventListener: (n, fn) => { (h[n] = h[n] || []).push(fn); }, fire: (n) => (h[n] || []).forEach((fn) => fn()) }; };
+  const doc = Object.assign(ev(), { hidden: false }), win = ev();
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, document: doc, window: win });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  await s.act('link_end', { id: 'r1' }, 'r-hide-0001');
+  await s.act('dog_photo', { data: 'x'.repeat(20000) }, 'r-hide-0002');   // too big for keepalive: waits for a normal send
+  assert.equal(s.outbox.count(), 2);
+  posts.length = 0;
+  doc.hidden = true; doc.fire('visibilitychange');
+  await new Promise((r) => setTimeout(r, 5));
+  assert.deepEqual(posts.map((p) => [p.body.request_id, p.keepalive, p.body.code]), [['r-hide-0001', true, 'ABC']]);
+  assert.equal(posts[0].type, 'text/plain;charset=utf-8');   // a simple request: no pre-flight
+  assert.equal(s.outbox.count(), 2, 'a keepalive send never takes an entry out of the box');
+  posts.length = 0; win.fire('pagehide');
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(posts.length, 1);
+  // the keepalive saved it; the next normal send is answered DUPLICATE and counts as saved
+  online = true; doc.hidden = false; doc.fire('visibilitychange');
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(s.outbox.count(), 0);
+  assert.deepEqual(s.outbox.refused(), [], 'the DUPLICATE after a keepalive is saved, never Not saved');
 });

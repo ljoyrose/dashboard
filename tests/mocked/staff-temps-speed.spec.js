@@ -124,3 +124,37 @@ test('Temps: a reading kept on the phone is sent as soon as the page is shown ag
   expect(sent[0].code).toBe('FAKE-CODE-1');
   await expect.poll(() => page.evaluate(() => localStorage.getItem('bld.outbox'))).toBeNull();
 });
+
+test('Temps: as the phone locks, a kept reading is handed to the browser to send, and stays kept until answered @live', async ({ page, allowedConsole }) => {
+  allowedConsole.push(/ERR_INTERNET_DISCONNECTED/, /Failed to load resource/);
+  await page.clock.install({ time: new Date('2026-11-12T09:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-11-12T09:00:01Z'));   // no timer runs: only hiding the page can send
+  const sent = [], state = { offline: true };
+  await setup(page);
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() !== 'GET') {
+      const b = JSON.parse(route.request().postData());
+      if (b.request_id === 'req-kept-test-0002') {
+        if (state.offline) return route.abort('internetdisconnected');
+        sent.push(b); return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'rdg-kept' } } });
+      }
+    }
+    return route.fallback();
+  });
+  await page.addInitScript(() => {
+    const body = { v: 1, request_id: 'req-kept-test-0002', table: 'area_reading', action: 'add', fields: { area_id: 'area-new', thermometer_id: 'thm-new', min_c: '12.0', max_c: '15.0', period_start: '2026-11-12T00:00:00+00:00' } };
+    localStorage.setItem('bld.outbox', JSON.stringify([{ id: body.request_id, body, at: '2026-11-12T08:59:00Z' }]));
+  });
+  await page.goto('cdhub/staff/#m/temperature');
+  await expect(page.locator('.cards .card .nm')).toHaveText(['3A.1/2']);
+  await page.waitForLoadState('load');
+  state.offline = false;
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].code).toBe('FAKE-CODE-1');
+  const kept = JSON.parse(await page.evaluate(() => localStorage.getItem('bld.outbox')));
+  expect(kept.map((x) => [x.id, x.unsure])).toEqual([['req-kept-test-0002', true]]);   // leaves on the next normal send
+});
