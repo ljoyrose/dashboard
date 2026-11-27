@@ -27,7 +27,7 @@ test('a Problem-button job (target optional) shows on its SOP panel with its own
   assert.match(V.sopHtml(v, 'Lost Dog'), /<b>lost_dog<\/b><span class="mut" data-every>When it happens<\/span>[\s\S]*Problem button/);
 });
 
-test('the summary uses each age band and the highest count for food bowls', () => {
+test('the summary uses each age band for the times a day; one done entry counts for the day (#820)', () => {
   const types = [
     Object.assign(T('feeding', 'dog', '1'), { sop: 'checks' }),
     Object.assign(T('food_bowls', 'none', '1'), { sop: 'checks', site_scope: 'one_line' }),
@@ -48,10 +48,17 @@ test('the summary uses each age band and the highest count for food bowls', () =
   const dogs = [{ id: 'sub-test-a', dob: '2026-03-01', area_id: 'area-a' }, { id: 'sub-test-b', dob: '2020-01-01', area_id: 'area-a' }];
   const rows = V.summary({ today: day, logs: logs, litters: [], types: types, dogs: dogs, areas: [], rules: rules, esc: (s) => String(s) });
   const row = (k) => rows.find((r) => r.key === k);
-  assert.equal(row('feeding').due, 1);
-  assert.equal(row('feeding').ok, 1);
-  assert.equal(row('food_bowls').due, 1);
+  // one done entry counts for the whole day, even where the day needs more (multi-per-day rule, #820)
+  assert.equal(row('feeding').due, 0);
+  assert.equal(row('feeding').ok, 2);
+  assert.equal(row('food_bowls').ok, 1);
   assert.equal(row('water_bowls').ok, 1);
+  // the age band still sets how many times: 4 for the 10-day-old, 2 for the adult; food bowls take the highest
+  const Due = require('../../cdhub/staff/lib/due.js');
+  const times = (target, key) => Due.forTarget(types, logs, target, day, [], { rules }).filter((j) => j.type_key === key)[0].times_per_day;
+  assert.equal(times({ subject_id: 'sub-test-a', everyDog: true, dob: '2026-03-01' }, 'feeding'), 4);
+  assert.equal(times({ subject_id: 'sub-test-b', everyDog: true, dob: '2020-01-01' }, 'feeding'), 2);
+  assert.equal(Due.timesPerDay(rules, 'food_bowls', day, { births: ['2026-03-01', '2020-01-01'], types }), 4);
 });
 
 test('the row\'s own frequency words win over words made from every_days', () => {

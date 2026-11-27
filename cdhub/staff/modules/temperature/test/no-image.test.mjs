@@ -21,9 +21,14 @@ const FORBIDDEN = [
   [/download\s*[:=]|\.download\b/, 'saves a file to the phone']
 ];
 
+// One named download is allowed in module.js: the owner-only Import's blank starter file (22 Nov 2026), a data: CSV
+// link, never a picture. Any other download, or this one turned into anything but text/csv, still fails below.
+const CSV_TEMPLATE = /download: 'temperature-readings\.csv', 'data-timp-template': '',\s*href: 'data:text\/csv;/;
+
 for (const f of ['module.js', 'reader.js']) {
   test(`${f}: no way to make, keep or send a picture`, () => {
-    const src = code(f);
+    let src = code(f);
+    if (f === 'module.js') { assert.match(src, CSV_TEMPLATE); src = src.replace(CSV_TEMPLATE, ''); }
     for (const [re, why] of FORBIDDEN) assert.equal(re.test(src), false, `${f} ${why}: ${src.match(re)?.[0]}`);
   });
 }
