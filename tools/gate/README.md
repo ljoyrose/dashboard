@@ -21,7 +21,7 @@ Exit code is 0 only when every required gate is PASS. FAIL, WAITS-LISA and bad i
 Gate names on a card may be the framework name or any old name (`G1`, `Gate 0`, `Design 4->5`, `G0-CONCEPT` ...).
 
 **Conflicts:** `gates.unified.json` lists conflicts between the four gate sources. A gate with an OPEN conflict reports
-`WAITS-LISA` and is never auto-passed. When Lisa rules, change that conflict's `status` to `RESOLVED` (data only).
+`WAITS-LISA` and is never auto-passed. When the owner rules, change that conflict's `status` to `RESOLVED` (data only).
 
 PROGRESS and HANDOVER are rewritten after each ruling (not appended).
 
