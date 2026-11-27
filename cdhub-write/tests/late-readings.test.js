@@ -89,13 +89,13 @@ test('the cap edge: back to exactly the kept years saves, a minute more is refus
 
   env = env0();                                                   // the owner sets temperature records to 2 years
   env.addFile('BLD-retention_setting.csv', ['id,tenant_id,section,keep_years,basis,set_by,set_on',
-    `ret-1,${fx.TENANT},temperature,2,Lisa's setting,o,2026-11-11`, `ret-2,${fx.TENANT},staff,10,x,o,2026-11-11`].join('\r\n') + '\r\n');
+    `ret-1,${fx.TENANT},temperature,2,owner's setting,o,2026-11-11`, `ret-2,${fx.TENANT},staff,10,x,o,2026-11-11`].join('\r\n') + '\r\n');
   assert.equal(send(env, env.codes.owner, { read_method: 'photo', period_start: iso(Date.UTC(2024, 10, 12, 10, 0, 0)) }).ok, true);
   const r = send(env, env.codes.owner, { read_method: 'photo', period_start: iso(Date.UTC(2024, 10, 12, 9, 59, 0)) });
   assert.equal(r.code, 'INVALID'); assert.match(r.fields.period_start, /kept \(2 years\)/);
 });
 
-test('retention rows are dated: the row in force on the reading\'s own date sets the kept years (Lisa 12 Nov 2026)', () => {
+test('retention rows are dated: the row in force on the reading\'s own date sets the kept years (owner 12 Nov 2026)', () => {
   const env = env0();
   // 2 years until 2023-12-31, then 6 years from 2024-01-01 (no end). A 2019 reading is under the 2-year row.
   env.addFile('BLD-retention_setting.csv', ['id,tenant_id,section,keep_years,basis,set_by,set_on,from_date,to_date',

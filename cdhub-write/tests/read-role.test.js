@@ -29,7 +29,7 @@ test('key_prefix=job. (15 Nov 2026, SOPJOBS S8): staff read only the job.* owner
   const t = fx.TENANT;
   const rules = env.file('BLD-breeding_rule.csv');
   const text = ['id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date',
-    `br-1,${t},job.paper_default_time,12:00,2026-11-14,Lisa,,,,`, `br-2,${t},link_kind.main,Main photo,2026-01-01,t,,,,`,
+    `br-1,${t},job.paper_default_time,12:00,2026-11-14,Owner,,,,`, `br-2,${t},link_kind.main,Main photo,2026-01-01,t,,,,`,
     `br-3,${t},file.who_may,STAFF,2026-01-01,t,,,,`].join('\r\n') + '\r\n';
   if (rules.length) { rules[0].content = text; rules[0].sheet = undefined; } else env.addFile('BLD-breeding_rule.csv', text);
   const f = env.file('BLD-field_visibility.csv')[0];
@@ -41,13 +41,13 @@ test('key_prefix=job. (15 Nov 2026, SOPJOBS S8): staff read only the job.* owner
   assert.equal(r.scope, 'the job.* rows');
 });
 
-test('key_prefix=job.|size_from_kg.|size_colour. (Lisa 22 Nov 2026): one row-rule allows several prefixes; every other key stays hidden', () => {
+test('key_prefix=job.|size_from_kg.|size_colour. (owner 22 Nov 2026): one row-rule allows several prefixes; every other key stays hidden', () => {
   const env = standardEnv({ props: { READ_ENABLED: 'true' } });
   const t = fx.TENANT;
   const rules = env.file('BLD-breeding_rule.csv');
   const text = ['id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date',
-    `br-1,${t},job.paper_default_time,12:00,2026-11-14,Lisa,,,,`, `br-2,${t},size_from_kg.medium,10,2026-11-12,Lisa,,,,`,
-    `br-3,${t},size_colour.medium,green,2026-01-01,Lisa,,,,`, `br-4,${t},file.who_may,STAFF,2026-01-01,t,,,,`,
+    `br-1,${t},job.paper_default_time,12:00,2026-11-14,Owner,,,,`, `br-2,${t},size_from_kg.medium,10,2026-11-12,Owner,,,,`,
+    `br-3,${t},size_colour.medium,green,2026-01-01,Owner,,,,`, `br-4,${t},file.who_may,STAFF,2026-01-01,t,,,,`,
     `br-5,${t},size_from_kgx.bad,1,2026-01-01,t,,,,`].join('\r\n') + '\r\n';
   if (rules.length) { rules[0].content = text; rules[0].sheet = undefined; } else env.addFile('BLD-breeding_rule.csv', text);
   const f = env.file('BLD-field_visibility.csv')[0];
@@ -55,7 +55,7 @@ test('key_prefix=job.|size_from_kg.|size_colour. (Lisa 22 Nov 2026): one row-rul
     .map(([c, cond]) => `fv-x,${t},breeding_rule,${c},aud-staff,yes,${cond},,t,2026-11-15,t`).join('\r\n') + '\r\n';
   const r = env.ctx.sinkRead_({ v: 1, action: 'read', code: env.codes.staff, table: 'breeding_rule' });
   assert.deepEqual(Array.from(r.rows, (x) => x.rule_key), ['job.paper_default_time', 'size_from_kg.medium', 'size_colour.medium']);
-  assert.equal(r.rows[1].source, 'Lisa');
+  assert.equal(r.rows[1].source, 'Owner');
   assert.equal(r.scope, 'the job.*, size_from_kg.*, size_colour.* rows');
 });
 
