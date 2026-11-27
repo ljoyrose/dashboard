@@ -68,6 +68,26 @@ test('a numbered sort comes first, in number order', () => {
   assert.deepEqual(P.forRecord(sorted, files, kinds, 'subjects', 'dog-a', '2026-11-14').gallery.map((f) => f.id), ['f3', 'f1', 'f4', 'f2']);
 });
 
+test('a removed or ended photo is left out of the gallery and is not the shown photo', () => {
+  const day = '2026-11-14';
+  const rows = links.concat([
+    L('l9', 'f1', 'gallery', '2026-11-14', '2026-11-14', { end_reason: 'Removed from gallery', set_on: '2026-11-14T12:00:00Z' }),
+    L('m9', 'f5', 'main', '2026-11-14', '2026-11-14', { end_reason: 'Removed from gallery', set_on: '2026-11-14T12:00:00Z' })
+  ]);
+  const blank = files.concat([{ id: 'f9', kind: 'photo', drive_file_id: '' }]);
+  const withBlank = rows.concat([L('l8', 'f9', 'gallery', '2026-11-01', '', { set_on: '2026-11-01T00:00:00Z' })]);
+  const r = P.forRecord(withBlank, blank, kinds, 'subjects', 'dog-a', day);
+  assert.equal(r.gallery.some((f) => f.id === 'f5' || f.id === 'f9'), false);
+  assert.notEqual(r.main && r.main.id, 'f5');
+  assert.equal(P.shownPhoto(r, 'DRIVEeeee5'), 'DRIVEbbbb2');
+  const gone = P.forRecord([
+    L('lg', 'f5', 'gallery', '2025-02-01', '2026-03-01', { end_reason: 'Removed from gallery' }),
+    L('mg', 'f5', 'main', '2025-02-01', '', { set_on: '2026-06-01T00:00:00Z' })
+  ], files, kinds, 'subjects', 'dog-a', day);
+  assert.equal(gone.gallery.length, 0);
+  assert.equal(P.shownPhoto(gone, 'DRIVEeeee5'), '');
+});
+
 test('no link_kind rule rows: no label (the page uses its own fallback); unsafe link addresses are refused', () => {
   assert.equal(P.forRecord(links, files, [], 'subjects', 'dog-a', '2026-11-14').galleryLabel, '');
   assert.equal(P.safeUrl('https://example.org/a'), 'https://example.org/a');

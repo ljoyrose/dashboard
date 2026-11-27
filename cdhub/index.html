@@ -425,8 +425,11 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .psort-btns{display:flex;flex-wrap:wrap;gap:8px}.psort-btns .btn{flex:1 1 120px}
 /* photo crop step (12 Nov 2026): white sheet, 12px corners, 1px lines; works by touch */
 .pcrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
-.pcrop-in{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px;font-family:var(--house-font)}
-.pcrop-in h3{margin:0;font-size:var(--fs-body)}
+.pcrop-in{position:relative;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px;font-family:var(--house-font)}
+.pcrop-in h3{margin:0 40px 0 0;font-size:var(--fs-body)}
+.pcrop-x{all:unset;box-sizing:border-box;position:absolute;top:8px;right:8px;width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--card);color:var(--ink);border:1px solid var(--line);font-size:var(--fs-head);line-height:1;cursor:pointer}
+.pcrop-x:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.pcrop-ask{margin:0}
 .pcrop-view{position:relative;width:100%;aspect-ratio:1/1;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;touch-action:none;cursor:grab;background:var(--soft)}
 .pcrop-view canvas{display:block;width:100%;height:100%}
 .pcrop-tip{margin:0;font-size:var(--fs-small)}
@@ -3300,16 +3303,69 @@ function galleryRetile(li,f,mainId,dates,ended){
 }
 function cardPhotoSync(dog,ph){
  var card=document.querySelector('.dc[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'); if(!card) return;
- var img=card.querySelector('img.dogphoto'); if(!img) return;
- var id=cardPhotoId(CD._byId[dog]||{id:dog},ph); if(!id) return;
+ var img=card.querySelector('img.dogphoto'), btn=card.querySelector('[data-photo-open]'), paw=card.querySelector('[data-paw]');
+ var id=cardPhotoId(CD._byId[dog]||{id:dog},ph);
+ if(!id){ if(img) img.remove(); if(paw) paw.classList.remove('off'); return; }
+ if(!img){ if(!btn) return; img=document.createElement('img'); img.className='dogphoto off'; img.alt=''; img.setAttribute('referrerpolicy','no-referrer'); btn.appendChild(img); }
  if(img.getAttribute('data-photo-id')===id&&img.getAttribute('src')) return;
  img.setAttribute('data-photo-id',id);
  var mem=PHOTO_MEM[id]; if(mem&&(mem.thumb||mem.full)){ photoShow(img,mem.thumb||mem.full,id); return; }
  loadGalleryThumb(img);
 }
+/* Remove one gallery photo in place: the tile goes at once, the dog list is not redrawn (the scroll position stays) and an
+   empty gallery leaves the card. When it was the main photo the next gallery photo becomes main (link_add main; the script
+   ends the old main link); with no next photo the main link ends too and the card shows none. A refused save puts it all
+   back and says why. Resolves true when saved. */
+function galleryOpenMains(dog){
+ return (T['BLD-links.csv']||[]).filter(function(l){ return l&&(l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!String(l.to_date||'').trim(); });
+}
+function gallerySay(dog,text){
+ GAL_MSG[dog]=text; var g=galBox(dog); if(g){ g.open=true; var m=g.querySelector('[data-gal-msg]'); if(m) m.textContent=text; }
+}
+async function galleryEnd(dog, id){
+ var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]), day=todayLondon(), j;
+ var row=links.filter(function(l){ return l.id===id; })[0]||{};
+ var ph=dogPhotos(CD._byId[dog]||{id:dog});
+ var wasMain=!!(ph.main&&row.to_id&&ph.main.id===row.to_id);
+ var next=wasMain?(ph.gallery||[]).filter(function(f){ return f.kind==='photo'&&f.id!==row.to_id&&dogPhotoId(f.drive_file_id); })[0]:null;
+ var to=galEndDate(row), wasTo=row.to_date||'', wasWhy=row.end_reason||'';
+ var oldMains=[], local='';
+ if(row.id&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); }
+ if(next){
+  galleryOpenMains(dog).forEach(function(l){ oldMains.push(l); l.to_date=to; l.end_reason=GAL_REMOVED; l._local=1; });
+  local='local-'+sinkRid();
+  links.push({id:local,from_table:'subject',from_id:dog,role:'main',to_table:'files',to_id:next.id,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString(),_local:1});
+ }
+ function mainBack(){
+  var ix=links.findIndex(function(l){ return l.id===local; }); if(local&&ix>=0) links.splice(ix,1);
+  oldMains.forEach(function(l){ l.to_date=''; l.end_reason=''; delete l._local; });
+ }
+ gallerySync(dog);
+ j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
+ if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
+ if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
+  linkEndDrop(id);
+  var back=(T['BLD-links.csv']||[]).filter(function(l){ return l.id===id; })[0];
+  if(back){ back.to_date=wasTo; back.end_reason=wasWhy; delete back._local; }
+  if(row.id&&row!==back){ row.to_date=wasTo; row.end_reason=wasWhy; }
+  mainBack();
+  if(galBox(dog)) gallerySync(dog); else drawDogs();
+  gallerySay(dog,'Not saved: '+((j&&j.message)||'try again.'));
+  return false; }
+ if(next){
+  var a=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:'main',to_table:'files',to_id:next.id,from_date:day,source:'CD Hub, Make main'});
+  if(!(a&&a.ok&&a.result&&a.result.status==='saved')){ mainBack(); gallerySync(dog); gallerySay(dog,'Not saved: '+((a&&a.message)||'try again.')); return false; }
+  var made=links.filter(function(l){ return l.id===local; })[0]; if(made&&a.result.id) made.id=a.result.id;
+ }
+ await clearCardPhoto(dog, row.to_id);
+ gallerySync(dog);
+ return true;
+}
 function gallerySync(dog){
- var g=galBox(dog); if(!g) return;
  var d=CD._byId[dog]||{id:dog}, ph=dogPhotos(d), dates=photoDatesOn(todayISO()), word=ph.galleryLabel||'Photos';
+ cardPhotoSync(dog,ph);
+ var g=galBox(dog); if(!g) return;
+ if(!ph.gallery.length){ g.remove(); return; }
  var label=g.querySelector(':scope > summary .dcs-label'); if(label) label.textContent=word+' ('+ph.gallery.length+')';
  var bd=g.querySelector(':scope > .dcs-bd'); if(!bd) return;
  var open=bd.querySelector(':scope > ul.glist');
@@ -3329,7 +3385,6 @@ function gallerySync(dog){
  }
  fill(ph.gallery,open,false);
  var det=bd.querySelector(':scope > details.gal-ended'); if(det) det.remove();
- cardPhotoSync(dog,ph);
 }
 function photoSortClose(){
  var dog=PHOTO_SORT&&PHOTO_SORT.dog, box=PHOTO_SORT&&PHOTO_SORT.box, key=PHOTO_SORT&&PHOTO_SORT.key;
@@ -3408,21 +3463,7 @@ document.addEventListener('click',async function(ev){
  var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]);
  b.disabled=true; if(msg) msg.textContent='Saving\u2026'; GAL_MSG[dog]='Saving\u2026';
  if(b.hasAttribute('data-gal-end')){
-  var id=b.getAttribute('data-gal-end'), row=links.filter(function(l){ return l.id===id; })[0]||{};
-  var to=galEndDate(row), wasTo=row.to_date||'', wasWhy=row.end_reason||'';
-  if(row.id&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); }
-  gallerySync(dog);
-  j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
-  if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
-  if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
-   linkEndDrop(id);
-   var back=(T['BLD-links.csv']||[]).filter(function(l){ return l.id===id; })[0];
-   if(back){ back.to_date=wasTo; back.end_reason=wasWhy; delete back._local; }
-   if(row.id&&row!==back){ row.to_date=wasTo; row.end_reason=wasWhy; }
-   gallerySync(dog);
-   GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); var mBad=galBox(dog); if(mBad){ mBad.open=true; var mm=mBad.querySelector('[data-gal-msg]'); if(mm) mm.textContent=GAL_MSG[dog]; }
-   return; }
-  clearCardPhoto(dog, row.to_id);
+  if(!(await galleryEnd(dog, b.getAttribute('data-gal-end')))) return;
  } else {
   var fid=b.getAttribute('data-gal-back')||b.getAttribute('data-gal-main'), role=b.hasAttribute('data-gal-main')?'main':'gallery';
   if(role==='main') links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
@@ -3465,13 +3506,8 @@ async function photoEdit(dog,fileId,msg){
  var tour=photoTour(dog, f&&f.id);
  var pic=await photoCrop(img,'',{canDelete:true, tour:tour.list.length?tour:null});
  if(!pic) return;   /* Cancel: nothing is saved */
- if(pic.galleryRemove){
-  var lid=pic.linkId, row=links.filter(function(l){ return l.id===lid; })[0]||{}, y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;
-  say('Removing the photo\u2026');
-  var jr=await sinkAct('link_end',{id:lid, to_date:to, reason:GAL_REMOVED});
-  if(jr&&jr.ok&&jr.result&&jr.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(lid, to, GAL_REMOVED); linkEndsApply(); }
-  gallerySync(dog);
-  var ag=galBox(dog); if(ag){ ag.open=true; var mm=ag.querySelector('[data-gal-msg]'); if(mm) mm.textContent=jr&&jr.ok?'\u2713 Removed':'Not saved: '+sinkMsg(jr); }
+ if(pic.galleryRemove&&pic.linkId){
+  if(await galleryEnd(dog, pic.linkId)) gallerySay(dog,'\u2713 Removed');
   return; }
  if(pic.remove){ say('Removing the photo\u2026'); await clearCardPhoto(dog,f&&f.id); gallerySync(dog);
   var gone=document.querySelector('.dc[data-dog="'+dog+'"]'), gm=gone&&gone.querySelector('[data-photo-msg]');
@@ -3622,16 +3658,19 @@ function photoCrop(src,was,opts){
  return new Promise(function(resolve){
   var box=document.createElement('div');
   box.className='pcrop'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','pcropT');
+  var canRemove=!!(opts.canDelete||opts.tour);
   box.innerHTML='<div class="pcrop-in"><h3 id="pcropT">Crop and edit the photo</h3>'
+   +'<button type="button" class="pcrop-x" data-crop-close aria-label="Close">\u00d7</button>'
    +'<div class="pcrop-view" data-crop-view><canvas data-crop-canvas></canvas></div>'
    +'<p class="mut pcrop-tip">Drag to move. Pinch or use the slider to zoom.</p>'
    +'<label class="pcrop-zoom"><span class="sr">Zoom</span><input type="range" min="1" max="4" step="0.01" value="1" data-crop-zoom aria-label="Zoom"></label>'
    +'<div class="pcrop-edit"><label for="pcropB">Brightness</label><input id="pcropB" type="range" min="-50" max="50" step="1" value="0" data-crop-bright>'
    +'<label for="pcropC">Contrast</label><input id="pcropC" type="range" min="-50" max="50" step="1" value="0" data-crop-contrast></div>'
    +'<p class="mut pcrop-size" data-crop-size aria-live="polite"></p>'
-   +'<div class="pcrop-btns">'+(opts.canDelete?'<button type="button" class="btn no" data-crop-delete aria-label="Delete this photo">\u00d7</button>':'')
+   +(canRemove?'<p class="mut pcrop-ask" data-crop-ask hidden>Remove this photo?</p>':'')
+   +'<div class="pcrop-btns">'+(canRemove?'<button type="button" class="btn danger" data-crop-remove>Remove</button>':'')
    +'<button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><button type="button" class="btn" data-crop-reset>Reset</button><span class="pcrop-gap"></span>'
-   +(opts.tour?'<button type="button" class="btn" data-crop-prev>Previous</button><button type="button" class="btn" data-crop-next>Next</button><button type="button" class="btn" data-crop-remove>Remove</button>':'')
+   +(opts.tour?'<button type="button" class="btn" data-crop-prev>Previous</button><button type="button" class="btn" data-crop-next>Next</button>':'')
    +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Save</button></div></div>';
   document.body.appendChild(box);
   var view=box.querySelector('[data-crop-view]'), cv=box.querySelector('[data-crop-canvas]'), zoom=box.querySelector('[data-crop-zoom]');
@@ -3679,10 +3718,15 @@ function photoCrop(src,was,opts){
   var prevBtn=box.querySelector('[data-crop-prev]'), nextBtn=box.querySelector('[data-crop-next]'), remBtn=box.querySelector('[data-crop-remove]');
   if(prevBtn) prevBtn.addEventListener('click',function(){ go(-1); });
   if(nextBtn) nextBtn.addEventListener('click',function(){ go(1); });
-  if(remBtn) remBtn.addEventListener('click',function(){ var f=opts.tour&&opts.tour.file?opts.tour.file():null; done({galleryRemove:true, fileId:f&&f.id||'', linkId:f&&f.link_id||''}); });
+  box.querySelector('[data-crop-close]').addEventListener('click',function(){ done(null); });
+  if(remBtn) remBtn.addEventListener('click',function(){
+   if(remBtn.getAttribute('data-crop-confirm')!=='1'){   /* first tap asks; the second removes */
+    remBtn.setAttribute('data-crop-confirm','1');
+    var ask=box.querySelector('[data-crop-ask]'); if(ask) ask.hidden=false;
+    return; }
+   var f=opts.tour&&opts.tour.file?opts.tour.file():null;
+   done(f&&f.link_id?{galleryRemove:true, fileId:f.id||'', linkId:f.link_id}:{remove:true}); });
   nav();
-  var delBtn=box.querySelector('[data-crop-delete]');
-  if(delBtn) delBtn.addEventListener('click',function(){ done({remove:true}); });
   box.querySelector('[data-crop-use]').addEventListener('click',function(){
    var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
    var f=opts.tour&&opts.tour.file?opts.tour.file():null;
