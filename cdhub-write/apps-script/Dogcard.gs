@@ -465,7 +465,7 @@ function sinkSubjectLinkEnd_(req) {
  *   action 'subject_video'  Adds one row, or a new row whose corrects_id points at an older one.
  *                           Nothing is overwritten. Remove sets active to no. Make main sets is_main
  *                           on the chosen clip and clears it on the previous main, each as its own new row.
- * Switch: TABLE_ON_subject_video, OFF until the sheet exists and Lisa turns it on.
+ * Switch: TABLE_ON_subject_video, OFF until the sheet exists and the owner turns it on.
  * --------------------------------------------------------------------------------------------------------------- */
 DOGCARD_.subject_video = { file: 'BLD-subject_video.csv', on: 'subject_video', idPrefix: 'svd',
   need: ['id', 'subject_id', 'video_url', 'title', 'is_main', 'created_at', 'corrects_id', 'active'] };

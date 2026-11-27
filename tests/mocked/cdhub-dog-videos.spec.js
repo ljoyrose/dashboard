@@ -1,4 +1,4 @@
-// Dog videos (Lisa 25 Nov 2026): any number of RoseQuest clips. Main first, then the rest newest first.
+// Dog videos: any number of RoseQuest clips. Main first, then the rest newest first.
 // Invented dogs and links only. The save script is pretend.
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 const { SINK, csv, put } = require('../support/dog-photo-world');
