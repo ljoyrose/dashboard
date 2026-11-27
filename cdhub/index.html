@@ -5660,7 +5660,7 @@ function ckrSubject(r){ var a=r.area_id&&(CD.allAreas||[]).filter(function(x){ r
   r.item_id?(it&&(it.name||it.item_no)?'Item '+(it.name||it.item_no):'Item not on the list'):''].filter(Boolean).join(', ')||'Whole site'; }
 function ckrMake(R){ var ym=(document.getElementById('ckrMonth')||{}).value||'', ts=document.getElementById('ckrType'), tid=ts?ts.value:'';
  var lines=R.build(T['BLD-check_log.csv']||[],{month:ym,typeId:tid,types:T['BLD-check_type.csv']||[],subject:ckrSubject,dogName:function(id){ var d=regDog(id); return d&&d.name?d.name:'Dog not on the current list'; }});
- return {ym:ym,lines:lines,head:{kennel:(CD.tenant&&CD.tenant.name)||'',month:ym,which:tid&&ts?ts.options[ts.selectedIndex].textContent:'All checks',printed:dmy(todayISO())+' '+hhmmNow()}}; }
+ return {ym:ym,lines:lines,head:{kennel:kennelNow(),month:ym,which:tid&&ts?ts.options[ts.selectedIndex].textContent:'All checks',printed:dmy(todayISO())+' '+hhmmNow()}}; }
 function bindChecksReg(){ var p=document.getElementById('ckrPrint'), c=document.getElementById('ckrCsv'), msg=document.getElementById('ckrMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; }, n=function(x){ return x.lines.length+' entr'+(x.lines.length===1?'y':'ies'); };
  ckrLib().catch(function(){});
