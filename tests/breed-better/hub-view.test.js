@@ -102,15 +102,15 @@ test('within a verdict, animals rank by percent of what they could earn', () => 
 test('seven sort choices, verdict best to worst first; no date of birth sorts last', () => {
   assert.deepStrictEqual(View.SORTS.map((s) => s[0]), ['verdict', 'high', 'low', 'name', 'oldest', 'youngest', 'attention']);
   const R = (name, verdict, e, a, dob) => ({ name, verdict, points_earned: e, points_available: a, dob: dob || '' });
-  const rows = [R('Cara', 'fail', 0, 10, '2020-01-01'), R('Abe', 'pass', 8, 10, '2022-05-01'), R('Bo', 'pass', 9, 10), R('Dot', 'unverified', 2, 10, '2019-03-01')];
+  const rows = [R('Dog C', 'fail', 0, 10, '2020-01-01'), R('Dog A', 'pass', 8, 10, '2022-05-01'), R('Dog B', 'pass', 9, 10), R('Dog D', 'unverified', 2, 10, '2019-03-01')];
   const names = (k) => View.sortRows(rows, k).map((r) => r.name);
-  assert.deepStrictEqual(names('verdict'), ['Bo', 'Abe', 'Dot', 'Cara']);
-  assert.deepStrictEqual(names('high'), ['Bo', 'Abe', 'Dot', 'Cara']);
-  assert.deepStrictEqual(names('low'), ['Cara', 'Dot', 'Abe', 'Bo']);
-  assert.deepStrictEqual(names('name'), ['Abe', 'Bo', 'Cara', 'Dot']);
-  assert.deepStrictEqual(names('oldest'), ['Dot', 'Cara', 'Abe', 'Bo']);
-  assert.deepStrictEqual(names('youngest'), ['Abe', 'Cara', 'Dot', 'Bo']);
-  assert.deepStrictEqual(names('attention'), ['Cara', 'Dot', 'Abe', 'Bo']);
+  assert.deepStrictEqual(names('verdict'), ['Dog B', 'Dog A', 'Dog D', 'Dog C']);
+  assert.deepStrictEqual(names('high'), ['Dog B', 'Dog A', 'Dog D', 'Dog C']);
+  assert.deepStrictEqual(names('low'), ['Dog C', 'Dog D', 'Dog A', 'Dog B']);
+  assert.deepStrictEqual(names('name'), ['Dog A', 'Dog B', 'Dog C', 'Dog D']);
+  assert.deepStrictEqual(names('oldest'), ['Dog D', 'Dog C', 'Dog A', 'Dog B']);
+  assert.deepStrictEqual(names('youngest'), ['Dog A', 'Dog C', 'Dog D', 'Dog B']);
+  assert.deepStrictEqual(names('attention'), ['Dog C', 'Dog D', 'Dog A', 'Dog B']);
 });
 
 test('the list page has a name search and the sort choice', () => {
