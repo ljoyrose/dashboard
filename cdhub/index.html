@@ -410,7 +410,6 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .gx:focus-visible,.ged:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .gi .gtools{display:flex;gap:4px;flex-wrap:wrap}
 .gi .gtools .cb{font-size:var(--fs-small)}
-.gal-ended{margin-top:8px}
 /* photo crop step (12 Nov 2026): white sheet, 12px corners, 1px lines; works by touch */
 .pcrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
 .pcrop-in{position:relative;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px;font-family:var(--house-font)}
@@ -2930,29 +2929,27 @@ function cardPhotoId(d,ph){ return BLDPhotos.shownPhoto(ph||{}, d&&d.photo); }
    as before. Sorting never changes; only the label is hidden. */
 var PHOTO_DATES_ME='photos.show_dates.owner', PHOTO_DATES_ALL='photos.show_dates';
 function photoDatesOn(iso){ var r=breedRule(PHOTO_DATES_ME,iso)||breedRule(PHOTO_DATES_ALL,iso); return !r||String(r.value)!=='0'; }
-/* Remove, Make main and Put back . Nothing is deleted:
-   Remove ends the photo's gallery link (it moves to Ended), Put back adds a new gallery link from today, Make main adds a
-   main link (the script ends the old main one). ended = true for an item in the Ended list. */
-function galleryTools(f,main,ended){
+/* Remove and Make main. Nothing is deleted: Remove ends the photo's gallery link (it leaves the gallery and the card),
+   Make main adds a main link (the script ends the old main one). Ended photos are not listed. */
+function galleryTools(f,main){
  if(!f.link_id) return '';
- if(ended) return ' <button type="button" class="cb" data-gal-back="'+esc(f.id)+'">Put back</button>';
  if(f.kind==='photo') return main?'':' <span class="gtools"><button type="button" class="cb" data-gal-main="'+esc(f.id)+'">Make main</button></span>';
  return ' <span class="gtools"><button type="button" class="cb" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this from the gallery">\u00d7 Remove</button></span>';
 }
-/* the × and ✎ that sit on a gallery photo (not in the Ended list) */
-function galleryPhotoMarks(f,ended){
- if(ended||!f.link_id) return '';
+/* the × and ✎ that sit on a gallery photo */
+function galleryPhotoMarks(f){
+ if(!f.link_id) return '';
  return '<button type="button" class="ged" data-gal-edit="'+esc(f.id)+'" aria-label="Crop or adjust this photo" title="Crop or adjust">\u270e</button>'
   +'<button type="button" class="gx" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this photo from the gallery" title="Remove">\u00d7</button>';
 }
-function galleryItem(f,mainId,dates,ended){
+function galleryItem(f,mainId,dates){
  var when=dmyShort(String(f.taken_on||f.set_on||f.created_at||'').slice(0,10)), main=mainId&&f.id===mainId;
- var cap=(dates===false?'':'<span class="mut" data-k="photo-date">'+esc(when)+'</span>')+(main?' <span class="pill" data-k="main">Main</span>':'')+galleryTools(f,main,ended);
+ var cap=(dates===false?'':'<span class="mut" data-k="photo-date">'+esc(when)+'</span>')+(main?' <span class="pill" data-k="main">Main</span>':'')+galleryTools(f,main);
  if(f.kind==='link'){ var u=BLDPhotos.safeUrl(f.url); if(!u) return '';
   var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
   return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
  var id=dogPhotoId(f.drive_file_id); if(!id) return '';
- if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
+ if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f)+'</span>'+cap+'</li>';
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
 function galleryLive(f){
@@ -2972,7 +2969,7 @@ function galleryHtml(d,ph){
   +'<ul class="glist">'+items.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>'
   +'<p class="mut" data-gal-msg role="status">'+esc(GAL_MSG[d.id]||'')+'</p></div></details>';
 }
-/* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
+/* Remove / Make main on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
    with the gallery still open. A photo added today can only end today (an end date cannot be before its start), so the
    end reason marks it removed and photos.js treats it as ended straight away. */
 var GAL_REMOVED='Removed from gallery';
@@ -3171,15 +3168,15 @@ function galleryRemove(b){
  return dropGalleryLink(dog, b.getAttribute('data-gal-end'), b.closest('.gi'), g);
 }
 document.addEventListener('click',async function(ev){
- var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-end],[data-gal-back],[data-gal-main]'):null; if(!b) return;
+ var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-end],[data-gal-main]'):null; if(!b) return;
  ev.preventDefault();
  if(b.hasAttribute('data-gal-end')){ galleryRemove(b); return; }
  var g=b.closest('details.gal'), dog=g?g.getAttribute('data-dog'):'', msg=g&&g.querySelector('[data-gal-msg]'), day=todayLondon(), j;
  var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]);
  b.disabled=true; if(msg) msg.textContent='Saving\u2026'; GAL_MSG[dog]='Saving\u2026';
  {
-  var fid=b.getAttribute('data-gal-back')||b.getAttribute('data-gal-main'), role=b.hasAttribute('data-gal-main')?'main':'gallery';
-  j=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,source:'CD Hub, '+(role==='main'?'Make main':'Put back')});
+  var fid=b.getAttribute('data-gal-main'), role='main';
+  j=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,source:'CD Hub, Make main'});
   if(j.ok&&j.result&&j.result.status==='saved'){
    if(role==='main') links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
    links.push({id:j.result.id||'',from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()}); }
@@ -3303,7 +3300,7 @@ document.addEventListener('toggle',function(e){ var el=e.target;
  if(el&&el.matches&&el.matches('details.gal')&&el.isConnected){ var k=el.getAttribute('data-dog'); if(el.open) GAL_OPEN[k]=1; else delete GAL_OPEN[k]; } },true);
 /* gallery pictures load only when that gallery is opened (one Drive call each) */
 document.addEventListener('toggle',function(e){
- var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal,details.gal-ended')) return;
+ var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal')) return;
  Array.prototype.forEach.call(el.querySelectorAll('img.galph[data-gal-id]:not([data-photo-id])'),function(img){
   if(img.closest('details')!==el) return;   /* an ended list loads only when it is opened itself */
   img.setAttribute('data-photo-id',img.getAttribute('data-gal-id')); loadPhotoImg(img);
