@@ -262,12 +262,12 @@ test('exercise counts the adult dogs only and hides a backfill note @regression'
   const C = require('../../cdhub/job-calendar.js');
   const ex = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01' };
   const dogs = [
-    { id: 'd1', area_id: 'a1', name: 'Ada', kind: 'Breeding Female', dob: '2020-01-01' },
-    { id: 'p1', area_id: 'a1', name: 'Marble x Sammy 2026 - Black male 1', kind: 'Pup', dob: '2026-06-01', birthLitter: 'lit-1' }
+    { id: 'd1', area_id: 'a1', name: 'Dog A', kind: 'Breeding Female', dob: '2020-01-01' },
+    { id: 'p1', area_id: 'a1', name: 'Dog C x Dog D 2026 - Black male 1', kind: 'Pup', dob: '2026-06-01', birthLitter: 'lit-1' }
   ];
   const v = {
     today: '2026-11-25', types: [ex], dogs, esc: (s) => String(s), dmy: (s) => s,
-    logs: [{ id: 'e1', check_type_id: 'cty-ex', subject_id: 'd1', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill Lisa 25 Nov', taken_by: 'Lisa Carson' }],
+    logs: [{ id: 'e1', check_type_id: 'cty-ex', subject_id: 'd1', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill 25 Nov', taken_by: 'Owner A' }],
     rules: [{ rule_key: 'compliance.calendar.exercise_all', value: '1', effective_from: '2026-01-01' }],
     calOpen: { key: 'exercise_all', iso: '2026-11-08' }
   };
