@@ -12,7 +12,7 @@ const emails = [
     body: 'Name: Buyer D\nEmail: buyer.d@example.com\nPhone: 07700 900104\nMessage: Hi, do you have any Labradoodle puppies due next year? We have a large garden.\n' },
   { id: 'enq-direct', want: { enquiry: true, channel: 'email', kind: 'puppy' },
     from: 'Buyer E <buyer.e@example.com>', subject: 'Cobberdog puppy',
-    body: 'Hello Lisa, we are looking for a Cobberdog puppy for our family in spring. Is there a waiting list? Thank you, Buyer E' },
+    body: 'Hello Owner, we are looking for a Cobberdog puppy for our family in spring. Is there a waiting list? Thank you, Buyer E' },
   { id: 'enq-cf', want: { enquiry: true, channel: 'cf-website-optin', kind: 'puppy' },
     from: 'ClickFunnels <myclickfunnels-notify@example.com>', subject: 'New opt-in on Home',
     body: 'First name: Buyer F\nLast name: Example\nEmail: buyer.f@example.com\nPhone: +44 7700 900106\nHow can we help?: Interested in a chocolate girl\n' },

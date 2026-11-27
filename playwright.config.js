@@ -2,7 +2,8 @@
 const { defineConfig, devices } = require('@playwright/test');
 
 const PORT = Number(process.env.PORT || 4173);
-const { BASE } = require('./tests/support/site');
+// LIVE (tests/support/site.js): LIVE_URL lets the live checks follow the site when it moves (GitHub Pages today, Cloudflare after cutover).
+const { BASE, LIVE } = require('./tests/support/site');
 const LOCAL = `http://127.0.0.1:${PORT}${BASE}`;
 // LIVE_URL lets the live check follow the site when it moves (GitHub Pages today, Cloudflare after cutover).
 const LIVE = process.env.LIVE_URL || 'https://dashboard-eyo.pages.dev/';
@@ -44,6 +45,17 @@ module.exports = defineConfig({
       testDir: './tests/live',
       use: { ...devices['Desktop Chrome'], baseURL: LIVE },
     },
+    // Live feature check (live-after-deploy.yml): the @live tests from the main suite, run against the DEPLOYED pages.
+    // Only the site's own files come from the live site; Google sign-in, Drive and the save script stay pretend (tests/support/test.js).
+    // Only defined when LIVE_FEATURES=1, so `npm test` and CI's mocked/phone runs never open the live site.
+    ...(process.env.LIVE_FEATURES
+      ? [{
+          name: 'live-features',
+          testDir: './tests/mocked',
+          grep: /@live\b/,
+          use: { ...devices['Desktop Chrome'], baseURL: LIVE, serviceWorkers: 'block' },
+        }]
+      : []),
   ],
   webServer: {
     command: 'node tests/support/static-server.js',

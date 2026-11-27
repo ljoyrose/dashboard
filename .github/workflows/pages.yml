@@ -26,12 +26,17 @@ env:
   CI: 'true'
 
 jobs:
-  gate:
-    name: Gate (tests must pass before anything is published)
+  # Same 4 shards as the required check in tests.yml, then one "gate" job that passes only if every shard passed.
+  gate-shards:
+    name: Gate shard ${{ matrix.shard }}/4
     # GitHub Pages is only for the public repo. Once private, the site is on Cloudflare and this costs minutes for nothing.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 60 # 2,500+ tests now take about 35-40 min; 35 cut off every publish from 20 Nov 22:47 (#715) to 22 Nov (#765), so github.io went stale. Same limit as tests.yml.
+    timeout-minutes: 40 # same limit as a tests.yml shard. History: one 35-min job cut off every publish from 20 Nov 22:47 (#715) to 22 Nov (#765), so github.io went stale.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -52,12 +57,24 @@ jobs:
       - name: Install the browser's system libraries (browser itself came from the cache)
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-      - name: Run the same tests as the required check
+      - name: Run the same tests as the required check (this shard)
         # Same suite as the required check, including the route crawl (tests/mocked/route-crawl.spec.js).
-        run: npx playwright test --project=mocked --project=phone
+        run: npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/4
       - name: Write the short summary
         if: always()
         run: node tests/support/summary.js test-results/results.json
+
+  gate:
+    name: Gate (tests must pass before anything is published)
+    needs: gate-shards
+    if: ${{ !cancelled() && !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every gate shard passed?
+        run: |
+          echo "Gate shards: ${{ needs.gate-shards.result }}"
+          test "${{ needs.gate-shards.result }}" = success
 
   publish:
     name: Publish (only if the gate passed)

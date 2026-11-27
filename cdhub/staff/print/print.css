@@ -53,6 +53,16 @@
 .vcard .code svg{max-width:100%;width:100%;height:auto}
 .vcard .chipline{grid-area:chip;display:block;color:#141413;min-width:0;max-width:100%}
 .vcard .chipline span{display:block;font-size:13px;color:#57504A}.dcard.vcard .chipline b{display:block;font-size:clamp(12px,5cqi,34px);letter-spacing:.04em;word-spacing:.12em;white-space:normal;overflow-wrap:normal;word-break:normal;max-width:100%}
+.vcard .photo{grid-area:photo;width:100%;min-width:88px;aspect-ratio:1/1;height:auto;box-sizing:border-box;border-width:6px;border-radius:12px;align-self:start}
+.vcard .szb{grid-area:size;display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:6px 16px 8px;border-radius:10px;box-sizing:border-box}
+.vcard .szb .lab{font-size:12px;font-weight:600;letter-spacing:.04em}.vcard .szb b{font-size:36px;line-height:1.1}
+.vcard .code{grid-area:code;align-self:end;justify-self:center;width:100%}
+.vcard .code svg{max-width:240px}
+.vcard .chipline{grid-area:chip;display:block;color:#141413}
+.dcard.vcard{position:relative}
+.vqr{position:absolute;right:4mm;bottom:4mm;width:22mm;height:22mm;background:#fff;z-index:1}
+.vqr svg{width:100%;height:100%;display:block}
+.vcard .chipline span{display:block;font-size:13px;color:#57504A}.vcard .chipline b{display:block;font-size:34px;letter-spacing:.08em;word-spacing:.25em}
 .dcard.vcard.icard{grid-template-areas:"name name" "photo facts" "photo code"}
 .vcard.icard .facts{grid-template-columns:1fr;justify-content:stretch;align-self:start}.vcard.icard .facts dd{font-size:18px}
 /* the litter card keeps its band */

@@ -1,5 +1,5 @@
 /**
- * EDIT, ARCHIVE AND DELETE WITH A CODE, LOGGED (Lisa 15 Nov 2026, Q1 and Q2). OFF until RECORD_EDIT_ON is 'true'.
+ * EDIT, ARCHIVE AND DELETE WITH A CODE, LOGGED (15 Nov 2026, Q1 and Q2). OFF until RECORD_EDIT_ON is 'true'.
  *
  *   record_edit     change fields of one saved row in place. Logged: one audit row with the old and new values.
  *   record_archive  end one row: its to_date is set (the row stays). Always logged.
@@ -191,7 +191,7 @@ function sinkRecordDelete_(req) {
 }
 
 /**
- * Retention (Lisa, OV11 15 Nov 2026): a row inside its kept period cannot be deleted; archive it instead. The kept
+ * Retention (OV11 15 Nov 2026): a row inside its kept period cannot be deleted; archive it instead. The kept
  * period is the owner's BLD-retention_setting row for the section in force on the row's own date, else the fallback
  * (retentionYears_). A row with no readable date of its own is treated as still kept (the safe side).
  */

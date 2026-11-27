@@ -98,6 +98,31 @@
     if (!s || (A.hasScope && !A.hasScope(s, READ_SCOPE))) return '';
     return s.access_token || '';
   }
+  /** An owner sign-in is kept in this browser but has run out (about an hour): it can be renewed quietly. */
+  function ownerExpired() {
+    var g = root_(), A = g.DashAuth;
+    if (!A || typeof A.read !== 'function') return false;
+    try { if (g.sessionStorage && g.sessionStorage.getItem(OWNER_SKIP_KEY)) return false; } catch (e) { /* carry on */ }
+    var s = A.read();
+    return !!(s && (!A.hasScope || A.hasScope(s, READ_SCOPE)) && Date.now() >= s.expires_at);
+  }
+  /* 22 Nov 2026 (owner saves: "only 1 of my readings saved"): a token that runs out mid-round is renewed quietly and the
+     request is sent again, instead of the tab being switched to staff codes. The page registers how to renew
+     (setOwnerRefresher); refreshOwnerToken() resolves the new token, or '' when Google could not renew it within 10 s.
+     One renewal at a time: every caller waiting shares it. Also used by the save outbox (#737) before a resend. */
+  var ownerRefresher = null, ownerRefreshing = null, OWNER_REFRESH_MS = 10000;
+  function setOwnerRefresher(fn) { ownerRefresher = typeof fn === 'function' ? fn : null; }
+  function refreshOwnerToken() {
+    if (!ownerRefresher) return Promise.resolve(ownerToken());
+    if (ownerRefreshing) return ownerRefreshing;
+    ownerRefreshing = new Promise(function (done) {
+      var t = setTimeout(function () { done(ownerToken()); }, OWNER_REFRESH_MS);
+      try { Promise.resolve(ownerRefresher()).then(function () { clearTimeout(t); done(ownerToken()); }, function () { clearTimeout(t); done(ownerToken()); }); }
+      catch (e) { clearTimeout(t); done(ownerToken()); }
+    });
+    ownerRefreshing.then(function () { ownerRefreshing = null; });
+    return ownerRefreshing;
+  }
   /** Stop (true) or allow again (false) the owner sign-in on this tab. */
   function ownerSkip(on) {
     try { var ss = root_().sessionStorage; if (ss) { if (on) ss.setItem(OWNER_SKIP_KEY, '1'); else ss.removeItem(OWNER_SKIP_KEY); } } catch (e) { /* ignore */ }
@@ -128,17 +153,37 @@
     if (opts.scriptUrl) setScriptUrl(opts.scriptUrl, false);
     else { var saved = get(local, URL_KEY); if (saved) setScriptUrl(saved, false); }
 
-    function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; if (c && typeof scheduleRetry === 'function') scheduleRetry(1000); }
+    function setCode(c, keepForTab) { c = String(c || '').trim(); if (c !== inMemoryCode && typeof dropCache === 'function') dropCache(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; if (c && typeof scheduleRetry === 'function') scheduleRetry(1000); }
     var inMemoryCode = get(session, CODE_KEY);
     function getCode() { return inMemoryCode; }
     var googleFn = typeof opts.google === 'function' ? opts.google : (opts.google === false ? function () { return ''; } : ownerToken);
     /** A staff code, or an owner's Google sign-in. */
-    function hasAuth() { return !!getCode() || !!googleFn(); }
+    function hasAuth() { return !!getCode() || !!googleFn() || (googleFn === ownerToken && ownerExpired()); }
+    /* owner sign-in only (no code): renew a run-out token before sending, so the request goes with Google */
+    function ownerMode() { return !getCode() && googleFn === ownerToken; }
+    function freshGoogle() { return ownerMode() && !googleFn() && ownerExpired() ? refreshOwnerToken() : Promise.resolve(googleFn()); }
+    /* the script refused the Google sign-in (run out or not checkable just now): renew once and send again. Nothing was
+       saved by the refused request, and the same request id goes again, so it can never save twice. */
+    function googleRefused(j) { return ownerMode() && j && j.ok === false && (j.code === 'GOOGLE_NOT_OWNER' || j.code === 'NO_CODE' || j.code === 'GOOGLE_UNREACHABLE'); }
+    function sendJson(body) {
+      return freshGoogle().then(function () {
+        withGoogle(body);
+        return withTimeout(doFetch(scriptUrl, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }))
+          .then(function (r) { return r.json(); });
+      });
+    }
+    function sendWithRenew(body) {
+      return sendJson(body).then(function (j) {
+        if (!googleRefused(j)) return j;
+        var before = body.google_token || '';
+        return refreshOwnerToken().then(function (t) { if (!t || t === before) return j; delete body.google_token; return sendJson(body); });
+      });
+    }
     /** Adds the owner's Google token to a request body when there is one (the code still goes too, as the fallback). */
-    function withGoogle(body) { var g = googleFn(); if (g) body.google_token = g; return body; }
+    function withGoogle(body) { var g = googleFn(); if (g) body.google_token = g; else delete body.google_token; return body; }
     var lastName = '';   // the name held against this code, from the last read (Welcome line only)
     var lastRole = '';   // the role the script reported for this code on the last read: OWNER, STAFF, GUEST... ('' until a read). For showing buttons only; the script still decides.
-    function clearCode() { inMemoryCode = ''; lastRole = ''; lastName = ''; put(session, CODE_KEY, ''); }
+    function clearCode() { dropCache(); inMemoryCode = ''; lastRole = ''; lastName = ''; put(session, CODE_KEY, ''); }
 
     function setLookups(l) { lookups = l || {}; }
     function lookupSize(name) { var l = lookups[name]; return !l ? 0 : (Array.isArray(l) ? l.length : Object.keys(l).length); }
@@ -479,14 +524,15 @@
       var body = {
         v: 1, request_id: o.requestId || newRequestId(), code: getCode(), table: tableKey, action: action, fields: fields
       };
-      withGoogle(body);
       if (action === 'correct') { body.corrects_id = o.correctsId || ''; body.reason = o.reason || ''; }
       if (o.values && action === 'add') body.values = o.values;   // a check's form answers {field_key: value}, saved with the record
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
+      // the Google token is added when the save is SENT, not when it joins the line: a save waiting its turn behind
+      // slow ones could otherwise go with a token that ran out meanwhile (22 Nov 2026). text/plain: no pre-flight needed.
       if (!signedIn) return keptForSignIn(body);
       var auth = authNow();
       keepEntry(body);
-      var sent = oneAtATime(function () { return postOnce(body); }, o.onTurn);
+      var sent = oneAtATime(function () { return busyRetry(function () { return sendWithRenew(body); }); }, o.onTurn);
       inFlight[body.request_id] = sent;
       var off = function () { delete inFlight[body.request_id]; };
       sent.then(off, off);
@@ -496,6 +542,7 @@
         if (j && j.ok) {
           var res = j.result || {};
           res.ok = true;
+          dropCache(tableKey);   // the kept copy of this list is out of date now
           res.requestId = body.request_id;
           res.message = res.status === 'queued'
             ? 'Sent. It is in the approvals queue until Lisa approves it; then it joins the records.'
@@ -521,14 +568,14 @@
       if (!hasAuth()) return keptForSignIn(body);
       var auth = authNow();
       keepEntry(body);
-      var sent = oneAtATime(function () { return postOnce(body); }, onTurn);
+      var sent = oneAtATime(function () { return busyRetry(function () { return sendWithRenew(body); }); }, onTurn);
       inFlight[body.request_id] = sent;
       var off = function () { delete inFlight[body.request_id]; };
       sent.then(off, off);
       return sent.then(function (j) {
         j = answerFor(body.request_id, j);
         if (!settle(body.request_id, j, auth) && j && j.ok === false) j = keptAnswer(j);
-        if (j && j.ok) { var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
+        if (j && j.ok) { dropCache(); var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', kept: !!(j && j.kept), signIn: !!(j && j.signIn), message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
         markUnsure(body.request_id);
@@ -545,20 +592,64 @@
      * Read one list through the script, as far as the owner has allowed THIS staff code (no Google sign-in).
      * Optional filter {area_id, from, to} (London days YYYY-MM-DD) narrows the rows; it never widens them.
      * Resolves (never rejects): {ok:true, table, fields, rows, count, scope} or {ok:false, code, message}.
-     * Nothing is cached or kept: the rows live only in the page.
+     * 22 Nov 2026 (staff Temps 45-110 s on every open): lists that change slowly (rooms, dogs, bands, thermometers...)
+     * are kept IN THIS PAGE'S MEMORY for the session, so a list is read once and every screen shares it; never stored
+     * on the phone. Lists that change often (SHORT: readings, job records) are kept for 2 minutes only, so reopening a
+     * screen straight away is instant; any save to a list from this page forgets its copy at once. The same read
+     * asked twice at once is sent once. A new code or dropCache() forgets every kept copy. A read gives up after 45 s.
      */
-    function read(tableKey, filter) {
+    var READ_TIMEOUT_MS = opts && typeof opts.readTimeoutMs === 'number' ? opts.readTimeoutMs : 45000;
+    var SHORT_MS = 120000, SHORT = { area_reading: 1, check_log: 1, guest_reading: 1, sensor_reading: 1, check_value: 1 };
+    var kept = {}, inflight = {};
+    function cacheKey(tableKey, filter) { return tableKey + '|' + (filter ? JSON.stringify(filter) : ''); }
+    function dropCache(tableKey) {
+      if (!tableKey) { kept = {}; return; }
+      Object.keys(kept).forEach(function (k) { if (k.split('|')[0] === tableKey) delete kept[k]; });
+    }
+    /** When the kept copy of a list was read (ms), or 0. */
+    function keptAt(tableKey, filter) { var e = kept[cacheKey(tableKey, filter)]; return e ? e.at : 0; }
+    function readTimeout(p) {
+      return new Promise(function (resolve, reject) {
+        var t = setTimeout(function () { reject(new Error('timeout')); }, READ_TIMEOUT_MS);
+        p.then(function (v) { clearTimeout(t); resolve(v); }, function (e) { clearTimeout(t); reject(e); });
+      });
+    }
+    function readOnce(tableKey, filter) {
+      var body = filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey };
+      function send() {
+        return freshGoogle().then(function () {
+          withGoogle(body);
+          return readTimeout(doFetch(scriptUrl, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }))
+            .then(function (r) { return r.json(); });
+        });
+      }
+      return send().then(function (j) {
+        if (!googleRefused(j)) return j;
+        var before = body.google_token || '';
+        return refreshOwnerToken().then(function (t) { return t && t !== before ? send() : j; });
+      }).then(function (j) {
+        if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; if (typeof res.name === 'string') lastName = res.name; return res; }
+        return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
+      }).catch(function (e) {
+        if (e && e.message === 'timeout') return { ok: false, code: 'TIMEOUT', message: 'The records did not answer in time. Try again.' };
+        return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' };
+      });
+    }
+    function read(tableKey, filter, o) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. Lisa switches it on when it is ready.' });
       if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
       if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
-      return withTimeout(doFetch(scriptUrl, {
-        method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(withGoogle(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey }))
-      })).then(function (r) { return r.json(); }).then(function (j) {
-        if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; if (typeof res.name === 'string') lastName = res.name; return res; }
-        return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
-      }).catch(function () { return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' }; });
+      var k = cacheKey(tableKey, filter), e = kept[k];
+      if (e && !(o && o.fresh) && (!SHORT[tableKey] || Date.now() - e.at < SHORT_MS)) return Promise.resolve(e.res);
+      if (inflight[k]) return inflight[k];
+      var p = readOnce(tableKey, filter).then(function (res) {
+        delete inflight[k];
+        if (res.ok) kept[k] = { res: res, at: Date.now() };
+        return res;
+      });
+      inflight[k] = p;
+      return p;
     }
 
     /**
@@ -642,9 +733,10 @@
       sending: function () { return sending; },
       loadConfigFromDrive: loadConfigFromDrive,
       act: act, linkAdd: linkAdd, linkEnd: linkEnd,
-      read: read, readMany: readMany, codeCheck: codeCheck, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
+      read: read, readMany: readMany, dropCache: dropCache, keptAt: keptAt, codeCheck: codeCheck, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
     };
   }
 
-  return { create: create, TABLES: TABLES, URL_OK: URL_OK, ownerToken: ownerToken, ownerSkip: ownerSkip };
+  return { create: create, TABLES: TABLES, URL_OK: URL_OK, ownerToken: ownerToken, ownerSkip: ownerSkip,
+    ownerExpired: ownerExpired, setOwnerRefresher: setOwnerRefresher, refreshOwnerToken: refreshOwnerToken };
 }));
