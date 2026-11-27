@@ -325,7 +325,7 @@ async function ownerRound(page, guard, saved) {
   return JSON.parse(await page.evaluate(() => localStorage.getItem('cdhub.outbox') || '[]'));
 }
 
-test('owner sign-in ends mid-round: it is renewed quietly and the kept save goes by itself, once, with no reload', async ({ page, guard }) => {
+test('owner sign-in ends mid-round: it is renewed quietly and the kept save goes by itself, once, with no reload @live', async ({ page, guard }) => {
   const saved = [];
   const kept = await ownerRound(page, guard, saved);
   expect(kept).toHaveLength(1);
