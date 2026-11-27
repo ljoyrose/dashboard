@@ -68,11 +68,11 @@ test('report: a past month (Nov 2025), all rooms, applies the puppy bed rule fro
   await expect(r2a.locator('td').nth(5)).toHaveText('AM In limit · PM Below the limit');
   await expect(r2a.locator('td').nth(6)).toHaveText('Heater on');
   const r2b = dayRow(r2, '4 Nov');
-  await expect(r2b.locator('td').nth(5)).toHaveText('AM Over max: cooling action · PM Missed');
-  await expect(r2b).toHaveClass(/warn/);                                                 // the missed PM, not the cooling action
-  await expect(dayRow(r2, '5 Nov').locator('td').nth(5)).toHaveText('Missed');     // rooms in use with no reading show as missed
-  await expect(r2.locator('.rep-sum')).toHaveText('3 readings · lowest 9.0 °C · highest 27.0 °C · 1 outside the limit · 1 cooling actions · 53 missed');
-  await expect(out.locator('.rep-all')).toHaveText('2 rooms · 5 readings · 2 outside the limit · 1 cooling actions · 107 missed');
+  await expect(r2b.locator('td').nth(5)).toHaveText('Over max: cooling action');
+  await expect(r2b).not.toHaveClass(/warn/);                                             // a cooling action is not outside; a PM with no reading is blank
+  await expect(out).not.toContainText('Missed');                                         // owner ruling 27 Nov: never marked missed
+  await expect(r2.locator('.rep-sum')).toHaveText('3 readings · lowest 9.0 °C · highest 27.0 °C · 1 outside the limit · 1 cooling actions');
+  await expect(out.locator('.rep-all')).toHaveText('2 rooms · 5 readings · 2 outside the limit · 1 cooling actions');
   // one room only
   await page.locator('#repUnit').selectOption('area-r2');
   await expect(out.locator('.rep-room')).toHaveCount(1);
