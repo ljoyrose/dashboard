@@ -1,5 +1,5 @@
 /*!
- * BLDLazy - load a page's heavier parts the first time they are needed, not on first open (OV11 / Lisa, 15 Nov 2026).
+ * BLDLazy - load a page's heavier parts the first time they are needed, not on first open (OV11 / the owner, 15 Nov 2026).
  *   BLDLazy.load(['a.js','b.js'])  -> Promise; the scripts run in the order given, each fetched once per page.
  *   BLDLazy.loaded('a.js')         -> true once that script has run.
  * A failed script rejects the promise and may be tried again (it is forgotten, so the next call fetches it anew).
