@@ -1,4 +1,4 @@
-// Main dashboard: https://ljoyrose.github.io/dashboard/
+// Main dashboard: https://dashboard-eyo.pages.dev/
 const { test, expect, buildWorld } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 const { at } = require('../support/site');
