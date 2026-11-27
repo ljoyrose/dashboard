@@ -139,3 +139,26 @@ plain('a failed save says so and the row stays', async ({ page }) => {
   await expect(page.locator('#work-W901 [data-saved="bad"]')).toHaveText('Not saved: Pretend failure. Nothing changed; try again.');
   await expect(page.locator('#work-W901')).toBeVisible();
 });
+
+// Photo after Done (shared helper staff/lib/evidence-photo.js): the done row is saved first, then a photo may join it as evidence.
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+plain('Done on Outstanding offers a photo under the done note; a chosen one is linked to the saved row @regression', async ({ page }) => {
+  const sent = await openWork(page);
+  await page.locator('#work-W901 [data-wk-done]').click();
+  await expect(page.locator('#work-W901')).toHaveCount(0);
+  const offer = page.locator('[data-done-photo="work"] [data-ev-photo]');
+  await expect(offer).toContainText('Add photo');
+  expect(sent).toHaveLength(1);   // the done row is saved before any photo
+  await offer.locator('input[type=file]').setInputFiles({ name: 'screws.png', mimeType: 'image/png', buffer: Buffer.from(PNG, 'base64') });
+  await expect(offer).toContainText('Photo kept');
+  expect(sent.map((b) => b.action)).toEqual(['add', 'file_add', 'link_add']);
+  expect(sent[2].fields).toMatchObject({ from_table: 'requirement', from_id: 'req-new-1', role: 'evidence', to_table: 'files', to_id: 'req-new-2' });
+});
+
+withRows(null, ['r-np,ten-x,job.done_photo.work,no,2020-01-01,Owner setting,,2020-01-01T00:00:00Z,sc-aaaaaa,,'])('with job.done_photo.work = no, Done offers no photo', async ({ page }) => {
+  const sent = await openWork(page);
+  await page.locator('#work-W901 [data-wk-done]').click();
+  await expect(page.locator('[data-wk-note="W901"]')).toContainText('W901: done.');
+  await expect(page.locator('[data-ev-photo]')).toHaveCount(0);
+  expect(sent).toHaveLength(1);
+});

@@ -149,6 +149,7 @@ test.describe('CD Hub: record an SOP check', () => {
     const kept = await ticks.nth(1).inputValue();
     await body.locator('[data-sop-save="microchip_check"]').click();
     await expect(body).toContainText('1 due');
+    await expect(body.locator('[data-sop-record="microchip_check"] [data-done-photo="microchip_check"] [data-ev-photo]')).toContainText('Add photo');   // photo after Done
     expect(sent).toHaveLength(1);
     expect(sent[0].action).toBe('add');
     expect(sent[0].table).toBe('check_log');
@@ -221,5 +222,37 @@ test.describe('CD Hub: record an SOP check', () => {
     expect(sent[1].fields.check_type_id).toBe('t-nails');
     expect(sent[1].fields.taken_by).toBeUndefined();
     await expect(page.locator('#compJobs tr[data-job="nails"] td[data-n="due"]')).toHaveText(String(dueBefore - 1));
+  });
+  // Photo after a Jobs-row tick (shared helper staff/lib/evidence-photo.js): one photo joins every dog row just saved.
+  test('a Jobs row tick for dogs offers a photo; a chosen one is linked to each saved dog row @regression', async ({ page, guard }) => {
+    addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['t-nails,t,nails,Pretend nails,dog,true,2020-01-01,,28,,,Care Check']));
+    await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) { /* private */ } }, URL_);
+    const sent = [];
+    await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => {
+      const b = JSON.parse(route.request().postData() || '{}'); sent.push(b);
+      const id = b.action === 'file_add' ? 'fil-1' : b.action === 'link_add' ? 'lnk-' + sent.length : 'clg-' + sent.length;
+      const many = b.fields && b.fields.dog_ids ? b.fields.dog_ids.split('|').map((d, i) => 'clg-d' + i) : undefined;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id, ids: many, at: '2026-11-20T12:00:00.000Z' } }) });
+    });
+    await HUBS.cdhub.open(page, guard);
+    await tab(page, 'compliance');
+    const nails = page.locator('#compJobs tr[data-job="nails"]');
+    await nails.getByRole('button', { name: 'Done: Pretend nails' }).click();
+    const ticks = nails.locator('[data-job-tick="nails"]');
+    const n = await ticks.count();
+    expect(n).toBeGreaterThan(1);
+    for (let i = 0; i < n; i++) await ticks.nth(i).check();
+    await nails.getByRole('button', { name: 'Done: Pretend nails' }).click();
+    const offer = page.locator('#compJobs tr[data-job="nails"] [data-done-photo="nails"] [data-ev-photo]');
+    await expect(offer).toContainText('Add photo');
+    const saves = sent.length;
+    expect(sent.every((b) => b.table === 'check_log')).toBe(true);   // the dog rows are saved before any photo
+    await offer.locator('input[type=file]').setInputFiles({ name: 'nails.png', mimeType: 'image/png',
+      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+    await expect(offer).toContainText('Photo kept');
+    const links = sent.slice(saves).filter((b) => b.action === 'link_add');
+    expect(sent.slice(saves).filter((b) => b.action === 'file_add')).toHaveLength(1);
+    expect(links.length).toBeGreaterThanOrEqual(n);
+    links.forEach((l) => expect(l.fields).toMatchObject({ from_table: 'check_log', role: 'evidence', to_table: 'files', to_id: 'fil-1' }));
   });
 });
