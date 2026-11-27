@@ -125,7 +125,7 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .card .card{box-shadow:none}
 
 
-.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{
+.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd):not(.phbtn):not(.gx):not(.ged):not(.gpick),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{
  font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);
  min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;box-sizing:border-box;line-height:1.2}
 .filt input,.sbox input,.tmp input,#rdate,.frow input{font-weight:400;cursor:text}
@@ -135,7 +135,7 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .filt select,.fpanel select,.sortsel{padding:0 10px}
 .btn[disabled],#main button[disabled]{cursor:not-allowed;opacity:.6}
 @media (hover:hover){.filt select:hover, .fpanel select:hover, .frow select:hover {background:var(--hov);}
-.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):not(.jd):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
+.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):not(.jd):not(.phbtn):not(.gx):not(.ged):not(.gpick):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
 .sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{background:var(--sel-fill);outline:1px solid var(--sel-bd);outline-offset:-1px;}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
 .sv-line{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--ink)}.sv-ic{display:inline-flex}.sv-ic svg{width:16px;height:16px}
@@ -150,8 +150,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
 .sbox input:is(:focus,:focus-visible){outline:none!important}
 .sbox:focus-within{border-color:var(--ink)}
-/* any touch screen too (the owner 17 Nov 2026: the folding phone open is 860px wide) */
-@media (max-width:544px),(pointer:coarse){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
+/* any touch screen too (Lisa 17 Nov 2026: the folding phone open is 860px wide) */
+@media (max-width:544px),(pointer:coarse){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd):not(.phbtn):not(.gx):not(.ged):not(.gpick),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
 
 
 .pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
@@ -404,13 +404,24 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .gph img.off{visibility:hidden}
 /* × remove and ✎ edit on the photo itself (the owner 17 Nov 2026: "still not got a x to remove a bad image") */
 .gph{position:relative}
-.gx,.ged{all:unset;box-sizing:border-box;position:absolute;top:4px;width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;
- background:var(--card);color:var(--ink);border:1px solid var(--line);font-size:var(--fs-head);line-height:1;cursor:pointer}
-.gx{right:4px}.ged{left:4px;font-size:var(--fs-body)}
+.gx,.ged{all:unset}
+#main .gph .gx,#main .gph .ged{box-sizing:border-box;position:absolute;top:4px;width:24px;height:24px;min-width:24px;min-height:24px;max-width:24px;max-height:24px;padding:0;border-radius:999px;display:flex;align-items:center;justify-content:center;
+ background:color-mix(in srgb,var(--card) 65%,transparent);color:var(--ink);border:1px solid var(--line);font-size:var(--fs-small);line-height:1;cursor:pointer;opacity:.85}
+.gx{right:4px}.ged{left:4px}
+#main .gph .gpick{box-sizing:border-box;position:absolute;left:4px;bottom:4px;width:24px;height:24px;min-width:24px;min-height:24px;max-width:24px;max-height:24px;padding:0;border-radius:12px;border:1px solid var(--line);background:color-mix(in srgb,var(--card) 80%,transparent);color:var(--ink);font-size:var(--fs-small);line-height:1;cursor:pointer}
+.gal:not([data-select]) .gpick{display:none}
+.gpick[aria-pressed="true"]{background:var(--sel-fill)}
+.gal-bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gal:not([data-select]) .gal-bulk{display:none}
 .gx:focus-visible,.ged:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .gi .gtools{display:flex;gap:4px;flex-wrap:wrap}
 .gi .gtools .cb{font-size:var(--fs-small)}
 .gal-ended{margin-top:8px}
+.psort{position:fixed;inset:0;z-index:900;display:flex;align-items:stretch;justify-content:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
+.psort-in{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:100%;max-width:880px;max-height:calc(100dvh - 24px);display:grid;grid-template-rows:auto auto minmax(120px,1fr) auto auto;gap:10px;font-family:var(--house-font);min-height:0}
+.psort-pic{width:100%;height:100%;min-height:0;object-fit:contain;background:var(--soft);border:1px solid var(--line);border-radius:var(--radius);touch-action:pan-y}
+.psort-count{margin:0}
+.psort-btns{display:flex;flex-wrap:wrap;gap:8px}.psort-btns .btn{flex:1 1 120px}
 /* photo crop step (12 Nov 2026): white sheet, 12px corners, 1px lines; works by touch */
 .pcrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
 .pcrop-in{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px;font-family:var(--house-font)}
@@ -2874,6 +2885,53 @@ function pawDogPhoto(img){
  var paw=img.parentNode&&img.parentNode.querySelector('[data-paw]');
  if(paw) paw.classList.remove('off');
 }
+var PHOTO_MEM={}, PHOTO_URLS_KEY='cdhub.photo.urls', PHOTO_CACHE='cdhub-photos-v1';
+function photoUrlsGet(){ try{ var o=JSON.parse(localStorage.getItem(PHOTO_URLS_KEY)||'{}'); return o&&typeof o==='object'?o:{}; }catch(e){ return {}; } }
+function photoUrlsSet(o){ try{ localStorage.setItem(PHOTO_URLS_KEY, JSON.stringify(o)); }catch(e){} }
+function thumbSize(url){ url=String(url||''); if(!url) return ''; var re=/=s\d+/; return re.test(url)?url.replace(re,'=s200'):url; }
+function photoCacheOpen(){ try{ return window.caches?caches.open(PHOTO_CACHE):Promise.resolve(null); }catch(e){ return Promise.resolve(null); } }
+function photoCacheKey(kind,id){ return 'https://cdhub.photo/'+kind+'/'+encodeURIComponent(id); }
+function photoCacheGet(kind,id){ return photoCacheOpen().then(function(c){ return c?c.match(photoCacheKey(kind,id)):null; }).then(function(res){ return res?res.blob():null; }).catch(function(){ return null; }); }
+function photoCachePut(kind,id,blob){ if(!blob) return Promise.resolve(); return photoCacheOpen().then(function(c){ if(!c) return; return c.put(photoCacheKey(kind,id), new Response(blob,{headers:{'Content-Type':blob.type||'image/jpeg'}})); }).catch(function(){}); }
+function photoMemUrl(id,kind,blob){ var slot=PHOTO_MEM[id]||(PHOTO_MEM[id]={}); if(slot[kind]) return slot[kind]; var url=URL.createObjectURL(blob); slot[kind]=url; DOGPHOTO_URLS.push(url); return url; }
+function photoRememberLink(id,link){ var o=photoUrlsGet(); o[id]={thumb:link,at:Date.now()}; photoUrlsSet(o); var slot=PHOTO_MEM[id]||(PHOTO_MEM[id]={}); slot.thumbLink=link; }
+function photoShow(img,url,id){ if(!img||!url) return; img.src=url; if(id) img.setAttribute('data-loaded',id); showDogPhoto(img); }
+function loadGalleryThumb(img){
+ var id=img&&(img.getAttribute('data-gal-id')||img.getAttribute('data-photo-id')); if(!id) return;
+ img.setAttribute('loading','lazy'); img.setAttribute('data-photo-id',id);
+ var mem=PHOTO_MEM[id]; if(mem&&mem.thumb){ photoShow(img,mem.thumb,id); return; }
+ photoCacheGet('thumb',id).then(function(blob){
+  if(!img.isConnected) return;
+  if(blob){ photoShow(img,photoMemUrl(id,'thumb',blob),id); return; }
+  var saved=photoUrlsGet()[id], link=(mem&&mem.thumbLink)||(saved&&saved.thumb)||'';
+  if(link){ fetchThumb(img,id,link); return; }
+  if(!TOKEN){ pawDogPhoto(img); return; }
+  gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
+   var raw=meta&&meta.thumbnailLink, sized=thumbSize(raw);
+   if(sized&&/^https:\/\//i.test(sized)){ photoRememberLink(id,sized); fetchThumb(img,id,sized); }
+  }).catch(function(){});
+ });
+}
+function fetchThumb(img,id,link){
+ if(PHOTO_MEM[id]&&PHOTO_MEM[id].thumb){ photoShow(img,PHOTO_MEM[id].thumb,id); return; }
+ var slot=PHOTO_MEM[id]||(PHOTO_MEM[id]={}); slot.thumb=link;
+ photoShow(img,link,id);
+}
+function photoFull(id){
+ if(!id) return Promise.resolve('');
+ var mem=PHOTO_MEM[id]; if(mem&&mem.full) return Promise.resolve(mem.full);
+ return photoCacheGet('full',id).then(function(blob){
+  if(blob) return photoMemUrl(id,'full',blob);
+  if(!TOKEN) return '';
+  return DashKit.googleFetch(DRIVE+'/'+encodeURIComponent(id)+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
+   if(!res.ok) return null; return res.blob();
+  }).then(function(blob){ if(!blob||!/^image\//.test(blob.type||'')) return ''; photoCachePut('full',id,blob); return photoMemUrl(id,'full',blob); });
+ }).catch(function(){ return ''; });
+}
+function photoPreloadNeighbours(){
+ var S=PHOTO_SORT; if(!S) return;
+ [S.i-1,S.i+1].forEach(function(n){ if(n<0||n>=S.list.length) return; var id=dogPhotoId(S.list[n].drive_file_id); if(id) photoFull(id); });
+}
 function dogPhotoBytes(img,id){
  img.setAttribute('data-tried','bytes');
  if(!TOKEN){ pawDogPhoto(img); return; }
@@ -2908,6 +2966,13 @@ function photoImgs(id,scope){
  return out;
 }
 function loadPhotoImg(img){
+  if(img&&img.classList&&img.classList.contains('galph')){ loadGalleryThumb(img); return; }
+  var id=img.getAttribute('data-photo-id');
+  if(!id||!TOKEN){ pawDogPhoto(img); return; }
+  var mem=PHOTO_MEM[id]; if(mem&&(mem.thumb||mem.full)){ photoShow(img,mem.thumb||mem.full,id); return; }
+  if(img.getAttribute('data-wired')==='1') return;
+  img.setAttribute('data-wired','1');
+  img.addEventListener('load', function(){ if(img.getAttribute('src')) showDogPhoto(img); });
   var id=img.getAttribute('data-photo-id'), main=isMainPhoto(img);
   applyTurn(img);
   if(!id||!TOKEN){ pawDogPhoto(img); return; }
@@ -2919,15 +2984,18 @@ function loadPhotoImg(img){
    img.setAttribute('data-tried','bytes');
    dogPhotoBytes(img,id);
   });
-  gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
-   var link=meta&&meta.thumbnailLink;
-   if(link&&/^https:\/\//i.test(link)){ img.src=link; return; }
-   dogPhotoBytes(img,id);
-  }).catch(function(){ dogPhotoBytes(img,id); });
+  photoCacheGet('thumb',id).then(function(blob){
+   if(blob){ photoShow(img,photoMemUrl(id,'thumb',blob),id); return; }
+   gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
+    var link=thumbSize(meta&&meta.thumbnailLink);
+    if(link&&/^https:\/\//i.test(link)){ photoRememberLink(id,link); fetchThumb(img,id,link); return; }
+    dogPhotoBytes(img,id);
+   }).catch(function(){ dogPhotoBytes(img,id); });
+  });
 }
 /* Main photo + gallery : files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subject',d.id,todayISO()); }
-/* The card shows the chosen (main) photo. A photo that was removed stays off the card even if the old photo cell still names it. */
+/* The card shows the open main link. The old photo cell is used only when there is no open main, and never when that file has ended. */
 function cardPhotoId(d,ph){
  var main=ph&&ph.main&&dogPhotoId(ph.main.drive_file_id);
  if(main) return main;
@@ -2954,7 +3022,8 @@ function galleryTools(f,main,ended){
 /* the × and ✎ that sit on a gallery photo (not in the Ended list) */
 function galleryPhotoMarks(f,ended){
  if(ended||!f.link_id) return '';
- return '<button type="button" class="ged" data-gal-edit="'+esc(f.id)+'" aria-label="Crop or adjust this photo" title="Crop or adjust">\u270e</button>'
+ return '<button type="button" class="gpick" data-gal-pick="'+esc(f.id)+'" aria-pressed="false" aria-label="Select this photo">\u2713</button>'
+  +'<button type="button" class="ged" data-gal-edit="'+esc(f.id)+'" aria-label="Crop or adjust this photo" title="Crop or adjust">\u270e</button>'
   +'<button type="button" class="gx" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this photo from the gallery" title="Remove">\u00d7</button>';
 }
 function galleryItem(f,mainId,dates,ended){
@@ -2964,7 +3033,7 @@ function galleryItem(f,mainId,dates,ended){
   var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
   return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
  var id=dogPhotoId(f.drive_file_id); if(!id) return '';
- if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
+ if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-link="'+esc(f.link_id||'')+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" loading="lazy" decoding="async" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
 /* RoseQuest clips (25 Nov 2026). The file stays on RoseQuest; the card stores only the share link. */
@@ -3000,16 +3069,44 @@ function videoHtml(d){
   +'</div></details>';
 }
 function galleryHtml(d,ph){
- if(!ph.gallery.length) return '';   /* ended photos stay in the sheet; the card does not list them  */
- var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
+ if(!ph.gallery.length) return '';
+ var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO()), photos=ph.gallery.some(function(f){ return f.kind==='photo'; });
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
   +'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>'
+  +(photos?'<button type="button" class="btn" data-gal-select="'+esc(d.id)+'">Select</button><span class="gal-bulk"><button type="button" class="btn" data-gal-bulk="'+esc(d.id)+'">Remove selected</button></span><button type="button" class="btn" data-photo-sort="'+esc(d.id)+'">Sort photos</button>':'')
   +'<p class="mut" data-gal-msg role="status">'+esc(GAL_MSG[d.id]||'')+'</p></div></details>';
 }
 /* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
    with the gallery still open. A photo added today can only end today (an end date cannot be before its start), so the
    end reason marks it removed and photos.js treats it as ended straight away. */
-var GAL_REMOVED='Removed from gallery';
+var GAL_REMOVED='Removed from gallery', GAL_EDIT='Removed in gallery edit', GAL_PICK={};
+function galleryBulkRemove(dog){
+ var g=galBox(dog); if(!g) return;
+ var picks=g.querySelectorAll('.gpick[aria-pressed="true"]'), n=picks.length; if(!n) return;
+ if(!window.confirm('Remove '+n+' photo'+(n===1?'':'s')+' from the gallery? The files are kept.')) return;
+ var links=T['BLD-links.csv']||[], ends=[], files=[];
+ Array.prototype.forEach.call(picks, function(btn){
+  var li=btn.closest('.gi'), id=li&&li.getAttribute('data-link');
+  var row=links.filter(function(l){ return l.id===id; })[0];
+  if(!row||String(row.to_date||'').trim()) return;
+  var to=galEndDate(row);
+  row.to_date=to; row.end_reason=GAL_EDIT; row._local=1; linkEndKeep(id,to,GAL_EDIT);
+  ends.push({id:id, to_date:to}); if(li) files.push(li.getAttribute('data-file'));
+ });
+ delete GAL_PICK[dog];
+ var sel=g.querySelector('[data-gal-select]'); if(sel) sel.textContent='Select';
+ g.removeAttribute('data-select');
+ gallerySync(dog);
+ files.forEach(function(fid){ clearCardPhoto(dog, fid); });
+ var msg=g.querySelector('[data-gal-msg]'); if(msg) msg.textContent=ends.length+' saving';
+ sinkSend({action:'link_end', fields:{reason:GAL_EDIT, ends:ends}, request_id:sinkRid()}).then(function(j){
+  var ok=j&&j.ok&&j.result&&j.result.status==='saved';
+  function say(t){ var box=galBox(dog), m=box&&box.querySelector('[data-gal-msg]'); if(m) m.textContent=t; }
+  if(ok){ say('\u2713 Removed '+ends.length); return; }
+  ends.reduce(function(p,e){ return p.then(function(){ return sinkSend({action:'link_end', fields:{id:e.id, to_date:e.to_date, reason:GAL_EDIT}, request_id:sinkRid()}); }); }, Promise.resolve())
+   .then(function(){ say('\u2713 Removed '+ends.length); });
+ });
+}
 /* Take a removed photo off the dog card: end any other open link to the same file, and clear the old photo cell when it is that file. */
 async function clearCardPhoto(dog, fileRowId){
  var files=T['BLD-files.csv']||[], links=T['BLD-links.csv']||[], d=CD._byId[dog]||{}, day=todayLondon();
@@ -3046,6 +3143,7 @@ function linkEndsGet(){ try{ var o=JSON.parse(localStorage.getItem(LINK_ENDS_KEY
 function linkEndsSet(o){ try{ if(Object.keys(o).length) localStorage.setItem(LINK_ENDS_KEY,JSON.stringify(o)); else localStorage.removeItem(LINK_ENDS_KEY); }catch(e){ /* private window: this visit still shows it */ } }
 var LINK_ENDS_MEM={};   /* the same, for a phone that will not keep it */
 function linkEndKeep(id,to,reason){ var o=linkEndsGet(); o[id]={to_date:to,end_reason:reason,at:Date.now()}; LINK_ENDS_MEM[id]=o[id]; linkEndsSet(o); }
+function linkEndDrop(id){ var o=linkEndsGet(); if(!o[id]&&!LINK_ENDS_MEM[id]) return; delete o[id]; delete LINK_ENDS_MEM[id]; linkEndsSet(o); }
 function linkEndsApply(){
  var o=linkEndsGet(); Object.keys(LINK_ENDS_MEM).forEach(function(k){ if(!o[k]) o[k]=LINK_ENDS_MEM[k]; });
  var ids=Object.keys(o); if(!ids.length) return;
@@ -3058,7 +3156,235 @@ function linkEndsApply(){
  });
  if(drop) linkEndsSet(o);
 }
+var PHOTO_SORT=null;
+function galEndDate(row){ var day=todayLondon(), y=dayMinus(day,1); return String((row&&row.from_date)||'').slice(0,10)<=y?y:day; }
+function photoGalleryList(dog){ var ph=dogPhotos(CD._byId[dog]||{id:dog}); return (ph.gallery||[]).filter(function(f){ return f.kind==='photo'&&f.link_id; }); }
+function photoSortPaint(){
+ var S=PHOTO_SORT; if(!S||!S.box) return;
+ var n=S.list.length, item=n?S.list[S.i]:null;
+ S.box.setAttribute('data-file', item?item.id:'');
+ var count=S.box.querySelector('[data-k="sort-count"]');
+ if(count) count.textContent=n?((S.i+1)+' of '+n):'No photos left';
+ var saving=S.box.querySelector('[data-k="sort-saving"]');
+ if(saving){ saving.hidden=!S.saving; saving.textContent=S.saving?(S.saving+' saving'):''; }
+ var img=S.box.querySelector('[data-k="sort-pic"]');
+ if(img){ img.hidden=!item; if(item){ img.alt=item.name||'Photo';
+  if(item._preview) img.src=item._preview;
+  else { var drive=dogPhotoId(item.drive_file_id);
+   if(drive&&img.getAttribute('data-full')!==drive){ img.setAttribute('data-full',drive); photoFull(drive).then(function(url){ if(url&&PHOTO_SORT&&PHOTO_SORT.list[PHOTO_SORT.i]===item) img.src=url; }); } }
+  photoPreloadNeighbours(); } }
+ var mainBtn=S.box.querySelector('[data-sort="main"]'); if(mainBtn) mainBtn.disabled=!item||item.id===S.mainId;
+ ['keep','remove','edit'].forEach(function(k){ var b=S.box.querySelector('[data-sort="'+k+'"]'); if(b) b.disabled=!item; });
+ var undo=S.box.querySelector('[data-sort="undo"]'); if(undo) undo.disabled=!S.stack.length;
+}
+function photoSortQueue(action, fields){
+ var rid=sinkRid(); if(PHOTO_SORT) PHOTO_SORT.saving++; photoSortPaint();
+ var p=sinkSend({action:action, fields:fields, request_id:rid}).then(function(j){
+  if(PHOTO_SORT) PHOTO_SORT.saving=Math.max(0,PHOTO_SORT.saving-1); photoSortPaint(); return j;
+ }, function(){ if(PHOTO_SORT) PHOTO_SORT.saving=Math.max(0,PHOTO_SORT.saving-1); photoSortPaint(); return {ok:false}; });
+ return {rid:rid, p:p};
+}
+function photoSortPutBack(fileId){
+ var S=PHOTO_SORT; if(!S||!fileId) return;
+ var day=todayLondon(), links=T['BLD-links.csv']||(T['BLD-links.csv']=[]), local='local-back-'+sinkRid();
+ links.push({id:local, from_table:'subject', from_id:S.dog, role:'gallery', to_table:'files', to_id:fileId, from_date:day, to_date:'', set_on:day, created_at:new Date().toISOString(), _local:1});
+ photoSortQueue('link_add',{from_table:'subject', from_id:S.dog, role:'gallery', to_table:'files', to_id:fileId, from_date:day, source:'CD Hub, Put back'}).p.then(function(j){
+  if(j&&j.ok&&j.result&&j.result.id){ var row=links.filter(function(l){ return l.id===local; })[0]; if(row) row.id=j.result.id; }
+ });
+}
+function photoSortMove(dir){ var S=PHOTO_SORT; if(!S||!S.list.length) return; var n=S.i+dir; if(n<0||n>=S.list.length) return; S.i=n; photoSortPaint(); }
+function photoSortRemove(){
+ var S=PHOTO_SORT; if(!S||!S.list.length) return;
+ var item=S.list[S.i], links=T['BLD-links.csv']||[], row=links.filter(function(l){ return l.id===item.link_id; })[0], to=galEndDate(row);
+ if(row&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(item.link_id, to, GAL_REMOVED); }
+ var q=photoSortQueue('link_end',{id:item.link_id, to_date:to, reason:GAL_REMOVED});
+ S.stack.push({type:'remove', item:item, index:S.i, q:q});
+ S.list.splice(S.i,1); if(S.i>=S.list.length) S.i=Math.max(0,S.list.length-1); photoSortPaint();
+}
+function photoSortMain(){
+ var S=PHOTO_SORT; if(!S||!S.list.length||S.list[S.i].id===S.mainId) return;
+ var item=S.list[S.i], day=todayLondon(), links=T['BLD-links.csv']||(T['BLD-links.csv']=[]), ended=[], prev=S.mainId, local='local-main-'+sinkRid();
+ links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===S.dog&&l.role==='main'&&!String(l.to_date||'').trim()){
+  ended.push({id:l.id, to_date:l.to_date||'', end_reason:l.end_reason||''}); var to=galEndDate(l); l.to_date=to; l.end_reason='Replaced as main'; l._local=1; } });
+ links.push({id:local, from_table:'subject', from_id:S.dog, role:'main', to_table:'files', to_id:item.id, from_date:day, to_date:'', set_on:day, created_at:new Date().toISOString(), _local:1});
+ S.mainId=item.id;
+ var q=photoSortQueue('link_add',{from_table:'subject', from_id:S.dog, role:'main', to_table:'files', to_id:item.id, from_date:day, source:'CD Hub, Make main'});
+ S.stack.push({type:'main', prev:prev, localId:local, ended:ended, q:q}); photoSortPaint();
+}
+function photoSortUndo(){
+ var S=PHOTO_SORT; if(!S||!S.stack.length) return;
+ var a=S.stack.pop();
+ if(a.type==='keep') S.i=a.from;
+ else if(a.type==='remove'){ S.list.splice(a.index,0,a.item); S.i=a.index; photoSortPutBack(a.item.id); }
+ else if(a.type==='main'){
+  var links=T['BLD-links.csv']||[], i=links.findIndex(function(l){ return l.id===a.localId; }); if(i>=0) links.splice(i,1);
+  a.ended.forEach(function(s){ var l=links.filter(function(x){ return x.id===s.id; })[0]; if(l){ l.to_date=s.to_date; l.end_reason=s.end_reason; } });
+  S.mainId=a.prev; hubDrop(a.q.rid);
+  if(a.prev) a.q.p.then(function(j){ if(j&&j.ok) photoSortQueue('link_add',{from_table:'subject', from_id:S.dog, role:'main', to_table:'files', to_id:a.prev, from_date:todayLondon(), source:'CD Hub, Make main'}); });
+ } else if(a.type==='edit'){ a.token.undone=true; if(S.list[a.index]&&S.list[a.index]._editing) S.list[a.index]=a.prev; S.i=a.index; }
+ photoSortPaint();
+}
+function photoSortEditFail(at, old, token){
+ var S=PHOTO_SORT; if(!S||token.undone) return;
+ if(S.list[at]&&S.list[at]._editing) S.list[at]=old;
+ var note=S.box&&S.box.querySelector('[data-k="sort-note"]'); if(note) note.textContent='That edit was not saved. The original photo is still here.';
+ photoSortPaint();
+}
+function photoSortSaveEdit(pic){
+ var S=PHOTO_SORT; if(!S||!S.list.length) return;
+ var at=S.i, old=S.list[at], token={undone:false}, day=todayLondon();
+ S.list[at]=Object.assign({}, old, {_preview:'data:'+pic.mime+';base64,'+pic.b64, _editing:true});
+ S.stack.push({type:'edit', index:at, prev:old, token:token});
+ if(at<S.list.length-1) S.i=at+1;
+ S.saving++; photoSortPaint();
+ var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]), files=T['BLD-files.csv']||(T['BLD-files.csv']=[]), done=false;
+ function finish(){ if(done) return; done=true; if(PHOTO_SORT) PHOTO_SORT.saving=Math.max(0,PHOTO_SORT.saving-1); photoSortPaint(); }
+ sinkSend({action:'file_add', fields:{kind:'photo', mime:pic.mime, data_base64:pic.b64, name:'edited-photo.jpg', taken_on:String(old.taken_on||day).slice(0,10), source:'Edited copy of '+old.id}, request_id:sinkRid()}).then(function(j){
+  if(token.undone||!(j&&j.ok&&j.result&&j.result.id)){ if(!token.undone) photoSortEditFail(at, old, token); finish(); return; }
+  var nid=j.result.id, drive=j.result.drive_file_id||'';
+  if(!files.some(function(x){ return x.id===nid; })) files.push({id:nid, kind:'photo', drive_file_id:drive, mime:pic.mime, name:'edited-photo.jpg', taken_on:old.taken_on||day, set_on:day, created_at:new Date().toISOString()});
+  if(PHOTO_SORT&&PHOTO_SORT.list[at]&&PHOTO_SORT.list[at]._editing){ PHOTO_SORT.list[at].id=nid; PHOTO_SORT.list[at].drive_file_id=drive; PHOTO_SORT.list[at]._editing=false; }
+  return sinkSend({action:'link_add', fields:{from_table:'subject', from_id:S.dog, role:'gallery', to_table:'files', to_id:nid, from_date:day, source:'CD Hub, Edited copy'}, request_id:sinkRid()}).then(function(k){
+   if(token.undone||!(k&&k.ok&&k.result&&k.result.status==='saved')){ if(!token.undone) photoSortEditFail(at, old, token); finish(); return; }
+   var newLink=k.result.id||'';
+   links.push({id:newLink, from_table:'subject', from_id:S.dog, role:'gallery', to_table:'files', to_id:nid, from_date:day, to_date:'', set_on:day, created_at:new Date().toISOString()});
+   if(PHOTO_SORT&&PHOTO_SORT.list[at]) PHOTO_SORT.list[at].link_id=newLink;
+   if(token.undone){ var back=galEndDate({from_date:day}); return sinkSend({action:'link_end', fields:{id:newLink, to_date:back, reason:GAL_REMOVED}, request_id:sinkRid()}).then(finish, finish); }
+   var row=links.filter(function(l){ return l.id===old.link_id; })[0], to=galEndDate(row);
+   if(row&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_EDITED; row._local=1; linkEndKeep(old.link_id, to, GAL_EDITED); }
+   return sinkSend({action:'link_end', fields:{id:old.link_id, to_date:to, reason:GAL_EDITED}, request_id:sinkRid()}).then(finish, finish);
+  });
+ }).then(null, finish);
+}
+async function photoLoadDrive(drive){
+ var url=await photoFull(drive); if(!url) return null;
+ var img=new Image();
+ await new Promise(function(ok,no){ img.onload=ok; img.onerror=no; img.src=url; });
+ return img;
+}
+function photoTour(dog, fileId){
+ var list=photoGalleryList(dog), at=0; list.forEach(function(x,i){ if(x.id===fileId) at=i; });
+ return {list:list, at:function(){ return at; },
+  hasPrev:function(){ return at>0; }, hasNext:function(){ return at<list.length-1; },
+  file:function(){ return list[at]||null; },
+  step:function(dir){ var n=at+dir; if(n<0||n>=list.length) return Promise.resolve(null);
+   return photoLoadDrive(dogPhotoId(list[n].drive_file_id)).then(function(im){ if(im) at=n; return im; }); } };
+}
+async function photoSortEdit(){
+ var S=PHOTO_SORT; if(!S||!S.list.length) return;
+ var item=S.list[S.i], img=await photoLoadDrive(dogPhotoId(item.drive_file_id));
+ if(!img){ var note=S.box.querySelector('[data-k="sort-note"]'); if(note) note.textContent='The photo could not be opened.'; return; }
+ var tour={hasPrev:function(){ return S.i>0; }, hasNext:function(){ return S.i<S.list.length-1; }, file:function(){ return S.list[S.i]; },
+  step:function(dir){ var n=S.i+dir; if(n<0||n>=S.list.length) return Promise.resolve(null);
+   return photoLoadDrive(dogPhotoId(S.list[n].drive_file_id)).then(function(im){ if(!im) return null; S.i=n; photoSortPaint(); return im; }); }};
+ var pic=await photoCrop(img,'',{tour:tour});
+ if(!PHOTO_SORT) return;
+ if(!pic){ photoSortPaint(); return; }
+ if(pic.galleryRemove){ photoSortRemove(); return; }
+ if(pic.error){ var n2=S.box.querySelector('[data-k="sort-note"]'); if(n2) n2.textContent=pic.error; return; }
+ photoSortSaveEdit(pic);
+}
+function galBox(dog){ return document.querySelector('details.gal[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'); }
+function galleryRetile(li,f,mainId,dates,ended){
+ var img=li.querySelector('img.galph'), drive=dogPhotoId(f.drive_file_id);
+ var box=document.createElement('div'); box.innerHTML=galleryItem(f,mainId,dates,ended);
+ var neu=box.firstChild; if(!neu) return li;
+ var fresh=neu.querySelector('img.galph');
+ if(img&&fresh&&img.getAttribute('data-gal-id')===drive&&img.getAttribute('src')) fresh.replaceWith(img);
+ else if(fresh) loadGalleryThumb(fresh);
+ li.replaceWith(neu); return neu;
+}
+function cardPhotoSync(dog,ph){
+ var card=document.querySelector('.dc[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'); if(!card) return;
+ var img=card.querySelector('img.dogphoto'); if(!img) return;
+ var id=cardPhotoId(CD._byId[dog]||{id:dog},ph); if(!id) return;
+ if(img.getAttribute('data-photo-id')===id&&img.getAttribute('src')) return;
+ img.setAttribute('data-photo-id',id);
+ var mem=PHOTO_MEM[id]; if(mem&&(mem.thumb||mem.full)){ photoShow(img,mem.thumb||mem.full,id); return; }
+ loadGalleryThumb(img);
+}
+function gallerySync(dog){
+ var g=galBox(dog); if(!g) return;
+ var d=CD._byId[dog]||{id:dog}, ph=dogPhotos(d), dates=photoDatesOn(todayISO()), word=ph.galleryLabel||'Photos';
+ var label=g.querySelector(':scope > summary .dcs-label'); if(label) label.textContent=word+' ('+ph.gallery.length+')';
+ var bd=g.querySelector(':scope > .dcs-bd'); if(!bd) return;
+ var open=bd.querySelector(':scope > ul.glist');
+ if(!open){ open=document.createElement('ul'); open.className='glist'; bd.insertBefore(open,bd.firstChild); }
+ var pool={}; Array.prototype.forEach.call(g.querySelectorAll('.gi[data-file]'),function(li){ pool[li.getAttribute('data-file')]=li; });
+ function fill(list,ul,ended){
+  if(!ul) return; var keep={};
+  list.forEach(function(f){
+   if(f.kind!=='photo'&&f.kind!=='link'&&f.kind!=='upload') return;
+   var li=pool[f.id];
+   if(li&&f.kind==='photo') li=galleryRetile(li,f,ph.main&&ph.main.id,dates,ended);
+   else if(!li){ var box=document.createElement('div'); box.innerHTML=galleryItem(f,ph.main&&ph.main.id,dates,ended); li=box.firstChild;
+    var im=li&&li.querySelector('img.galph'); if(im) loadGalleryThumb(im); }
+   if(!li) return; pool[f.id]=li; keep[f.id]=1; ul.appendChild(li);
+  });
+  Array.prototype.forEach.call(ul.querySelectorAll(':scope > .gi'),function(li){ if(!keep[li.getAttribute('data-file')]) li.remove(); });
+ }
+ fill(ph.gallery,open,false);
+ var det=bd.querySelector(':scope > details.gal-ended'); if(det) det.remove();
+ cardPhotoSync(dog,ph);
+}
+function photoSortClose(){
+ var dog=PHOTO_SORT&&PHOTO_SORT.dog, box=PHOTO_SORT&&PHOTO_SORT.box, key=PHOTO_SORT&&PHOTO_SORT.key;
+ if(key) document.removeEventListener('keydown', key, true);
+ if(box) box.remove(); PHOTO_SORT=null;
+ if(dog) gallerySync(dog);
+ var again=dog&&galBox(dog); if(again) again.open=true;
+}
+function photoSortOpen(dog){
+ if(PHOTO_SORT) photoSortClose();
+ var list=photoGalleryList(dog); if(!list.length) return;
+ var ph=dogPhotos(CD._byId[dog]||{id:dog});
+ var box=document.createElement('div');
+ box.className='psort'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','sortT'); box.setAttribute('data-k','photo-sort');
+ box.innerHTML='<div class="psort-in"><h3 id="sortT">Sort photos</h3>'
+  +'<p class="psort-count" data-k="sort-count"></p><p class="mut" data-k="sort-saving" hidden></p>'
+  +'<img class="psort-pic" data-k="sort-pic" alt="">'
+  +'<p class="mut" data-k="sort-note" role="status"></p>'
+  +'<div class="psort-btns"><button type="button" class="btn yes" data-sort="keep">Keep</button>'
+  +'<button type="button" class="btn" data-sort="remove">Remove</button><button type="button" class="btn" data-sort="edit">Edit</button>'
+  +'<button type="button" class="btn" data-sort="main">Make main</button><button type="button" class="btn" data-sort="undo">Undo last</button>'
+  +'<button type="button" class="btn" data-sort="done">Done</button></div></div>';
+ document.body.appendChild(box);
+ PHOTO_SORT={dog:dog, list:list.slice(), i:0, mainId:ph.main&&ph.main.id||'', stack:[], saving:0, box:box};
+ function key(e){ if(!PHOTO_SORT||document.querySelector('.pcrop')) return;
+  if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) return;
+  if(e.key==='Escape'){ e.preventDefault(); photoSortClose(); }
+  else if(e.key==='ArrowRight'){ e.preventDefault(); photoSortMove(1); }
+  else if(e.key==='ArrowLeft'){ e.preventDefault(); photoSortMove(-1); } }
+ PHOTO_SORT.key=key; document.addEventListener('keydown', key, true);
+ box.addEventListener('click', function(e){ var b=e.target&&e.target.closest?e.target.closest('[data-sort]'):null; if(!b||b.disabled) return;
+  var act=b.getAttribute('data-sort');
+  if(act==='done') photoSortClose();
+  else if(act==='keep'){ var from=PHOTO_SORT.i; photoSortMove(1); if(PHOTO_SORT&&PHOTO_SORT.i!==from) PHOTO_SORT.stack.push({type:'keep', from:from}); photoSortPaint(); }
+  else if(act==='remove') photoSortRemove();
+  else if(act==='main') photoSortMain();
+  else if(act==='undo') photoSortUndo();
+  else if(act==='edit') photoSortEdit(); });
+ var pic=box.querySelector('[data-k="sort-pic"]'), sx=0, sy=0, down=false;
+ pic.addEventListener('pointerdown', function(e){ sx=e.clientX; sy=e.clientY; down=true; });
+ pic.addEventListener('pointerup', function(e){ if(!down) return; down=false; var dx=e.clientX-sx, dy=e.clientY-sy; if(Math.abs(dx)<48||Math.abs(dx)<Math.abs(dy)) return; photoSortMove(dx<0?1:-1); });
+ photoSortPaint(); var keep=box.querySelector('[data-sort="keep"]'); if(keep) keep.focus();
+}
 document.addEventListener('click',async function(ev){
+ var sortBtn=ev.target&&ev.target.closest?ev.target.closest('[data-photo-sort]'):null;
+ if(sortBtn){ ev.preventDefault(); photoSortOpen(sortBtn.getAttribute('data-photo-sort')); return; }
+ var selBtn=ev.target&&ev.target.closest?ev.target.closest('[data-gal-select]'):null;
+ if(selBtn){ ev.preventDefault(); var sd=selBtn.getAttribute('data-gal-select'), sg=galBox(sd); if(!sg) return;
+  if(sg.getAttribute('data-select')){ delete GAL_PICK[sd]; sg.removeAttribute('data-select'); selBtn.textContent='Select'; }
+  else { GAL_PICK[sd]={}; sg.setAttribute('data-select','1'); selBtn.textContent='Done'; }
+  var sb=sg.querySelector('[data-gal-bulk]'); if(sb) sb.textContent='Remove selected'; return; }
+ var tick=ev.target&&ev.target.closest?ev.target.closest('[data-gal-pick]'):null;
+ if(tick){ ev.preventDefault(); var tg=tick.closest('details.gal'), td=tg&&tg.getAttribute('data-dog'), on=tick.getAttribute('aria-pressed')!=='true';
+  tick.setAttribute('aria-pressed', on?'true':'false'); var bag=GAL_PICK[td]||(GAL_PICK[td]={});
+  if(on) bag[tick.getAttribute('data-gal-pick')]=1; else delete bag[tick.getAttribute('data-gal-pick')];
+  var nb=tg.querySelectorAll('.gpick[aria-pressed="true"]').length, bb=tg.querySelector('[data-gal-bulk]');
+  if(bb) bb.textContent='Remove selected'+(nb?' ('+nb+')':''); return; }
+ var bulk=ev.target&&ev.target.closest?ev.target.closest('[data-gal-bulk]'):null;
+ if(bulk){ ev.preventDefault(); galleryBulkRemove(bulk.getAttribute('data-gal-bulk')); return; }
  var all=ev.target&&ev.target.closest?ev.target.closest('[data-video-all]'):null;
  if(all){ VIDEO_MORE[all.getAttribute('data-video-all')]=1; var det=all.closest('details'); drawDogs();
   var again=document.querySelector('details.vids[data-dog="'+all.getAttribute('data-video-all')+'"]'); if(again) again.open=true; return; }
@@ -3079,29 +3405,36 @@ document.addEventListener('click',async function(ev){
  b.disabled=true; if(msg) msg.textContent='Saving\u2026'; GAL_MSG[dog]='Saving\u2026';
  if(b.hasAttribute('data-gal-end')){
   var id=b.getAttribute('data-gal-end'), row=links.filter(function(l){ return l.id===id; })[0]||{};
-  var y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;   /* gone from today; never before its start */
+  var to=galEndDate(row), wasTo=row.to_date||'', wasWhy=row.end_reason||'';
+  if(row.id&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); }
+  gallerySync(dog);
   j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
-  /* already ended (22 Nov 2026): this phone was showing an old copy, and the photo was removed before. It is gone, so
-     the screen says so instead of "Not saved". */
   if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
-  if(j.ok&&j.result&&j.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); linkEndsApply();
-   await clearCardPhoto(dog, row.to_id); }
+  if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
+   linkEndDrop(id);
+   var back=(T['BLD-links.csv']||[]).filter(function(l){ return l.id===id; })[0];
+   if(back){ back.to_date=wasTo; back.end_reason=wasWhy; delete back._local; }
+   if(row.id&&row!==back){ row.to_date=wasTo; row.end_reason=wasWhy; }
+   gallerySync(dog);
+   GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); var mBad=galBox(dog); if(mBad){ mBad.open=true; var mm=mBad.querySelector('[data-gal-msg]'); if(mm) mm.textContent=GAL_MSG[dog]; }
+   return; }
+  clearCardPhoto(dog, row.to_id);
  } else {
   var fid=b.getAttribute('data-gal-back')||b.getAttribute('data-gal-main'), role=b.hasAttribute('data-gal-main')?'main':'gallery';
+  if(role==='main') links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
+  var local='local-'+sinkRid();
+  links.push({id:local,from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString(),_local:1});
+  gallerySync(dog);
   j=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,source:'CD Hub, '+(role==='main'?'Make main':'Put back')});
-  if(j.ok&&j.result&&j.result.status==='saved'){
-   if(role==='main') links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
-   links.push({id:j.result.id||'',from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()}); }
+  if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
+   var ix=links.findIndex(function(l){ return l.id===local; }); if(ix>=0) links.splice(ix,1); gallerySync(dog);
+   GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); var mNo=galBox(dog); if(mNo){ mNo.open=true; var mn=mNo.querySelector('[data-gal-msg]'); if(mn) mn.textContent=GAL_MSG[dog]; }
+   return; }
+  var patched=links.filter(function(l){ return l.id===local; })[0]; if(patched&&j.result.id) patched.id=j.result.id;
  }
- b.disabled=false;
- /* a read may have redrawn the list while this saved: use the gallery on screen now, not the one tapped */
- var gNow=dog?document.querySelector('details.gal[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'):null;
- if(gNow&&gNow!==g){ g=gNow; msg=g.querySelector('[data-gal-msg]'); }
- if(!(j&&j.ok&&j.result&&j.result.status==='saved')){ GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); if(g){ g.open=true; GAL_OPEN[dog]=1; } if(msg) msg.textContent=GAL_MSG[dog]; return; }
  GAL_MSG[dog]='\u2713 Saved';
- var open=g&&g.open; drawDogs();
- var again=document.querySelector('details.gal[data-dog="'+dog+'"]');
- if(again){ again.open=open||true; var m2=again.querySelector('[data-gal-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
+ var again=galBox(dog);
+ if(again){ again.open=true; var m2=again.querySelector('[data-gal-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
 });
 /* ✎ Crop or adjust a photo already saved (the owner 17 Nov 2026: "a crop / adjust tool anywhere there is a photo, starting
    with dog photos"). The same crop tool as Take/Upload photo opens on the saved picture (read from Drive with this
@@ -3125,12 +3458,22 @@ async function photoEdit(dog,fileId,msg){
   await new Promise(function(ok,no){ img.onload=ok; img.onerror=no; img.src=url; });
  }catch(e){ say('The photo could not be opened for editing.'); return; }
  say('');
- var pic=await photoCrop(img,'',{canDelete:true});
+ var tour=photoTour(dog, f&&f.id);
+ var pic=await photoCrop(img,'',{canDelete:true, tour:tour.list.length?tour:null});
  if(!pic) return;   /* Cancel: nothing is saved */
- if(pic.remove){ say('Removing the photo\u2026'); await clearCardPhoto(dog,f&&f.id); drawDogs();
+ if(pic.galleryRemove){
+  var lid=pic.linkId, row=links.filter(function(l){ return l.id===lid; })[0]||{}, y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;
+  say('Removing the photo\u2026');
+  var jr=await sinkAct('link_end',{id:lid, to_date:to, reason:GAL_REMOVED});
+  if(jr&&jr.ok&&jr.result&&jr.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(lid, to, GAL_REMOVED); linkEndsApply(); }
+  gallerySync(dog);
+  var ag=galBox(dog); if(ag){ ag.open=true; var mm=ag.querySelector('[data-gal-msg]'); if(mm) mm.textContent=jr&&jr.ok?'\u2713 Removed':'Not saved: '+sinkMsg(jr); }
+  return; }
+ if(pic.remove){ say('Removing the photo\u2026'); await clearCardPhoto(dog,f&&f.id); gallerySync(dog);
   var gone=document.querySelector('.dc[data-dog="'+dog+'"]'), gm=gone&&gone.querySelector('[data-photo-msg]');
   if(gm) gm.textContent='Photo removed'; return; }
  if(pic.error){ say(pic.error); return; }
+ if(pic.fileId){ var picked=files.filter(function(x){ return x.id===pic.fileId; })[0]; if(picked) f=picked; }
  say('Saving the edited copy\u2026');
  var j=await sinkAct('file_add',{kind:'photo',mime:pic.mime,data_base64:pic.b64,name:'edited-photo.jpg',taken_on:(f&&String(f.taken_on||'').slice(0,10))||day,source:'Edited copy'+(f?' of '+f.id:'')});
  if(!(j.ok&&j.result&&j.result.id)){ say('Not saved: '+sinkMsg(j)); return; }
@@ -3154,8 +3497,8 @@ async function photoEdit(dog,fileId,msg){
    gl.to_date=to; gl.end_reason=GAL_EDITED; }
   if(!fileId||(ph.main&&f&&ph.main.id===f.id)) await add('main');
  }catch(err){ done='The edited copy is saved, but it is not shown yet: '+((err&&err.message)||'try again.'); }
- drawDogs();   /* the message is set after the redraw, so it is not wiped by it (17 Nov 2026) */
- var again=document.querySelector('details.gal[data-dog="'+dog+'"]'); if(again&&fileId) again.open=true;
+ gallerySync(dog);
+ var again=galBox(dog); if(again&&fileId) again.open=true;
  var card=document.querySelector('.dc[data-dog="'+dog+'"]'), m=(again&&fileId)?again.querySelector('[data-gal-msg]'):card&&card.querySelector('[data-photo-msg]');
  if(m) m.textContent=done;
 }
@@ -3207,9 +3550,9 @@ document.addEventListener('toggle',function(e){ var el=e.target;
 /* gallery pictures load only when that gallery is opened (one Drive call each) */
 document.addEventListener('toggle',function(e){
  var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal,details.gal-ended')) return;
- Array.prototype.forEach.call(el.querySelectorAll('img.galph[data-gal-id]:not([data-photo-id])'),function(img){
+ Array.prototype.forEach.call(el.querySelectorAll('img.galph[data-gal-id]:not([data-loaded])'),function(img){
   if(img.closest('details')!==el) return;   /* an ended list loads only when it is opened itself */
-  img.setAttribute('data-photo-id',img.getAttribute('data-gal-id')); loadPhotoImg(img);
+  loadGalleryThumb(img);
  });
 },true);
 function photoMsg(inp,text){
@@ -3284,6 +3627,7 @@ function photoCrop(src,was,opts){
    +'<p class="mut pcrop-size" data-crop-size aria-live="polite"></p>'
    +'<div class="pcrop-btns">'+(opts.canDelete?'<button type="button" class="btn no" data-crop-delete aria-label="Delete this photo">\u00d7</button>':'')
    +'<button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><button type="button" class="btn" data-crop-reset>Reset</button><span class="pcrop-gap"></span>'
+   +(opts.tour?'<button type="button" class="btn" data-crop-prev>Previous</button><button type="button" class="btn" data-crop-next>Next</button><button type="button" class="btn" data-crop-remove>Remove</button>':'')
    +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Save</button></div></div>';
   document.body.appendChild(box);
   var view=box.querySelector('[data-crop-view]'), cv=box.querySelector('[data-crop-canvas]'), zoom=box.querySelector('[data-crop-zoom]');
@@ -3318,15 +3662,27 @@ function photoCrop(src,was,opts){
   bright.addEventListener('input',draw); contrast.addEventListener('input',draw);
   box.querySelector('[data-crop-reset]').addEventListener('click',function(){ bright.value='0'; contrast.value='0'; rot=0; fit(); });
   function done(v){ clearTimeout(sizeT); document.removeEventListener('keydown',key,true); window.removeEventListener('resize',fit); box.remove(); resolve(v); }
-  function key(e){ if(e.key==='Escape'){ e.preventDefault(); done(null); } }
+  function nav(){ var p=box.querySelector('[data-crop-prev]'), n=box.querySelector('[data-crop-next]');
+   if(p) p.disabled=!(opts.tour&&opts.tour.hasPrev()); if(n) n.disabled=!(opts.tour&&opts.tour.hasNext()); }
+  function go(dir){ if(!opts.tour||!opts.tour.step) return; nav();
+   Promise.resolve(opts.tour.step(dir)).then(function(im){ if(im){ src=im; fit(); } nav(); }); }
+  function key(e){ if(e.key==='Escape'){ e.preventDefault(); done(null); return; }
+   if(!opts.tour||(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'))) return;
+   if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); e.stopPropagation(); go(e.key==='ArrowRight'?1:-1); } }
   document.addEventListener('keydown',key,true); window.addEventListener('resize',fit);
   box.querySelector('[data-crop-rotate]').addEventListener('click',function(){ rot=(rot+1)%4; fit(); });
   box.querySelector('[data-crop-cancel]').addEventListener('click',function(){ done(null); });
+  var prevBtn=box.querySelector('[data-crop-prev]'), nextBtn=box.querySelector('[data-crop-next]'), remBtn=box.querySelector('[data-crop-remove]');
+  if(prevBtn) prevBtn.addEventListener('click',function(){ go(-1); });
+  if(nextBtn) nextBtn.addEventListener('click',function(){ go(1); });
+  if(remBtn) remBtn.addEventListener('click',function(){ var f=opts.tour&&opts.tour.file?opts.tour.file():null; done({galleryRemove:true, fileId:f&&f.id||'', linkId:f&&f.link_id||''}); });
+  nav();
   var delBtn=box.querySelector('[data-crop-delete]');
   if(delBtn) delBtn.addEventListener('click',function(){ done({remove:true}); });
   box.querySelector('[data-crop-use]').addEventListener('click',function(){
    var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
-   done(b?{mime:'image/jpeg',b64:b}:{error:'That picture is too large.'}); });
+   var f=opts.tour&&opts.tour.file?opts.tour.file():null;
+   done(b?{mime:'image/jpeg',b64:b,fileId:f&&f.id||'',linkId:f&&f.link_id||''}:{error:'That picture is too large.'}); });
   fit(); box.querySelector('[data-crop-use]').focus();
  });
 }
