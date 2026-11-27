@@ -85,14 +85,9 @@ test('Jobs: a records read that never answers shows Try again within 45 s', asyn
   await expect(page.locator('[data-load-timeout]')).toHaveCount(0);
 });
 
-test('Checks page: "Loading the checks..." stays until the form draws; a read that never answers gives Try again and keeps the code', async ({ page }) => {
-  await page.clock.install({ time: new Date('2026-11-12T09:00:00Z') });
-  const s = await setup(page, { hang: 'area' });
+test('Checks page: retired (daily checks are on Jobs); it says it has moved and keeps the code', async ({ page }) => {
+  await setup(page, {});
   await page.goto('cdhub/checks/');
-  await expect(page.locator('.bs-banner')).toHaveText('Loading the checks...');
-  await expect.poll(() => s.reads.some((r) => r.table === 'area')).toBe(true);   // the hung read is out, so its 45 s has started
-  await page.clock.runFor(46000);
-  await expect(page.locator('.bs-banner')).toContainText('did not answer in 45 seconds');
-  await expect(page.locator('[data-load-retry]')).toBeVisible();
+  await expect(page.locator('body')).toContainText('This page has moved');
   expect(await page.evaluate(() => localStorage.getItem('bld.device.code'))).toBe('FAKE-CODE-1');
 });

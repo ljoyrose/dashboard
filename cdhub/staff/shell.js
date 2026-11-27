@@ -219,7 +219,6 @@
     });
     return dataP;
   }
-  function refresh() { dataP = null; if (save.dropCache) save.dropCache(); return data(); }
   /* 22 Nov 2026: a screen that waits for the records gives up after LOAD_LIMIT_MS and says so, with Try again.
      limit(p, host, retry) resolves what p resolves, or never (null-free) once the message has replaced the screen. */
   var LOAD_LIMIT_MS = 45000;
@@ -238,10 +237,7 @@
   }
   /** "As of" for the kept lists a screen uses: the oldest time one of them was read, or 0. */
   function listsAt(keys) { var at = 0; (keys || []).forEach(function (k) { var x = save.keptAt ? save.keptAt(k) : 0; if (x && (!at || x < at)) at = x; }); return at; }
-  function go(path) { if (location.hash === '#' + path) route(); else location.hash = path; }
-
-  var ctx = { save: save, data: data, refresh: refresh, readOptional: readOptional, limit: limit, listsAt: listsAt, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); } };
-  function refresh() { dataP = null; dataObj = null; return data(); }
+  function refresh() { dataP = null; dataObj = null; if (save.dropCache) save.dropCache(); return data(); }
   /* Overseer 22 Nov 2026: a move showed the old room until a full reload. The loaded lists are changed in place instead. */
   var dataObj = null;
   function rebuild(o) { var d = BLDOccupancy.dailyList(o.raw); o.areas = d.areas; o.dogs = d.dogs; o.skipped = d.skipped; }
@@ -262,7 +258,7 @@
   }
   function go(path) { if (location.hash === '#' + path) route(); else location.hash = path; }
 
-  var ctx = { save: save, data: data, refresh: refresh, noteMove: noteMove, refreshOccupancy: refreshOccupancy, readOptional: readOptional, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); } };
+  var ctx = { save: save, data: data, refresh: refresh, noteMove: noteMove, refreshOccupancy: refreshOccupancy, readOptional: readOptional, limit: limit, listsAt: listsAt, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); } };
 
   /** "Welcome <name> · <Role>" from the name and role held against this phone's code (shown once a read has told us). */
   function showMe() {
