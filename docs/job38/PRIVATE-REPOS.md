@@ -1,6 +1,6 @@
 # Running CI checks in a session (for repos with no Actions minutes left)
 
-JOB 38. Text only: nothing has been added to any private repo. Each repo's own job adopts this, after Lisa says yes.
+JOB 38. Text only: nothing has been added to any private repo. Each repo's own job adopts this, after the owner says yes.
 
 ## Why
 
@@ -34,7 +34,7 @@ ALL GREEN
 1. Copy `run-all.sh`; replace the check list with the commands from that repo's `.github/workflows/*.yml`.
 2. Keep any workflow files as they are (they still run if minutes return).
 3. State in each PR that CI did not run and paste the run-all table instead.
-4. Lisa decides whether a run-all table is enough to merge in that repo.
+4. the owner decides whether a run-all table is enough to merge in that repo.
 
 ## What it does not do
 

@@ -32,9 +32,9 @@ for (const [name, url] of [['Main dashboard', './'], ['Money Hub', 'money/'], ['
   });
 }
 
-// Calm layer (Lisa, 20 Oct 2026), house look (28 Oct): the slot colour shows on hover, so the check hovers first.
+// Calm layer (the owner, 20 Oct 2026), house look (28 Oct): the slot colour shows on hover, so the check hovers first.
 // Bottom tabs carry their colour in the icon and the line; a view under More carries it in its icon (slot 8 = warm charcoal
-// #3A3632, never black; Bin sits under More since Lisa's tab picks, 2 Nov);
+// #3A3632, never black; Bin sits under More since the owner's tab picks, 2 Nov);
 // Stage 2c removed the More tab, so Money (slot 3) is checked on its Dashboard card and Work My Drive (slot 4) on its Drives page.
 test('the colour carries meaning on the dashboard menu: Bin is slot 8, Money slot 3, Work My Drive slot 4', async ({ page }) => {
   await page.goto('./');
@@ -46,7 +46,7 @@ test('the colour carries meaning on the dashboard menu: Bin is slot 8, Money slo
   await expect.poll(() => page.locator('#mainNav a[data-nav="bin"] svg').first().evaluate((e) => getComputedStyle(e).color)).toBe('rgb(58, 54, 50)');
   await page.keyboard.press('Escape');
   const slot = (sel) => page.locator(sel).first().evaluate((e) => { const d = document.createElement('i'); d.style.color = getComputedStyle(e).getPropertyValue('--slot').trim(); document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; });
-  await tabClick(page, '#mainNav a[data-nav="money"]'); // the Money card moved off Main into More (Lisa, 2 Nov)
+  await tabClick(page, '#mainNav a[data-nav="money"]'); // the Money card moved off Main into More (the owner, 2 Nov)
   await expect(page.locator('#view section.card.slotfin')).toHaveCount(1);
   expect(await slot('#view section.card.slotfin')).toBe('rgb(231, 134, 21)');
   await tabClick(page, '#mainNav a[data-nav="drives"]');

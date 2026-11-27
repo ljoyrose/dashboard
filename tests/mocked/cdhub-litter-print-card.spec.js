@@ -1,4 +1,4 @@
-// Litter print card in the kennel-card style (Lisa's "Dog Card Print-outs" v4): band in the dam's size colour,
+// Litter print card in the kennel-card style (the owner's "Dog Card Print-outs" v4): band in the dam's size colour,
 // Born 2 Mar 2026, Sire, Pups, Room, one large code. Only litters still here. Invented rows only.
 const { test, expect } = require('../fixtures/job34/load');
 
@@ -45,7 +45,7 @@ test('print: litter cards look like kennel cards and list only litters still on 
   };
   tables.subject[0].coat_colour_id = 'cc-1'; tables.subject[0].coat_pattern_id = 'cp-1';
   tables.subject[0].photo = 'FAKEphotoFileId123';
-  // the main photo is the 'main' link row in force; the old photo cell is only the fallback (Lisa 13 Nov 2026)
+  // the main photo is the 'main' link row in force; the old photo cell is only the fallback (the owner 13 Nov 2026)
   tables.files = [{ id: 'fil-1', kind: 'photo', drive_file_id: 'FAKEmainFromLink9' }];
   tables.links = [{ id: 'lnk-1', from_table: 'subjects', from_id: 'dam1', to_table: 'files', to_id: 'fil-1', role: 'main', from_date: '2026-01-01', to_date: '' }];
   await page.route(/^https:\/\/drive\.google\.com\/thumbnail/, (route) => route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') }));
@@ -66,7 +66,7 @@ test('print: litter cards look like kennel cards and list only litters still on 
   await expect(card.locator('[data-k="Room"] dd')).toHaveText('Room A');
   await expect(card).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
   await expect(card.locator('.code svg')).toHaveCount(1);
-  await expect(page.locator('.sheet')).toHaveClass(/\bper2\b/);   // two per A4 to start (Lisa's dog card, 18 Nov 2026)
+  await expect(page.locator('.sheet')).toHaveClass(/\bper2\b/);   // two per A4 to start (the owner's dog card, 18 Nov 2026)
   await page.getByRole('button', { name: 'Full A4' }).click();
   await expect(page.locator('.sheet')).toHaveClass(/\bper1\b/);
   await page.getByRole('button', { name: '2 per A4' }).click();
@@ -81,19 +81,19 @@ test('print: litter cards look like kennel cards and list only litters still on 
   expect(frame.w).toBeGreaterThan(20); expect(Math.abs(frame.w - frame.h)).toBeLessThan(2);
   await expect(card).not.toContainText(/\bPhoto\b/);
   await page.emulateMedia({ media: 'screen' });
-  // Lisa's dog card (18 Nov 2026): name, Sex, Date of birth, photo in the size colour, Size, code, microchip in threes
+  // the owner's dog card (18 Nov 2026): name, Sex, Date of birth, photo in the size colour, Size, code, microchip in threes
   await page.getByRole('button', { name: 'Dog cards' }).click();
   const dam = page.locator('.dcard[data-dog="dam1"]');
   await expect(dam.locator('.name')).toHaveText('Pretend Dam');
   await expect(dam.locator('[data-k="chip"] b')).toHaveText('123 456 789 012 345');
-  await expect(dam.locator('[data-k="dob"] dd')).toHaveText('2 Mar 2021');   // one date format everywhere (Lisa 13 Nov 2026): never DD/MM/YY
+  await expect(dam.locator('[data-k="dob"] dd')).toHaveText('2 Mar 2021');   // one date format everywhere (the owner 13 Nov 2026): never DD/MM/YY
   await expect(dam.locator('[data-k="photo"] img')).toHaveAttribute('src', /thumbnail\?id=FAKEmainFromLink9/);
   await expect(dam.locator('.code svg')).toHaveCount(1);
   await expect(page.locator('.dcard[data-dog="sire1"] [data-k="chip"]')).toHaveCount(0);
-  // room card: Lisa's design, the footer line
+  // room card: the owner's design, the footer line
   await page.getByRole('button', { name: 'Room cards' }).click();
   await expect(page.locator('.rcard .foot').first()).toHaveText('Unsure? Don\u2019t Move. Ask.');
-  // no address on any print-out (Lisa 13 Nov 2026): no printed text holds the site address, and the page margin is 0 so the
+  // no address on any print-out (the owner 13 Nov 2026): no printed text holds the site address, and the page margin is 0 so the
   // browser has no room for its own header and footer (which print the page address)
   const origin = new URL(page.url()).origin;
   for (const b of ['Room cards', 'Dog cards', 'Litter cards']) {

@@ -1,4 +1,4 @@
-// Lisa 19 Nov 2026: "Site loops a lot including eventually ending in a dead-end". Every path from Needs you / Outstanding
+// the owner 19 Nov 2026: "Site loops a lot including eventually ending in a dead-end". Every path from Needs you / Outstanding
 // ends where the action is: a list opens on screen at phone width, a check opens at its own row, a note shows once.
 const { test: base, expect } = require('../support/test');
 const { buildWorld, IDS } = require('../support/world');

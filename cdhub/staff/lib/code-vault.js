@@ -1,4 +1,4 @@
-/* Codes vault, browser only (Lisa 14 Nov 2026, option B: a shared vault password for the admins, codes kept in Admin).
+/* Codes vault, browser only (the owner 14 Nov 2026, option B: a shared vault password for the admins, codes kept in Admin).
    Each code is sealed here, on this device: AES-GCM 256 with a key from PBKDF2-SHA256 (600,000 rounds or more) of the
    vault password, a fresh random salt and IV per entry, and the public code id bound in as additional data (a sealed
    code cannot be moved onto another person's row). Only the sealed text, the salt, the IV and the public id leave the

@@ -1,4 +1,4 @@
-// Dog card room control (Lisa 13 Nov 2026): a dog or pup with no room gets Place on its card; the picker offers cabins
+// Dog card room control (the owner 13 Nov 2026): a dog or pup with no room gets Place on its card; the picker offers cabins
 // with space and Off-site; a move is one new occupancy row through the save script and the card shows a tick.
 // Invented rows only. Nothing here is posted to a live sheet.
 const { test, expect } = require('../support/test');

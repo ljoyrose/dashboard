@@ -105,7 +105,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .d.empty{background:transparent;box-shadow:none}
 .d.future{background:var(--paper);border:1px solid var(--line);box-shadow:none;opacity:.35}
 .d.unknown,.sd.unknown{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
-/* In limit: solid green (Lisa 17 Nov 2026: the pale tint with a frame looked "weird"; back to the solid green she had). Outside limit: solid orange. Missed: the same orange as a frame on a light cell, never a brown fill. */
+/* In limit: solid green (the owner 17 Nov 2026: the pale tint with a frame looked "weird"; back to the solid green she had). Outside limit: solid orange. Missed: the same orange as a frame on a light cell, never a brown fill. */
 .d.allok{background:var(--ljr-5);box-shadow:none}.d.warn{background:var(--ljr-3);box-shadow:none}.d.miss{background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)}.d.nolimit{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
 .d.ocool{background:var(--ljr-6-tint);box-shadow:none}.d.omild{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}.d.owarm{background:var(--ljr-4-tint);box-shadow:none}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
@@ -127,7 +127,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .itable th{padding:4px 6px;text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
 .itable td{padding:5px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;vertical-align:middle}
 .itable tr:last-child td{border-bottom:none}
-/* Over the maximum = cooling action, not outside (Lisa 17 Nov 2026): a light warm tint, never the solid orange of a breach */
+/* Over the maximum = cooling action, not outside (the owner 17 Nov 2026): a light warm tint, never the solid orange of a breach */
 .d.warmd{background:var(--ljr-4-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)}.sd.warmd{background:var(--ljr-4-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)}
 .cool-act{color:var(--muted)}
 
@@ -226,7 +226,7 @@ span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(-
   <span class="house-sp" aria-hidden="true"></span>
   <button type="button" class="btn house-ib hidden" id="hubBack" data-hub-back aria-label="Back" title="Back"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
   <span class="live" id="livepill">Live</span>
-  <!-- Lisa 17 Nov 2026: closing Temperatures must go back to CD Hub. This was a Sign out button that looked like close;
+  <!-- the owner 17 Nov 2026: closing Temperatures must go back to CD Hub. This was a Sign out button that looked like close;
        signing out is on CD Hub itself. -->
   <a class="btn house-ib" id="cdClose" href="./index.html#/compliance" aria-label="Close Temperatures" title="Close" onclick="return closeTemps()">
     <svg class="ti" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -281,7 +281,7 @@ var VIEW_MODE='outdoor'; /* 'outdoor' | 'compliance' */
 var SPAN={};        /* areaId -> {first,last} reading day */
 var FIRST_DAY='';   /* the first day any room has a reading: nothing is missed before readings began (no coded date) */
 var REQ=[];         /* BLD-requirement rows (room.in_use, reading.temperature); optional until the table is switched on */
-var LINKS=[];      /* BLD-area_link rows: an old room's readings also show for the room it became (Lisa 12 Nov 2026); optional */
+var LINKS=[];      /* BLD-area_link rows: an old room's readings also show for the room it became (the owner 12 Nov 2026); optional */
 var THERMOS=[];     /* BLD-thermometer rows (name, area_id); optional */
 
 /* ---- helpers ---- */
@@ -329,7 +329,7 @@ function readDriveFile(f){
     return gget(DRIVE_API+'/'+id+'/export?mimeType='+encodeURIComponent('text/csv')+'&supportsAllDrives=true');
   return gget(DRIVE_API+'/'+id+'?alt=media&supportsAllDrives=true');
 }
-/* Limits come from BLD-temperature_band rows, never typed here (Lisa 12 Nov 2026: every limit is a dated row).
+/* Limits come from BLD-temperature_band rows, never typed here (the owner 12 Nov 2026: every limit is a dated row).
    A reading is judged by the rows in force on its own day (the shared rule, staff/lib/capacity.js; two in force: the
    later from_date wins), for its room: a row for this room beats a row for every room, and when rows have ages the
    youngest dog in the room that day picks the row (as the staff round and the hub do). The youngest dog comes from
@@ -422,7 +422,7 @@ function tempCls(min,max,day,aid,spot){
   if(tempUnreadable(min,max))return'unread';
   if(tempSwapped(min,max))return'swap';   /* max lower than min: typed the wrong way round, checked before hot/cold */
   if(!B)return'unknown';
-  /* Temps A (Lisa 17 Nov 2026), staff/lib/temp-judge.js: the room on the adult row (over its max = cooling action, not
+  /* Temps A (the owner 17 Nov 2026), staff/lib/temp-judge.js: the room on the adult row (over its max = cooling action, not
      outside); puppies under four weeks: the bed spot on their own row; no bed spot = "not recorded", not outside. */
   var k=window.BLDTempJudge?BLDTempJudge.judge({min:min,max:max,spot:spot},B,adultBandOn(day||TODAY_STR,aid),B.age_to!==null):((!isNaN(lo)&&lo<B.min)?'cold':(!isNaN(hi)&&hi>B.max)?'warm':'ok');
   return k;
@@ -464,7 +464,7 @@ async function loadAreaData(){
       AREA_HDR_BAD=(rows.length&&(!('area_id' in rows[0])||!('min_c' in rows[0])||!('max_c' in rows[0])))?'row 1 is not the heading row'
         :rows.some(function(r){ return r.id==='id'||r.area_id==='area_id'; })?'a heading row is also lower down':'';
       rows=rows.filter(function(r){ return r.id!=='id'&&r.area_id!=='area_id'; });
-      /* Lisa 18 Nov 2026: a room marked empty (BLD-requirement room.empty, dated) shows Room empty with its temperatures hidden;
+      /* the owner 18 Nov 2026: a room marked empty (BLD-requirement room.empty, dated) shows Room empty with its temperatures hidden;
          the readings stay in the records. Before and after the link copies, so a copy never carries them into another room. */
       var hideE=function(x){ var O=window.BLDOccupancy; return O&&O.hideEmpty?O.hideEmpty(x,REQ,function(r){ return readingWhen(r.period_start||r.taken_at).day; }):x; };
       rows=hideE(rows);
@@ -602,7 +602,7 @@ function dayClass(isoDate){
   return'omild';
 }
 
-/* One date format everywhere (Lisa 13 Nov 2026): "2 Mar 2026"; stored dates stay ISO. */
+/* One date format everywhere (the owner 13 Nov 2026): "2 Mar 2026"; stored dates stay ISO. */
 function dayWords(iso){ iso=String(iso||''); if(!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso; return parseInt(iso.slice(8,10),10)+' '+MONTHS[parseInt(iso.slice(5,7),10)-1]+' '+iso.slice(0,4); }
 function openDrill(isoDate){
   var r=DAYS[isoDate]||{};
@@ -658,14 +658,14 @@ function closeDrill(){el('drill').classList.remove('open');}
 var YEAR=+TODAY_STR.slice(0,4);
 /* Round order comes from BLD-area rows: group_sort, then code. When a room is in use and a thermometer is needed
    comes only from BLD-requirement rows through the shared lib (staff/lib/needs.js, thermometer.js, occupancy.js;
-   Lisa 11 Nov 2026, "A standard"). A room whose room.in_use rows have all ended is retired: left out of the round
+   the owner 11 Nov 2026, "A standard"). A room whose room.in_use rows have all ended is retired: left out of the round
    after its end day, shown by its own name (and the room it became), and its past readings still show. */
 function areaEnd(aid){ var N=window.BLDNeeds; return N?N.endDay(REQ,'room.in_use','area',aid):''; }
 function isRetired(aid){ var e=areaEnd(aid); return !!e&&e<TODAY_STR; }
-/* Lisa 12 Nov 2026: a retired room shows its own name without the ZZ_ filing mark, and the room it became (BLD-area_link). */
+/* the owner 12 Nov 2026: a retired room shows its own name without the ZZ_ filing mark, and the room it became (BLD-area_link). */
 function areaCode(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')).replace(/^ZZ_/,''); }
 function areaNow(aid){ var to=''; (LINKS||[]).forEach(function(l){ if(l&&l.from_area_id===aid&&l.to_area_id&&l.to_area_id!==aid) to=l.to_area_id; }); return to; }
-/* Lisa 18 Nov 2026: no "(retired 2 Nov 2026)" after a renamed cabin's name in the calendar; it still sorts last */
+/* the owner 18 Nov 2026: no "(retired 2 Nov 2026)" after a renamed cabin's name in the calendar; it still sorts last */
 function areaName(aid){ if(!isRetired(aid)) return areaCode(aid); var to=areaNow(aid);
   return areaCode(aid)+(to?', now '+areaCode(to):''); }
 function roomEmptyOn(aid,day){ var O=window.BLDOccupancy; return !!(O&&O.emptyOn&&O.emptyOn(aid,day,REQ)); }
@@ -705,7 +705,7 @@ function needStart(aid){
   return start||FIRST_DAY;
 }
 /* A line is a unit: the room, or, for a room with two or more thermometers (H5/6: H5 and H6), "room|thermometer"
-   (Lisa 11 Nov 2026: each reading shown in the room by thermometer name). A reading names its thermometer
+   (the owner 11 Nov 2026: each reading shown in the room by thermometer name). A reading names its thermometer
    (thermometer_id); an older one with none counts for the room's only thermometer, or stays on a room line. */
 function roomThermos(aid){ return THERMOS.filter(function(t){ return t.area_id===aid; }).sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||''),'en',{numeric:true}); }); }
 function multi(aid){ return roomThermos(aid).length>1; }
@@ -724,7 +724,7 @@ function neededOn(u,day){
 }
 function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 /* One slot: in / out / nolimit / miss / due / none */
-/* Room empty (Lisa 11 Nov 2026) = no dog present, a flag on the slot's reading. With no reading the slot is covered
+/* Room empty (the owner 11 Nov 2026) = no dog present, a flag on the slot's reading. With no reading the slot is covered
    ('empty', never missed). Outside the limit while empty is flagged with "Room empty" but never counted as outside
    ('eout'). */
 function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'||k==='swap'||k==='warm'||k==='nospot'; }
@@ -777,7 +777,7 @@ function slotHtml(label,s){
   if(s.k==='swap') return '<span class="warn"'+(s.unread?' data-unread':'')+'>'+esc(txt)+(s.unread?' · Check: not a number':' · max lower than min')+'</span>';
   if(s.k==='out') return '<span class="warn">'+esc(txt)+(s.why==='spotcold'?' · bed spot '+esc(s.spot)+' below the puppy limit':s.why==='spothot'?' · bed spot '+esc(s.spot)+' above the puppy limit':'')+'</span>';
   if(s.k==='warm') return esc(txt)+' <span class="cool-act">· over the limit: cooling action</span>';
-  /* Lisa 18 Nov 2026: no "puppies: bed spot not recorded" words in any room; the room inside its limit shows its tick */
+  /* the owner 18 Nov 2026: no "puppies: bed spot not recorded" words in any room; the room inside its limit shows its tick */
   if(s.k==='nospot') return esc(txt)+' <span class="tick" aria-label="room inside limit">✓</span>';
   if(s.k==='eout') return '<span class="warn">'+esc(txt)+' · Room empty</span>';
   return esc(txt)+(s.k==='in'?' <span class="tick" aria-label="inside limit">✓</span>':'')+(s.empty?' <span class="due">(empty)</span>':'');
@@ -799,7 +799,7 @@ function stateWord(cls){
   return {future:'Later',nd:'No readings',nolimit:'No limit set',warn:'Check',miss:'Missed',allok:'In limit',warmd:'Warm: cooling action',ocool:'Cool',omild:'Mild',owarm:'Warm'}[cls]||cls;
 }
 /* 21 Nov 2026 (OV12, Steward check on #346): a day's indoor state for the corner dot and the Compliance colours comes from
-   the page's own slotState, judged on the limit rows Lisa typed (BLD-temperature_band in force that day), never a fixed
+   the page's own slotState, judged on the limit rows the owner typed (BLD-temperature_band in force that day), never a fixed
    15-25. flag = cannot be read (wrong way round, or not a number); warn = outside the limit; a room with no limit row,
    an empty room or a warm room (cooling action, Temps A) gets no dot. */
 function compSlot(t,aid,day,slot){
@@ -822,7 +822,7 @@ function areaStatusNow(isoDate){
   var st=Object.keys(dayAreas).map(function(aid){ return areaStatusForArea(dayAreas[aid],isoDate,aid); });
   return st.indexOf('flag')>=0?'flag':st.indexOf('warn')>=0?'warn':'ok';
 }
-/* ---- Month report (Lisa 20 Nov 2026): one month, all rooms or one, ready to save as a PDF (the browser's own
+/* ---- Month report (the owner 20 Nov 2026): one month, all rooms or one, ready to save as a PDF (the browser's own
    Print > Save as PDF; nothing is sent anywhere). The same rules as every view on this page: each slot is judged by the
    limit rows in force on its own day, and the youngest dog in the room that day (BLD-occupancy rows + BLD-subject date of
    birth) picks the row. So a room that held puppies under four weeks on a past day is judged on the bed spot against the
@@ -1056,7 +1056,7 @@ function setView(id,btn){
   btn.classList.add('on');
   closeDrill();
 }
-/* Year buttons: this year back to the first year with a reading (Lisa 20 Nov 2026: past years must load), and always
+/* Year buttons: this year back to the first year with a reading (the owner 20 Nov 2026: past years must load), and always
    at least this year and the two before (as the page always offered). */
 function firstYear(){ var now=+TODAY_STR.slice(0,4), f=FIRST_DAY?+FIRST_DAY.slice(0,4):now; return Math.min(f,now-2); }
 function yearButtons(){
@@ -1075,7 +1075,7 @@ function setYear(y){
   el('view-a').innerHTML=buildHeatMap(y);
   el('view-b').innerHTML=buildStrip(y);
   el('view-c').innerHTML=buildMonthCards(y);
-  /* Lisa 20 Nov 2026: pressing 2025 still showed today on The round. The round moves to the same day in that year. */
+  /* the owner 20 Nov 2026: pressing 2025 still showed today on The round. The round moves to the same day in that year. */
   if(ROUND_DATE&&+ROUND_DATE.slice(0,4)!==y){ ROUND_DATE=sameDayIn(y,ROUND_DATE); var v=el('view-d'); if(v) v.innerHTML=buildRound(ROUND_DATE); }
   /* and the report to the same month in that year */
   if(REP.y!==null&&REP.y!==y){ var mm=ds(y,REP.m,1)>TODAY_STR?+TODAY_STR.slice(5,7)-1:REP.m; REP.y=y; REP.m=mm; var r=el('view-r'); if(r) r.innerHTML=buildReport(); }

@@ -50,7 +50,7 @@ test.describe('Marketplace hub: Fish Treats postage to-dos (G7)', () => {
     await expect(card('9703')).toContainText('InPost'); await expect(card('9704')).toContainText('InPost');
     await expect(card('9705')).toContainText('Decide how to post'); await expect(card('9705')).toContainText('if it fits');
     await expect(card('9706')).toContainText('Decide how to post'); await expect(card('9707')).toContainText('6 Fish Treat units');
-    for (const no of ['9701', '9705']) await expect(card(no).locator('[data-v="Posted"]')).toHaveText('Posted');   // no Found step: Lisa packs these herself
+    for (const no of ['9701', '9705']) await expect(card(no).locator('[data-v="Posted"]')).toHaveText('Posted');   // no Found step: the owner packs these herself
     await expect(card('9701').locator('a.btn', { hasText: 'Open the order in Shopify' })).toHaveAttribute('href', 'https://admin.shopify.com/store/example-store/orders?query=9701');
   });
 

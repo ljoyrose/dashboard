@@ -96,7 +96,7 @@
     BLDLookups.loadFromDrive(window.BLD_CONFIG, today).then(function(r){
       if (!r.ok) { document.getElementById('dataMsg').textContent = r.message; return; }
       setLookups(r.lookups);
-      // optional: pick up the Script URL from the Drive config file Lisa owns
+      // optional: pick up the Script URL from the Drive config file the owner owns
       if (window.BLD_CONFIG && !save.getScriptUrlSet()) save.loadConfigFromDrive(r.token, window.BLD_CONFIG.folderId).then(function(c){ if (c.ok) refreshStatus(); });
     });
   };

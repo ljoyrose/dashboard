@@ -18,7 +18,7 @@ any static server. Sign-in only works from the authorised GitHub Pages address, 
 | One file | `npx playwright test tests/mocked/<name>.spec.js` | |
 | Live smoke (optional) | `npm run test:live` | Opens the live site signed out. Never blocks. |
 | Web Estate unit tests | `node --test tests/estate/` | No browser. |
-| Real column names (Lisa's computer only) | `npm run check:headers -- <folder of downloaded files>` | Prints column names only. Not run in CI on purpose. |
+| Real column names (the owner's computer only) | `npm run check:headers -- <folder of downloaded files>` | Prints column names only. Not run in CI on purpose. |
 
 What each check covers: [TESTS.md](../../TESTS.md). Undo: tests change nothing; delete `test-results/` and `playwright-report/`.
 
@@ -44,7 +44,7 @@ What each check covers: [TESTS.md](../../TESTS.md). Undo: tests change nothing; 
   AUTHOR rules run, and the DENY rule is a placeholder. The CI job **Privacy guard (public repo)** (`privacy-guard.yml`) runs the
   real denylist on every push and pull request and is a required check on `main`.
 - Self-tests: `python3 tools/privacy-guard/test_privacy_guard.py` (fake data only).
-- On a FAIL: do not push; fix by a normal edit. If already pushed: stop, never force-push, tell Lisa (she alone decides
+- On a FAIL: do not push; fix by a normal edit. If already pushed: stop, never force-push, tell the owner (she alone decides
   history rewrites). A failing PR is replaced by a clean PR. Full rules: README "Privacy guard".
 
 ## Pages deploy
@@ -52,7 +52,7 @@ What each check covers: [TESTS.md](../../TESTS.md). Undo: tests change nothing; 
 - `pages.yml` ("Publish site (after tests)") runs on every push to `main`: it runs the tests first, then copies only the
   published files (list in the workflow) to `_site/` and deploys. Docs, tests and tools are never published.
 - `live-after-deploy.yml` then checks the live files match `main` byte for byte. It never blocks.
-- Undo a bad publish: Lisa merges a revert PR; the next push to `main` republishes. Rollback switch for the whole
+- Undo a bad publish: the owner merges a revert PR; the next push to `main` republishes. Rollback switch for the whole
   mechanism: TESTS.md "Publishing waits for the tests".
 - Sessions never run, dispatch or re-run any workflow.
 
@@ -69,7 +69,7 @@ Never rename the two required job names (see TESTS.md "Make the tick compulsory"
 
 ## Undo, in general
 
-- Every change is a PR; Lisa merges. Undo = a revert PR, merged by Lisa. Never force-push.
+- Every change is a PR; the owner merges. Undo = a revert PR, merged by the owner. Never force-push.
 - On the live site, the only writes are trash and rename (Home Bin and PC-Personal) and request files / Sheet rows (Studio,
   Factory, Estate, Food hub, Marketplace). Trash is undone from the Drive bin; a request file is undone by Undo before the
   engine's next run.

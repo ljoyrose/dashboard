@@ -45,7 +45,7 @@ LOOP = goes round to the same screen. DEAD = nothing happens. ERROR = the browse
 | #/dogs/feb · Dogs | D Mon YYYY Dog A.. Not named # tablet Oral | row or card | #/dogs/feb · Dogs [fold.dcs.meds] | opens it | 1 |
 | #/dogs/feb · Dogs | Open Dog A..: medicines | button | #/dogs/feb · Dogs [fold.dcs.meds] | opens it | 8 |
 | #/dogs/feb · Dogs | D Mon YYYY Dog A.. Not named # ml Oral | row or card | #/dogs/feb · Dogs [fold.dcs.meds] | opens it | 1 |
-| #/dogs/feb · Dogs | D Mon YYYY Dog A.. Sample Spot-on # pipette Topical | row or card | #/dogs/feb · Dogs [fold.dcs.meds] | opens it | 6 |
+| #/dogs/feb · Dogs | D Mon YYYY Dog A.. Med B # pipette Topical | row or card | #/dogs/feb · Dogs [fold.dcs.meds] | opens it | 6 |
 | #/dogs/feb · Dogs | Search dogs | box (search) | same screen | takes what is typed and redraws | 1 |
 | #/dogs/feb · Dogs | Filter | button | #/dogs/feb · Dogs [open:button.btn.fbtn] | opens it | 1 |
 | #/dogs/feb · Dogs | Sort | list | same screen | changes this screen | 1 |
@@ -77,7 +77,7 @@ LOOP = goes round to the same screen. DEAD = nothing happens. ERROR = the browse
 | #/dogs/feb · Dogs | no chip recorded | button | #/dogs/feb · Dogs [fold.bb-secf, fold.bb-secf.bb-miss, open… | opens it | 3 |
 | #/dogs/mar · Dogs [fold.bb-secf, fold.bb-secf.bb-miss, fold.dcs.meds] | Fold Medicine in Mar # | button | same screen | changes this screen | 1 |
 | #/dogs/mar · Dogs [fold.bb-secf, fold.bb-secf.bb-miss, fold.dcs.meds] | Medicine in Mar # | row or card | same screen | changes this screen | 1 |
-| #/dogs/mar · Dogs [fold.bb-secf, fold.bb-secf.bb-miss, fold.dcs.meds] | D Mon YYYY Dog A.. Sample Wormer # tablets Oral | row or card | same screen | moves to summary | 1 |
+| #/dogs/mar · Dogs [fold.bb-secf, fold.bb-secf.bb-miss, fold.dcs.meds] | D Mon YYYY Dog A.. Med C # tablets Oral | row or card | same screen | moves to summary | 1 |
 | #/dogs/mar · Dogs [fold.bb-secf, fold.bb-secf.bb-miss, fold.dcs.meds] | Open Dog A..: medicines | button | same screen | moves to summary | 1 |
 | #/dogs/mar · Dogs [fold.bb-secf, fold.bb-secf.bb-miss, fold.dcs.meds] | Search dogs | box (search) | same screen | takes what is typed and redraws | 1 |
 | #/dogs/mar · Dogs [fold.bb-secf, fold.bb-secf.bb-miss, fold.dcs.meds] | Filter | button | #/dogs/mar · Dogs [fold.bb-secf, fold.bb-secf.bb-miss, fold… | opens it | 1 |

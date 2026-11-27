@@ -1,6 +1,6 @@
 // The round is the thermometer rows, never a coded list (overseer, 11 Nov 2026: one thermometer per place,
 // corridors are their own place, fields have none). When a room or thermometer is needed comes only from
-// BLD-requirement rows through the shared lib (Lisa 11 Nov 2026, "A standard"). Invented rows only.
+// BLD-requirement rows through the shared lib (the owner 11 Nov 2026, "A standard"). Invented rows only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

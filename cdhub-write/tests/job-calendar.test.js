@@ -1,5 +1,5 @@
 'use strict';
-/** Daily records calendars (Lisa 17 Nov 2026): green when done, part done shows how many dogs, missed only after the job's
+/** Daily records calendars (the owner 17 Nov 2026): green when done, part done shows how many dogs, missed only after the job's
  *  first record; which jobs show is the owner's compliance.calendar.<job> rows. Invented rows only. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -92,7 +92,7 @@ test('a day with records opens who and when, notes, and its photos; a day with a
   assert.match(html, /1FAKEPDFIDFORTESTS0000000000000b\/view"[^>]*data-jcal-photo[^>]*><span>certificate<\/span>/);   // a PDF: a link, no picture
 });
 
-// Lisa 22 Nov 2026: "Cross reference the dogs vet visit dates": a vet day shows on the health-check calendar, never as a check.
+// the owner 22 Nov 2026: "Cross reference the dogs vet visit dates": a vet day shows on the health-check calendar, never as a check.
 test('a vet visit shows on the per-dog calendar day (marker and details), not on one-line jobs, and never counts as a check', () => {
   const v = Object.assign(base([log('1', 'cty-hc', '2026-11-10', 'd1'), log('2', 'cty-hc', '2026-11-10', 'd2'), log('3', 'cty-fb', '2026-11-10')]), {
     dmy: (s) => s, dogNames: { d1: 'Pretend Dog' },
@@ -202,7 +202,7 @@ test('one session row marks every listed dog done, and an exception stays outsta
   assert.equal(day.state, 'part');
 });
 
-// Lisa 22 Nov 2026 ("A"): import past daily records from a spreadsheet. Every row is checked; only ready rows save, marked import.
+// the owner 22 Nov 2026 ("A"): import past daily records from a spreadsheet. Every row is checked; only ready rows save, marked import.
 test('import: rows are checked (date, job by name or key, outcome, future, repeat, already done) before anything saves', () => {
   const v = base([log('1', 'cty-fb', '2026-11-10')]);
   const rows = C.parseImport(v, 'date,job,outcome,note\r\n'
@@ -231,7 +231,7 @@ test('import: rows are checked (date, job by name or key, outcome, future, repea
   assert.match(tpl, /^date,job,outcome,note\r\n2026-11-16,"Health check: all dogs",done,/);
 });
 
-// Lisa 22 Nov 2026: a Numbers export puts the table name ("Csv", "daily-records") above the heading row. It is left out.
+// the owner 22 Nov 2026: a Numbers export puts the table name ("Csv", "daily-records") above the heading row. It is left out.
 test('import: title lines above the heading row are left out, never shown as a row', () => {
   const v = base([]);
   const rows = C.parseImport(v, 'daily-records\r\nCsv,,,\r\ndate,job,outcome,note\r\n2026-11-09,Food bowls washed,done,\r\n');
@@ -240,7 +240,7 @@ test('import: title lines above the heading row are left out, never shown as a r
   assert.equal(rows[0].line, 1);
 });
 
-// Lisa 22 Nov 2026: "Imported 1 of 16", the rest refused as "more than 7 days ago. Save anyway?". The owner has seen every
+// the owner 22 Nov 2026: "Imported 1 of 16", the rest refused as "more than 7 days ago. Save anyway?". The owner has seen every
 // date before pressing Import, so a row older than 7 days is sent with the save-anyway answer; a recent row is not.
 test('import: a part-done day is not "already recorded"; a fully done day is, and is not sent', () => {
   const v = base([log('1', 'cty-hc', '2026-11-15', 'd1'), log('2', 'cty-hc', '2026-11-16', 'd1'), log('3', 'cty-hc', '2026-11-16', 'd2')]);
@@ -257,14 +257,17 @@ test('a vet day button keeps the day size and drops native button chrome @regres
   assert.match(C.CSS, /\.jdays\{[^}]*font-size:10px/);
 });
 
-test('a day is done only after times_per_day records, and part done before that', () => {
-  const rules = [{ rule_key: 'job.times_per_day.food_bowls', value: '2', effective_from: '2026-01-01' }];
-  const v = base([log('1', 'cty-fb', '2026-11-10'), log('2', 'cty-fb', '2026-11-12'), log('3', 'cty-fb', '2026-11-12')], rules);
-  const st = (iso) => C.month(v, 'food_bowls', '2026-11').cells.find((c) => c.iso === iso);
-  assert.equal(st('2026-11-10').state, 'part');
-  assert.equal(st('2026-11-10').got, 1);
-  assert.equal(st('2026-11-10').need, 2);
-  assert.equal(st('2026-11-12').state, 'done');
+test('one done entry completes a multi-per-day day, including a past day', () => {
+  const rules = [
+    { rule_key: 'job.times_per_day.food_bowls', value: '2', effective_from: '2026-01-01' },
+    { rule_key: 'job.times_per_day.whole_site_clean', value: '3', effective_from: '2026-01-01' }
+  ];
+  const v = base([log('1', 'cty-fb', '2026-11-10'), log('2', 'cty-ws', '2026-11-11')], rules);
+  const st = (key, iso) => C.month(v, key, '2026-11').cells.find((c) => c.iso === iso);
+  assert.equal(st('food_bowls', '2026-11-10').state, 'done');
+  assert.equal(st('food_bowls', '2026-11-10').got, 1);
+  assert.equal(st('whole_site_clean', '2026-11-11').state, 'done');
+  assert.doesNotMatch(C.html(v, '2026-11', false), /part done \(1 of /);
 });
 
 test('the calendar counts subjects on site that day, and can leave juveniles out @regression', () => {

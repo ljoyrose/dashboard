@@ -1,4 +1,4 @@
-// CD Hub menu, option A (Lisa 14 Nov 2026): Main · up to 3 sections · More. Which sections are on, and which sit on the bar,
+// CD Hub menu, option A (the owner 14 Nov 2026): Main · up to 3 sections · More. Which sections are on, and which sit on the bar,
 // are owner settings (dated nav.* rule rows); no rows = the starting layout. Pretend Google and Drive only; rows invented.
 const fs = require('fs');
 const path = require('path');

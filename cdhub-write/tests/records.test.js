@@ -202,7 +202,7 @@ test('occupancy: a move can carry the over-limit reason', () => {
   const env = env1();
   const r = send(env, 'occupancy', { subject_id: dog(env), area_id: area(env), classification_note: 'Short stay' });
   assert.equal(r.ok, true, JSON.stringify(r));
-  // moves go straight in (Lisa 12 Nov 2026), so the reason is on the saved row, not in the approvals queue
+  // moves go straight in (the owner 12 Nov 2026), so the reason is on the saved row, not in the approvals queue
   const rows = recs(env, 'BLD-occupancy.csv');
   assert.equal(rows[rows.length - 1].classification_note, 'Short stay');
 });

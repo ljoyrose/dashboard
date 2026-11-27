@@ -1,4 +1,4 @@
-// Daily records calendars on Compliance (Lisa 17 Nov 2026: "make a calendar view which will help the user, simple to use
+// Daily records calendars on Compliance (the owner 17 Nov 2026: "make a calendar view which will help the user, simple to use
 // and log all done so staff or user say done then it shows as green"). Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
@@ -42,14 +42,48 @@ test('Compliance opens with a calendar per daily job; yesterday done is green; D
   expect(sent).toEqual([{ table: 'check_log', action: 'add_site', fields: { check_type_id: 'j1', outcome: 'ok', how_recorded: 'site_tap' } }]);
 });
 
-// Lisa 17 Nov 2026: "Board is hard to find" and "I need to print areas and dogs": one tap each from Main.
+// the owner 17 Nov 2026: "Board is hard to find" and "I need to print areas and dogs": one tap each from Main.
+test('one done entry marks a multi-per-day day done, including a past day', async ({ page, guard }) => {
+  const today = london(new Date()), yest = london(new Date(Date.now() - 86400000));
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, [
+    'j1,t,food_bowls,Bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line',
+    'j2,t,water_bowls,Water bowls,none,true,2020-01-01,,1,,,Cleaning,one_line'
+  ]));
+  addTable(guard.world, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', [
+    'r1,t,job.times_per_day.food_bowls,2,2020-01-01,test,,,',
+    'r2,t,job.times_per_day.water_bowls,3,2020-01-01,test,,,'
+  ]));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [
+    `l1,t,j1,,,,,ok,,,${yest}T09:00:00Z,A1,,,site_tap`,
+    `l2,t,j2,,,,,ok,,,${yest}T09:00:00Z,A1,,,site_tap`
+  ]));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  const cal = page.locator('#jobCals');
+  const bowls = cal.locator('[data-jcal="food_bowls"]');
+  const water = cal.locator('[data-jcal="water_bowls"]');
+  if (yest.slice(0, 7) !== today.slice(0, 7)) await cal.locator('[data-jcal-month]').first().click();
+  await expect(bowls.locator(`[data-day="${yest}"]`)).toHaveClass(/\bdone\b/);
+  await expect(water.locator(`[data-day="${yest}"]`)).toHaveClass(/\bdone\b/);
+  await expect(bowls.locator(`[data-day="${yest}"]`)).not.toHaveAttribute('aria-label', /part done/);
+  await expect(water.locator(`[data-day="${yest}"]`)).not.toHaveAttribute('aria-label', /part done/);
+  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'chk-1', ids: ['chk-1'], at: new Date().toISOString(), who: 'A1' } }; }; });
+  await bowls.locator('[data-jcal-done="food_bowls"]').click();
+  await expect(bowls.locator(`[data-day="${today}"]`)).toHaveClass(/\bdone\b/);
+  await expect(bowls.locator(`[data-day="${today}"]`)).not.toHaveAttribute('aria-label', /part done/);
+  const sent = await page.evaluate(() => window.__sent);
+  expect(sent).toHaveLength(1);
+  expect(sent[0]).toMatchObject({ table: 'check_log', action: 'add_site', fields: { check_type_id: 'j1', outcome: 'ok' } });
+});
+
 test('Main has The Board and Print cards', async ({ page, guard }) => {
   await HUBS.cdhub.open(page, guard);
   await expect(page.locator('[data-open-board]')).toHaveAttribute('href', './staff/');
   await expect(page.locator('[data-open-print]')).toHaveAttribute('href', './staff/print/');
 });
 
-// Lisa 22 Nov 2026: "can it also have the photos as then we would click and show image as we will for diary entries".
+// the owner 22 Nov 2026: "can it also have the photos as then we would click and show image as we will for diary entries".
 test('tapping a day on a calendar opens who and when, and its diary photo; tapping again closes it', async ({ page, guard }) => {
   const yest = london(new Date(Date.now() - 86400000));
   addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
@@ -77,7 +111,7 @@ test('tapping a day on a calendar opens who and when, and its diary photo; tappi
   await expect(page.locator('[data-jcal-detail]')).toHaveCount(0);
 });
 
-// Lisa 22 Nov 2026 ("A"): import past daily records. The file is checked and shown first; one press saves the ready rows.
+// the owner 22 Nov 2026 ("A"): import past daily records. The file is checked and shown first; one press saves the ready rows.
 test('Import: a chosen file is checked row by row; Import saves only the ready rows, marked import, and the days turn green', async ({ page, guard }) => {
   const today = london(new Date()), d1 = london(new Date(Date.now() - 2 * 86400000)), d2 = london(new Date(Date.now() - 3 * 86400000));
   addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
@@ -102,7 +136,7 @@ test('Import: a chosen file is checked row by row; Import saves only the ready r
   if (d2.slice(0, 7) === today.slice(0, 7)) await expect(page.locator(`[data-jcal="food_bowls"] [data-day="${d2}"]`)).toHaveClass(/\bdone\b/);
 });
 
-// Lisa 22 Nov 2026: "add a cancel function to the import". Cancel clears the checked file (nothing saved); during an
+// the owner 22 Nov 2026: "add a cancel function to the import". Cancel clears the checked file (nothing saved); during an
 // import it reads Stop, and rows not yet sent are not sent.
 test('Import: Cancel clears the file with nothing saved; Stop during an import leaves the unsent rows unsent', async ({ page, guard }) => {
   const day = (n) => london(new Date(Date.now() - n * 86400000));
@@ -131,7 +165,7 @@ test('Import: Cancel clears the file with nothing saved; Stop during an import l
   await expect(page.locator('[data-jcal-imp-done]')).toHaveText('Imported 1 of 3. Stopped: the other 2 were not sent.');
   expect(await page.evaluate(() => window.__sent.length)).toBe(1);
 });
-// Lisa 23 Nov 2026 (phone screenshot: "Make it clearer between part done (orange) and missed (red)". Missed is a red
+// the owner 23 Nov 2026 (phone screenshot: "Make it clearer between part done (orange) and missed (red)". Missed is a red
 // frame with a small cross, part done an orange frame on a light orange fill; the key shows all three the same way.
 test('daily records: done, part done and missed look different (not by colour alone), the key matches, and the cross reads in light and dark @regression', async ({ page, guard }) => {
   addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
@@ -162,7 +196,7 @@ test('daily records: done, part done and missed look different (not by colour al
   }
   // a real missed day in the month carries the class (and so the cross)
   await expect(page.locator('#jobCals [data-jcal="food_bowls"] .jd.missed').first()).toBeVisible();
-  // done days are green, not the grey button fill (Lisa: the ticks were grey)
+  // done days are green, not the grey button fill (the owner: the ticks were grey)
   const doneBg = await page.locator('#jobCals button.jd.done').first().evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(doneBg.replace(/\s/g, '')).toMatch(/81,173,87/);
 });

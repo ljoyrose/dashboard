@@ -1,7 +1,7 @@
 // Tech section (TECH-HUB-1, Dashboard > More > Tech): one tile per paid tool, from the tools tab Studio already reads
 // (config.js studio.ownedTools). This file is the pure part: read the tab's rows by header name, check the header,
 // build one view-model per row, filter, search, sort and group, check an Add tech entry, and draw one tile as HTML.
-// No DOM, no network, no ids: the page (index.html) reads the tab with Lisa's sign-in and only renders what this returns.
+// No DOM, no network, no ids: the page (index.html) reads the tab with the owner's sign-in and only renders what this returns.
 // Node tests load it directly (tests/mocked/tech-core.spec.js). Nothing about any real tool is written here.
 (function (root) {
   'use strict';
@@ -9,7 +9,7 @@
 
   // Groups in their fixed order (TECH-HUB-1a G3). slot = the LJR7 colour slot in tokens.css (--ljr-N), so a tool's colour
   // comes from its group, never its row. Dev and hosting has no free slot: it reads opts.devHostingSlot (config.js
-  // tech.devHostingSlot, Lisa's decision pending), so one value moves every Dev and hosting tile. A group the tab names
+  // tech.devHostingSlot, the owner's decision pending), so one value moves every Dev and hosting tile. A group the tab names
   // that is not on this list falls into Other (grey).
   var GROUPS = [
     { key: 'ai', name: 'AI', slot: 0 },

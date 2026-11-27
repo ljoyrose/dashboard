@@ -28,7 +28,7 @@ Status: PROTOTYPE, switched off. Nothing deploys. No Google Cloud project, no DN
 - The site is served from the root of the new address (as on Cloudflare), not under `/dashboard/`. The test suite
   already runs both ways (`SITE_BASE=/`).
 
-## Lisa's steps if A1 is chosen (bots prepare everything else)
+## the owner's steps if A1 is chosen (bots prepare everything else)
 1. Google Cloud console: create a project, switch billing on.
 2. BOT gives the exact commands for: Artifact Registry and Cloud Run APIs on, one service account for deploys, one
    Workload Identity pool and provider limited to this repo, and the IAP allow list (your account first).

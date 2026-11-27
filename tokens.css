@@ -1,4 +1,4 @@
-/* ===== THE HOUSE STYLE SHEET (Lisa, 3 Nov 2026): the brand's source of truth. Every token the dashboard is drawn with lives in
+/* ===== THE HOUSE STYLE SHEET (the owner, 3 Nov 2026): the brand's source of truth. Every token the dashboard is drawn with lives in
    THIS file, in the sections below; house.css only builds the shared parts from them, and no page sets its own colours or sizes.
    A weekly checker reads this file, so these NAMES ARE STABLE: add a token, never rename or drop one.
    Token index (section: names)
@@ -20,7 +20,7 @@
      J  Looks (colours) ....... --house-paper  --house-canvas  --house-card  --house-ink  --house-muted  --house-soft-line  --house-soft
                                --house-press  --house-ring  --house-frame  --house-foot  --house-frame-ink  --house-frame-line  --house-shadow
                                --house-late(-tint)  --house-soon(-tint)  --house-ok(-tint)  --house-risk(-tint)
-     K  Counts (Lisa, 3 Nov 2026) ONE rule for every page, toolkit.js DashKit.count (why / kind / cls / say):
+     K  Counts (the owner, 3 Nov 2026) ONE rule for every page, toolkit.js DashKit.count (why / kind / cls / say):
                                grey ring (--house-ring) = waiting, to-do, the Bin;  rose ring (.need, --house-late) = LATE (late, overdue);
                                black badge (.broken) = BROKEN (site down, domain expired, project stuck, check failed, engine error):
                                --house-broken-fill  --house-broken-ink  (near-black + white; inverted in the dark looks: light ink + near-black).
@@ -30,13 +30,13 @@
 
 /* A  LJR7 slots. */
 /* LJR7 colours for the whole dashboard (home, Money Hub, CD Hub). ONE file: change a colour here and every page follows.
-   Palette A "Clear" (chosen by Lisa, 18 Oct 2026). Colour = meaning (LJR7 spine):
+   Palette A "Clear" (chosen by the owner, 18 Oct 2026). Colour = meaning (LJR7 spine):
      0 Basics / AI / read first   1 White Vision   2 Red Security, legal, risk   3 Orange Financial
      4 Yellow Action, operations  5 Green Connection   6 Blue Sales, marketing   7 Purple Creative, ideas   8 Black Superseded, bin
    For each slot:
      --ljr-N        the fill: stripes, dots, borders, bars
      --ljr-N-text   the same colour dark enough to READ as text: 4.6:1 or better on every background text sits on (white card,
-                    cream, tints, and the darker page paper / canvas / soft in both looks; Lisa, 3 Nov 2026; tests/mocked/house-text-contrast)
+                    cream, tints, and the darker page paper / canvas / soft in both looks; the owner, 3 Nov 2026; tests/mocked/house-text-contrast)
      --ljr-N-tint   a pale background for cards and chips of that slot
      --ljr-N-solid  the fill to use BEHIND text (red and purple use their darker text colour so white text passes)
      --ljr-N-on     the text colour to put on --ljr-N-solid (ink on orange, yellow, green and blue; white on red and purple)
@@ -52,11 +52,11 @@
   --ljr-6: #129FE7; --ljr-6-text: #01628E; --ljr-6-tint: #DEF1F8; --ljr-6-solid: #129FE7; --ljr-6-on: #2C2C2A; /* 6 Sales */
   --ljr-7: #A570D1; --ljr-7-text: #76459E; --ljr-7-tint: #F2EAF5; --ljr-7-solid: #76459E; --ljr-7-on: #FFFFFF; /* 7 Ideas */
   --ljr-8: #141413; --ljr-8-text: #141413; --ljr-8-tint: #ECEAE6; --ljr-8-solid: #141413; --ljr-8-on: #FFFEFB;
-  /* --ljr-N-icon: the shade for an icon (and its ring) on a card, 3:1 or better (Lisa's pick 3e, 2 Nov). 1 = ink (the whole picture);
+  /* --ljr-N-icon: the shade for an icon (and its ring) on a card, 3:1 or better (the owner's pick 3e, 2 Nov). 1 = ink (the whole picture);
      0 = the grey every tab icon rests in. Dark looks use the bright fill (below). */
   --ljr-0-icon: #93856E; --ljr-1-icon: var(--ljr-ink); --ljr-2-icon: #E0251D; --ljr-3-icon: #B66A11; --ljr-4-icon: #A2890B;
   --ljr-5-icon: #428C46; --ljr-6-icon: #0F82BC; --ljr-7-icon: #995DCB; --ljr-8-icon: #3A3632;   /* 8 = warm charcoal, never black */
-  /* Main's line: every colour = the whole picture (Lisa's pick 3i A). */
+  /* Main's line: every colour = the whole picture (the owner's pick 3i A). */
   --ljr-rainbow: linear-gradient(90deg, var(--ljr-2), var(--ljr-3), var(--ljr-4), var(--ljr-5), var(--ljr-6), var(--ljr-7));
   /* Courier bands on Marketplace post cards (approximate brand colours, the same in dark mode; name always written too). */
   --ljr-cb-inpost: #FFCD00; --ljr-cb-inpost-on: #111111; --ljr-cb-evri: #00539F; --ljr-cb-rm: #DA202A; --ljr-cb-dpd: #A50034; --ljr-cb-yodel: #1E6B32; --ljr-cb-pf: #B5121B; --ljr-cb-none: #595959; --ljr-cb-on: #FFFFFF;
@@ -98,7 +98,7 @@
   --ljr-0-icon: #93856E; --ljr-1-icon: #F3EEE5; --ljr-2-icon: var(--ljr-2); --ljr-3-icon: var(--ljr-3); --ljr-4-icon: var(--ljr-4); --ljr-5-icon: var(--ljr-5); --ljr-6-icon: var(--ljr-6); --ljr-7-icon: var(--ljr-7); --ljr-8-icon: #CFCAC2;
 }
 
-/* C-J  House look (Lisa, 28 Oct 2026): the agreed rules as numbers, ONCE. house.css builds the shared parts from these;
+/* C-J  House look (the owner, 28 Oct 2026): the agreed rules as numbers, ONCE. house.css builds the shared parts from these;
    every hub loads tokens.css, then house.css, then its own layout. Change a number here and every hub follows.
    Sizes and lines are the same in every look. Colours: "Warm clear" (default) and "Cool clear" (Look menu, html.look-cool),
    each with a dark version (the device's dark mode, or Look > Dark = [data-theme="dark"]). */
@@ -108,25 +108,25 @@
   --house-line: 1px;               /* every line */
   --house-bar: 3px;                /* H  colour lines: 3px down the WHOLE left edge of a card or row, curved with its 12px corner */
   --house-marker-w: 3px; --house-marker-h: 18px;   /* the column-title stage marker */
-  /* G  The bottom tab bar (Lisa's picks, 2 Nov): ONE row, this high on every page, desktop and phone; at most 6 tabs, More last. */
+  /* G  The bottom tab bar (the owner's picks, 2 Nov): ONE row, this high on every page, desktop and phone; at most 6 tabs, More last. */
   --house-tabs-h: 70px; --house-tabs-gap: 5px; --house-tab-max: 128px;
   --house-tab-bar: 18px; --house-tab-bar-on: 40px; --house-tab-bar-h: 4px;   /* the short line under each tab: rest / hover and selected */
   --house-tab-disc: 28px; --house-tab-icon: 22px;   /* the round place for the icon; a 1px ring shows round it only on hover, focus and press */
   --house-tab-count-w: 24px; --house-tab-count-h: 24px; --house-tab-count-lh: 22px; --house-tab-count-pad: 0px;   /* a tab's count: a 14px number in a round ring in its top-right corner (1 and 2 digits one width) */
   --house-tab-dot: 8px; --house-tab-dot-top: 6px;   /* on a phone (under 768px) a tab's count is this dot, off the icon's top-right corner */
-  --house-focus: 1px;              /* keyboard focus: ONE 1px ink line inside (offset -1px), never a ring outside (Lisa, 3 Nov 2026) */
+  --house-focus: 1px;              /* keyboard focus: ONE 1px ink line inside (offset -1px), never a ring outside (the owner, 3 Nov 2026) */
   --house-btn: 36px; --house-btn-phone: 44px;      /* everything you press */
-  --house-head: 56px;              /* the top bar (Lisa's pick A, 2 Nov): one row, this high on every page, desktop and phone */
+  --house-head: 56px;              /* the top bar (the owner's pick A, 2 Nov): one row, this high on every page, desktop and phone */
   --house-head-space: 8px;         /* between the things in the top bar */
   --house-head-name: var(--fs-head); /* the hub's name in the top bar: 18px, like a heading */
-  --house-gutter: 24px;            /* the page frame (Lisa, 2 Nov): every page uses the full window with this side gap; 16px on a phone */
+  --house-gutter: 24px;            /* the page frame (the owner, 2 Nov): every page uses the full window with this side gap; 16px on a phone */
   --house-read-size: var(--fs-small); /* the small read time in the top bar */
   --house-icon: 20px;              /* an icon inside an icon-only button (24px outline icons, stroke 2) */
   --house-icon-stroke: 2;
   --house-menu-w: 300px;           /* the shared Look menu */
   --house-pill: 24px;              /* read-only pills (tags, dates, stamps) */
   --house-count-w: 30px; --house-count-h: 24px; --house-count-r: 12px; --house-count-lh: 22px; --house-count-pad: 3px;   /* every ringed number: 14px in this one box */
-  /* E  Type (Lisa, 2 Nov 2026): ONE font, three weights (400 / 500 / 600), and only these sizes. A big number is never bigger than a heading. */
+  /* E  Type (the owner, 2 Nov 2026): ONE font, three weights (400 / 500 / 600), and only these sizes. A big number is never bigger than a heading. */
   --fs-head: 18px;                 /* headings (h1-h4, card titles), the hub name in the top bar */
   --fs-figure: 18px;               /* big numbers and summary figures */
   --fs-body: 15px;                 /* body text */
@@ -136,7 +136,7 @@
   --house-head-gap: 16px;          /* under a section header */
   --house-pad: 12px;               /* inside a card */
   --house-logo: 20px;              /* brand logo slot (initials when there is no logo) */
-  /* D  States (Lisa's sweep, 3 Nov 2026): hover, focus, press and selected draw ONE 1px line inside (outline, offset -1px) in ink, or in the
+  /* D  States (the owner's sweep, 3 Nov 2026): hover, focus, press and selected draw ONE 1px line inside (outline, offset -1px) in ink, or in the
      control's meaning colour; NEVER a fill and nothing moves. Every line is 1px and INSIDE the box: keyboard focus is the --house-focus
      line (1px, offset -1px) in ink (frame ink on the frame; the --on colour inside a filled control), never a 2px ring, a ring outside,
      a second line or a box-shadow. Typing boxes on focus change only their border colour. Only typing boxes may change fill. */
@@ -144,7 +144,7 @@
   --house-state-fill: transparent;         /* the fill a state adds: none */
   --house-tint: 14%;               /* the pale tint for a badge's own colour (brand initials); never a state */
   --house-hov-mix: 14%;            /* how much muted goes into the card for the pale grey hover / selected fill (house.css --hov).
-                                      Warm dark uses 10% so the control line (--house-press) stays 3:1 on it (Lisa, 12 Nov 2026). */
+                                      Warm dark uses 10% so the control line (--house-press) stays 3:1 on it (the owner, 12 Nov 2026). */
   /* E  Typing boxes (input, textarea, select, contenteditable): 16px on every page, so a phone (iPhone Safari) never zooms in when one is
      tapped. The only size above 15px that is not a heading or figure. */
   --fs-input: 16px;
@@ -163,7 +163,7 @@
   --house-shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
   /* Meaning lines (3:1 or better on a card): date pills, yes / no, needs-you. Tints are the slot tints. */
   --house-late: var(--ljr-2); --house-late-tint: var(--ljr-2-tint);   /* rose ring: late only (DashKit.count in toolkit.js) */
-  /* K  Broken counts (Lisa, 3 Nov 2026): the black badge, the one fill a count may have. */
+  /* K  Broken counts (the owner, 3 Nov 2026): the black badge, the one fill a count may have. */
   --house-broken-fill: #1E1C1A; --house-broken-ink: #FFFFFF;
   --house-soon: var(--ljr-3-text); --house-soon-tint: var(--ljr-3-tint);
   --house-ok: var(--ljr-5-text); --house-ok-tint: var(--ljr-5-tint);
@@ -201,5 +201,5 @@
   --house-frame: #24323F; --house-foot: #2D3D4C;
 }
 
-/* Links (Lisa, 20 Oct 2026): normal text colour, underlined; never default blue. */
+/* Links (the owner, 20 Oct 2026): normal text colour, underlined; never default blue. */
 a { color: inherit; }

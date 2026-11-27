@@ -1,5 +1,5 @@
 /*!
- * BLDThermometer - which thermometers are needed on a day (Lisa 11 Nov 2026).
+ * BLDThermometer - which thermometers are needed on a day (the owner 11 Nov 2026).
  * A thermometer row has no dates (id, name, area_id). When it is needed comes from BLD-requirement rows with
  * need_type reading.temperature, target_table thermometer (BLDNeeds.coversDay): no rows = always needed.
  * After its last day it drops out of today's round and the print list, but its records stay, and a late reading
@@ -26,7 +26,7 @@
    * A thermometer outside its need rows is never flagged.
    */
   // A reading covers thermometer t when it names t (thermometer_id), or names none and t is the only thermometer in its
-  // room (older rows, the CD Hub round). Any row counts, a Room empty one too (Lisa 11 Nov 2026).
+  // room (older rows, the CD Hub round). Any row counts, a Room empty one too (the owner 11 Nov 2026).
   function missingOn(rows, readings, on, reqRows) {
     var perRoom = {}, byId = {}, byRoom = {};
     (rows || []).forEach(function (t) { if (t) perRoom[t.area_id] = (perRoom[t.area_id] || 0) + 1; });

@@ -1,7 +1,7 @@
 /*!
  * BLDTempEvidence - keeps a photo of the thermometer with a temperature reading, ONLY while the owner switches it on.
  *
- * Lisa, 16 Nov 2026: photos are not kept by default (storage and privacy). The owner can switch keeping on, for
+ * the owner, 16 Nov 2026: photos are not kept by default (storage and privacy). The owner can switch keeping on, for
  * example for an inspection, with ONE dated rule row in BLD-breeding_rule:
  *
  *   rule_key  job.temps_keep_photo     (the job. prefix is what staff phones are allowed to read)

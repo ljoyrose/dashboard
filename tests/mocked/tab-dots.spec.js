@@ -1,9 +1,9 @@
-// Bottom-tab counts and tab size (Lisa's pick b, 2 Nov 2026: "use b not different sized rectangles ... same size ideally square").
+// Bottom-tab counts and tab size (the owner's pick b, 2 Nov 2026: "use b not different sized rectangles ... same size ideally square").
 //  - Phone (390): a tab's count is a DOT, not a number: 8px, just off the icon's top-right corner, rose = late or due today,
 //    grey = waiting, no dot when 0. Every tab on the bar is the same width (no tab widens for its count) and as close to square
 //    as fits: height >= width - 2px, never under 56px high. The tab's name still says the number ("Do 3 waiting").
 //  - Laptop (1280): the 14px number in its 24px ring stays as it was; tabs are equal width there too.
-//  - Phone words (Lisa, 2 Nov 2026): Money's "Accountant" shows as "Acct" and Marketplace's "New Stock" as "Stock" on a phone, so
+//  - Phone words (the owner, 2 Nov 2026): Money's "Accountant" shows as "Acct" and Marketplace's "New Stock" as "Stock" on a phone, so
 //    every phone tab is one square size; laptops keep the full words. The tab's name keeps the full word ("Accountant 3 waiting").
 // On all 8 pages. Pretend Google, Drive and Sheets; every row is invented.
 const { test, expect } = require('../support/test');
@@ -20,7 +20,7 @@ const ALL = {
     },
   },
 };
-const ROSE = 'rgb(230, 68, 61)', GREY = 'rgb(138, 127, 112)', BLACK = 'rgb(30, 28, 26)';   // black = broken (Lisa, 3 Nov 2026)
+const ROSE = 'rgb(230, 68, 61)', GREY = 'rgb(138, 127, 112)', BLACK = 'rgb(30, 28, 26)';   // black = broken (the owner, 3 Nov 2026)
 const CLEAR = /^(transparent|rgba\(0, 0, 0, 0\))$/;
 
 // Every tab on the bar: its box, its word's room, its icon, its count (box, colours, whether a number shows) and its name.
@@ -151,7 +151,7 @@ test("dark look at 390: the dots take the look's own rose and grey (Money)", asy
   for (const t of counted) expect(t.n.bg, `${t.word}: rose = late, grey = waiting`).toBe(t.n.need ? tok['--house-late'] : tok['--house-ring']);
 });
 
-// Lisa (2 Nov 2026): phone words for the two long tabs, so every phone tab is the same square; laptops keep the full words.
+// the owner (2 Nov 2026): phone words for the two long tabs, so every phone tab is the same square; laptops keep the full words.
 const SHORT = { money: ['Accountant', 'Acct'], marketplace: ['New Stock', 'Stock'] };
 for (const [hub, [full, short]] of Object.entries(SHORT)) {
   test(`${hub} at 390: "${full}" shows as "${short}" and every tab is the same width; at 1280 it says "${full}"`, async ({ page, guard }) => {

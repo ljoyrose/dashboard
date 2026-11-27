@@ -8,18 +8,18 @@
   var RANK = { late: 0, never: 1, today: 2, as_needed: 3, ok: 4 }, REPORT_KEY = 'report', ctx0 = StaffPage.ctx;
 
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  /* "2 Mar 2026" on every screen, staff and owner (Lisa 13/11) */
+  /* "2 Mar 2026" on every screen, staff and owner (the owner 13/11) */
   function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso)); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : iso; }
   function dueLine(j) {
     if (j.status === 'late') return j.days_late === 1 ? '1 day late' : j.days_late + ' days late';
-    if (j.status === 'today') return j.times_per_day > 1 ? 'Due today: ' + (j.done_today || 0) + ' of ' + j.times_per_day : 'Due today';
+    if (j.status === 'today') return 'Due today';
     if (j.status === 'never') return 'Due';
     if (j.status === 'ok') return 'Next ' + dmy(j.next_due);
     return 'As needed';
   }
   function isDue(j) { return j.status === 'late' || j.status === 'today' || j.status === 'never'; }
   function byRank(a, b) { return (RANK[a.status] - RANK[b.status]) || String(a.label).localeCompare(String(b.label)); }
-  /* Lisa 18 Nov 2026: daily jobs first (feed, health check), then the less often ones (grooming, ears), as needed last;
+  /* the owner 18 Nov 2026: daily jobs first (feed, health check), then the less often ones (grooming, ears), as needed last;
      A-Z within the same frequency. The frequency is the owner's every_days on the job row; a group goes by its most frequent job. */
   function every(j) { var n = parseInt(j.every_days, 10); return n > 0 ? n : 1e6; }
   function byFrequency(list) {
@@ -177,7 +177,7 @@
         var capR = BLDCapacity.check({ areaId: target.area_id, access: BLDCapacity.accessOn((v[9] && v[9].rows) || [], target.area_id, today0), capacity: v[8].rows, dogs: roomDogs.map(function (x) { return fact(x.id); }), date: today0 });
         host.appendChild(h('p', { class: capR.status === 'over' ? 'msg bad' : 'sub', 'data-k': 'capacity', text: capR.status === 'over' ? capR.message : BLDCapacity.summary(capR) }));
       }
-      /* a room scan: who is in the room now, each opening that dog's own jobs (Lisa 18 Nov 2026); Move dogs is below */
+      /* a room scan: who is in the room now, each opening that dog's own jobs (the owner 18 Nov 2026); Move dogs is below */
       if (target.area_id) {
         var dogTag = {};
         (tags.rows || []).forEach(function (t) { if (t.kind === 'subject' && isOn(t)) dogTag[t.ref_id] = t.tag; });
@@ -188,8 +188,8 @@
           : [h('p', { class: 'sub', text: 'No dogs here.' })])));
       }
       /* this code cannot read past records (no read rows for check_log): say so, never a silent "Due" */
-      /* Lisa 17 Nov 2026: jobs she had just saved still said Due. Say WHY the records were not read: not allowed for this
-         code (ask Lisa), or no answer in time (slow saves: try again), with a Try again button for the second. */
+      /* the owner 17 Nov 2026: jobs she had just saved still said Due. Say WHY the records were not read: not allowed for this
+         code (ask the owner), or no answer in time (slow saves: try again), with a Try again button for the second. */
       if (!v[2].ok) {
         var slow = v[2].code === 'NETWORK' || v[2].code === 'BUSY' || v[2].code === 'TIMEOUT' || !v[2].code;
         host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', text: slow
@@ -206,7 +206,7 @@
       function byLine(job) { var b = job.reset_by && byKey[job.reset_by]; return b && job.status === 'ok' ? ' · ' + b.label : ''; }
       function say(text, kind) { status.className = 'msg ' + (kind || ''); status.textContent = text; }
 
-      /* every tap shows something on the card: Saving..., then a tick or a plain red line (Lisa, 13 Nov) */
+      /* every tap shows something on the card: Saving..., then a tick or a plain red line (the owner, 13 Nov) */
       function send(job, t, outcome, inputs, panelMsg, state, noteFor) {
         try { sendNow(job, t, outcome, inputs, panelMsg, state, noteFor); }
         catch (e) { BLDDone.fail(state.card, 'Not saved. Something went wrong on this screen; try again.'); if (window.console) console.error(e); }
@@ -294,7 +294,7 @@
           logs = logs.concat(r.session ? [Object.assign({}, entry, mine, { id: r.id, covered_ids: entry.dog_ids || '', subject_id: '', exceptions: entry.exceptions || '' })]
             : (dogs.length ? dogs.map(function (dog, i) { return Object.assign({}, entry, mine, { id: real ? r.ids[i] : r.id + '-' + i, _noId: !real, subject_id: dog }); })
             : [Object.assign({}, entry, mine, { id: r.id })]));
-          // 22 Nov 2026 (Lisa: "when you enter with entered after, ensure there is a photo option so we can add the diary"):
+          // 22 Nov 2026 (the owner: "when you enter with entered after, ensure there is a photo option so we can add the diary"):
           // after an Earlier save that has real record ids, offer the page it came from. Optional; the record is saved either way.
           var recIds = dogs.length ? (real ? r.ids.slice() : []) : (r.id ? [r.id] : []);
           if (paper && recIds.length && r.status !== 'queued') diaryPhoto(job, recIds, BLDDue.londonDate(entry.happened_at) || today);
@@ -359,7 +359,7 @@
           roomList = h('div', { class: 'job-dogs' }, roomDogs.length ? roomDogs.map(function (x, i) { return dogRow(state.ticks[i], x.label, roomDid[x.id]); }) : [h('p', { class: 'sub', text: 'No dogs here.' })]);
           state.dogIds = roomDogs.map(function (x) { return x.id; });
         }
-        if (dogJob && !target.subject_id) {   // Lisa 12 Nov: every dog starts unticked; tick dogs one by one, or Select all and untick a dog that needs a comment
+        if (dogJob && !target.subject_id) {   // the owner 12 Nov: every dog starts unticked; tick dogs one by one, or Select all and untick a dog that needs a comment
           var did = doneToday(t.type_key), dogs = BLDDue.dogsFor(t, target).slice().sort(function (x, y) { return String(labelOf[x.id]).localeCompare(String(labelOf[y.id])); });
           state.ticks = dogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, onchange: function () { state.rid = null; } }); });
           var all = h('button', { class: 'btn quiet job-all', type: 'button', text: 'Select all', onclick: function () {
@@ -369,7 +369,7 @@
           state.dogIds = dogs.map(function (x) { return x.id; });
           if (site) { panel.insertBefore(roomList, panel.firstChild); roomList = null; }
         }
-        /* Lisa 22 Nov 2026: a multi-dog job had no button by its ticks, so the ticked dogs were never saved. "Done: N dogs" saves them. */
+        /* the owner 22 Nov 2026: a multi-dog job had no button by its ticks, so the ticked dogs were never saved. "Done: N dogs" saves them. */
         if (state.ticks && state.ticks.length > 1) {
           var tickBtn = h('button', { class: 'btn job-ticks-done', type: 'button', 'data-ticks-done': '1', onclick: function () { send(job, t, done, inputs, panelMsg, state); } });
           var count = function () { var n = state.ticks.filter(function (x) { return x.checked; }).length; tickBtn.textContent = 'Done: ' + n + (n === 1 ? ' dog' : ' dogs'); tickBtn.disabled = !n; };
@@ -377,7 +377,7 @@
           var dogBox = roomList || panel.querySelector('.job-dogs');
           dogBox.appendChild(tickBtn); state.countTicks = count; count();
         }
-        /* Note (Lisa 13 Nov): not always a problem, just an explanation. On a job not done today it saves it as done, with the note.
+        /* Note (the owner 13 Nov): not always a problem, just an explanation. On a job not done today it saves it as done, with the note.
            On a job already done today it waits for the save script's note record (outcome note + note_for_id). */
         var dogIds = state.dogIds || (dogJob && target.subject_id ? [target.subject_id] : null);
         var doneLine = (dogIds && dogIds.length > 1) ? null : todays(t.type_key).filter(function (l) { return l.outcome !== 'not_done' && l.outcome !== 'note' && !l._queued && !l._noId && (dogIds ? dogIds.indexOf(l.subject_id) >= 0 : here(l)); })[0];
@@ -392,7 +392,7 @@
           h('button', { class: 'btn quiet', type: 'button', text: 'Not done', onclick: function () { send(job, t, 'not_done', inputs, panelMsg, state); } }),
           h('button', { class: 'btn quiet', type: 'button', text: 'Part done', onclick: function () { send(job, t, 'part_done', inputs, panelMsg, state); } })   // needs a note; not counted as done
         ]));
-        /* Earlier (Lisa 13 Nov, option B): the day and time it was really done, then any button saves for that day */
+        /* Earlier (the owner 13 Nov, option B): the day and time it was really done, then any button saves for that day */
         var WHEN = { exact: 'Time', part: 'Part of day', none: 'Not known', now: 'Now' };
         var pDate = h('input', { class: 'inp', type: 'date', max: today, 'aria-label': 'Day done', onchange: function () { state.rid = null; refresh(); } });
         var pTime = h('input', { class: 'inp', type: 'time', 'aria-label': 'Time done (optional)', onchange: function () { state.rid = null; } });
@@ -427,7 +427,7 @@
         ]);
         var kids = roomList ? [head, roomList] : [head];
         if (a.outcome) kids.push(h('button', { class: 'job-prob', type: 'button', text: 'Problem/Note?', 'aria-label': 'Problem: ' + job.label, onclick: function () { panel.hidden = false; problems.hidden = false; } }));
-        /* "Earlier" + plus icon (Lisa 13/11, AA_BLD-SCHEMA §14): one word for any late entry, from paper, an app or memory */
+        /* "Earlier" + plus icon (the owner 13/11, AA_BLD-SCHEMA §14): one word for any late entry, from paper, an app or memory */
         kids.push(earlierBtn('job-prob job-paper-btn', 'Earlier: ' + job.label, function () { panel.hidden = false; paperRow.hidden = false; if (a.outcome) problems.hidden = false; }));
         kids.push(panel);
         var card = state.card = h('div', { class: 'card job s-' + job.status, 'data-job': job.type_key }, kids);
@@ -441,14 +441,14 @@
         return h('label', { class: 'job-dog' }, kids);
       }
 
-      /* "Earlier" + plus icon: the one word for any late entry (Lisa 13/11) */
+      /* "Earlier" + plus icon: the one word for any late entry (the owner 13/11) */
       function earlierBtn(cls, label, onclick) {
         var b = h('button', { class: cls, type: 'button', 'aria-label': label, onclick: onclick });
         b.innerHTML = PLUS; b.appendChild(document.createTextNode('Earlier'));
         return b;
       }
 
-      /* Earlier, several days at once (Lisa 13/11, option B): one job, a day or a week; a row per dog, room or site per day;
+      /* Earlier, several days at once (the owner 13/11, option B): one job, a day or a week; a row per dog, room or site per day;
          each row is judged by the job as it was set up on its own day, and ticks when its save lands */
       function lineOn(key, tg, day) {
         return logs.filter(function (l) {

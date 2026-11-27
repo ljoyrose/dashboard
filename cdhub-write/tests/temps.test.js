@@ -95,7 +95,7 @@ test('read filter: area_id and London days narrow the rows; it never widens them
 });
 
 // ---- thermometers (NEW: TEMPS, 11 Nov 2026): one per place; the count is rows, not code. A thing carries no dates
-// (Lisa 11 Nov 2026, "A standard"): when one is needed is BLD-requirement rows.
+// (the owner 11 Nov 2026, "A standard"): when one is needed is BLD-requirement rows.
 const THM_HEADER = ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'];
 const REQ_HEADER = ['id', 'tenant_id', 'need_type', 'target_table', 'target_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'];
 const thmEnv = (props) => {

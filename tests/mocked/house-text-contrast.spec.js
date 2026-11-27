@@ -1,4 +1,4 @@
-// Text contrast (Lisa, 3 Nov 2026): every piece of text holds 4.5:1 or better on whatever it sits on — the white card,
+// Text contrast (the owner, 3 Nov 2026): every piece of text holds 4.5:1 or better on whatever it sits on — the white card,
 // the darker page backgrounds (paper, canvas, soft) and the cool look's — on all 8 pages, every tab and More page,
 // at 1280 and 390, in all four looks (warm and cool, light and dark). The colour tokens aim for 4.6:1 so there is room.
 // The background is read from the drawn page: up through the parents to the first solid colour (tests/support/sweep-audit.js).

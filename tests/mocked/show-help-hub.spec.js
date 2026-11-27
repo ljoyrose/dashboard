@@ -1,4 +1,4 @@
-// Show help on the CD Hub (Lisa 18 Nov 2026): the Look menu's Help row turns help lines on; off by default; data lines stay.
+// Show help on the CD Hub (the owner 18 Nov 2026): the Look menu's Help row turns help lines on; off by default; data lines stay.
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 
 test('hub: Compliance help lines hidden by default; Look → Show help shows them; Hidden hides them again', async ({ page, guard }) => {

@@ -1,4 +1,4 @@
-// Apps (Factory) Main (Lisa's house style, 2 Nov 2026): exactly Next, Needs you (at most 5, late > today > waiting, each row with its
+// Apps (Factory) Main (the owner's house style, 2 Nov 2026): exactly Next, Needs you (at most 5, late > today > waiting, each row with its
 // action), then Questions · Gates · Live (the Dashboard's Apps tile numbers, worked out the same way), each a link to its filtered
 // list; "–" when the state cannot be read; ONE "Nothing needs you" when nothing waits. Pretend Google and Drive; the data is
 // tests/fixtures/factory/state.js (invented).
@@ -42,7 +42,7 @@ test.describe('Apps Main', () => {
     await open(page, guard, { change: lively });
     await checkMain(page, { labels: LABELS, hrefs: HREFS, values: [2, 1, 1], late: [false, false, false] });
     await onlyMain(page);
-    // Next: the overdue Lisa task, with its action one tap away (its item page, where Done is).
+    // Next: the overdue the owner task, with its action one tap away (its item page, where Done is).
     const next = page.locator('[data-hm="next"]');
     await expect(next.locator('.hm-what')).toHaveText('Vet Converter · Test the import on 3 files');
     await expect(next.locator('a[data-hm-act]')).toHaveAttribute('href', '#/item/wrk000001');

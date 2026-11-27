@@ -1,4 +1,4 @@
-// Lisa 18 Nov 2026 (demo): "The hub opens on Records, with the sub-menu visible at the top." An owner row
+// the owner 18 Nov 2026 (demo): "The hub opens on Records, with the sub-menu visible at the top." An owner row
 // nav.start.OWNER = the section's slot number (4 = Records) picks where the hub opens with no address. No row: Main.
 // Pretend Google and Drive only; rows invented.
 const { test, expect } = require('../support/test');

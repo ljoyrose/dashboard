@@ -1,6 +1,6 @@
 # AF-ENGINE: post the presend stamp on the Sends task (approved, NOT deployed)
 
-Written 23 Oct 2026. **Approved 30 Oct 2026 by Lisa's default A** (go ahead as designed once the Factory Send gate PR merges). Nothing here is pushed to AF-ENGINE by this repo: a session with engine access (the Mac route) pastes it in.
+Written 23 Oct 2026. **Approved 30 Oct 2026 by the owner's default A** (go ahead as designed once the Factory Send gate PR merges). Nothing here is pushed to AF-ENGINE by this repo: a session with engine access (the Mac route) pastes it in.
 
 ## Ready to paste
 `tools/presend/stamp-handler.gs` holds `stamp_` and the one wire-in line for `pickupRequests_`. Tests: `tests/mocked/presend-stamp-handler.spec.js` (pretend ClickUp; a READY and a NOT READY stamp post one plain comment; 10 bad requests throw before any write; a non-Sends or missing task is refused).
