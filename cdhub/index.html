@@ -1404,6 +1404,8 @@ function build(){
   CD.sizeLabel=BLDCapacity.sizeLabels(T['BLD-breeding_rule.csv']||[],todayISO());   /* shared with the print cards (staff/lib/capacity.js) */
   CD.sizeCut=BLDCapacity.sizeCutoffs(T['BLD-breeding_rule.csv']||[],_day);
   CD.dogs.forEach(sizeFromWeight);
+  /* a pup under the owner's puppy.under_weeks rows shows in the size_colour.puppy colour (shared rule, staff/lib/capacity.js puppy) */
+  CD.dogs.forEach(function(d){ var p=BLDCapacity.puppy(T['BLD-breeding_rule.csv']||[],todayISO(),d.dob); d.pupColour=p.colour; });
   CD.tempBands=(T['BLD-temperature_band.csv']||[]).map(function(r){
     return {band:r.band,from:parseInt(r.age_from_days,10),to:r.age_to_days===''?99999:parseInt(r.age_to_days,10),
             min:(r.min_temp==null||r.min_temp==='')?null:parseFloat(r.min_temp),max:(r.max_temp==null||r.max_temp==='')?null:parseFloat(r.max_temp),
@@ -3585,9 +3587,9 @@ function drawDogs(){
    var gSex=d.sex==='Female'?(isEntire(d)?'f':'fn'):d.sex==='Male'?(isEntire(d)?'m':'mn'):'u';
    var gSym=d.sex==='Female'?'#i-female':d.sex==='Male'?'#i-male':'#i-paw';
    var gTitle=(d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered/spayed');
-   var szC=d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'';
+   var szC=d.pupColour||(d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'');
    var ph=dogPhotos(d), pic=cardPhotoId(d,ph);
-   h+='<article class="dc '+cls+(d.sizeWord?' sz':'')+'"'+(d.sizeWord?' data-size="'+esc(d.sizeWord)+'" data-size-from="'+esc(d.sizeFrom)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')+' data-dog="'+esc(d.id)+'">'
+   h+='<article class="dc '+cls+(szC?' sz':'')+'"'+(d.pupColour?' data-pup="1"':'')+(d.sizeWord?' data-size="'+esc(d.sizeWord)+'" data-size-from="'+esc(d.sizeFrom)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')+' data-dog="'+esc(d.id)+'">'
 
   +'<div class="dc-top">'
     +'<div class="dogphoto-col">'
@@ -3798,7 +3800,7 @@ function capFor(aid,band,access){ var a=CD.cap[aid]; if(!a||!access) return null
 function hideSource(s){ return BLDDisplay.hideSource(s); }
 function dogMoveChip(d, fromId, sid){
  if(!d) return '<span class="pill i">'+esc(sid)+'</span>';
- var szC=d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'';
+ var szC=d.pupColour||(d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'');
  var col=(typeof colourLabel==='function'?colourLabel(d):'')||'';
  return '<button type="button" class="dchip" data-move-dog="'+esc(d.id)+'" data-from="'+esc(fromId||'')+'"'
   +(d.sizeWord?' data-size="'+esc(d.sizeWord)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')
@@ -6247,7 +6249,7 @@ function goBody(id,push){
    +'<p class="cd-retry"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
- /* Report 20 Nov 2026: the Bin page is gone. An old #/bin address opens Settings, or Main when this sign-in has no Settings. */
+ /* The Bin page is gone. An old #/bin address opens Settings, or Main when this sign-in has no Settings. */
  if(id==='bin'&&LOAD.later==='wait'){ id='admin'; full='admin'; sub=null; main.setAttribute('data-view',id); }   /* Settings' rows still loading: wait; SHOWN stays #/bin, so the redraw when they land decides */
  else if(id==='bin'){
   var binTo=navHas('admin')?'admin':'map';
