@@ -249,11 +249,12 @@
   }
   /* Lisa 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
   /* the main photo is the 'main' link row in force (the owner 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
+  /* main photo as main picks it (BLDPhotos.shownPhoto: a removed main falls back to the gallery, an ended file is never shown); a plain web link otherwise */
   function photoRef(s, table) {
-    var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
-    var id = (m && photoId(m.drive_file_id || m.file_id)) || photoId(s.photo);
+    var rec = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()), m = rec.main;
+    var id = photoId(BLDPhotos.shownPhoto(rec, s.photo));
     var url = BLDPhotos.safeUrl(m && m.url) || BLDPhotos.safeUrl(s.photo);
-    if (url && /drive\.google\.com|docs\.google\.com|googleusercontent\.com/i.test(url)) { if (!id) id = photoId(url); url = ''; }
+    if (url && /drive\.google\.com|docs\.google\.com|googleusercontent\.com/i.test(url)) { if (!id && m && url === BLDPhotos.safeUrl(m.url)) id = photoId(url); url = ''; }
     if (id) url = '';
     return { id: id, url: url };
   }

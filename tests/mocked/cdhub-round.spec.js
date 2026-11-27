@@ -395,7 +395,7 @@ test.describe('Scan and move: the move shows at once, with no read again', () =>
   const scan = async (page, tag) => { await page.goto('cdhub/staff/#mv/' + tag); };
   const reads = (page) => { const r = []; page.on('request', (q) => { if (q.method() === 'POST') { try { const b = JSON.parse(q.postData() || '{}'); if (String(b.action).indexOf('read') === 0) r.push(b.table || (b.tables || []).join(',') || b.action); } catch (e) { /* not JSON */ } } }); return r; };
 
-  test('a saved move shows the dog in its new room and out of the old one, with no read of the lists @regression', async ({ page }) => {
+  test('a saved move shows the dog in its new room and out of the old one, with no read of the lists @regression @live', async ({ page }) => {
     const { script } = await round(page, { tables: (t) => { t.occupancy = t.occupancy.filter((r) => r.subject_id !== 'sub-a12'); } });
     await scan(page, 'ROOMAAAB');
     await expect(page.getByRole('heading', { name: 'Room 2', exact: true })).toBeVisible();
