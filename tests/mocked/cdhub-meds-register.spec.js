@@ -171,6 +171,22 @@ test.describe('Medicines register: the staff "Medicine given" job counts too', (
     expect(R.cell(get('j1'), 'date')).toBe('4 Feb 2026');
   });
 
+  test('a dose typed from paper or imported says how it was recorded; a late save is never marked late @regression', () => {
+    const logs = [
+      { id: 'k1', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Sample Drops', amount: '2', outcome: 'ok', happened_at: '2026-02-04T08:15:00Z', taken_at: '2026-02-06T18:40:00Z', taken_by: 'Sample Staff A', note: 'Given with food', how_recorded: 'tapped' },
+      { id: 'k2', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Sample Drops', amount: '2', outcome: 'ok', happened_at: '2026-02-05T08:15:00Z', taken_at: '2026-02-05T08:20:00Z', taken_by: 'Sample Staff A', how_recorded: 'paper' },
+      { id: 'k3', check_type_id: 'ct-med', subject_id: 'sub-test-dog-2', item: 'Sample Drops', amount: '2', outcome: 'ok', happened_at: '2026-02-05T08:15:00Z', taken_by: 'Sample Staff A', how_recorded: 'import' },
+    ];
+    const lines = R.build(R.fromChecks(logs, JOB_TYPES), { month: '2026-02', dog });
+    const get = (id) => lines.find((l) => l.id === id);
+    expect(R.cell(get('k1'), 'note')).toBe('Given with food');   // saved two days later: no late mark
+    expect(R.cell(get('k2'), 'note')).toBe('Recorded from paper.');
+    expect(R.cell(get('k3'), 'note')).toBe('Imported.');
+    const csv = R.toCsv({ kennel: 'K', month: '2026-02', printed: '' }, lines);
+    expect(csv).toContain('Recorded from paper.');
+    expect(csv).not.toMatch(/late/i);
+  });
+
   test('UK time: a job at 23:30 UTC in summer falls on the next day', () => {
     const [l] = R.build(R.fromChecks([{ id: 's', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'X', outcome: 'ok', happened_at: '2026-06-30T23:30:00Z' }], JOB_TYPES), { month: '2026-07', dog });
     expect(R.cell(l, 'date', true)).toBe('2026-07-01');
@@ -182,7 +198,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
   test('pick a month, download the CSV and open the print page; nothing is written @live', async ({ page, guard, context }) => {
     setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
     setFile(guard.world, 'BLD-microchip.csv', CHIPS);
-    setFile(guard.world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\nbr-gb,ten-test,register.given_by_default,Owner A,2020-01-01,invented,,,\n');
+    setFile(guard.world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\nbr-gb,ten-test,meds.given_by.default,Owner A,2020-01-01,invented,,,\n');
     setFile(guard.world, 'BLD-check_type.csv', 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit\nct-med,ten-test,medicine,Medicine given,dog,true,Medicine,true,dose\n');
     setFile(guard.world, 'BLD-check_log.csv', 'id,tenant_id,check_type_id,subject_id,item,amount,outcome,happened_at,taken_at,taken_by,note,note_for_id,corrects_id,time_given\njb-1,ten-test,ct-med,sub-test-dog-2,Sample Drops,2,ok,2026-02-12T09:30:00Z,2026-02-12T09:30:00Z,Sample Staff A,,,,\n');
     await context.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
@@ -223,6 +239,23 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await expect(pop.locator('table')).not.toContainText('Recorded in');
     await expect(card.locator('#medsMsg')).toHaveText('Opened 4 entries to print.');
     await pop.close();
+  });
+
+  test('a dose recorded from paper says so in the downloaded CSV @live', async ({ page, guard }) => {
+    setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
+    setFile(guard.world, 'BLD-microchip.csv', CHIPS);
+    setFile(guard.world, 'BLD-check_type.csv', 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit\nct-med,ten-test,medicine,Medicine given,dog,true,Medicine,true,dose\n');
+    setFile(guard.world, 'BLD-check_log.csv', 'id,tenant_id,check_type_id,subject_id,item,amount,outcome,happened_at,taken_at,taken_by,note,note_for_id,corrects_id,time_given,how_recorded\njb-p,ten-test,ct-med,sub-test-dog-2,Sample Drops,2,ok,2026-02-12T09:30:00Z,2026-02-14T18:00:00Z,Sample Staff A,,,,,paper\n');
+    await page.goto('cdhub/');
+    await signIn(page);
+    await tabClick(page, '#nav button[data-go="compliance"]');
+    const card = page.locator('#compMeds');
+    await card.locator('#medsMonth').selectOption('2026-02');
+    const [dl] = await Promise.all([page.waitForEvent('download'), card.locator('#medsCsv').click()]);
+    const csv = fs.readFileSync(await dl.path(), 'utf8');
+    expect(csv).toContain('Sample Drops');
+    expect(csv).toContain('Recorded from paper.');
+    expect(csv).not.toMatch(/late/i);
   });
 
   test('a month with nothing given prints and downloads a nil record', async ({ page, guard, context }) => {
