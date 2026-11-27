@@ -178,8 +178,8 @@ test('a session row counts as done for each listed dog, an exception stays outst
 test('the register and the rules helper name every dog on a session row and mark the exception', () => {
   global.BLDCheckRules = Rules;
   const log = { id: 's', check_type_id: 'ct', outcome: 'ok', happened_at: '2026-11-25T09:00:00Z', covered_ids: 'a|b', exceptions: 'b:not_here', how_recorded: 'site_tap' };
-  const lines = Register.build([log], { month: '2026-11', types: [{ id: 'ct', label: 'Present' }], dogName: (id) => (id === 'a' ? 'Ada' : 'Bea') });
-  assert.deepEqual(lines.map((l) => [l.subject, l.result]), [['Ada', 'done'], ['Bea', 'not here']]);
+  const lines = Register.build([log], { month: '2026-11', types: [{ id: 'ct', label: 'Present' }], dogName: (id) => (id === 'a' ? 'Dog A' : 'Dog B') });
+  assert.deepEqual(lines.map((l) => [l.subject, l.result]), [['Dog A', 'done'], ['Dog B', 'not here']]);
   const card = Rules.dogLine({ id: 'a' }, { 'BLD-check_log.csv': [log], 'BLD-check_type.csv': [{ id: 'ct', label: 'Present' }] }, (s) => s);
   assert.match(card, /included in the round/);
   const ex = Rules.dogLine({ id: 'b' }, { 'BLD-check_log.csv': [log], 'BLD-check_type.csv': [{ id: 'ct', label: 'Present' }] }, (s) => s);
