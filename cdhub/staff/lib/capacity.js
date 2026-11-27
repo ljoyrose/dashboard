@@ -126,6 +126,32 @@
   }
 
   /**
+   * Puppy colour and Size tile (owner rule rows, newest effective_from in force on `today` wins; to_date ends a row):
+   * puppy.under_weeks (a number), size_colour.puppy (a colour word or #hex), puppy.size_tile ("size" or "puppy").
+   * A dog born less than under_weeks weeks before `today` is a pup. No date of birth, or no rows: never a pup.
+   * Returns { pup, colour, tile } where colour is '' unless pup and a colour row exists, and tile is 'puppy' or 'size'.
+   * Hub and print share this.
+   */
+  function puppy(rules, today, dob) {
+    var day = ymd(today), born = ymd(dob), best = {};
+    (rules || []).forEach(function (r) {
+      var k = String(r.rule_key || '').trim(); if (!/^(puppy\.under_weeks|size_colour\.puppy|puppy\.size_tile)$/.test(k)) return;
+      var v = String(r.value || '').trim(), f = ymd(r.effective_from), t = ymd(r.to_date);
+      if (!v || (day && f && f > day) || (day && t && t < day)) return;
+      if (best[k] && f < best[k].f) return;
+      best[k] = { f: f, v: v };
+    });
+    var wk = best['puppy.under_weeks'] ? parseFloat(best['puppy.under_weeks'].v) : NaN, pup = false;
+    if (wk > 0 && born && day) {
+      var a = born.split('-'), b = day.split('-');
+      var days = (Date.UTC(+b[0], +b[1] - 1, +b[2]) - Date.UTC(+a[0], +a[1] - 1, +a[2])) / 864e5;
+      pup = days >= 0 && days < wk * 7;
+    }
+    var c = best['size_colour.puppy'] ? best['size_colour.puppy'].v : '';
+    return { pup: pup, colour: pup && /^([a-z]+|#[0-9a-f]{3,6})$/i.test(c) ? c : '', tile: pup && best['puppy.size_tile'] && /^puppy$/i.test(best['puppy.size_tile'].v) ? 'puppy' : 'size' };
+  }
+
+  /**
    * Whether one access row counts. A row whose to_date is before its from_date was voided (it never applied; OV12 18 Nov
    * 2026, 3A.1/2) and never counts. With a date, the row must also be in force that day (inForce: started, not ended).
    */
@@ -331,6 +357,6 @@
     if (r.limit === null) return takes + (r.count ? r.count + ' here. ' : '') + r.notes.join(' ');
     return takes + r.count + ' of ' + r.limit + ' now.' + (r.notes.length ? ' ' + r.notes.join(' ') : '');
   }
-  return { check: check, audit: audit, accessOf: accessOf, accessRowCounts: accessRowCounts, accessOn: accessOn, limitsOn: limitsOn, facts: facts, summary: summary, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, sizeOverride: sizeOverride, sizeForDog: sizeForDog, sizeLabels: sizeLabels, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
+  return { check: check, audit: audit, accessOf: accessOf, accessRowCounts: accessRowCounts, accessOn: accessOn, limitsOn: limitsOn, facts: facts, summary: summary, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, sizeOverride: sizeOverride, sizeForDog: sizeForDog, sizeLabels: sizeLabels, puppy: puppy, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
 
 }));

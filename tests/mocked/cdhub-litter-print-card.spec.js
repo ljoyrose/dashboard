@@ -108,3 +108,29 @@ test('print: litter cards look like kennel cards and list only litters still on 
   expect(margins.length).toBeGreaterThan(0);
   for (const m of margins) expect(m).toMatch(/^0(px)?$/);
 });
+
+test('print: a litter born less than puppy.under_weeks ago prints in the size_colour.puppy colour; an older litter in the dam\'s size colour', async ({ page }) => {
+  const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
+  const CORS = { 'access-control-allow-origin': '*' };
+  await page.clock.setFixedTime(new Date('2026-11-27T12:00:00Z'));
+  const tables = {
+    area: [{ id: 'ar-a', code: 'Room A' }], requirement: [], area_access: [], area_capacity: [], subject_status: [], check_type: [],
+    subject: [{ id: 'dam1', name: 'Pretend Dam', sex: 'Female', size_band: '10-25kg (medium)', dob: '2021-03-02' }, { id: 'dam2', name: 'Pretend Dam Two', sex: 'Female', size_band: '10-25kg (medium)', dob: '2021-03-02' },
+      { id: 'p1', name: 'Pretend Pup A', birth_litter_id: 'lit-young' }, { id: 'p2', name: 'Pretend Pup B', birth_litter_id: 'lit-older' }],
+    litter: [{ id: 'lit-young', dam_subject_id: 'dam1', born_on: '2026-09-30' }, { id: 'lit-older', dam_subject_id: 'dam2', born_on: '2026-08-01' }],
+    occupancy: ['dam1', 'dam2', 'p1', 'p2'].map((id) => ({ subject_id: id, area_id: 'ar-a', moved_in: '2026-01-01' })),
+    qr_tag: [{ tag: 'LLLLLLLL', kind: 'litter', ref_id: 'lit-young', active: 'true' }, { tag: 'MMMMMMMM', kind: 'litter', ref_id: 'lit-older', active: 'true' }],
+    breeding_rule: [{ rule_key: 'size_colour.medium', value: 'green' }, { rule_key: 'size_colour.puppy', value: 'purple', effective_from: '2026-11-21' },
+      { rule_key: 'puppy.under_weeks', value: '12', effective_from: '2026-11-21' }],
+    coat_colour: [], coat_pattern: [], nose_pigment: [], microchip: [], links: [], files: []
+  };
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [] } } });
+  });
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.goto('cdhub/staff/print/');
+  await page.getByRole('button', { name: 'Litter cards' }).click();
+  await expect(page.locator('.dcard.lcard[data-litter="lit-young"]')).toHaveAttribute('style', /--c:var\(--sz-purple, purple\)/);   // 58 days old
+  await expect(page.locator('.dcard.lcard[data-litter="lit-older"]')).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);    // 118 days: the dam's colour
+});
