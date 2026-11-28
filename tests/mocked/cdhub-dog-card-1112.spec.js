@@ -27,7 +27,7 @@ async function saves(page, answer) {
   const bodies = [];
   await page.route(SINK, async (route) => {
     const b = JSON.parse(route.request().postData() || '{}'); bodies.push(b);
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer ? answer(b) : { ok: true, result: { status: 'saved', id: 'new-1' } }) });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer ? await answer(b) : { ok: true, result: { status: 'saved', id: 'new-1' } }) });
   });
   return bodies;
 }
@@ -391,12 +391,15 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     const not = page.locator(`button[data-nothere="${sid}"][data-area="${area}"]`), line = page.locator(`[data-hsave="${area}|${sid}"]`);
     await here.click();
     await expect(here).toHaveAttribute('aria-pressed', 'true');
+    await page.waitForTimeout(200); expect(bodies.length).toBe(0);   // a tap only marks: the room is sent once, by Save room
+    await page.locator(`[data-psave="${area}"]`).click();
     await expect.poll(() => bodies.length).toBe(1);
-    // Present is one session row for the round (the dogs present, not one row per dog) unless Settings turns that off.
-    expect(bodies[0]).toMatchObject({ table: 'check_log', action: 'add_session', fields: { check_type_id: 'cty-p', area_id: area, outcome: 'recorded', how_recorded: 'tapped', dog_ids: sid, exceptions: '' } });
+    // Present is one session row for the room (every dog in it, not one row per dog) unless Settings turns that off.
+    const roomDogs = await page.evaluate((a) => inCabin(a, CD._roundDate || todayISO()), area);
+    expect(bodies[0]).toMatchObject({ table: 'check_log', action: 'add_session', fields: { check_type_id: 'cty-p', area_id: area, outcome: 'recorded', how_recorded: 'tapped', dog_ids: roomDogs.join('|'), exceptions: '' } });
     expect(bodies[0].fields.subject_id).toBeUndefined();
     expect(bodies[0].fields.item).toBeUndefined();
-    await expect(line.locator('[data-saved="good"]')).toContainText(/^Saved \d\d:\d\d$/);
+    await expect(page.locator(`[data-psess="${area}"] [data-saved="good"]`)).toContainText(/^Saved \d\d:\d\d$/);
     await here.click();   // a second tap on the saved button sends nothing
     await page.waitForTimeout(200); expect(bodies.length).toBe(1);
     await not.click();   // already saved today: the other button does not write another row
@@ -412,6 +415,45 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(line).toContainText('Not saved');
     await expect(not).toHaveAttribute('aria-pressed', 'false');
     await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('room presence: Save room sends one row for the room; Except… marks dogs not present with their own reason or one for all; a second press sends nothing @regression', async ({ page, guard }) => {
+    await open(page, guard);
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    const bodies = await saves(page, async () => { await gate; return { ok: true, result: { status: 'saved', id: 'clg-room' } }; });
+    await page.evaluate(() => {
+      T['BLD-check_type.csv'] = (T['BLD-check_type.csv'] || []).concat([{ id: 'cty-p', type_key: 'round.presence', label: 'Present', target: 'dog', active: 'true', effective_from: '2026-01-01', source: 'Pretend' }]);
+      // every pretend dog moves into the first room that has one, so that room holds several
+      const occ = T['BLD-occupancy.csv'] || [], first = (occ.find((o) => o.area_id && !o.moved_out) || {}).area_id;
+      occ.forEach((o) => { if (o.area_id && !o.moved_out && !o.off_site_kind) o.area_id = first; });
+      go('round');
+    });
+    // the room with at least two dogs
+    const area = await page.evaluate(() => { const d = CD._roundDate || todayISO(); return [...document.querySelectorAll('[data-pall]')].map((b) => b.getAttribute('data-pall')).find((a) => inCabin(a, d).length >= 2); });
+    expect(area, 'a room with two dogs in the pretend data').toBeTruthy();
+    const dogs = await page.evaluate((a) => inCabin(a, CD._roundDate || todayISO()), area);
+    await page.locator(`[data-pexcept-open="${area}"]`).click();
+    const panel = page.locator(`[data-pexcept="${area}"]`);
+    await panel.locator(`[data-pex-dog="${dogs[0]}"]`).check();
+    await panel.locator(`[data-pex-dog="${dogs[1]}"]`).check();
+    await panel.locator(`[data-pex-all="${area}"]`).fill('At the vet');
+    await panel.locator(`[data-pex-apply="${area}"]`).click();                       // one reason for every ticked dog
+    await expect(panel.locator(`[data-pex-why="${dogs[1]}"]`)).toHaveValue('At the vet');
+    await panel.locator(`[data-pex-why="${dogs[1]}"]`).fill('Out on a walk | with staff');   // then its own reason
+    await panel.locator(`[data-psave="${area}"]`).click();
+    await page.locator(`[data-pall="${area}"]`).click();                               // pressed again while it is on its way
+    await expect.poll(() => bodies.length).toBe(1);
+    await page.waitForTimeout(200); expect(bodies.length).toBe(1);
+    expect(bodies[0]).toMatchObject({ table: 'check_log', action: 'add_session', fields: { check_type_id: 'cty-p', area_id: area, dog_ids: dogs.join('|') } });
+    expect(bodies[0].fields.exceptions).toBe(dogs[0] + ':not_here:At the vet|' + dogs[1] + ':not_here:Out on a walk with staff');
+    await expect(page.locator(`[data-psess="${area}"]`)).toContainText('Already sending this room');
+    release();
+    await expect(page.locator(`[data-psess="${area}"] [data-saved="good"]`)).toContainText(/^Saved \d\d:\d\d$/);
+    await page.evaluate(() => go('round', false));
+    await expect(page.locator(`[data-pbar="${area}"]`)).toContainText('Present: done today');
+    await page.locator(`button[data-here="${dogs[0]}"][data-area="${area}"]`).click();   // done today: a tap writes nothing
+    await page.waitForTimeout(200); expect(bodies.length).toBe(1);
   });
 
   test('Present already saved today is not written again on a later round @regression', async ({ page, guard }) => {

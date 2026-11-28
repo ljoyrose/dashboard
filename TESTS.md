@@ -466,6 +466,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 26 Nov 2026 | Dog cards printed with no photo | "dog card photo is a loaded square in every layout and in print @regression" (tests/mocked/cdhub-print-dog-card-box.spec.js) |
 | 26 Nov 2026 | Printed QR codes opened the print page or a missing staff page instead of the staff page on this site | "every print QR uses the staff rule or the staff page @regression @live" (tests/mocked/cdhub-print-dog-card-box.spec.js) |
 | 27 Nov 2026 | Medicines register: a staff-job dose recorded from paper, with several days at once or by import did not say so; saved times are not used, because a save can reach the sheet hours after the dose | "a dose typed from paper or imported says how it was recorded; a late save is never marked late @regression" and "a dose recorded from paper says so in the downloaded CSV @live" (tests/mocked/cdhub-meds-register.spec.js) |
+| 28 Nov 2026 | Caught after merge (live job records, 27 Nov): with room presence on, every present tap sent a new room row covering the dogs ticked so far (8 growing rows for one room, about 25 s each), so temperature saves queued behind them and the round stalled | "room presence: Save room sends one row for the room; Except… marks dogs not present with their own reason or one for all; a second press sends nothing @regression" (tests/mocked/cdhub-dog-card-1112.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
