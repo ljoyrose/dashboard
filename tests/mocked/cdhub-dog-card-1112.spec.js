@@ -451,7 +451,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(bodies[0].fields.exceptions).toContain(sid + ':not_here');
   });
 
-  test('Present once a day: eight taps in a round make ONE row for the whole site, sent when the round is left; a later round writes nothing @regression', async ({ page, guard }) => {
+  test('Present once a day: eight taps in a round make ONE row for the whole site, sent when the round is left; a later round writes nothing @regression @live', async ({ page, guard }) => {
     await open(page, guard);
     const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', id: 'clg-day' } }));
     await page.evaluate(() => {
