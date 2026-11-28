@@ -88,7 +88,6 @@ function authStaff_(code) {
 }
 
 /* -----------------------------------------------------------------------------------------------
- * OWNERS SAVE WITH THEIR GOOGLE SIGN-IN (Owner 16 Nov 2026, option A). Staff keep codes.
  * OWNERS SAVE WITH THEIR GOOGLE SIGN-IN (16 Nov 2026, option A). Staff keep codes.
  * The CD Hub page sends the Google access token it already holds for reading Drive (google_token). This script asks
  * Google two things about it:

@@ -99,7 +99,6 @@ for (const size of [{ name: 'phone', width: 390, height: 844 }, { name: 'laptop'
     await expect(items).toHaveCount(2);
     await expect(items.first()).toHaveAttribute('data-file', 'fil-1');   // order unchanged: newest first
     await expect(gal.locator('[data-k="photo-date"]')).toHaveCount(0);   // the owner's own row hides the dates
-    // Owner 17 Nov 2026: a setting, not a button on the dog card. The button is in Admin -> Display.
     // Report 17 Nov 2026: a setting, not a button on the dog card. The button is in Admin -> Display.
     await expect(gal.locator('[data-photo-dates]')).toHaveCount(0);
     await page.evaluate(() => go('admin'));

@@ -193,11 +193,6 @@
       /* 17 Nov 2026: jobs the owner had just saved still said Due. 22 Nov 2026: one neutral line whatever the reason (no
          answer in time, or no read rows for check_log yet), always with Try again; never "Ask <name>", never blame. */
       if (!v[2].ok) {
-        var slow = v[2].code === 'NETWORK' || v[2].code === 'BUSY' || v[2].code === 'TIMEOUT' || !v[2].code;
-        host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', text: slow
-          ? 'The past records did not load in time, so "Due" may already be done. Try again in a minute.'
-          : 'This code cannot read past records' + (v[2].message ? ' (' + v[2].message + ')' : '') + ', so "Due" may already be done. Ask the owner.' }));
-        if (slow) host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));
         host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', 'data-why': String(v[2].code || ''), text: 'Couldn\u2019t check what\u2019s done yet. Try again.' }));
         host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));
       }

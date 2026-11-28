@@ -30,7 +30,6 @@
  *                    this address + #s=<INSPECT_SCRIPT_ID>&c=<code>. Not secret. Missing = the owner page shows the code only.
  *   INSPECT_SCRIPT_ID  the Save deployment's id (between /macros/s/ and /exec). Not secret; the inspector's phone needs it.
  *   HUB_CLIENT_ID    the CD Hub's Google sign-in client id (the hub page's DASH_CONFIG.clientId; not secret). Set =
- *                    owners save with their Google sign-in, no code (Owner 16 Nov 2026, option A; owner list = ADMIN_EMAILS,
  *                    owners save with their Google sign-in, no code (16 Nov 2026, option A; owner list = ADMIN_EMAILS,
  *                    a personal Gmail counts). Missing = codes only, as before. See authOwnerGoogle_ in Auth.gs.
  *
