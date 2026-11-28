@@ -321,6 +321,21 @@ function csvRecordsRows_(read) {
   return [read.header.slice()].concat(read.records.map(function (rec) { return read.header.map(function (h) { return rec[h]; }); }));
 }
 
+/* READ ONCE PER SAVE (28 Nov 2026: live check_log saves took 17-37 s, 10-25 s of it untimed). A Present save opened the
+ * same small lists several times (check types twice, check settings up to four times, the dog-room list once more).
+ * While one table save runs (READ_ONCE_ set by doPost around sinkHandle_), a list that the save only READS is opened
+ * once and the same read is used again. The table being written is never read this way. Outside a save, nothing
+ * changes: store_readOnce_ is store_read_. */
+var READ_ONCE_ = null;
+function store_readOnce_(title, must) {
+  if (!READ_ONCE_) return store_read_(title, must);
+  if (!Object.prototype.hasOwnProperty.call(READ_ONCE_, title)) READ_ONCE_[title] = store_read_(title, false);
+  if (!READ_ONCE_[title] && must) return store_read_(title, true);   // says plainly that it is missing
+  return READ_ONCE_[title];
+}
+/** A table that is written during the save is read fresh afterwards. */
+function store_forget_(title) { if (READ_ONCE_) delete READ_ONCE_[title]; }
+
 /** Read a table (Google Sheet or CSV). If `must` and it is missing, say so plainly. */
 function store_read_(title, must) {
   var file = store_findOne_(title);
@@ -363,6 +378,7 @@ function textHash_(text) {
  */
 /** Several rows in one write: all of them are saved or none are. Same guards and read-back as store_append_. */
 function store_appendMany_(title, expectedHeader, rows, read) {
+  store_forget_(title);
   if (allowedFiles_().indexOf(title) < 0) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   if (!sameHeader_(read.header, expectedHeader)) {
     throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
@@ -406,6 +422,7 @@ function store_appendManySheet_(title, rows, read) {
 }
 
 function store_append_(title, expectedHeader, rowValues, read) {
+  store_forget_(title);
   if (allowedFiles_().indexOf(title) < 0) {
     throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   }
@@ -457,6 +474,7 @@ function store_commit_(file, title, before, beforeHash, after, unchangedOk) {
  * `index` is the position in read.records (0 = first data row).
  */
 function store_replaceRow_(title, expectedHeader, index, rowValues, read) {
+  store_forget_(title);
   if (allowedFiles_().indexOf(title) < 0 || title === BLD.PENDING_FILE) {
     throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   }
@@ -486,6 +504,7 @@ function store_replaceRow_(title, expectedHeader, index, rowValues, read) {
  * must be byte-identical afterwards. `index` is the position in read.records (0 = first data row).
  */
 function store_deleteRow_(title, expectedHeader, index, read) {
+  store_forget_(title);
   if (allowedFiles_().indexOf(title) < 0 || title === BLD.PENDING_FILE) {
     throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   }
@@ -567,7 +586,7 @@ function store_readSmall_(title) {
       if (hit) { var o = JSON.parse(hit); if (o.at === at) return { records: o.records, cached: true }; }
     } catch (e) { /* unreadable: read the file */ }
   }
-  var r = store_read_(title, false);
+  var r = store_readOnce_(title, false);
   if (!r) return null;
   if (cache && at) {
     try { var text = JSON.stringify({ at: at, records: r.records }); if (text.length < 90000) cache.put(key, text, 120); }

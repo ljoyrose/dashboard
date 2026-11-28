@@ -391,7 +391,7 @@ var SESSION_TYPE_ = { 'round.presence': 1, 'round_presence': 1, 'health_check_al
 
 /** The owner's check_setting row in force on a day, or null when none has been set (today's behaviour). */
 function checkSettingFor_(typeKey, day) {
-  var read = store_read_('BLD-check_setting.csv', false);
+  var read = store_readOnce_('BLD-check_setting.csv', false);
   if (!read || !read.records) return null;
   var rows = read.records.filter(function (r) { return String(r.type_key || '') === String(typeKey || ''); });
   return latestInForce_(rows, day, 'from_date');
@@ -424,7 +424,8 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
   var f = req.fields && typeof req.fields === 'object' ? req.fields : {};
   if (req.values !== undefined && req.values !== null) throw err_('BAD_REQUEST', 'A whole-site tap has no form. Record it on its own to answer the questions.');
-  var typeRead = store_read_(TABLES.check_type.file, true);
+  var tSite = Date.now();
+  var typeRead = store_readOnce_(TABLES.check_type.file, true);
   var type = typeRead.records.filter(function (r) { return r.id === String(f.check_type_id || '') && r.tenant_id === tenant; })[0];
   if (!type) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check was not found.' } });
   var today0 = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
@@ -439,8 +440,10 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: f.how_recorded || ((room && !session) ? '' : 'site_tap') };
   if (f.confirm_unusual) fields.confirm_unusual = f.confirm_unusual;   // Import (PR #770) sends this for a date 7 days or older; it is not a column
   if (room || (session && f.area_id)) fields.area_id = f.area_id;
+  timing_('site_type_settings', Date.now() - tSite);
   if (!session && scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
 
+  var tSiteLook = Date.now();
   var lookups = store_lookups_(spec, tenant, req.fields);
   var v = validateInput_(spec, fields, lookups, nowMs);
   var dogs = validateInput_({ input: { dog_ids: { type: 'idlist', lookup: 'subject', required: true } } }, { dog_ids: f.dog_ids }, lookups, nowMs);
@@ -450,7 +453,10 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
 
   var never = {};
   String(type.not_in_areas || '').split('|').forEach(function (a) { a = a.trim(); if (a) never[a] = true; });
-  var occ = store_read_(TABLES.occupancy.file, true).records.filter(function (r) { return r.tenant_id === tenant; });
+  timing_('site_lookups', Date.now() - tSiteLook);
+  var tOcc = Date.now();
+  var occ = store_readOnce_(TABLES.occupancy.file, true).records.filter(function (r) { return r.tenant_id === tenant; });
+  timing_('site_rooms', Date.now() - tOcc);
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
   var ids = {}, rows = [], made = [], kept = [], left = { isolation: 0, no_room: 0, off_site: 0, repeat: 0 };
   // A session row is one ordinary add (it reads the log itself). A per-dog tap reads the tail, not every column.
@@ -602,6 +608,7 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
   var lookups = store_lookups_(spec, tenant, req.fields);
   var late = ageCap_(spec, tenant, nowMs, req.fields);
   timing_('lookups_rules', Date.now() - tLook);
+  var tVal = Date.now();
   var v = validateInput_(spec, req.fields, lookups, nowMs, late);
   var errors = v.errors;
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
@@ -610,10 +617,13 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
     var logKey = lookups.check_type_key && lookups.check_type_key[logTypeId];
     if (typeof logKey === 'string') assertCheckMayLog_({ type_key: logKey }, today);
   }
+  timing_('validate_settings', Date.now() - tVal);
 
+  var tPend = Date.now();
   var pendingRead = null, pendState = {};
   var needPending = req.action === 'correct' || spec.alwaysPending || modeFor_(spec) !== 'direct';
   if (needPending) { pendingRead = loadPending_(); pendState = pendingState_(pendingRead.records); }
+  timing_('approvals_queue', Date.now() - tPend);
   var waiting = waitingRows_(pendState, spec);
   if (spec.checkAgainst && req.action === 'add') spec.checkAgainst(v.clean, target.records.concat(waiting), errors);
 
@@ -636,13 +646,16 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
     }
   }
 
+  var tForm = Date.now();
   var form = spec.key === 'check_log' ? formAnswers_(req, v.clean, tenant, today, needPending, errors) : null;
+  timing_('form', Date.now() - tForm);
 
   if (Object.keys(errors).length) {
     throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: errors });
   }
 
   var extra = (held && held.extra) || [];
+  var tDup = Date.now();
   if (req.action === 'add') {
     var dup = findDuplicate_(spec, v.clean, all.concat(waiting, extra), nowMs, today) || (late ? sameSlot_(late, v.clean, all.concat(waiting, extra), nowMs) : null);
     if (dup) {
@@ -656,6 +669,7 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
   extra.forEach(function (r) { if (r && r.id) ids[r.id] = true; });
   var rowId = newId_(spec.idPrefix, now);
   while (ids[rowId]) rowId = newId_(spec.idPrefix, now);
+  timing_('dup_ids', Date.now() - tDup);
 
   var row = buildRow_(spec, v.clean, {
     rowId: rowId, tenantId: tenant, nowIso: londonIso_(now), today: today, who: who.who, whoId: who.id || '', correctsId: correctsId
@@ -724,7 +738,7 @@ function formAnswers_(req, clean, tenant, today, needPending, errors) {
     return null;
   }
   if (errors.check_type_id) return null;
-  var type = store_read_(TABLES.check_type.file, true).records.filter(function (r) { return r.id === clean.check_type_id && r.tenant_id === tenant; })[0];
+  var type = store_readOnce_(TABLES.check_type.file, true).records.filter(function (r) { return r.id === clean.check_type_id && r.tenant_id === tenant; })[0];
   var fRead = store_read_(TABLES.check_field.file, false);
   // the questions in force on the record's own day (an Earlier entry is judged by the form and limits of its day, 14 Nov 2026)
   var happened = String(clean.happened_at || '').slice(0, 10);

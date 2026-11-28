@@ -87,10 +87,11 @@ function doPost(e) {
     }
     var tSave = Date.now();
     try {
+      READ_ONCE_ = {};   // lists the save only reads are opened once (Store.gs READ ONCE PER SAVE)
       var saved = sinkHandle_(req);
       if (saved && typeof saved === 'object') saved.timing = SAVE_TIMING_;
       return jsonOut_({ ok: true, result: saved });
-    } finally { lastTiming_(tSave); }
+    } finally { READ_ONCE_ = null; lastTiming_(tSave); }
   } catch (ex) {
     var errOut = errorBody_(ex);
     lastRefusal_(req, errOut);
