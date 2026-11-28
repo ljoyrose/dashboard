@@ -12,7 +12,7 @@ function read(env, over) {
 }
 function addVis(env, lines) { const f = env.file('BLD-field_visibility.csv')[0]; f.content = f.content.replace(/\r?\n?$/, '\r\n') + lines.join('\r\n') + '\r\n'; }
 
-test('microchip and the colour lists: nothing until Lisa adds rows; owner rows let the owner read, never staff', () => {
+test('microchip and the colour lists: nothing until the owner adds rows; owner rows let the owner read, never staff', () => {
   const env = standardEnv({ props: { READ_ENABLED: 'true' } });
   env.addFile('BLD-microchip.csv', ['id,tenant_id,subject_id,chip_number', `mc-1,${fx.TENANT},sub-test-a,000000000000001`].join('\r\n') + '\r\n');
   env.addFile('BLD-coat_colour.csv', ['id,name,base_family,swatch_hex,nose_pigment_applies', 'cc-1,Red,red,swatch-red,yes'].join('\r\n') + '\r\n');
