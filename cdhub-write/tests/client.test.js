@@ -1216,3 +1216,18 @@ test('a kept entry resent after a lost answer and answered DUPLICATE leaves the 
   assert.equal(await s.outbox.flush(), 0);
   assert.equal(s.outbox.refused().length, 0);
 });
+
+test('outbox: kept temperature readings are sent before older kept entries of other kinds (temps first) @regression', async () => {
+  const local = memStore(), posts = [];
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    posts.push(JSON.parse(init.body).request_id); return { json: async () => ({ ok: true, result: { id: 'x' } }) };
+  };
+  const t0 = Date.now();
+  const item = (id, table, m) => ({ id, at: new Date(t0 - m * 60000).toISOString(), body: { v: 1, request_id: id, table, action: 'add', fields: {} } });
+  local.setItem('bld.outbox', JSON.stringify([item('r-job-0001', 'check_log', 9), item('r-temp-0001', 'area_reading', 5), item('r-job-0002', 'check_log', 4), item('r-temp-0002', 'area_reading', 1)]));
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  assert.equal(await s.outbox.flush(), 0);
+  assert.deepEqual(posts, ['r-temp-0001', 'r-temp-0002', 'r-job-0001', 'r-job-0002']);
+});

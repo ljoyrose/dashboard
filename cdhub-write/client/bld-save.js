@@ -377,6 +377,9 @@
       if (flushing) return flushing;
       var now = Date.now(), all = outboxRead();
       var due = all.filter(function (x) { return (o && o.old) || now - Date.parse(x.at) < OUTBOX_AUTO_MS; });
+      // temps first (28 Nov 2026): kept temperature readings are sent before any other kept entry, each group oldest first
+      var hot = function (x) { return !!(x.body && x.body.table === 'area_reading'); };
+      due = due.filter(hot).concat(due.filter(function (x) { return !hot(x); }));
       if (!due.length || !scriptUrl || !doFetch) return Promise.resolve(all.length);
       if (!hasAuth() || authWait === authNow()) { quietRenew(); return Promise.resolve(all.length); }
       flushing = due.reduce(function (p, item) { return p.then(function () { return sendKept(item); }); }, Promise.resolve())
