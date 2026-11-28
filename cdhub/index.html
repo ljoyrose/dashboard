@@ -151,7 +151,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
 .sbox input:is(:focus,:focus-visible){outline:none!important}
 .sbox:focus-within{border-color:var(--ink)}
-/* any touch screen too (Lisa 17 Nov 2026: the folding phone open is 860px wide) */
+/* any touch screen too (17 Nov 2026: the folding phone open is 860px wide) */
 @media (max-width:544px),(pointer:coarse){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd):not(.phbtn):not(.gx):not(.ged):not(.gpick),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
 
 
@@ -5231,6 +5231,9 @@ document.addEventListener('click',function(e){ var t=e.target&&e.target.closest?
  else if(t.hasAttribute('data-outbox-why')){ hubWhy=!hubWhy; hubBoxDraw(); }
  else if(t.hasAttribute('data-outbox-ok')){ var ids=(t.getAttribute('data-outbox-ok')||'').split('|'); hubPut(HUB_REFUSED,hubList(HUB_REFUSED).filter(function(x){ return ids.indexOf(x.id)<0; })); } });
 window.addEventListener('online',function(){ if(!hubStop) hubFlush(); });
+/* 27 Nov 2026: shown again (tab back, phone unlocked, restored page): send what is kept at once, not on a slowed timer. */
+document.addEventListener('visibilitychange',function(){ if(!document.hidden&&!hubStop) hubFlush(); });
+window.addEventListener('pageshow',function(){ if(!hubStop) hubFlush(); });
 document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'&&!hubStop) hubFlush(); });
 window.addEventListener('load',function(){ hubBoxDraw(); hubRetry(4000); });
 async function sinkSend(body){

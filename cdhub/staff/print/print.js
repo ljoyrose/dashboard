@@ -247,7 +247,7 @@
     var ended = (ph.ended || []).some(function (f) { return photoId(f.drive_file_id) === cell; });
     return ended ? '' : cell;
   }
-  /* Lisa 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
+  /* 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
   /* the main photo is the 'main' link row in force (the owner 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
   /* main photo as main picks it (BLDPhotos.shownPhoto: a removed main falls back to the gallery, an ended file is never shown); a plain web link otherwise */
   function photoRef(s, table) {
