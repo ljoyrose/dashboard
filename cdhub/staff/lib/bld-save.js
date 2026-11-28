@@ -408,6 +408,13 @@
       scheduleRetry(4000);
       if (win.addEventListener) win.addEventListener('online', function () { flush(); });
     }
+    // 27 Nov 2026 (readings reached the script hours late, in bursts at the next app open): a phone that locks or puts
+    // the page in the background stops its timers and may drop a save in flight. When the page is shown again (back to
+    // the tab, phone unlocked, page restored from the back/forward cache) the kept entries are sent at once instead of
+    // waiting for a slowed timer. flush() sends each entry at most once at a time, so this never doubles a save.
+    var wakeDoc = opts.document || (autoOn ? document : null), wakeWin = opts.window || (autoOn ? win : null);
+    if (wakeDoc && wakeDoc.addEventListener) wakeDoc.addEventListener('visibilitychange', function () { if (!wakeDoc.hidden) flush(); });
+    if (wakeWin && wakeWin.addEventListener) wakeWin.addEventListener('pageshow', function () { flush(); });
     var KEPT_MSG = 'No answer yet. It is kept on this phone and sent again by itself, so do not type it again.';
 
     /** Plain-English state for the banner and for disabling buttons. */

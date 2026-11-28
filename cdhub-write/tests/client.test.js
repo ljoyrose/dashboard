@@ -1216,3 +1216,33 @@ test('a kept entry resent after a lost answer and answered DUPLICATE leaves the 
   assert.equal(await s.outbox.flush(), 0);
   assert.equal(s.outbox.refused().length, 0);
 });
+
+test('outbox: kept entries are sent at once when the page is shown again (tab back, phone unlocked, page restored) @regression', async () => {
+  const local = memStore(), posts = [];
+  let online = false;
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    if (!online) throw new TypeError('Load failed');   // the phone locked mid-save
+    posts.push(JSON.parse(init.body)); return { json: async () => ({ ok: true, result: { id: 'x' } }) };
+  };
+  const ev = () => { const h = {}; return { on: h, addEventListener: (n, fn) => { (h[n] = h[n] || []).push(fn); }, fire: (n) => (h[n] || []).forEach((fn) => fn()) }; };
+  const doc = Object.assign(ev(), { hidden: true }), win = ev();
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, document: doc, window: win });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  await s.act('link_end', { id: 'r1' }, 'r-wake-0001');
+  assert.equal(s.outbox.count(), 1);
+  online = true;
+  doc.fire('visibilitychange');                 // still hidden: nothing is sent
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(posts.length, 0);
+  doc.hidden = false; doc.fire('visibilitychange');
+  await new Promise((r) => setTimeout(r, 5));
+  assert.deepEqual(posts.map((p) => p.request_id), ['r-wake-0001']);
+  assert.equal(s.outbox.count(), 0);
+  await s.act('link_end', { id: 'r2' }, 'r-wake-0002').then(() => {});   // sent normally
+  online = false; await s.act('link_end', { id: 'r3' }, 'r-wake-0003'); online = true;
+  win.fire('pageshow');                          // restored from the back/forward cache
+  await new Promise((r) => setTimeout(r, 5));
+  assert.deepEqual(posts.map((p) => p.request_id), ['r-wake-0001', 'r-wake-0002', 'r-wake-0003']);
+  assert.equal(s.outbox.count(), 0);
+});
