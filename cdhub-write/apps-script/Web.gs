@@ -34,6 +34,13 @@ function doPost(e) {
     var req;
     try { req = JSON.parse(body); } catch (x) { throw err_('BAD_REQUEST', 'That request was not understood.'); }
     if (big && (!req || (req.action !== 'dog_photo' && req.action !== 'file_add'))) throw err_('BAD_REQUEST', 'That request was too large.');
+    // 27 Nov 2026 (saves such as a gallery link_end took 19-60 s and left no timing): every action answered below,
+    // before sinkHandle_, is timed too, under table 'action:<name>' (numbers and the action name only).
+    var tEarly = 0;
+    if (req && typeof req === 'object' && typeof req.action === 'string' && SINK_ACTIONS_.indexOf(req.action) < 0) {
+      tEarly = Date.now(); SAVE_TIMING_.table = 'action:' + String(req.action).slice(0, 40);
+    }
+    try {
     if (req && typeof req === 'object' && req.action === 'dog_photo') return jsonOut_({ ok: true, result: sinkDogPhoto_(req) });
     if (req && typeof req === 'object' && req.action === 'read') return jsonOut_({ ok: true, result: sinkRead_(req) });
     if (req && typeof req === 'object' && req.action === 'code_check') return jsonOut_({ ok: true, result: sinkCodeCheck_(req) });   // codes vault: ok or no only
@@ -68,6 +75,7 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'record_delete') return jsonOut_({ ok: true, result: sinkRecordDelete_(req) });
     // saved dated scores (15 Nov 2026, BB; OFF until TABLE_ON_score_assessment is true)
     if (req && typeof req === 'object' && req.action === 'score_save') return jsonOut_({ ok: true, result: sinkScoreSave_(req) });
+    } finally { if (tEarly) lastTiming_(tEarly); }
     // 17 Nov 2026: the waiting-room-moves pass reads the whole approvals queue. It runs at most once a minute from saves
     // (a plain GET, the owner page and the queue itself still run it), so an ordinary save does not pay for it each time.
     var tMoves = Date.now(), movesCache = null;
@@ -79,10 +87,11 @@ function doPost(e) {
     }
     var tSave = Date.now();
     try {
+      READ_ONCE_ = {};   // lists the save only reads are opened once (Store.gs READ ONCE PER SAVE)
       var saved = sinkHandle_(req);
       if (saved && typeof saved === 'object') saved.timing = SAVE_TIMING_;
       return jsonOut_({ ok: true, result: saved });
-    } finally { lastTiming_(tSave); }
+    } finally { READ_ONCE_ = null; lastTiming_(tSave); }
   } catch (ex) {
     var errOut = errorBody_(ex);
     lastRefusal_(req, errOut);
@@ -110,6 +119,9 @@ function doGet(e) {
   try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
   return jsonOut_(statusBody_());
 }
+
+/** The actions sinkHandle_ answers (it times them itself). Every other action is timed in doPost. */
+var SINK_ACTIONS_ = ['add', 'correct', 'add_site', 'add_session', 'add_many'];
 
 /** Keep the timings of the last 10 saves (numbers and the table name only) in the script cache for ?status=1. */
 function lastTiming_(t0) {

@@ -255,20 +255,37 @@ function store_appendSheet_(title, rowValues, read) {
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED',
     restored
-      ? 'The table did not read back as expected after saving, so the added row was taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
+      ? 'The table did not read back as expected after saving, so the added row was taken out again and nothing was saved. Try again; if it repeats, tell the owner.'
       : 'The table did not read back as expected after saving AND taking the row out again could not be confirmed. Tell Lisa now; do not save again. The earlier version is in the Sheet\'s version history.',
     { restored: restored, file: title });
 }
 
-/** Same as the CSV in-place edit, for a Sheet: ONE row's values change, every other cell must be identical. */
+/** Same as the CSV in-place edit, for a Sheet: ONE row's values change, every other cell must be identical.
+ * 27 Nov 2026 (a one-row edit such as a gallery link_end took 19-60 s): the whole tab used to be read twice more, once
+ * before writing and once after. Now, like FAST APPEND CHECKS, only what this edit can disturb is checked: the row
+ * count, the header row, the target row (and the rows next to it) must still be exactly as read before writing, and
+ * after writing the target row must read back as sent and its neighbours, header and row count must be unchanged.
+ * A changed target row still stops the edit (CHANGED_DURING_WRITE); a failed read-back still puts the old values back. */
+function store_editRowsSame_(sh, read, index, skipTarget) {
+  if (sh.getLastRow() !== read.lastRow) return false;
+  var w = read.width, shown = read.shown || csvRecordsRows_(read), nums = read.rowNums;
+  var check = [0, index, index + 1, index + 2];
+  for (var k = 0; k < check.length; k++) {
+    var i = check[k];
+    if (i < 0 || i >= shown.length || (k > 0 && i === 0) || (skipTarget && i === index + 1)) continue;
+    if (store_rowShown_(sh, nums[i], w) !== csvLine_(shown[i])) return false;
+  }
+  return true;
+}
+
 function store_replaceSheetRow_(title, index, rowValues, read) {
   if (read.tail) throw err_('UNEXPECTED_LAYOUT', title + ' was read in part, so nothing was changed. Try again.');
-  var sh = read.tab, beforeHash = textHash_(read.text);
-  if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) !== beforeHash) {
-    throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was changed. Try again.');
-  }
-  if (index < 0 || index >= read.records.length) {
+  if (index < 0 || index >= read.records.length || !read.rowNums || read.rowNums.length !== read.records.length + 1) {
     throw err_('UNEXPECTED_LAYOUT', title + ' is laid out in a way the edit cannot handle safely, so nothing was changed.');
+  }
+  var sh = read.tab;
+  if (!store_editRowsSame_(sh, read, index, false)) {
+    throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was changed. Try again.');
   }
   var rowNum = read.rowNums[index + 1], w = read.width;
   var vals = rowValues.slice(0, w).map(function (v) { return v === null || v === undefined ? '' : String(v); });
@@ -279,24 +296,23 @@ function store_replaceSheetRow_(title, index, rowValues, read) {
   rg.setValues(read.types ? typed.values : [vals]);
   SpreadsheetApp.flush();
   var rows = (read.shown || csvRecordsRows_(read)).slice();
-  if (!read.types) {
-    rows[index + 1] = vals;
-    var want = textHash_(store_rowsText_(rows));
-    if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === want) return store_rowsText_(rows);
-  } else {
-    var now = store_sheetRows_(sh).rows, others = now.slice(); others.splice(index + 1, 1); rows.splice(index + 1, 1);
-    if (now.length === read.shown.length && textHash_(store_rowsText_(others)) === textHash_(store_rowsText_(rows)) && store_sameTyped_(rg.getValues(), typed.values)) return store_rowsText_(now);
+  // read back the target row only, plus the header, its neighbours and the row count
+  var back = rg.getDisplayValues()[0];
+  if (store_editRowsSame_(sh, read, index, true) &&
+      (read.types ? store_sameTyped_(rg.getValues(), typed.values) : csvLine_(back) === csvLine_(vals))) {
+    rows[index + 1] = read.types ? back : vals;
+    return store_rowsText_(rows);
   }
   var restored = false;
   try {
     if (oldFmt) rg.setNumberFormats(oldFmt);
     rg.setValues(old); SpreadsheetApp.flush();
-    restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash;
+    restored = store_editRowsSame_(sh, read, index, false);
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED',
     restored
-      ? 'The table did not read back as expected after the edit, so the old values were put back and nothing was changed. Try again; if it repeats, tell Lisa.'
-      : 'The table did not read back as expected after the edit AND putting the old values back could not be confirmed. Tell Lisa now. The earlier version is in the Sheet\'s version history.',
+      ? 'The table did not read back as expected after the edit, so the old values were put back and nothing was changed. Try again; if it repeats, tell the owner.'
+      : 'The table did not read back as expected after the edit AND putting the old values back could not be confirmed. Tell the owner now. The earlier version is in the Sheet\'s version history.',
     { restored: restored, file: title });
 }
 
@@ -304,6 +320,21 @@ function store_replaceSheetRow_(title, index, rowValues, read) {
 function csvRecordsRows_(read) {
   return [read.header.slice()].concat(read.records.map(function (rec) { return read.header.map(function (h) { return rec[h]; }); }));
 }
+
+/* READ ONCE PER SAVE (28 Nov 2026: live check_log saves took 17-37 s, 10-25 s of it untimed). A Present save opened the
+ * same small lists several times (check types twice, check settings up to four times, the dog-room list once more).
+ * While one table save runs (READ_ONCE_ set by doPost around sinkHandle_), a list that the save only READS is opened
+ * once and the same read is used again. The table being written is never read this way. Outside a save, nothing
+ * changes: store_readOnce_ is store_read_. */
+var READ_ONCE_ = null;
+function store_readOnce_(title, must) {
+  if (!READ_ONCE_) return store_read_(title, must);
+  if (!Object.prototype.hasOwnProperty.call(READ_ONCE_, title)) READ_ONCE_[title] = store_read_(title, false);
+  if (!READ_ONCE_[title] && must) return store_read_(title, true);   // says plainly that it is missing
+  return READ_ONCE_[title];
+}
+/** A table that is written during the save is read fresh afterwards. */
+function store_forget_(title) { if (READ_ONCE_) delete READ_ONCE_[title]; }
 
 /** Read a table (Google Sheet or CSV). If `must` and it is missing, say so plainly. */
 function store_read_(title, must) {
@@ -347,6 +378,7 @@ function textHash_(text) {
  */
 /** Several rows in one write: all of them are saved or none are. Same guards and read-back as store_append_. */
 function store_appendMany_(title, expectedHeader, rows, read) {
+  store_forget_(title);
   if (allowedFiles_().indexOf(title) < 0) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   if (!sameHeader_(read.header, expectedHeader)) {
     throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
@@ -385,11 +417,12 @@ function store_appendManySheet_(title, rows, read) {
     restored = store_tailSame_(sh, read);
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED', restored
-    ? 'The table did not read back as expected after saving, so the added rows were taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
+    ? 'The table did not read back as expected after saving, so the added rows were taken out again and nothing was saved. Try again; if it repeats, tell the owner.'
     : 'The table did not read back as expected after saving and could not be put back. Do not save again. Tell Lisa.');
 }
 
 function store_append_(title, expectedHeader, rowValues, read) {
+  store_forget_(title);
   if (allowedFiles_().indexOf(title) < 0) {
     throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   }
@@ -426,7 +459,7 @@ function store_commit_(file, title, before, beforeHash, after, unchangedOk) {
     } catch (e) { restored = false; }
     throw err_('VERIFY_FAILED',
       restored
-        ? 'The file did not read back as expected after saving, so the earlier text was put back exactly and nothing was saved. Try again; if it repeats, tell Lisa.'
+        ? 'The file did not read back as expected after saving, so the earlier text was put back exactly and nothing was saved. Try again; if it repeats, tell the owner.'
         : 'The file did not read back as expected after saving AND putting the earlier text back could not be confirmed. Tell Lisa now; do not save again. The earlier version is in the file history.',
       { restored: restored, file: title });
   }
@@ -441,6 +474,7 @@ function store_commit_(file, title, before, beforeHash, after, unchangedOk) {
  * `index` is the position in read.records (0 = first data row).
  */
 function store_replaceRow_(title, expectedHeader, index, rowValues, read) {
+  store_forget_(title);
   if (allowedFiles_().indexOf(title) < 0 || title === BLD.PENDING_FILE) {
     throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   }
@@ -470,6 +504,7 @@ function store_replaceRow_(title, expectedHeader, index, rowValues, read) {
  * must be byte-identical afterwards. `index` is the position in read.records (0 = first data row).
  */
 function store_deleteRow_(title, expectedHeader, index, read) {
+  store_forget_(title);
   if (allowedFiles_().indexOf(title) < 0 || title === BLD.PENDING_FILE) {
     throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   }
@@ -495,8 +530,8 @@ function store_deleteRow_(title, expectedHeader, index, read) {
     try { sh.insertRowBefore(rowNum); sh.getRange(rowNum, 1, 1, w).setValues(old); SpreadsheetApp.flush();
       restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash; } catch (e) { restored = false; }
     throw err_('VERIFY_FAILED', restored
-      ? 'The table did not read back as expected after the delete, so the row was put back and nothing was changed. Try again; if it repeats, tell Lisa.'
-      : 'The table did not read back as expected after the delete AND putting the row back could not be confirmed. Tell Lisa now. The earlier version is in the Sheet\'s version history.',
+      ? 'The table did not read back as expected after the delete, so the row was put back and nothing was changed. Try again; if it repeats, tell the owner.'
+      : 'The table did not read back as expected after the delete AND putting the row back could not be confirmed. Tell the owner now. The earlier version is in the Sheet\'s version history.',
       { restored: restored, file: title });
   }
   var file = read.file, before = read.text, bh = textHash_(before);
@@ -551,7 +586,7 @@ function store_readSmall_(title) {
       if (hit) { var o = JSON.parse(hit); if (o.at === at) return { records: o.records, cached: true }; }
     } catch (e) { /* unreadable: read the file */ }
   }
-  var r = store_read_(title, false);
+  var r = store_readOnce_(title, false);
   if (!r) return null;
   if (cache && at) {
     try { var text = JSON.stringify({ at: at, records: r.records }); if (text.length < 90000) cache.put(key, text, 120); }
