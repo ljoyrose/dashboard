@@ -18,7 +18,7 @@
   function settingsBox() {
     var d = document.createElement('div');
     d.className = 'bs-card'; d.style.maxWidth = '560px';
-    d.innerHTML = '<b>Turn saving on</b> (Lisa only). Paste the Script URL; it is kept on this device only.' +
+    d.innerHTML = '<b>Turn saving on</b> (owner only). Paste the Script URL; it is kept on this device only.' +
       '<input class="bs-in" id="bw-url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" aria-label="Script URL">' +
       '<button class="bs-btn" id="bw-on" type="button" style="margin-top:8px">Use this address</button> ' +
       '<button class="bs-link" id="bw-off" type="button">Switch off on this device</button><div id="bw-msg" role="status"></div>';

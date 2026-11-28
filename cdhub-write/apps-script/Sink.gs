@@ -283,7 +283,7 @@ function sinkSpecFor_(req, who) {
   }
   if ((req.action === 'add_site' || req.action === 'add_session') && spec.key !== 'check_log') throw err_('BAD_REQUEST', 'A whole-site tap only applies to staff checks.');
   var permAction = (req.action === 'add_site' || req.action === 'add_session') ? 'add' : req.action;
-  if (!spec.perms[permAction] || spec.perms[permAction].indexOf(who.role) < 0) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
+  if (!spec.perms[permAction] || spec.perms[permAction].indexOf(who.role) < 0) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask the owner.');
   return spec;
 }
 
@@ -458,7 +458,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   if (!session) {
     read = appendRead_(spec, { action: 'add', fields: fields }, nowMs);
     if (!sameHeader_(read.target.header, spec.columns)) {
-      throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+      throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. The owner needs to check the file header.');
     }
     pool = dupRows_(read);
     fillIds_(read, ids);
@@ -595,7 +595,7 @@ function sinkProcess_(spec, req, who, now, nowMs, held) {
   }
   timing_(fast ? (tailOnly ? 'read_tail' : 'read_fast') : 'read', Date.now() - tRead);
   if (!sameHeader_(target.header, spec.columns)) {
-    throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+    throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. The owner needs to check the file header.');
   }
   var all = target.tail && !tailOnly ? fastRecords_(target) : target.records;   // every row (only the checked columns after a fast read), or the last rows in full
   var tLook = Date.now();
@@ -760,7 +760,7 @@ function formAnswers_(req, clean, tenant, today, needPending, errors) {
   if (!answers.length) return null;
   var read = store_read_(TABLES.check_value.file, true);
   if (!sameHeader_(read.header, TABLES.check_value.columns)) {
-    throw err_('HEADER_MISMATCH', TABLES.check_value.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+    throw err_('HEADER_MISMATCH', TABLES.check_value.file + ' does not have the columns the save system expects, so nothing was saved. The owner needs to check the file header.');
   }
   return { read: read, answers: answers };
 }
