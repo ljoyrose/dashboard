@@ -415,6 +415,33 @@
     var wakeDoc = opts.document || (autoOn ? document : null), wakeWin = opts.window || (autoOn ? win : null);
     if (wakeDoc && wakeDoc.addEventListener) wakeDoc.addEventListener('visibilitychange', function () { if (!wakeDoc.hidden) flush(); });
     if (wakeWin && wakeWin.addEventListener) wakeWin.addEventListener('pageshow', function () { flush(); });
+    /* SEND ON HIDE (27 Nov 2026): a save in flight when the phone locks or the page goes to the background can be dropped,
+       and nothing else is sent until the page is shown again. As the page is hidden, every kept entry is handed to the
+       browser with keepalive, which it delivers even after the page is hidden. Same request id, so the script answers a
+       repeat with the first answer and never saves twice. Nothing is taken out of the box here: the entry is marked as
+       "may have saved" and leaves on the next normal send. Only small entries go (no photos), under the browser's
+       64 KB keepalive limit, as plain text like every save (no pre-flight). A keepalive that fails changes nothing. */
+    var HIDE_ONE_MAX = 8000, HIDE_ALL_MAX = 60000;
+    function sendOnHide() {
+      if (!scriptUrl || !doFetch || !hasAuth() || authWait === authNow()) return 0;
+      var now = Date.now(), a = outboxRead(), total = 0, n = 0, marked = false;
+      a.forEach(function (x) {
+        if (now - Date.parse(x.at) >= OUTBOX_AUTO_MS) return;
+        var text = JSON.stringify(withGoogle(Object.assign({}, x.body, { code: getCode() })));
+        if (text.length > HIDE_ONE_MAX || total + text.length > HIDE_ALL_MAX) return;   // waits for the next normal send
+        total += text.length; n++;
+        if (!x.unsure) { x.unsure = true; marked = true; }
+        try {
+          Promise.resolve(doFetch(scriptUrl, { method: 'POST', keepalive: true, redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: text }))
+            .then(null, function () { /* stays kept */ });
+        } catch (e) { /* stays kept */ }
+      });
+      if (marked) put(local, OUTBOX_KEY, JSON.stringify(a));
+      return n;
+    }
+    outbox.sendOnHide = sendOnHide;
+    if (wakeDoc && wakeDoc.addEventListener) wakeDoc.addEventListener('visibilitychange', function () { if (wakeDoc.hidden) sendOnHide(); });
+    if (wakeWin && wakeWin.addEventListener) wakeWin.addEventListener('pagehide', function () { sendOnHide(); });
     var KEPT_MSG = 'No answer yet. It is kept on this phone and sent again by itself, so do not type it again.';
 
     /** Plain-English state for the banner and for disabling buttons. */
