@@ -32,3 +32,25 @@ jobs:
         run: node tools/lint/lint.mjs --selftest
       - name: Lint (new findings only)
         run: node tools/lint/lint.mjs
+
+  # 27 Nov 2026: three PRs (#835, #817, #819) broken by "keep both sides" merges of main (doubled test() lines,
+  # duplicate or unclosed functions) only showed as red browser shards after about 30 minutes. This says so in about a minute,
+  # with the file and line. Not a required check (branch protection requires only the browser tests and the privacy guard).
+  syntax:
+    name: Syntax check (fast)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Control cases (the syntax check proves it can still fail)
+        run: node tools/syntax-check/check.mjs --selftest
+      - name: Parse every .js, .mjs, .gs file and every inline script in .html (file and line on failure)
+        run: node tools/syntax-check/check.mjs
+      - name: Install packages (exact versions from package-lock.json; no browser)
+        run: npm ci
+      - name: Load every Playwright spec without running it (catches doubled tests and broken specs)
+        run: npx playwright test --list --project=mocked --project=phone --project=live-smoke > /dev/null

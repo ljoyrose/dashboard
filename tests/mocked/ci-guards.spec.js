@@ -132,6 +132,18 @@ test.describe('Alarm wiring @ci-guard', () => {
     execFileSync('bash', ['-n', path.join(REPO, 'tools/ci-local/browser-deps.sh')]);
   });
 
+  // 27 Nov 2026: broken "keep both sides" merges (#835, #817, #819) only showed after ~30 minutes of browser shards.
+  test('a fast syntax check runs on every pull request: parse every script file and inline script, and load every spec', () => {
+    const wf = read('.github/workflows/lint.yml');
+    expect(wf).toMatch(/\n  pull_request:/);
+    expect(wf).toMatch(/\n  syntax:\n    name: Syntax check \(fast\)\n    runs-on: [^\n]+\n    timeout-minutes: [1-9]\n/);
+    expect(wf).toContain('run: node tools/syntax-check/check.mjs --selftest');
+    expect(wf).toContain('run: node tools/syntax-check/check.mjs\n');
+    expect(wf).toMatch(/npx playwright test --list --project=mocked --project=phone/);
+    const out = execFileSync('node', ['tools/syntax-check/check.mjs', '--selftest'], { cwd: REPO, encoding: 'utf8' });
+    expect(out).toMatch(/Self-test OK/);
+  });
+
   test('the alarm message is one technical line', () => {
     const out = execFileSync('node', ['tests/support/report-issue.js', '--state', 'red', '--label', 'x', '--results', 'none', '--note', 'drill', '--dry-run'], {
       cwd: REPO, encoding: 'utf8', env: { ...process.env, GITHUB_REPOSITORY: 'o/r', GITHUB_RUN_ID: '1' },
@@ -212,8 +224,12 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(cfg).toContain("LANE === 'crawl' ? { testMatch: CRAWL } : LANE === 'rest' ? { testIgnore: CRAWL } : {}");
     expect(cfg).toMatch(/name: 'mocked',\n\s+testDir: '\.\/tests\/mocked',\n\s+\.\.\.laneFilter,/);
     // The required check: the merge job keeps the name, waits for every shard, still reports when one fails, and is red unless all passed.
-    expect(tests).toMatch(/\n  tests:\n    name: Browser tests \(pretend Google and Drive\)\n    needs: shards\n    if: \$\{\{ !cancelled\(\) \}\}/);
+    expect(tests).toMatch(/\n  tests:\n    name: Browser tests \(pretend Google and Drive\)\n    needs: \[shards, unit\]\n    if: \$\{\{ !cancelled\(\) \}\}/);
     expect(tests).toContain('test "${{ needs.shards.result }}" = success');
+    // 27 Nov 2026: the node unit tests are part of the same required check (save script and page helpers, no browser)
+    expect(tests).toContain('test "${{ needs.unit.result }}" = success');
+    expect(tests).toMatch(/\n  unit:\n[\s\S]*?run: npm test\n        working-directory: cdhub-write\n[\s\S]*?run: npm run test:unit\n/);
+    expect(JSON.parse(read('cdhub-write/package.json')).scripts.test).toBe('node --test tests/*.test.js');
     expect(tests).toMatch(/fail-fast: false/);
     expect(pages()).toContain('test "${{ needs.gate-shards.result }}" = success');
   });

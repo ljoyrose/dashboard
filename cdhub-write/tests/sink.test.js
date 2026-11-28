@@ -385,7 +385,7 @@ test('a table file that does not exist yet is said plainly (the sink never creat
   const env = standardEnv({ noTargets: true, props: { MODE_area_reading: 'direct' } });
   const r = save(env, req(env));
   assert.equal(r.code, 'FILE_MISSING');
-  assert.match(r.message, /Lisa needs to create it/);
+  assert.match(r.message, /needs to create it before this can be saved/);
   assert.equal(env.created.length, 0);
 });
 
@@ -445,7 +445,7 @@ test('read-back check fails AND the restore cannot be confirmed: say so loudly',
   env.breakSetContent = true;
   const r = save(env, req(env));
   assert.equal(r.code, 'VERIFY_FAILED');
-  assert.match(r.message, /Tell Lisa now/);
+  assert.match(r.message, /Tell \S+ now; do not save again/);
   assert.match(r.message, /could not be confirmed/);
 });
 
@@ -777,7 +777,7 @@ test('owner read of area hides area_value until that column is allowed', () => {
   assert.equal(row.area_unit_id, 'u-m2');
 });
 
-test('a role sees only the columns Lisa allowed: no tenant_id, no unlisted column, nothing with a condition or redaction', () => {
+test('a role sees only the columns the owner allowed: no tenant_id, no unlisted column, nothing with a condition or redaction', () => {
   const env = withRead();
   let r = read(env, { table: 'area' });
   assert.equal(r.ok, true);
@@ -805,7 +805,7 @@ test('a "no" row beats a "yes" row for the same column (area_reading.mitigation_
   assert.equal(o.result.rows[0].mitigation_note, 'fans on');
 });
 
-test('a role sees only the rows Lisa allowed: own_rows_days<=14 means my own entries from the last 14 days', () => {
+test('a role sees only the rows the owner allowed: own_rows_days<=14 means my own entries from the last 14 days', () => {
   const env = withRead();
   assert.equal(save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22' } })).ok, true);                         // Sam, day 0
   assert.equal(save(env, req(env, { code: env.codes.owner, fields: { area_id: 'area-t2', min_c: '19', max_c: '21' } })).ok, true);  // Olive, day 0

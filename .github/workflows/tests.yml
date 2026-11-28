@@ -123,9 +123,36 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
 
+  # Node unit tests (27 Nov 2026): the save script's own tests (cdhub-write, through its fake-Drive harness, nothing live)
+  # and the page helpers' tests. No browser. The required check below waits for this job too, so a red unit test blocks
+  # a merge exactly like a red browser test.
+  unit:
+    name: Node unit tests (no browser)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: cdhub-write/package-lock.json
+
+      - name: Install the save-script test packages (exact versions from cdhub-write/package-lock.json)
+        run: npm ci
+        working-directory: cdhub-write
+
+      - name: Save script tests (every cdhub-write/tests/*.test.js)
+        run: npm test
+        working-directory: cdhub-write
+
+      - name: Page helper tests (staff lib, staff modules, Breed Better, enquiries, estate, yearly print)
+        run: npm run test:unit
+
   tests:
     name: Browser tests (pretend Google and Drive)
-    needs: shards
+    needs: [shards, unit]
     if: ${{ !cancelled() }} # reports even when a shard failed, so the required check is red, never missing
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -173,10 +200,11 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-      - name: Every shard passed? (this is what makes the required check red or green)
+      - name: Every shard and the unit tests passed? (this is what makes the required check red or green)
         run: |
-          echo "Shards: ${{ needs.shards.result }}"
+          echo "Shards: ${{ needs.shards.result }}  Unit tests: ${{ needs.unit.result }}"
           test "${{ needs.shards.result }}" = success
+          test "${{ needs.unit.result }}" = success
 
       # Failure surface. Scheduled (Monday) or hand-started runs on main only. No Slack, no webhooks, no new secrets:
       # the run's own built-in token opens ONE GitHub Issue (GitHub emails the owner) and closes it when green again.
