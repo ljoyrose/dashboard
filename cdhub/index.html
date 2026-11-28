@@ -5685,7 +5685,7 @@ function pushCheckLog(logs, fields, res){
 }
 async function sendPlans(memKey, plans, msg){
  var sig=JSON.stringify(plans.map(function(p){ return {a:p.action,f:p.fields}; }));
- var mem=saveMem(memKey, sig), logs=T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[]), bad='', last=null, added=0;
+ var mem=saveMem(memKey, sig), logs=T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[]), bad='', last=null, added=0, ids=[];
  for(var i=mem.from;i<plans.length;i++){
   var rid=mem.rids[i]||sinkRid(); mem.rids[i]=rid; mem.from=i;
   if(msg){ msg.removeAttribute('data-saved'); msg.textContent=plans.length>1?('Saving '+(i+1)+' of '+plans.length+'\u2026'):'saving\u2026'; msg.setAttribute('data-rid', rid); }
@@ -5693,10 +5693,11 @@ async function sendPlans(memKey, plans, msg){
   last=r;
   if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); if(!(r&&(r.code==='NETWORK'||r.kept))) mem.rids[i]=''; break; }
   pushCheckLog(logs, plans[i].fields, r.result||{}); added++; mem.from=i+1;
+  if(r.result.status==='saved') ids=ids.concat(r.result.ids&&r.result.ids.length?r.result.ids:[r.result.id]);
  }
  if(msg){ msg.removeAttribute('data-rid'); showSave(msg, bad||sinkMsg(last||{},'')); }
  if(!bad) delete SAVE_MEM[memKey];
- return {ok:!bad, added:added, message:bad||(last?sinkMsg(last,''):'')};
+ return {ok:!bad, added:added, ids:ids.filter(Boolean), message:bad||(last?sinkMsg(last,''):'')};
 }
 function readExtra(root, prefix){
  var extra={}, item=root.querySelector('[data-'+prefix+'-item]'), amount=root.querySelector('[data-'+prefix+'-amount]'), note=root.querySelector('[data-'+prefix+'-note]');
@@ -5718,6 +5719,7 @@ async function sopRecord(btn){
  var sent=await sendPlans('sop:'+key, plan.plans, msg);
  drawSops();
  if(!sent.ok){ var again=document.querySelector('[data-sop-record="'+CSS.escape(key)+'"] [data-sop-msg]'); if(again) showSave(again, sent.message); }
+ hubDonePhoto(document.querySelector('[data-sop-record="'+CSS.escape(key)+'"]'), key, sent.ids, day, 'check_log', key);
 }
 /* Checked today: an SOP with no check in force. The first time also adds the check_type row, then one check_log. */
 async function sopChecked(btn){
@@ -5764,6 +5766,8 @@ async function jobDone(btn){
  COMP.doneNote={key:key, html:saveHtml(sent.message)};
  go('compliance', false);
  COMP.doneNote=null;
+ var note=document.querySelector('[data-job-msg="'+CSS.escape(key)+'"]');
+ hubDonePhoto(note&&note.parentNode, key, sent.ids, day, 'check_log', key);
 }
 document.addEventListener('click',function(ev){
  var all=ev.target.closest&&ev.target.closest('[data-job-all]');
@@ -6074,10 +6078,19 @@ function hubPhotoSender(){
   linkAdd:function(f){ return sinkSend({action:'link_add',fields:f}).then(function(j){ if(j&&j.ok) (T['BLD-links.csv']=T['BLD-links.csv']||[]).push(Object.assign({id:(j.result||{}).id||''},f)); return norm(j); }); }};
 }
 function donePhotoHub(key,res){
- var P=window.BLDEvidencePhoto, ids=res&&res.ids&&res.ids.length?res.ids:[res&&res.id];
- if(!P||!ids[0]||(res.status==='queued')||!P.doneOn(T['BLD-breeding_rule.csv']||[],key,todayISO())) return;
- var card=[].slice.call(document.querySelectorAll('[data-jcal]')).filter(function(x){return x.getAttribute('data-jcal')===key;})[0]; if(!card) return;
- P.offer(card,{send:hubPhotoSender(),fromTable:'check_log',fromIds:ids,day:todayISO(),name:key+'.jpg',source:'Job done: '+key,title:'Add photo',hint:'A photo of the job done, or skip.'});
+ var ids=res&&res.ids&&res.ids.length?res.ids:[res&&res.id];
+ if(!res||res.status==='queued') return;
+ var card=[].slice.call(document.querySelectorAll('[data-jcal]')).filter(function(x){return x.getAttribute('data-jcal')===key;})[0];
+ hubDonePhoto(card,key,ids,todayISO(),'check_log',key);
+}
+/* One photo offer after any Done on the hub: into host, joined to each saved id in fromTable. Off when the owner's
+   job.done_photo(.<key>) row says no (Outstanding uses key work). Returns true when the offer is drawn. */
+function hubDonePhoto(host,key,ids,day,fromTable,name){
+ var P=window.BLDEvidencePhoto; ids=(ids||[]).filter(Boolean);
+ if(!P||!host||!ids.length||!P.doneOn(T['BLD-breeding_rule.csv']||[],key,day)) return false;
+ var wrap=document.createElement('div'); wrap.setAttribute('data-done-photo',key); host.appendChild(wrap);
+ P.offer(wrap,{send:hubPhotoSender(),fromTable:fromTable,fromIds:ids,day:day,past:day!==todayISO(),name:name+'.jpg',source:'Job done: '+key,title:'Add photo',hint:'A photo of the job done, or skip.'});
+ return true;
 }
 /* Checks register (priority 2, 21 Nov 2026): print or CSV of one month's check records for an inspector. Read only.
    checks-register.js is fetched when Compliance opens (not on first load). Every month from the first record to this one
@@ -6499,7 +6512,9 @@ function workV(){ return {esc:esc,dmy:ukDate,saveHtml:saveHtml,today:todayLondon
  remember:function(row){ (T['BLD-requirement.csv']=T['BLD-requirement.csv']||[]).push(row);
   CD.work=CDWork.apply((T['BLD-WORK.csv']||[]).filter(function(r){ return String(r.area||'').trim().toLowerCase()!=='ccp'&&!/\bnot CD Hub\b/i.test(String(r.evidence||'')); }),T['BLD-requirement.csv'],todayLondon());
   CD._needs=null; },
- redraw:function(){ go('work',false); }}; }
+ redraw:function(){ go('work',false); },
+ donePhoto:function(reqId,workId){ var n=[].slice.call(document.querySelectorAll('[data-wk-note]')).filter(function(x){ return x.getAttribute('data-wk-note')===workId; })[0];
+  if(n){ var h=document.createElement('div'); n.parentNode.insertBefore(h,n.nextSibling); hubDonePhoto(h,'work',[reqId],todayLondon(),'requirement','work-'+workId); } }}; }
 /* Which views exist on this hub for this sign-in. Table map and Assocs stay off the menu. */
 function viewOn(id){ return HubNav.viewOn({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),id:id}); }
 function navHas(id){

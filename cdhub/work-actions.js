@@ -96,7 +96,8 @@
     return h + '</div>';
   }
 
-  /** Wire the buttons on the Outstanding page. v: {sinkPost, bbSaved, showSave, remember, redraw, today, esc}. */
+  /** Wire the buttons on the Outstanding page. v: {sinkPost, bbSaved, showSave, remember, redraw, today, esc, donePhoto?}.
+   *  donePhoto(requirementId, workId): after Done, offer a photo under that row's note. */
   function bind(main, v) {
     if (!main || main.dataset.wkBound) return;
     main.dataset.wkBound = '1';
@@ -119,7 +120,11 @@
         var text = 'Saved ' + new Date().toTimeString().slice(0, 5) + '. ' + id + ': ' + said + '.';
         S.open = ''; S.msg[id] = text;
         v.showSave(box, text);
-        setTimeout(v.redraw, 900);
+        setTimeout(function () {
+          v.redraw();
+          /* Done: the row has left the list; offer a photo of the work under its note (v.donePhoto, the shared photo helper) */
+          if (said === 'done' && v.donePhoto && res.id) v.donePhoto(res.id, id);
+        }, 900);
       }).catch(function (err) {
         box.querySelectorAll('button').forEach(function (x) { x.disabled = false; });
         var why = String(err && err.message || err).replace(/^Not saved:\s*/, '').replace(/[.\s]*$/, '');
@@ -131,7 +136,7 @@
   /** The ticks for saves whose row has now left the list (done, snoozed, moved), newest first. */
   function notes(v, shown) {
     return Object.keys(S.msg).filter(function (id) { return !shown[id]; }).map(function (id) {
-      return '<p role="status" data-wk-note>' + v.saveHtml(S.msg[id]) + '</p>';
+      return '<p role="status" data-wk-note="' + v.esc(id) + '">' + v.saveHtml(S.msg[id]) + '</p>';
     }).join('');
   }
 
