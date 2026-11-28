@@ -21,7 +21,7 @@ const recs = (env, title) => {
 
 test('a whole-site import older than 7 days is saved when confirm_unusual is yes, and refused without it @regression', () => {
   const env = env0();
-  const made = save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: { type_key: 'exercise_all', label: 'Exercise', target: 'none', site_scope: 'one_line', effective_from: '2026-01-01' } }));
+  const made = save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: { type_key: 'water_bowls', label: 'Water bowls', target: 'none', site_scope: 'one_line', effective_from: '2026-01-01' } }));
   assert.equal(made.ok, true, JSON.stringify(made));
   const id = made.result.id;
   // DEFAULT_NOW in the harness is 2026-10-15, so this morning is more than 7 days earlier.

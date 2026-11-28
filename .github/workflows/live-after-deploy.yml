@@ -34,8 +34,21 @@ jobs:
     permissions:
       contents: read
       issues: write
+    env:
+      # The commit the triggering publish run built and deployed. A workflow_run job otherwise checks out main HEAD,
+      # which can be newer than what is live (a publish cancelled by concurrency): tests then fail against older pages
+      # (27 Nov 2026, issue #847). Hand-started runs check out the branch they were started on.
+      DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Which commit is checked out (must be the deployed one)
+        run: |
+          echo "Deployed commit: $DEPLOYED_SHA"
+          echo "Checked out:     $(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD)" = "$DEPLOYED_SHA"
+          echo "Checked against deployed commit \`$DEPLOYED_SHA\`." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -49,7 +62,11 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - if: steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
-      - if: steps.pw-cache.outputs.cache-hit == 'true'
+      - name: Install the browser's system libraries (browser itself came from the cache)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        # The runner image already holds these libraries; an apt mirror outage here (run 728, 27 Nov: a 403 from a
+        # third-party apt source) must not skip the live check. If a library is really missing, the tests go red.
+        continue-on-error: true
         run: npx playwright install-deps chromium
       - name: Give the web address a moment to show the new version
         run: sleep 20
@@ -65,25 +82,26 @@ jobs:
         run: cp test-results/results.json smoke-results.json || true
       - name: Live feature check (@live tests against the deployed pages, pretend Google and Drive)
         id: features
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: npx playwright test --project=live-features --retries=2
         env:
           LIVE_FEATURES: '1'
       - name: Write the short summary
         if: always()
-        run: node tests/support/summary.js smoke-results.json && node tests/support/summary.js test-results/results.json
+        run: |
+          node tests/support/summary.js smoke-results.json || true
+          node tests/support/summary.js test-results/results.json || true
       - name: Live feature check red? Open or update the one live-site issue
         if: ${{ always() && steps.features.outcome == 'failure' }}
         continue-on-error: true
-        run: 'node tests/support/report-issue.js --state red --label live-site-red --title "cdhub: live feature check failed" --sha "$MERGED_SHA" --failed test-results/results.json'
+        run: 'node tests/support/report-issue.js --state red --label live-site-red --title "cdhub: live feature check failed" --sha "$DEPLOYED_SHA" --failed test-results/results.json'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MERGED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Live site red? Open or update the one live-site issue
         if: ${{ always() && steps.live.outcome == 'failure' && steps.features.outcome != 'failure' }}
         continue-on-error: true
-        run: 'node tests/support/report-issue.js --state red --label live-site-red --title-prefix "cdhub: check failed" --results smoke-results.json --note "Technical check failed."'
+        run: 'node tests/support/report-issue.js --state red --label live-site-red --title-prefix "cdhub: check failed" --results smoke-results.json --note "Technical check failed." --sha "$DEPLOYED_SHA"'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Live site fine? Close the issue

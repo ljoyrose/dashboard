@@ -26,17 +26,26 @@ env:
   CI: 'true'
 
 jobs:
-  # Same 4 shards as the required check in tests.yml, then one "gate" job that passes only if every shard passed.
+  # Same 8 shards (two lanes) as the required check in tests.yml, then one "gate" job that passes only if every shard passed.
   gate-shards:
-    name: Gate shard ${{ matrix.shard }}/4
+    name: Gate ${{ matrix.lane }} ${{ matrix.shard }}/${{ matrix.of }}
     # GitHub Pages is only for the public repo. Once private, the site is on Cloudflare and this costs minutes for nothing.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40 # same limit as a tests.yml shard. History: one 35-min job cut off every publish from 20 Nov 22:47 (#715) to 22 Nov (#765), so github.io went stale.
+    timeout-minutes: 30 # same limit as a tests.yml shard. History: one 35-min job cut off every publish from 20 Nov 22:47 (#715) to 22 Nov (#765), so github.io went stale.
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        include:
+          # rest: every spec but the click-crawl, desktop and phone. crawl: tests/mocked/cdhub-crawl.spec.js only.
+          - { lane: rest, shard: 1, of: 4, projects: '--project=mocked --project=phone' }
+          - { lane: rest, shard: 2, of: 4, projects: '--project=mocked --project=phone' }
+          - { lane: rest, shard: 3, of: 4, projects: '--project=mocked --project=phone' }
+          - { lane: rest, shard: 4, of: 4, projects: '--project=mocked --project=phone' }
+          - { lane: crawl, shard: 1, of: 4, projects: '--project=mocked' }
+          - { lane: crawl, shard: 2, of: 4, projects: '--project=mocked' }
+          - { lane: crawl, shard: 3, of: 4, projects: '--project=mocked' }
+          - { lane: crawl, shard: 4, of: 4, projects: '--project=mocked' }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -59,7 +68,9 @@ jobs:
         run: npx playwright install-deps chromium
       - name: Run the same tests as the required check (this shard)
         # Same suite as the required check, including the route crawl (tests/mocked/route-crawl.spec.js).
-        run: npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/4
+        run: npx playwright test ${{ matrix.projects }} --shard=${{ matrix.shard }}/${{ matrix.of }}
+        env:
+          PW_LANE: ${{ matrix.lane }}
       - name: Write the short summary
         if: always()
         run: node tests/support/summary.js test-results/results.json
