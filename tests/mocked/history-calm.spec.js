@@ -187,7 +187,7 @@ test('colour: no red anywhere; orange only for outside-limit or missed; the outs
 });
 
 // ------------------------------------------------------------------ AUDIT
-test('audit: each day matches its rows; missed only where needed; outside-limit shows what was done; month totals equal the rows', async ({ page, guard }) => {
+test('audit: each day matches its rows; a slot with no reading is blank, never marked missed @regression @live; outside-limit shows what was done; month totals equal the rows', async ({ page, guard }) => {
   await open(page, guard);
   await page.getByRole('button', { name: 'Heat map' }).click();
   const state = async (iso) => (await day(page, iso).getAttribute('class')).split(' ')[1];
@@ -195,8 +195,8 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   expect(await state('2026-01-05')).toBe('allok');
   expect(await state('2026-01-06')).toBe('warmd');   // R2 AM over 26: cooling action, a light warm tint, not orange
   expect(await state('2026-01-10')).toBe('warn');    // R1 PM below 10: outside the limit
-  expect(await state('2026-01-07')).toBe('miss');    // R3 PM missed
-  expect(await state('2026-01-08')).toBe('miss');    // nothing read, rooms in use
+  expect(await state('2026-01-07')).toBe('allok');   // R3 PM not read: blank, never marked missed (owner ruling 27 Nov)
+  expect(await state('2026-01-08')).toBe('nd');      // nothing read: No readings, not missed
   expect(await state('2026-01-12')).toBe('allok');   // today: AM all read, PM still due
   for (const [cls, word] of Object.entries(RULES.audit.dayStates)) {
     const one = page.locator(`#view-a [data-cal="indoors"] button.d.${cls}`).first();
@@ -214,7 +214,8 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   await expect(page.locator('#drill .rl', { hasText: 'R1' })).not.toContainText('what was done');
   await page.locator('#drill .dclose').click();
   await openDay(page, '2026-01-07');
-  await expect(page.locator('#drill .rl', { hasText: 'R3' }).locator('.warn')).toHaveText('PM missed');
+  await expect(page.locator('#drill .rl', { hasText: 'R3' })).not.toContainText('missed');
+  await expect(page.locator('#drill .rl', { hasText: 'R3' }).locator('.warn')).toHaveCount(0);
   await page.locator('#drill .dclose').click();
 
   // The retired room is never missed after its last reading (10/01).
@@ -232,12 +233,12 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   const jan = page.locator('#view-c .mitem[data-month="1"]');
   await expect(jan).toHaveAttribute('data-read', String(want.read));
   await expect(jan).toHaveAttribute('data-out', String(want.out));
-  await expect(jan).toHaveAttribute('data-miss', String(want.miss));
+  await expect(jan).toHaveAttribute('data-miss', '0');
   await expect(jan).toContainText(`${want.read - want.out} in limit`);
   await expect(jan).toContainText(`${want.out} outside`);
   await expect(jan).toContainText(`${want.warm} warm (cooling action)`);
-  await expect(jan).toContainText(`${want.miss} missed`);
-  await expect(jan).toContainText(`${Math.round(100 * (want.read - want.out) / (want.read + want.miss))}% in limit`);
+  await expect(jan).not.toContainText('missed');
+  await expect(jan).toContainText(`${Math.round(100 * (want.read - want.out) / want.read)}% in limit`);
   // quality review 12 Nov: no card for a month that has not started; a card opens its month on the heat map
   await expect(page.locator('#view-c .mitem')).toHaveCount(1);
   await jan.click();
@@ -266,18 +267,17 @@ test('heat map: a day with nothing to open is not a button you can press; every 
   await expect(page.locator('#view-a button.d.future').first()).toHaveAttribute('aria-label', /Later$/);
 });
 
-test('audit: a room in use with no readings at all is listed and shows missed, never hidden', async ({ page, guard }) => {
+test('audit: a room in use with no readings at all is listed, never hidden, and its slots stay blank', async ({ page, guard }) => {
   await open(page, guard, null, ROOMS + 'area-r5,R5,5\n');
   await page.locator('#rdate').fill('2026-01-11');
   await page.locator('#rdate').dispatchEvent('change');
   await expect(page.locator('#view-d .rtile .rn')).toHaveText(['R1', 'R2', 'R3', 'R5']);
-  await expect(page.locator('#view-d .rtile', { hasText: 'R5' }).locator('.warn')).toHaveText(['AM missed', 'PM missed']);
+  await expect(page.locator('#view-d .rtile', { hasText: 'R5' })).not.toContainText('missed');
   await page.getByRole('button', { name: 'Heat map' }).click();
-  expect((await day(page, '2026-01-05').getAttribute('class')).split(' ')[1]).toBe('miss');   // R5 missed from the first reading day
+  expect((await day(page, '2026-01-05').getAttribute('class')).split(' ')[1]).toBe('allok');  // R5 has no reading: blank, the read rooms decide
   expect((await day(page, '2026-01-04').getAttribute('class')).split(' ')[1]).toBe('nd');     // nothing before readings began
   await page.getByRole('button', { name: 'Month cards' }).click();
-  const want = expected();
-  await expect(page.locator('#view-c .mitem[data-month="1"]')).toHaveAttribute('data-miss', String(want.miss + 15));   // R5: 7 days x 2 + today AM
+  await expect(page.locator('#view-c .mitem[data-month="1"]')).toHaveAttribute('data-miss', '0');
 });
 
 module.exports = { RULES };
@@ -311,7 +311,7 @@ test('audit: Room empty is covered, never missed; an outside reading in an empty
   const jan = page.locator('#view-c .mitem[data-month="1"]');
   await expect(jan).toHaveAttribute('data-out', String(want.out));          // the empty room's outside reading is not counted
   await expect(jan).toHaveAttribute('data-read', String(want.read + 2));
-  await expect(jan).toHaveAttribute('data-miss', String(want.miss - 3));    // R3 PM 07/01, R1 and R2 AM 08/01 covered
+  await expect(jan).toHaveAttribute('data-miss', '0');
 });
 
 // the owner 18 Nov 2026 ("mark h2 (iso) as empty since 01/01/25 ... temps can stay in records just hide them"): a room.empty
@@ -333,9 +333,8 @@ test('audit: a room marked empty by a room.empty row shows empty AM and PM, its 
   await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 12.0–15.0 ✓');   // other rooms unchanged
   await page.locator('#drill .dclose').click();
   expect((await day(page, '2026-01-10').getAttribute('class')).split(' ')[1]).toBe('allok');   // R1's outside reading is hidden
-  await openDay(page, '2026-01-08');   // no reading in R1 that day: empty, never missed
-  await expect(page.locator('#drill .rl', { hasText: 'R1' })).toContainText('AM empty');
-  await expect(page.locator('#drill .rl', { hasText: 'R1' }).locator('.miss')).toHaveCount(0);
+  // 8 Jan: no reading anywhere. A day with nothing to open is not a button; it is never marked missed.
+  expect((await day(page, '2026-01-08').getAttribute('class')).split(' ')[1]).toBe('nd');
 });
 
 // Two named thermometers in one room (the owner 11 Nov 2026, H5/6): one line each, "H5/6 · H5" and "H5/6 · H6", each
@@ -357,7 +356,7 @@ test('audit: a room with two thermometers has a line per thermometer; a blank th
   await page.locator('#rdate').dispatchEvent('change');
   await expect(page.locator('#view-d .rtile .rn')).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
   await expect(page.locator('#view-d .rtile', { hasText: 'H5/6 · H5' }).locator('.warn')).toHaveCount(0);
-  await expect(page.locator('#view-d .rtile', { hasText: 'H5/6 · H6' }).locator('.warn')).toHaveText(['AM missed']);
+  await expect(page.locator('#view-d .rtile', { hasText: 'H5/6 · H6' })).not.toContainText('missed');   // no reading: blank
   await expect(page.locator('#view-d .rtile', { hasText: 'S1' }).locator('.warn')).toHaveCount(0);
 });
 
@@ -474,7 +473,7 @@ test('audit: a reading with max lower than min is flagged, even when both figure
 // limits (empty from_date / to_date, as on the live band table). Invented rooms and figures only. Outside the
 // limit is solid orange (.warn); a missed needed reading is an orange outline (.miss). The day panel does not
 // repeat empty "what was done" lines or "(from …)" source text.
-test('audit: July and August indoor days colour from the readings; missed is an outline, outside-limit is solid', async ({ page, guard }) => {
+test('audit: July and August indoor days colour from the readings; outside-limit is solid; a day with no reading is never marked missed', async ({ page, guard }) => {
   const rows = R.slice();
   const addRow = (aid, day, slot, min, max, note) => rows.push([aid, day, slot, min, max, note || '']);
   for (const aid of ['area-r1', 'area-r2', 'area-r3']) {
@@ -509,12 +508,12 @@ test('audit: July and August indoor days colour from the readings; missed is an 
     return page.locator(`#view-a [data-cal="indoors"] button.d[title^="${+iso.slice(8)} ${mon} 2026 indoors"]`);
   };
   expect((await dayM('2026-07-10').getAttribute('class')).split(' ')[1]).toBe('warn');
-  expect((await dayM('2026-07-11').getAttribute('class')).split(' ')[1]).toBe('miss');
+  expect((await dayM('2026-07-11').getAttribute('class')).split(' ')[1]).toBe('nd');
   expect((await dayM('2026-08-10').getAttribute('class')).split(' ')[1]).toBe('allok');
   const warmCell = await dayM('2026-08-11').getAttribute('class');
-  expect(warmCell.split(' ')[1] === 'warmd' || warmCell.split(' ')[1] === 'miss', 'a day over 26 is never solid orange').toBe(true);
+  expect(warmCell.split(' ')[1], 'a day over 26 is never solid orange').not.toBe('warn');
   await expect(page.locator('.legend')).toContainText('Outside limit');
-  await expect(page.locator('.legend')).toContainText('Missed');
+  await expect(page.locator('.legend')).not.toContainText('Missed');
   await expect(page.locator('.legend')).not.toContainText('Outside limit or missed');
   const paint = (iso) => dayM(iso).evaluate((el) => {
     const s = getComputedStyle(el);
@@ -522,8 +521,7 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   });
   const julyWarn = await paint('2026-07-10');
   const julyMiss = await paint('2026-07-11');
-  expect(julyWarn.bg, 'outside limit is a solid fill, missed is not').not.toBe(julyMiss.bg);
-  expect(julyMiss.shadow, 'a missed day keeps an orange frame').toContain('rgb');
+  expect(julyWarn.bg, 'outside limit is a solid fill, a day with no reading is not').not.toBe(julyMiss.bg);
   await dayM('2026-07-10').click();
   await expect(page.locator('#drill')).toBeVisible();
   const drillBox = await page.locator('#drill').evaluate((el) => {
@@ -540,12 +538,7 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   const rowFrame = await page.locator('#drill .rl').first().evaluate((el) => getComputedStyle(el).borderTopWidth);
   expect(rowFrame).toBe('1px');
   await page.locator('#drill .dclose').click();
-  await dayM('2026-07-11').click();
-  const missed = page.locator('#drill span.miss');
-  await expect(missed.first()).toBeVisible();
-  await expect(missed.first()).toHaveClass(/\bwarn\b/);
-  expect(await page.locator('#drill span.warn').count()).toBe(await page.locator('#drill span.warn.miss').count());
-  await page.locator('#drill .dclose').click();
+  await expect(page.locator('#view-a span.miss, #view-a .d.miss')).toHaveCount(0);   // no missed mark anywhere
   // A limit typed with from_date of today still colours a July reading (standing guidance, entered late).
   upsert('bld-band', 'BLD-temperature_band.csv', 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\ntb-a,Adult,29,,10,26,2026-11-12,\n');
   await page.reload();
@@ -682,9 +675,12 @@ test('Print / PDF: summary and room table for a month, totals and outside list f
   await expect(rep.locator('[data-rp="summary"]')).toHaveAttribute('data-month', '2026-01');
   await expect(rep.locator('[data-rp="table"] tbody th[rowspan]')).toHaveText(['R1', 'R2', 'R3', 'R4']);   // the page's own room names (no "(retired …)" since the owner 18 Nov 2026)
   const want = expected();
-  await expect(rep.locator('[data-rp="table"] [data-rp-totals]')).toContainText(`Readings taken: ${want.read} · missed: ${want.miss} · outside the limit: ${want.out}`);
+  await expect(rep.locator('[data-rp="table"] [data-rp-totals]')).toContainText(`Readings taken: ${want.read} · outside the limit: ${want.out}`);
+  await expect(rep.locator('[data-rp-totals]').first()).not.toContainText('missed');
   await expect(rep.locator('.rp-out li', { hasText: 'R1' }).first()).toContainText('nothing recorded');
-  await expect(rep.locator('[data-rp="table"] td.miss').first()).toHaveText('MISS');
+  await expect(rep.locator('td.miss')).toHaveCount(0);   // a slot with no reading is an empty cell
+  await expect(rep).not.toContainText('MISS');
+  await expect(rep.locator('.rd.miss')).toHaveCount(0);
   // whole year, tables only: January only (the rest of 2026 has not begun on the pretend date)
   await panel.locator('input[name="rpPeriod"][value="year"]').check();
   await panel.locator('#rpSummary').uncheck();

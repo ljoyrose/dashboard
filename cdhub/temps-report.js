@@ -2,9 +2,9 @@
  * Temperatures report: "Print / Save as PDF" (the owner 18 Nov 2026: "PDF A and B and also both month and year - all options
  * selectable by user"). The person picks the period (one month, or a whole year) and what goes in:
  *   B  Summary: one small calendar per room, a day green when every slot was read inside its limit, solid orange when a
- *      reading was outside, an orange frame when a slot was missed. No numbers: the month at a glance.
+ *      reading was outside; a slot with no reading is left blank (never marked missed). No numbers: the month at a glance.
  *   A  Room table: rooms down the side, days across, AM and PM rows, lowest over highest in each cell. Outside-limit
- *      readings carry "!", missed slots say MISS, so it reads in black and white too. A foot lists every outside reading
+ *      readings carry "!", so it reads in black and white too; a slot with no reading is an empty cell. A foot lists every outside reading
  *      with what was done, and the totals.
  * Uses the Temperatures page's own day rules (dayRooms / slotState), so the paper and the screen always agree.
  * The browser's print makes the PDF (Save as PDF), so nothing is sent anywhere. Every room comes from the records.
@@ -77,7 +77,7 @@
       var sq = Math.min(byW, byH, 12);
       if (sq > cell) { cell = sq; cols = c; }
     }
-    h += '<p class="rp-key"><i class="rk done">✓</i> every reading inside its limit &nbsp; <i class="rk out">!</i> a reading outside its limit &nbsp; <i class="rk miss">✗</i> a reading missed</p>'
+    h += '<p class="rp-key"><i class="rk done">✓</i> every reading inside its limit &nbsp; <i class="rk out">!</i> a reading outside its limit</p>'
       + '<div class="rp-cals" style="grid-template-columns:repeat(' + cols + ',max-content);--c:' + (Math.floor(cell * 100) / 100) + 'mm">';
     md.rooms.forEach(function (r) {
       h += '<div class="rp-cal" data-room="' + e(r.aid) + '"><b>' + e(r.name) + '</b><div class="rp-g">'
@@ -128,7 +128,7 @@
 
   function totalsLine(md) {
     var t = md.totals;
-    return '<p class="rp-tot" data-rp-totals>Readings taken: <b>' + t.read + '</b> · missed: <b>' + t.miss + '</b> · outside the limit: <b>' + t.out + '</b>'
+    return '<p class="rp-tot" data-rp-totals>Readings taken: <b>' + t.read + '</b> · outside the limit: <b>' + t.out + '</b>'
       + (t.empty ? ' · room empty: <b>' + t.empty + '</b>' : '') + '</p>';
   }
 

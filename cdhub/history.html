@@ -740,7 +740,9 @@ function slotState(t,aid,day,slot){
   if(roomEmptyOn(unitArea(aid),day)) return {k:'empty'};   /* marked empty all day (room.empty row): never missed */
   if(day===TODAY_STR&&(slot==='pm'||new Date().getHours()<12)) return {k:'due'};
   if(day>TODAY_STR) return {k:'due'};
-  return {k:'miss'};
+  /* No reading, needed, day gone: blank, never marked missed (owner ruling 27 Nov: missed readings will be imported once
+     saving is fixed; marking becomes a user setting later). */
+  return {k:'none'};
 }
 /* The rooms shown for a day: needed that day or with a reading, in round order. */
 function dayRooms(day){
@@ -888,7 +890,7 @@ function repRoom(R,y,m){
   }).join('');
   return '<section class="rep-room" data-unit="'+esc(R.u)+'"><h3>'+esc(R.name)+'</h3>'
     +'<p class="rep-sum">'+R.read+' readings · lowest '+(R.lo===null?'–':dpIndoor(R.lo))+' °C · highest '+(R.hi===null?'–':dpIndoor(R.hi))+' °C · '
-    +R.out+' outside the limit · '+R.warm+' cooling actions · '+R.miss+' missed</p>'
+    +R.out+' outside the limit · '+R.warm+' cooling actions</p>'
     +'<div class="rscroll" tabindex="0" role="region" aria-label="'+esc(R.name)+' readings"><table class="rep-tab"><thead><tr><th>Date</th><th>AM min–max</th><th>PM min–max</th><th>Bed spot</th><th>Limit °C</th><th>Result</th><th>What was done</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
 }
 function buildReport(){
@@ -904,7 +906,7 @@ function buildReport(){
     +'<p class="rep-say" id="repSay" role="status" aria-live="polite"></p></div>'
     +'<div class="rep-out" id="repOut"><h2 class="rep-h">'+esc(title)+'</h2>'
     +'<p class="rep-why">Each reading is judged by the limit rows in force that day. On a day a room held puppies under four weeks, the room is judged on the adult row and the bed spot on the puppy row.</p>'
-    +(list.length?'<p class="rep-sum rep-all">'+list.length+(list.length===1?' room':' rooms')+' · '+t.read+' readings · '+t.out+' outside the limit · '+t.warm+' cooling actions · '+t.miss+' missed</p>'
+    +(list.length?'<p class="rep-sum rep-all">'+list.length+(list.length===1?' room':' rooms')+' · '+t.read+' readings · '+t.out+' outside the limit · '+t.warm+' cooling actions</p>'
       +list.map(function(R){ return repRoom(R,y,m); }).join('')
       :'<p class="sub">No readings and nothing due for '+esc(MONTHS[m]+' '+y)+'.</p>')
     +'</div>';
@@ -1012,7 +1014,6 @@ function buildMonthCards(y){
       h+='<span'+(t.out?' class="warn"':'')+'>'+t.out+' outside</span>';
       if(t.warm) h+='<span data-warm>'+t.warm+' warm (cooling action)</span>';
       if(t.swap) h+='<span class="warn">'+t.swap+' max lower than min</span>';
-      h+='<span'+(t.miss?' class="warn"':'')+'>'+t.miss+' missed</span>';
       if(hi) h+='<span>High '+dpIndoor(hi.v)+' '+esc(hi.name)+'</span>';
       if(lo) h+='<span>Low '+dpIndoor(lo.v)+' '+esc(lo.name)+'</span>';
     }
@@ -1094,7 +1095,6 @@ function legend(){
   return '<div class="legend">'
     +'<div class="leg">'+sq('background:var(--ljr-5)')+'In limit</div>'
     +'<div class="leg">'+sq('background:var(--ljr-3)')+'Outside limit</div>'
-    +'<div class="leg">'+sq('background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)')+'Missed</div>'
     +'<div class="leg">'+sq('background:var(--card);box-shadow:inset 0 0 0 1px var(--line)')+'No readings</div>'
     +'<div class="leg">Outside: '+sq('background:var(--ljr-6-tint)')+(BAND?'below '+BAND.min:'cool')+' '+sq('background:var(--ljr-4-tint)')+(BAND?'above '+BAND.max:'warm')+'</div>'
     +'</div>';
