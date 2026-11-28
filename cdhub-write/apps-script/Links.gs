@@ -83,11 +83,15 @@ function linksEntry_(req, fn) {
   if (!linksOn_()) throw err_('TABLE_OFF', 'Saving to ' + LINKS_.file + ' is switched off.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
+  var tAuth = Date.now();
   var who = authSaver_(req);
+  timing_('sign_in', Date.now() - tAuth);
   var cache = CacheService.getScriptCache(), cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
   var f = req.fields && typeof req.fields === 'object' ? req.fields : {};
-  var result = withLock_(function () { return fn(f, who, new Date()); });
+  var tLock = Date.now(), tIn = 0;
+  var result = withLock_(function () { tIn = Date.now(); return fn(f, who, new Date()); });
+  timing_('lock_wait', tIn - tLock); timing_('work', Date.now() - tIn);
   cache.put('rid:' + rid, JSON.stringify(result), BLD.LIMITS.REQUEST_CACHE_SEC);
   return result;
 }
