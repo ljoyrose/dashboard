@@ -53,14 +53,18 @@ test('module.js loads evidence.js only behind the setting, and never for guests 
 });
 
 test('evidence.js sends only through the save script (file_add, then link_add) and stores nothing on the phone', () => {
+  // the camera, the picture and the two saves live in the shared helper (cdhub/staff/lib/evidence-photo.js), so both are checked
   const src = code('evidence.js');
-  for (const [re, why] of [
-    [/fetch\s*\(|XMLHttpRequest|sendBeacon|WebSocket|navigator\.share/, 'sends something itself'],
-    [/localStorage|indexedDB|caches\.|sessionStorage/, 'stores data in the browser'],
-    [/download\s*[:=]|\.download\b|createObjectURL/, 'saves a file to the phone'],
-    [/capture\s*[:=]|['"]capture['"]/, 'opens the camera app (photo would land in the camera roll)']
-  ]) assert.equal(re.test(src), false, `evidence.js ${why}: ${src.match(re)?.[0]}`);
-  assert.match(src, /act\('file_add'/);
-  assert.match(src, /linkAdd\(\{ from_table: 'area_reading'/);
-  assert.match(src, /role: 'evidence'/);
+  const helper = readFileSync(new URL('../../../lib/evidence-photo.js', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  for (const [f, text] of [['evidence.js', src], ['lib/evidence-photo.js', helper]]) {
+    for (const [re, why] of [
+      [/fetch\s*\(|XMLHttpRequest|sendBeacon|WebSocket|navigator\.share/, 'sends something itself'],
+      [/localStorage|indexedDB|caches\.|sessionStorage/, 'stores data in the browser'],
+      [/download\s*[:=]|\.download\b|createObjectURL/, 'saves a file to the phone'],
+      [/capture\s*[:=]|['"]capture['"]/, 'opens the camera app (photo would land in the camera roll)']
+    ]) assert.equal(re.test(text), false, `${f} ${why}: ${text.match(re)?.[0]}`);
+  }
+  assert.match(helper, /act\('file_add'/);
+  assert.match(helper, /linkAdd\(\{ from_table: o\.fromTable, from_id: id, role: 'evidence'/);
+  assert.match(src, /fromTable: o\.fromTable \|\| 'area_reading'/);
 });

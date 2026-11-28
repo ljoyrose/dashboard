@@ -5271,6 +5271,9 @@ document.addEventListener('click',function(e){ var t=e.target&&e.target.closest?
  else if(t.hasAttribute('data-outbox-why')){ hubWhy=!hubWhy; hubBoxDraw(); }
  else if(t.hasAttribute('data-outbox-ok')){ var ids=(t.getAttribute('data-outbox-ok')||'').split('|'); hubPut(HUB_REFUSED,hubList(HUB_REFUSED).filter(function(x){ return ids.indexOf(x.id)<0; })); } });
 window.addEventListener('online',function(){ if(!hubStop) hubFlush(); });
+/* 27 Nov 2026: shown again (tab back, phone unlocked, restored page): send what is kept at once, not on a slowed timer. */
+document.addEventListener('visibilitychange',function(){ if(!document.hidden&&!hubStop) hubFlush(); });
+window.addEventListener('pageshow',function(){ if(!hubStop) hubFlush(); });
 document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'&&!hubStop) hubFlush(); });
 window.addEventListener('load',function(){ hubBoxDraw(); hubRetry(4000); });
 async function sinkSend(body){
