@@ -792,7 +792,7 @@ test.describe('Studio page', () => {
     const box0 = await other.boundingBox();
     await other.hover();
     expect(await other.boundingBox()).toEqual(box0);
-    expect(await other.evaluate((e) => { const c = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return { s: c.outlineStyle, grey: c.backgroundColor === hov }; }), 'hover = the pale grey fill, no line (Lisa, 12 Nov 2026)').toEqual({ s: 'none', grey: true });
+    expect(await other.evaluate((e) => { const c = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return { s: c.outlineStyle, grey: c.backgroundColor === hov }; }), 'hover = the pale grey fill, no line (12 Nov 2026)').toEqual({ s: 'none', grey: true });
     const lab = await page.locator('.col[data-stage="5"] .col-head .lab').evaluate((e) => getComputedStyle(e).color);
     expect(lab).toBe(await page.evaluate(() => getComputedStyle(document.body).color));
     // Keyboard focus is a 1px ink line inside, never the browser blue.
@@ -1203,7 +1203,7 @@ test.describe('Studio page', () => {
     // Main is the house Main (the owner, 2 Nov 2026); the old three (On track / Needs you / Overdue) open from the top of Do, and the
     // fuller late-first, "–" and empty cases are in hub-main-studio.spec.js. This checks Main with the real sample state.
     await open(page, guard, '#/me');
-    await expect(page.locator('#view .hello'), 'no greeting (Lisa, 2 Nov: no unnecessary words)').toHaveCount(0);
+    await expect(page.locator('#view .hello'), 'no greeting (2 Nov: no unnecessary words)').toHaveCount(0);
     const nums = page.locator('[data-hm="nums"] a.hm-n');
     await expect(nums.locator('.hm-l')).toHaveText(['Approve', 'Due Today', 'Sold']);
     await expect(nums.nth(0).locator('.hm-v')).toHaveText('2'); // the two pieces waiting at Review
