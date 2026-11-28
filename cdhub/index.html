@@ -17,6 +17,7 @@
 <script src="staff/lib/temp-judge.js"></script>
 <script src="staff/lib/thermometer.js"></script>
 <script src="staff/lib/capacity.js"></script>
+<script src="staff/lib/evidence-photo.js"></script>
 <script src="staff/lib/temp-pair.js"></script>
 <script src="staff/lib/display.js"></script>
 <script src="staff/lib/area-temp-line.js"></script>
@@ -150,7 +151,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
 .sbox input:is(:focus,:focus-visible){outline:none!important}
 .sbox:focus-within{border-color:var(--ink)}
-/* any touch screen too (Lisa 17 Nov 2026: the folding phone open is 860px wide) */
+/* any touch screen too (17 Nov 2026: the folding phone open is 860px wide) */
 @media (max-width:544px),(pointer:coarse){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd):not(.phbtn):not(.gx):not(.ged):not(.gpick),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
 
 
@@ -424,8 +425,11 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .psort-btns{display:flex;flex-wrap:wrap;gap:8px}.psort-btns .btn{flex:1 1 120px}
 /* photo crop step (12 Nov 2026): white sheet, 12px corners, 1px lines; works by touch */
 .pcrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
-.pcrop-in{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px;font-family:var(--house-font)}
-.pcrop-in h3{margin:0;font-size:var(--fs-body)}
+.pcrop-in{position:relative;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px;font-family:var(--house-font)}
+.pcrop-in h3{margin:0 40px 0 0;font-size:var(--fs-body)}
+.pcrop-x{all:unset;box-sizing:border-box;position:absolute;top:8px;right:8px;width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--card);color:var(--ink);border:1px solid var(--line);font-size:var(--fs-head);line-height:1;cursor:pointer}
+.pcrop-x:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.pcrop-ask{margin:0}
 .pcrop-view{position:relative;width:100%;aspect-ratio:1/1;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;touch-action:none;cursor:grab;background:var(--soft)}
 .pcrop-view canvas{display:block;width:100%;height:100%}
 .pcrop-tip{margin:0;font-size:var(--fs-small)}
@@ -3299,16 +3303,69 @@ function galleryRetile(li,f,mainId,dates,ended){
 }
 function cardPhotoSync(dog,ph){
  var card=document.querySelector('.dc[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'); if(!card) return;
- var img=card.querySelector('img.dogphoto'); if(!img) return;
- var id=cardPhotoId(CD._byId[dog]||{id:dog},ph); if(!id) return;
+ var img=card.querySelector('img.dogphoto'), btn=card.querySelector('[data-photo-open]'), paw=card.querySelector('[data-paw]');
+ var id=cardPhotoId(CD._byId[dog]||{id:dog},ph);
+ if(!id){ if(img) img.remove(); if(paw) paw.classList.remove('off'); return; }
+ if(!img){ if(!btn) return; img=document.createElement('img'); img.className='dogphoto off'; img.alt=''; img.setAttribute('referrerpolicy','no-referrer'); btn.appendChild(img); }
  if(img.getAttribute('data-photo-id')===id&&img.getAttribute('src')) return;
  img.setAttribute('data-photo-id',id);
  var mem=PHOTO_MEM[id]; if(mem&&(mem.thumb||mem.full)){ photoShow(img,mem.thumb||mem.full,id); return; }
  loadGalleryThumb(img);
 }
+/* Remove one gallery photo in place: the tile goes at once, the dog list is not redrawn (the scroll position stays) and an
+   empty gallery leaves the card. When it was the main photo the next gallery photo becomes main (link_add main; the script
+   ends the old main link); with no next photo the main link ends too and the card shows none. A refused save puts it all
+   back and says why. Resolves true when saved. */
+function galleryOpenMains(dog){
+ return (T['BLD-links.csv']||[]).filter(function(l){ return l&&(l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!String(l.to_date||'').trim(); });
+}
+function gallerySay(dog,text){
+ GAL_MSG[dog]=text; var g=galBox(dog); if(g){ g.open=true; var m=g.querySelector('[data-gal-msg]'); if(m) m.textContent=text; }
+}
+async function galleryEnd(dog, id){
+ var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]), day=todayLondon(), j;
+ var row=links.filter(function(l){ return l.id===id; })[0]||{};
+ var ph=dogPhotos(CD._byId[dog]||{id:dog});
+ var wasMain=!!(ph.main&&row.to_id&&ph.main.id===row.to_id);
+ var next=wasMain?(ph.gallery||[]).filter(function(f){ return f.kind==='photo'&&f.id!==row.to_id&&dogPhotoId(f.drive_file_id); })[0]:null;
+ var to=galEndDate(row), wasTo=row.to_date||'', wasWhy=row.end_reason||'';
+ var oldMains=[], local='';
+ if(row.id&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); }
+ if(next){
+  galleryOpenMains(dog).forEach(function(l){ oldMains.push(l); l.to_date=to; l.end_reason=GAL_REMOVED; l._local=1; });
+  local='local-'+sinkRid();
+  links.push({id:local,from_table:'subject',from_id:dog,role:'main',to_table:'files',to_id:next.id,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString(),_local:1});
+ }
+ function mainBack(){
+  var ix=links.findIndex(function(l){ return l.id===local; }); if(local&&ix>=0) links.splice(ix,1);
+  oldMains.forEach(function(l){ l.to_date=''; l.end_reason=''; delete l._local; });
+ }
+ gallerySync(dog);
+ j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
+ if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
+ if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
+  linkEndDrop(id);
+  var back=(T['BLD-links.csv']||[]).filter(function(l){ return l.id===id; })[0];
+  if(back){ back.to_date=wasTo; back.end_reason=wasWhy; delete back._local; }
+  if(row.id&&row!==back){ row.to_date=wasTo; row.end_reason=wasWhy; }
+  mainBack();
+  if(galBox(dog)) gallerySync(dog); else drawDogs();
+  gallerySay(dog,'Not saved: '+((j&&j.message)||'try again.'));
+  return false; }
+ if(next){
+  var a=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:'main',to_table:'files',to_id:next.id,from_date:day,source:'CD Hub, Make main'});
+  if(!(a&&a.ok&&a.result&&a.result.status==='saved')){ mainBack(); gallerySync(dog); gallerySay(dog,'Not saved: '+((a&&a.message)||'try again.')); return false; }
+  var made=links.filter(function(l){ return l.id===local; })[0]; if(made&&a.result.id) made.id=a.result.id;
+ }
+ await clearCardPhoto(dog, row.to_id);
+ gallerySync(dog);
+ return true;
+}
 function gallerySync(dog){
- var g=galBox(dog); if(!g) return;
  var d=CD._byId[dog]||{id:dog}, ph=dogPhotos(d), dates=photoDatesOn(todayISO()), word=ph.galleryLabel||'Photos';
+ cardPhotoSync(dog,ph);
+ var g=galBox(dog); if(!g) return;
+ if(!ph.gallery.length){ g.remove(); return; }
  var label=g.querySelector(':scope > summary .dcs-label'); if(label) label.textContent=word+' ('+ph.gallery.length+')';
  var bd=g.querySelector(':scope > .dcs-bd'); if(!bd) return;
  var open=bd.querySelector(':scope > ul.glist');
@@ -3328,7 +3385,6 @@ function gallerySync(dog){
  }
  fill(ph.gallery,open,false);
  var det=bd.querySelector(':scope > details.gal-ended'); if(det) det.remove();
- cardPhotoSync(dog,ph);
 }
 function photoSortClose(){
  var dog=PHOTO_SORT&&PHOTO_SORT.dog, box=PHOTO_SORT&&PHOTO_SORT.box, key=PHOTO_SORT&&PHOTO_SORT.key;
@@ -3407,21 +3463,7 @@ document.addEventListener('click',async function(ev){
  var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]);
  b.disabled=true; if(msg) msg.textContent='Saving\u2026'; GAL_MSG[dog]='Saving\u2026';
  if(b.hasAttribute('data-gal-end')){
-  var id=b.getAttribute('data-gal-end'), row=links.filter(function(l){ return l.id===id; })[0]||{};
-  var to=galEndDate(row), wasTo=row.to_date||'', wasWhy=row.end_reason||'';
-  if(row.id&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); }
-  gallerySync(dog);
-  j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
-  if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
-  if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
-   linkEndDrop(id);
-   var back=(T['BLD-links.csv']||[]).filter(function(l){ return l.id===id; })[0];
-   if(back){ back.to_date=wasTo; back.end_reason=wasWhy; delete back._local; }
-   if(row.id&&row!==back){ row.to_date=wasTo; row.end_reason=wasWhy; }
-   gallerySync(dog);
-   GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); var mBad=galBox(dog); if(mBad){ mBad.open=true; var mm=mBad.querySelector('[data-gal-msg]'); if(mm) mm.textContent=GAL_MSG[dog]; }
-   return; }
-  clearCardPhoto(dog, row.to_id);
+  if(!(await galleryEnd(dog, b.getAttribute('data-gal-end')))) return;
  } else {
   var fid=b.getAttribute('data-gal-back')||b.getAttribute('data-gal-main'), role=b.hasAttribute('data-gal-main')?'main':'gallery';
   if(role==='main') links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
@@ -3464,13 +3506,8 @@ async function photoEdit(dog,fileId,msg){
  var tour=photoTour(dog, f&&f.id);
  var pic=await photoCrop(img,'',{canDelete:true, tour:tour.list.length?tour:null});
  if(!pic) return;   /* Cancel: nothing is saved */
- if(pic.galleryRemove){
-  var lid=pic.linkId, row=links.filter(function(l){ return l.id===lid; })[0]||{}, y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;
-  say('Removing the photo\u2026');
-  var jr=await sinkAct('link_end',{id:lid, to_date:to, reason:GAL_REMOVED});
-  if(jr&&jr.ok&&jr.result&&jr.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(lid, to, GAL_REMOVED); linkEndsApply(); }
-  gallerySync(dog);
-  var ag=galBox(dog); if(ag){ ag.open=true; var mm=ag.querySelector('[data-gal-msg]'); if(mm) mm.textContent=jr&&jr.ok?'\u2713 Removed':'Not saved: '+sinkMsg(jr); }
+ if(pic.galleryRemove&&pic.linkId){
+  if(await galleryEnd(dog, pic.linkId)) gallerySay(dog,'\u2713 Removed');
   return; }
  if(pic.remove){ say('Removing the photo\u2026'); await clearCardPhoto(dog,f&&f.id); gallerySync(dog);
   var gone=document.querySelector('.dc[data-dog="'+dog+'"]'), gm=gone&&gone.querySelector('[data-photo-msg]');
@@ -3621,16 +3658,19 @@ function photoCrop(src,was,opts){
  return new Promise(function(resolve){
   var box=document.createElement('div');
   box.className='pcrop'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','pcropT');
+  var canRemove=!!(opts.canDelete||opts.tour);
   box.innerHTML='<div class="pcrop-in"><h3 id="pcropT">Crop and edit the photo</h3>'
+   +'<button type="button" class="pcrop-x" data-crop-close aria-label="Close">\u00d7</button>'
    +'<div class="pcrop-view" data-crop-view><canvas data-crop-canvas></canvas></div>'
    +'<p class="mut pcrop-tip">Drag to move. Pinch or use the slider to zoom.</p>'
    +'<label class="pcrop-zoom"><span class="sr">Zoom</span><input type="range" min="1" max="4" step="0.01" value="1" data-crop-zoom aria-label="Zoom"></label>'
    +'<div class="pcrop-edit"><label for="pcropB">Brightness</label><input id="pcropB" type="range" min="-50" max="50" step="1" value="0" data-crop-bright>'
    +'<label for="pcropC">Contrast</label><input id="pcropC" type="range" min="-50" max="50" step="1" value="0" data-crop-contrast></div>'
    +'<p class="mut pcrop-size" data-crop-size aria-live="polite"></p>'
-   +'<div class="pcrop-btns">'+(opts.canDelete?'<button type="button" class="btn no" data-crop-delete aria-label="Delete this photo">\u00d7</button>':'')
+   +(canRemove?'<p class="mut pcrop-ask" data-crop-ask hidden>Remove this photo?</p>':'')
+   +'<div class="pcrop-btns">'+(canRemove?'<button type="button" class="btn danger" data-crop-remove>Remove</button>':'')
    +'<button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><button type="button" class="btn" data-crop-reset>Reset</button><span class="pcrop-gap"></span>'
-   +(opts.tour?'<button type="button" class="btn" data-crop-prev>Previous</button><button type="button" class="btn" data-crop-next>Next</button><button type="button" class="btn" data-crop-remove>Remove</button>':'')
+   +(opts.tour?'<button type="button" class="btn" data-crop-prev>Previous</button><button type="button" class="btn" data-crop-next>Next</button>':'')
    +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Save</button></div></div>';
   document.body.appendChild(box);
   var view=box.querySelector('[data-crop-view]'), cv=box.querySelector('[data-crop-canvas]'), zoom=box.querySelector('[data-crop-zoom]');
@@ -3678,10 +3718,15 @@ function photoCrop(src,was,opts){
   var prevBtn=box.querySelector('[data-crop-prev]'), nextBtn=box.querySelector('[data-crop-next]'), remBtn=box.querySelector('[data-crop-remove]');
   if(prevBtn) prevBtn.addEventListener('click',function(){ go(-1); });
   if(nextBtn) nextBtn.addEventListener('click',function(){ go(1); });
-  if(remBtn) remBtn.addEventListener('click',function(){ var f=opts.tour&&opts.tour.file?opts.tour.file():null; done({galleryRemove:true, fileId:f&&f.id||'', linkId:f&&f.link_id||''}); });
+  box.querySelector('[data-crop-close]').addEventListener('click',function(){ done(null); });
+  if(remBtn) remBtn.addEventListener('click',function(){
+   if(remBtn.getAttribute('data-crop-confirm')!=='1'){   /* first tap asks; the second removes */
+    remBtn.setAttribute('data-crop-confirm','1');
+    var ask=box.querySelector('[data-crop-ask]'); if(ask) ask.hidden=false;
+    return; }
+   var f=opts.tour&&opts.tour.file?opts.tour.file():null;
+   done(f&&f.link_id?{galleryRemove:true, fileId:f.id||'', linkId:f.link_id}:{remove:true}); });
   nav();
-  var delBtn=box.querySelector('[data-crop-delete]');
-  if(delBtn) delBtn.addEventListener('click',function(){ done({remove:true}); });
   box.querySelector('[data-crop-use]').addEventListener('click',function(){
    var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
    var f=opts.tour&&opts.tour.file?opts.tour.file():null;
@@ -5186,6 +5231,9 @@ document.addEventListener('click',function(e){ var t=e.target&&e.target.closest?
  else if(t.hasAttribute('data-outbox-why')){ hubWhy=!hubWhy; hubBoxDraw(); }
  else if(t.hasAttribute('data-outbox-ok')){ var ids=(t.getAttribute('data-outbox-ok')||'').split('|'); hubPut(HUB_REFUSED,hubList(HUB_REFUSED).filter(function(x){ return ids.indexOf(x.id)<0; })); } });
 window.addEventListener('online',function(){ if(!hubStop) hubFlush(); });
+/* 27 Nov 2026: shown again (tab back, phone unlocked, restored page): send what is kept at once, not on a slowed timer. */
+document.addEventListener('visibilitychange',function(){ if(!document.hidden&&!hubStop) hubFlush(); });
+window.addEventListener('pageshow',function(){ if(!hubStop) hubFlush(); });
 document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'&&!hubStop) hubFlush(); });
 window.addEventListener('load',function(){ hubBoxDraw(); hubRetry(4000); });
 async function sinkSend(body){
@@ -5270,12 +5318,21 @@ async function tempSave(areaId,slot,which,raw,el,msgEl,th){
   var cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
   var nv={min:t.min,max:t.max,at:r.result.at||new Date().toISOString()};
   cur['t_'+slot]=nv; if(multi) cur[sk]=nv; delete TYPED[tk];
-  keptRow(areaId,ps,th?{min_c:t.min,max_c:t.max,thermometer_id:th}:{min_c:t.min,max_c:t.max},r); roundRefresh(date); }
+  keptRow(areaId,ps,th?{min_c:t.min,max_c:t.max,thermometer_id:th}:{min_c:t.min,max_c:t.max},r); roundRefresh(date); roundPhoto(areaId,slot,th,r,date,msgEl); }
 }
 /* After a save (the owner 12 Nov 2026: "0 with a temperature" and "No readings" right after an H1 reading that HAD saved):
    the new row joins the page's copy of the sheet, and the count and Kept readings are drawn again at once. */
 function keptRow(areaId,ps,f,r){ var rows=T['BLD-area_reading.csv']||(T['BLD-area_reading.csv']=[]);
  rows.push(Object.assign({id:(r.result&&r.result.id)||'',area_id:areaId,period_start:ps,taken_at:(r.result&&r.result.at)||new Date().toISOString()},f)); }
+/* After a Round reading or Empty mark is saved, offer a photo of it (shared helper staff/lib/evidence-photo.js). The reading
+   is already saved; the photo joins it as evidence. Same switch as staff Temps: rule row job.temps_keep_photo = yes (no row = off). */
+function roundPhoto(areaId,slot,th,r,date,msgEl){
+ var P=window.BLDEvidencePhoto, id=r&&r.result&&r.result.id;
+ if(!P||!id||r.result.status!=='saved'||!msgEl||!P.ruleOn(T['BLD-breeding_rule.csv']||[],'job.temps_keep_photo',date,false)) return;
+ var row=msgEl.closest('.tmp'); if(!row) return;
+ var host=document.createElement('div'); host.setAttribute('data-round-photo',areaId+'|'+slot+(th?'|'+th:'')); row.parentNode.insertBefore(host,row.nextSibling);
+ P.offer(host,{send:hubPhotoSender(),fromTable:'area_reading',fromIds:[id],day:date,past:date!==todayISO(),name:'reading-'+areaId+'-'+slot+'.jpg',source:'Round reading',title:'Add photo',hint:'A photo of the thermometer, or skip.'});
+}
 function roundRefresh(date){
  var st=document.getElementById('rstat'); if(st){ var rows=liveCabins(), n=rows.filter(function(a){ var x=ROUND[roundKey(date,a.id)]||{}; return x.t_am||x.t_pm; }).length; st.textContent=rows.length+' cabins \u00b7 '+n+' with a temperature'; }
  var kr=document.getElementById('kept-readings'); if(kr) kr.outerHTML=keptReadings(date); }
@@ -5296,7 +5353,7 @@ async function roomEmptySave(areaId,slot,msgEl,th){
   var ev={min:'',max:'',at:r.result.at||new Date().toISOString(),empty:true};
   cur['t_'+slot]=ev; if(multi) cur[sk]=ev;
   keptRow(areaId,ps,th?{room_empty:'yes',thermometer_id:th}:{room_empty:'yes'},r); roundRefresh(date);
-  if(msgEl) msgEl.textContent='empty, saved'; }
+  if(msgEl) msgEl.textContent='empty, saved'; roundPhoto(areaId,slot,th,r,date,msgEl); }
 }
 /* a whole litter (and its dam) into one cabin: one move row each, through the same save as one dog */
 async function roundAddLitter(areaId,litterId,msgEl){
@@ -5882,24 +5939,29 @@ function compMedsHtml(){
  while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
  var years=[]; list.forEach(function(k){ var yy=k.slice(0,4); if(years.indexOf(yy)<0) years.push(yy); });
  if(years.length<2) years.push(String(Number(years[0]||todayISO().slice(0,4))-1));
- return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine and dose say \u201cnot recorded\u201d when the record does not hold them. A blank name shows Lisa Carson. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
+ return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine and dose say \u201cnot recorded\u201d when the record does not hold them. A blank name shows the default name in your rules (meds.given_by.default), when set. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
   +'<div class="frow"><label for="medsPeriod">Period</label> <select id="medsPeriod" aria-label="Period"><option value="month" selected>One month</option><option value="year">Whole year</option></select></div>'
   +'<div class="frow"><label for="medsMonth">Month</label> <select id="medsMonth">'+list.map(function(k){ return '<option value="'+k+'">'+esc(UKMON[Number(k.slice(5))-1]+' '+k.slice(0,4))+' ('+(ms[k]||'none')+')</option>'; }).join('')+'</select> '
   +'<label for="medsYear">Year</label> <select id="medsYear" aria-label="Year">'+years.map(function(yy){ return '<option value="'+yy+'">'+yy+'</option>'; }).join('')+'</select> '
   +'<button type="button" class="btn" id="medsPrint">Print</button> <button type="button" class="btn" id="medsCsv">Download CSV</button></div><p id="medsMsg" class="mut" aria-live="polite"></p>');
 }
 function medsLib(){ return window.BLDMedsRegister?Promise.resolve(window.BLDMedsRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='meds-register.js'; s.onload=function(){ ok(window.BLDMedsRegister); }; s.onerror=no; document.head.appendChild(s); }); }
+/* The name a blank Given by shows: the owner's rule row meds.given_by.default (older key register.given_by_default) in force
+   today (latest from-date wins). Read at run time so no name is written in the code (public repo rule). No row: a blank name stays blank. */
+function medsNamed(){ var t=todayISO(), best=null;
+ (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ if((r.rule_key==='meds.given_by.default'||r.rule_key==='register.given_by_default')&&r.effective_from&&r.effective_from<=t&&(!r.to_date||r.to_date>=t)&&(!best||r.effective_from>best.effective_from)) best=r; });
+ return best?String(best.value||'').trim():''; }
 function medsMake(R){ var period=(document.getElementById('medsPeriod')||{}).value||'month';
- var kennel=kennelNow(), printed=dmy(todayISO())+' '+hhmmNow();
+ var kennel=kennelNow(), printed=dmy(todayISO())+' '+hhmmNow(), named=medsNamed();
  var rows=R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO());
  if(period==='year'){ var y=(document.getElementById('medsYear')||{}).value||todayISO().slice(0,4), sheets=[], mi, flat=[];
   for(mi=1;mi<=12;mi++){ var ym=y+'-'+(mi<10?'0':'')+mi; if(ym+'-01'>todayISO()) continue;
-   sheets.push({month:ym,lines:R.build(rows,{month:ym,dog:regDog})}); }
+   sheets.push({month:ym,lines:R.build(rows,{month:ym,dog:regDog,named:named})}); }
   sheets.forEach(function(s){ flat=flat.concat(s.lines); });
-  return {period:'year',year:y,ym:y,sheets:sheets,lines:flat,head:{kennel:kennel,year:y,printed:printed}}; }
+  return {period:'year',year:y,ym:y,sheets:sheets,lines:flat,head:{kennel:kennel,year:y,printed:printed,named:named}}; }
  var ym=(document.getElementById('medsMonth')||{}).value||'';
- var lines=R.build(rows,{month:ym,dog:regDog});
- return {ym:ym,lines:lines,head:{kennel:kennel,month:ym,printed:printed}}; }
+ var lines=R.build(rows,{month:ym,dog:regDog,named:named});
+ return {ym:ym,lines:lines,head:{kennel:kennel,month:ym,printed:printed,named:named}}; }
 function bindMeds(){ var p=document.getElementById('medsPrint'), c=document.getElementById('medsCsv'), msg=document.getElementById('medsMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; };
  medsLib().catch(function(){});   /* fetched now, so Print can open its tab inside the press and is not blocked */
@@ -6004,8 +6066,22 @@ document.addEventListener('click',async function(ev){
   if(res.session) rows.push({id:res.id||'',check_type_id:f.check_type_id,subject_id:'',covered_ids:res.covered_ids||f.dog_ids||'',exceptions:f.exceptions||'',outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who});
   else ids.forEach(function(d,i){ rows.push({id:(res.ids&&res.ids[i])||((res.id||'jcal')+'-'+i),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who}); });
   var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml();
+  donePhotoHub(key,res);
  } else { b.disabled=false; b.textContent='Done today'; var p=document.createElement('p'); p.className='msg bad'; p.setAttribute('data-jcal-msg',''); p.textContent=sinkMsg(r||{},''); b.closest('.jcal').appendChild(p); }
 });
+/* After Done today, offer a photo (shared helper staff/lib/evidence-photo.js). The record is already saved; the photo
+   joins each saved row as evidence. Switch: rule rows job.done_photo(.<type_key>), default on. */
+function hubPhotoSender(){
+ function norm(j){ return j&&j.ok?{ok:true,id:(j.result||{}).id}:{ok:false,message:(j&&j.message)||'Not saved.'}; }
+ return {fileAdd:function(f){ return sinkSend({action:'file_add',fields:f}).then(norm); },
+  linkAdd:function(f){ return sinkSend({action:'link_add',fields:f}).then(function(j){ if(j&&j.ok) (T['BLD-links.csv']=T['BLD-links.csv']||[]).push(Object.assign({id:(j.result||{}).id||''},f)); return norm(j); }); }};
+}
+function donePhotoHub(key,res){
+ var P=window.BLDEvidencePhoto, ids=res&&res.ids&&res.ids.length?res.ids:[res&&res.id];
+ if(!P||!ids[0]||(res.status==='queued')||!P.doneOn(T['BLD-breeding_rule.csv']||[],key,todayISO())) return;
+ var card=[].slice.call(document.querySelectorAll('[data-jcal]')).filter(function(x){return x.getAttribute('data-jcal')===key;})[0]; if(!card) return;
+ P.offer(card,{send:hubPhotoSender(),fromTable:'check_log',fromIds:ids,day:todayISO(),name:key+'.jpg',source:'Job done: '+key,title:'Add photo',hint:'A photo of the job done, or skip.'});
+}
 /* Checks register (priority 2, 21 Nov 2026): print or CSV of one month's check records for an inspector. Read only.
    checks-register.js is fetched when Compliance opens (not on first load). Every month from the first record to this one
    is offered, a month with none too, so its nil record can be printed. Printing is inside this page, as Temperatures. */
@@ -6282,7 +6358,7 @@ function ypCtx(R){
   areaName:function(id){ var a=byId(areas,id); return a&&a.name?a.name:''; },
   itemName:function(id){ var it=byId(items,id); return it&&it.name?it.name:''; },
   litterName:function(id){ var l=null; litters.forEach(function(x){ if(x.id===id) l=x; }); return l&&typeof litName==='function'?'Litter '+litName(l):''; },
-  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO()),{month:ym,dog:regDog});
+  meds:R?function(ym){ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[],todayISO()),{month:ym,dog:regDog,named:medsNamed()});
    return {columns:R.COLUMNS,lines:lines,cell:function(l,k){ return R.cell(l,k); }}; }:null };
 }
 function pageYearly(){

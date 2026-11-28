@@ -14,8 +14,8 @@ const TYPES = [
   { id: 'ct-m', type_key: 'medicine', label: 'Medicine given', target: 'dog', every_days: '1', effective_from: '2026-01-01' }
 ];
 const DOGS = [
-  { id: 'd-ada', name: 'Ada', dob: '2024-01-01', area_id: 'a1', onSite: true },
-  { id: 'd-bob', name: 'Bob', dob: '2026-03-10', area_id: 'a1', onSite: true }
+  { id: 'd-a', name: 'Dog A', dob: '2024-01-01', area_id: 'a1', onSite: true },
+  { id: 'd-b', name: 'Dog B', dob: '2026-03-10', area_id: 'a1', onSite: true }
 ];
 const AREAS = [{ id: 'a1', name: 'Cabin A', onSite: true }];
 function ctx(extra) {
@@ -61,22 +61,22 @@ test('the 24 kennel check names all print once a row exists, whatever the indust
 
 test('a per-dog month is a grid: tick, part, missed, and a pup is not missed before it is born', () => {
   const logs = [
-    log('l1', 'ct-h', '2026-03-01', 'd-ada', 'ok'),
-    log('l2', 'ct-h', '2026-03-02', 'd-ada', 'part_done', 'ate slowly'),
-    log('l3', 'ct-h', '2026-03-01', 'd-bob', 'ok'),
-    log('l4', 'ct-h', '2026-03-04', 'd-ada', 'concern', 'limp')
+    log('l1', 'ct-h', '2026-03-01', 'd-a', 'ok'),
+    log('l2', 'ct-h', '2026-03-02', 'd-a', 'part_done', 'ate slowly'),
+    log('l3', 'ct-h', '2026-03-01', 'd-b', 'ok'),
+    log('l4', 'ct-h', '2026-03-04', 'd-a', 'concern', 'limp')
   ];
   const g = Y.gridMonth(Y.catalogue(ctx({ logs: logs })).find((s) => s.id === 'check:health_check_all'), '2026-03', ctx({ logs: logs }));
-  assert.deepEqual(g.rows.map((r) => r.name), ['Ada', 'Bob']);
+  assert.deepEqual(g.rows.map((r) => r.name), ['Dog A', 'Dog B']);
   assert.equal(g.days.length, 31);
-  assert.equal(g.marks['d-ada']['2026-03-01'], 'tick');
-  assert.equal(g.marks['d-ada']['2026-03-02'], 'part');
-  assert.equal(g.marks['d-ada']['2026-03-03'], 'miss');
-  assert.equal(g.marks['d-ada']['2026-03-04'], 'concern');
-  assert.equal(g.marks['d-ada']['2026-03-16'], '');
-  assert.equal(g.marks['d-bob']['2026-03-01'], 'tick');   // a real record is shown even before the birth date used for "missed"
-  assert.equal(g.marks['d-bob']['2026-03-09'], '');
-  assert.equal(g.marks['d-bob']['2026-03-10'], 'miss');
+  assert.equal(g.marks['d-a']['2026-03-01'], 'tick');
+  assert.equal(g.marks['d-a']['2026-03-02'], 'part');
+  assert.equal(g.marks['d-a']['2026-03-03'], 'miss');
+  assert.equal(g.marks['d-a']['2026-03-04'], 'concern');
+  assert.equal(g.marks['d-a']['2026-03-16'], '');
+  assert.equal(g.marks['d-b']['2026-03-01'], 'tick');   // a real record is shown even before the birth date used for "missed"
+  assert.equal(g.marks['d-b']['2026-03-09'], '');
+  assert.equal(g.marks['d-b']['2026-03-10'], 'miss');
   const built = Y.build({ period: 'month', year: 2026, month: 2, ids: ['check:health_check_all'], today: TODAY }, ctx({ logs: logs }));
   assert.equal(built.pages.length, 1);
   assert.match(built.html, /data-layout="dogs"/);
@@ -89,12 +89,12 @@ test('a per-dog month is a grid: tick, part, missed, and a pup is not missed bef
 });
 
 test('a sparse type is one list page, and a year is one page per started month', () => {
-  const logs = [log('l9', 'ct-p', '2026-02-02', 'd-ada', 'ok', 'from clg-20261118-042020-vf20 spot')];
+  const logs = [log('l9', 'ct-p', '2026-02-02', 'd-a', 'ok', 'from clg-20261118-042020-vf20 spot')];
   const month = Y.build({ period: 'month', year: 2026, month: 1, ids: ['check:parasites'], today: TODAY }, ctx({ logs: logs }));
   assert.equal(month.pages.length, 1);
   assert.match(month.html, /data-layout="list"/);
   assert.match(month.html, /February 2026/);
-  assert.match(month.html, /Ada/);
+  assert.match(month.html, /Dog A/);
   assert.match(month.html, /done/);
   assert.match(month.html, /spot/);
   assert.doesNotMatch(month.html, /clg-20261118-042020-vf20/);
@@ -108,14 +108,14 @@ test('a sparse type is one list page, and a year is one page per started month',
 
 test('a whole year of a fixed table keeps undated rows on their own page, and the CSV cannot run a formula', () => {
   const tables = { 'BLD-microchip.csv': [
-    { id: 'mc-1', subject_id: 'd-ada', chip_number: '900000000000001' },
-    { id: 'mc-2', subject_id: 'd-bob', chip_number: '900000000000002', registered_on: '2026-01-04' }
+    { id: 'mc-1', subject_id: 'd-a', chip_number: '900000000000001' },
+    { id: 'mc-2', subject_id: 'd-b', chip_number: '900000000000002', registered_on: '2026-01-04' }
   ] };
   const built = Y.build({ period: 'year', year: 2026, ids: ['microchip'], today: TODAY }, ctx({ tables: tables }));
-  assert.ok(built.pages.some((p) => p.month === 'undated' && /900000000000001/.test(p.html) && /Ada/.test(p.html)));
+  assert.ok(built.pages.some((p) => p.month === 'undated' && /900000000000001/.test(p.html) && /Dog A/.test(p.html)));
   assert.match(built.pages.find((p) => p.month === '2026-01').html, /900000000000002/);
   const csv = Y.toCsv({ period: 'month', year: 2026, month: 1, ids: ['check:parasites'], today: TODAY }, ctx({
-    logs: [log('l9', 'ct-p', '2026-02-02', 'd-ada', 'ok', '=CMD()')]
+    logs: [log('l9', 'ct-p', '2026-02-02', 'd-a', 'ok', '=CMD()')]
   }));
   assert.equal(csv.charCodeAt(0), 0xfeff);
   assert.match(csv, /'=CMD\(\)/);
@@ -125,31 +125,31 @@ test('a whole year of a fixed table keeps undated rows on their own page, and th
 
 test('PR 785 year pack: chip number, registration, fit to breed, medicines, vaccination, weight, vet visit, mating, health grade', () => {
   const tables = {
-    'BLD-microchip.csv': [{ id: 'mc-1', subject_id: 'd-ada', chip_number: '900000000000001' }],
+    'BLD-microchip.csv': [{ id: 'mc-1', subject_id: 'd-a', chip_number: '900000000000001' }],
     'BLD-microchip_registration.csv': [{ id: 'mr-1', microchip_id: 'mc-1', registry: 'Sample registry', registered_on: '2026-02-02' }],
-    'BLD-fit_to_breed.csv': [{ id: 'f1', subject_id: 'd-ada', assessed_on: '2026-02-03', outcome: 'fit', vet_name: 'Sample Vet' }],
-    'BLD-vaccination.csv': [{ id: 'v1', subject_id: 'd-ada', given_on: '2026-02-04', product: 'Sample Vaccine', diseases_covered: 'Sample course' }],
-    'BLD-weight.csv': [{ id: 'w1', subject_id: 'd-ada', performed_on: '2026-02-05', weight_kg: '12.5', unit: 'kg' }],
-    'BLD-visit.csv': [{ id: 'vs1', subject_id: 'd-ada', performed_on: '2026-02-06', kind: 'appointment', status: 'done', reason: 'Sample check' }],
-    'BLD-mating.csv': [{ id: 'mt1', dam_subject_id: 'd-ada', sire_subject_id: 'd-bob', mated_on: '2026-02-07', method: 'natural' }],
-    'BLD-health_screen.csv': [{ id: 'hs1', subject_id: 'd-ada', test: 'hips', grade: 'A' }]
+    'BLD-fit_to_breed.csv': [{ id: 'f1', subject_id: 'd-a', assessed_on: '2026-02-03', outcome: 'fit', vet_name: 'Sample Vet' }],
+    'BLD-vaccination.csv': [{ id: 'v1', subject_id: 'd-a', given_on: '2026-02-04', product: 'Sample Vaccine', diseases_covered: 'Sample course' }],
+    'BLD-weight.csv': [{ id: 'w1', subject_id: 'd-a', performed_on: '2026-02-05', weight_kg: '12.5', unit: 'kg' }],
+    'BLD-visit.csv': [{ id: 'vs1', subject_id: 'd-a', performed_on: '2026-02-06', kind: 'appointment', status: 'done', reason: 'Sample check' }],
+    'BLD-mating.csv': [{ id: 'mt1', dam_subject_id: 'd-a', sire_subject_id: 'd-b', mated_on: '2026-02-07', method: 'natural' }],
+    'BLD-health_screen.csv': [{ id: 'hs1', subject_id: 'd-a', test: 'hips', grade: 'A' }]
   };
   const c = ctx({ tables: tables, meds: (ym) => {
     if (ym !== '2026-02') return { columns: Meds.COLUMNS, lines: [], cell: (l, k) => Meds.cell(l, k) };
-    const lines = Meds.build([{ id: 'dsp1', subject_id: 'd-ada', given_on: '2026-02-08', product: 'Med C', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: ym, dog: () => ({ name: 'Ada', chip: '' }) });
+    const lines = Meds.build([{ id: 'dsp1', subject_id: 'd-a', given_on: '2026-02-08', product: 'Med C', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: ym, dog: () => ({ name: 'Dog A', chip: '' }) });
     return { columns: Meds.COLUMNS, lines: lines, cell: (l, k) => Meds.cell(l, k) };
   } });
   const choice = { period: 'month', year: 2026, month: 1, today: TODAY };
   function page(id) { return Y.build(Object.assign({ ids: [id] }, choice), c).html; }
   function csv(id) { return Y.toCsv(Object.assign({ ids: [id] }, choice), c); }
   assert.match(page('microchip'), /900000000000001/);
-  assert.match(page('microchip'), /Ada/);
+  assert.match(page('microchip'), /Dog A/);
   assert.match(csv('microchip'), /900000000000001/);
   const reg = page('microchip_registration');
   assert.match(reg, /February 2026/);
   assert.match(reg, /900000000000001/);
   assert.match(reg, /Sample registry/);
-  assert.match(reg, /Ada/);
+  assert.match(reg, /Dog A/);
   assert.match(page('fit_to_breed'), /fit/);
   assert.match(page('fit_to_breed'), /Sample Vet/);
   assert.match(page('vaccination'), /Sample Vaccine/);
@@ -157,7 +157,7 @@ test('PR 785 year pack: chip number, registration, fit to breed, medicines, vacc
   assert.match(page('weight'), /12\.5 kg/);
   assert.match(page('visit'), /Sample check/);
   assert.match(page('mating'), /natural/);
-  assert.match(page('mating'), /Bob/);
+  assert.match(page('mating'), /Dog B/);
   const grade = page('health_screen');
   assert.match(grade, /hips/);
   assert.match(grade, />A</);
@@ -332,7 +332,7 @@ test('zoom shrinks a page that is taller than one sheet and leaves a short page 
 });
 
 test('medicines: a year is one A4 sheet per month and keeps dose, dog and who', () => {
-  const lines = Meds.build([{ id: 'd1', subject_id: 'd-ada', given_on: '2026-02-03', product: 'Med C', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: '2026-02', dog: () => ({ name: 'Ada', chip: '' }) });
+  const lines = Meds.build([{ id: 'd1', subject_id: 'd-a', given_on: '2026-02-03', product: 'Med C', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: '2026-02', dog: () => ({ name: 'Dog A', chip: '' }) });
   const html = Meds.toYearHtml({ kennel: 'Sample Kennel', year: '2026', printed: '15 Mar 2026' }, [
     { month: '2026-01', lines: [] },
     { month: '2026-02', lines: lines }
@@ -343,7 +343,7 @@ test('medicines: a year is one A4 sheet per month and keeps dose, dog and who', 
   assert.match(Meds.toYearHtml({ kennel: '', year: '2026', printed: '' }, [{ month: '2026-01', lines: [] }, { month: '2026-02', lines: [] }]), /No records this month/);
   assert.match(html, /Medicines register · February 2026/);
   assert.match(html, />Dose</);
-  assert.match(html, /Ada/);
+  assert.match(html, /Dog A/);
   assert.match(html, /Sample Staff/);
   assert.match(html, /1 tablet/);
   const one = Meds.toHtml({ kennel: 'Sample Kennel', month: '2026-02', printed: '15 Mar 2026' }, lines);

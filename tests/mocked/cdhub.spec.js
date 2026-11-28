@@ -11,7 +11,7 @@ const signIn = async (page) => {
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
 };
 
-test('dates use 3-letter months, "2 Sep 2026" never "Sept" (Lisa, 16 Nov 2026)', () => {
+test('dates use 3-letter months, "2 Sep 2026" never "Sept" (16 Nov 2026)', () => {
   const D = require('../../cdhub/staff/lib/date-words.js');
   D.setLocale([{ language_tag: 'en-GB' }]);
   expect(D.long('2026-09-30')).toBe('30 Sep 2026');
@@ -188,7 +188,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await tabClick(page, '#nav button[data-go="work"]');
     await expect(page.locator('#main')).toContainText('Sample item waiting on Lisa');
     await expect(page.locator('#main')).toContainText('Sample item waiting on Claude');
-    await expect(page.locator('#main')).not.toContainText('Sample finished item');   // Owner 17 Nov 2026: the Done list is cleared from view
+    await expect(page.locator('#main')).not.toContainText('Sample finished item');   // 17 Nov 2026: the Done list is cleared from view
     await expect(page.locator('[data-work-sum]')).toContainText('done 1');
   });
 
@@ -210,7 +210,7 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Records, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('menu option A (14 Nov 2026): Main, then the starting sections Compliance, Records, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     const bar = page.locator('#nav > button.ht[data-section]');
@@ -225,7 +225,7 @@ test.describe('CD Hub: navigation', () => {
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
   });
 
-  test('Assocs and Table map are off the bar and More (Lisa 13 Nov) but still open by link', async ({ page }) => {
+  test('Assocs and Table map are off the bar and More (13 Nov) but still open by link', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     await expect(page.locator('#nav [data-go="buyers"], #nav [data-go="shape"]')).toHaveCount(0);
@@ -627,7 +627,7 @@ test.describe('CD Hub house look', () => {
     await expect(page.locator('header .srchbtn')).toBeVisible();
     await page.locator('header .srchbtn').click();
     await expect(page.locator('#dashSearch')).toBeVisible();
-    expect(await page.locator('#nav .ht .n').first().evaluate((e) => getComputedStyle(e).position)).toBe('absolute');   // Lisa's tab picks: the count sits in the tab's top-right corner
+    expect(await page.locator('#nav .ht .n').first().evaluate((e) => getComputedStyle(e).position)).toBe('absolute');   // the owner's tab picks: the count sits in the tab's top-right corner
   });
 });
 
@@ -1073,7 +1073,6 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
     CD._byId.tpup = { id: 'tpup', dob: '2026-01-01' };
     CD.dogs.push({ id: 'tpup', area_id: 'test-pup-room', dob: '2026-01-01' });
     const pup = roomBand('test-pup-room', '2026-01-10');
-    // Temps A (Owner 17 Nov 2026): the room on the adult row; the bed spot (4th value) on the puppy row
     // Temps A (17 Nov 2026): the room on the adult row; the bed spot (4th value) on the puppy row
     out.pupOk = tempState('18', '22', pup, '27.0', '2026-01-10');
     out.pupRoomWarm = tempState('20', '27.5', pup, '27.0', '2026-01-10');

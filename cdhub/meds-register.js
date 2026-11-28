@@ -3,7 +3,8 @@
  * priority 2 "legally compliant exports"). Read only: it never writes a row.
  * One line per medicine given. Every column an inspector asks for is always printed; a detail the record does not hold
  * says "not recorded" only for a legally required detail: the date, the dog, the medicine and the dose.
- * A blank name in Given by shows the owner Carson while those blanks are filled in on the sheet. The sheet still keeps the name column.
+ * A blank name in Given by shows the default name passed in (opts.named / head.named), read by the page from the owner's
+ * rule row register.given_by_default. No name is written in this file. With no default set, a blank name stays blank.
  * Time, batch, expiry, route, reason and the vet instruction are left blank when the record does not hold them.
  * Where the row was recorded (dog card or staff job) stays on the line for other code. It is not a column.
  * A column is read only by its own name (listed in FROM below); nothing is worked out from another column.
@@ -18,9 +19,8 @@
   var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var NR = 'not recorded';
-  /* Only these say "not recorded" when empty. The rest stay blank. A blank Given by shows NAMED instead. */
+  /* Only these say "not recorded" when empty. The rest stay blank. A blank Given by shows opts.named instead. */
   var REQUIRED = { date: 1, dog: 1, product: 1, dose: 1 };
-  var NAMED = 'Lisa Carson';
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   /* The register's columns, in print order: [key, heading]. */
@@ -30,6 +30,9 @@
     ['vet', 'Vet instruction'], ['given_by', 'Given by'], ['note', 'Note']
   ];
   var SOURCE = { dispense: 'dog card', job: 'staff job' };
+  /* How a staff-job dose was recorded, when it was not on the day (how_recorded, set on the phone). Never a late mark:
+     saved times can be when the save arrived, hours after the dose (owner ruling 27 Nov). */
+  var HOW_NOTE = { paper: 'Recorded from paper.', bulk: 'Recorded with several days at once.', import: 'Imported.' };
   var RESULT = { ok: 'done', done: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', part_done: 'part done' };
 
   /* Where each detail is read from: the record's own column names, first one with a value wins. */
@@ -114,7 +117,8 @@
       if (mine.some(function (c) { return str(c.corrects_id) === str(r.id); })) notes.push('Corrected by a later record.');
       return { id: str(r.id), subject_id: str(r.subject_id), given_at: str(r.happened_at) || str(r.taken_at), product: str(r.item),
         dose_volume: amt && u && amt.indexOf(u) < 0 ? amt + ' ' + u : amt, taken_by: str(r.taken_by), given_by: str(r.given_by) || str(r.taken_by), note: notes.join(' '),
-        time_given: str(r.time_given), to_date: str(r.to_date), end_reason: str(r.end_reason), _from: 'job' };
+        time_given: str(r.time_given), to_date: str(r.to_date), end_reason: str(r.end_reason), _from: 'job',
+        how_recorded: str(r.how_recorded) };
     });
   }
 
@@ -135,7 +139,7 @@
    */
   function build(rows, opts) {
     opts = opts || {};
-    var ym = str(opts.month), dogOf = typeof opts.dog === 'function' ? opts.dog : function () { return null; };
+    var ym = str(opts.month), dogOf = typeof opts.dog === 'function' ? opts.dog : function () { return null; }, named = str(opts.named);
     var out = [];
     (rows || []).forEach(function (r) {
       var w = when(r);
@@ -151,7 +155,9 @@
         product: unnamed(r.product, r.ruling_needed) ? '' : str(r.product)
       };
       Object.keys(FROM).forEach(function (k) { line[k] = pick(r, FROM[k]); });
-      line.note = Show.human(clean(line.note)); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by) || NAMED;
+      line.note = Show.human(clean(line.note)); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by) || named;
+      var howNote = HOW_NOTE[str(r.how_recorded)];
+      if (howNote) line.note = [howNote, line.note].filter(Boolean).join(' ');
       line.missing = ['date', 'dog', 'product', 'dose'].filter(function (k) { return !line[k]; });
       out.push(line);
     });
@@ -224,7 +230,7 @@
       + '<h1>' + esc(title) + '</h1>'
       + '<p class="meta">' + (kennel ? '<span><b>Kennel:</b> ' + esc(kennel) + '</span>' : '<span>Set the kennel name in Settings.</span>') + '<span><b>Printed:</b> ' + esc(head.printed) + '</span>'
       + '<span><b>Entries:</b> ' + lines.length + '</span></p>'
-      + '<p class="meta">Date, dog, medicine and dose say <i>' + NR + '</i> when the record does not hold them. A blank name shows ' + esc(NAMED) + '. Other details are left blank.</p>'
+      + '<p class="meta">Date, dog, medicine and dose say <i>' + NR + '</i> when the record does not hold them. ' + (str(head.named) ? 'A blank name shows ' + esc(str(head.named)) + '. ' : '') + 'Other details are left blank.</p>'
       + body
       + (gk.length ? '<p class="gaps"><b>Not recorded:</b> ' + gk.map(function (k) { return esc(heading(k)) + ' ' + g[k] + ' of ' + lines.length; }).join(' · ') + '</p>' : '')
       + '<p class="sign"><span>Checked by</span><span>Date</span></p></section>';

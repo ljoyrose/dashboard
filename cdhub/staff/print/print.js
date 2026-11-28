@@ -30,7 +30,8 @@
   function h(t, a, k) { var e = document.createElement(t); Object.keys(a || {}).forEach(function (x) { if (x === 'text') e.textContent = a[x]; else if (x === 'class') e.className = a[x]; else if (x === 'html') e.innerHTML = a[x]; else if (x.slice(0, 2) === 'on') e.addEventListener(x.slice(2), a[x]); else e.setAttribute(x, a[x]); }); (k || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
   /* tags and which tag an item already has: the one shared helper (staff/lib/qr-rules.js), also used by the back-fill tool */
   function newTag() { var taken = {}; (T && T.qr_tag || []).forEach(function (t) { taken[t.tag] = 1; }); return BLDQrRules.newTag(taken, function (n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return a; }); }
-  function say(t, k) { msg.className = 'msg noprint ' + (k || ''); msg.textContent = t; }   // noprint kept: the status line never prints
+  var saidN = 0;   // counts messages, so a late 'cards ready' never covers a newer one (a save, an error)
+  function say(t, k) { saidN++; msg.className = 'msg noprint ' + (k || ''); msg.textContent = t; }   // noprint kept: the status line never prints
   var msg = h('p', { class: 'msg noprint', role: 'status' });
   screen.appendChild(h('h1', { class: 'noprint', text: 'Print QR cards' }));
   var code = ''; try { code = localStorage.getItem(CODE_KEY) || ''; } catch (e) { /* no storage */ }
@@ -166,9 +167,16 @@
         if (t) sheet.appendChild(draw ? draw(t.tag, it) : card(t.tag, it.label, kind === 'area', it.room));
       });
       var left = items.filter(function (it) { return !current(kind, it.id); }).length;
-      say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
-        : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
-      if (done) done();
+      var saidAt = saidN;
+      photosReady(sheet).then(function () {
+        if (gen !== makeGen) return;
+        if (saidN !== saidAt) { if (done) done(); return; }
+        var ready = sheet.children.length + ' cards ready. Use your browser’s Print.';
+        function sayReady() { var note = photoNote(sheet); say(ready + note, note ? 'warn' : 'good'); readySaid = saidN; }
+        if (failed) say('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.', 'bad');
+        else { sayReady(); resay = sayReady; }
+        if (done) done();
+      });
     }());
   }
   /* Pick which cards print (the owner 22 Nov 2026): one tick box per card, all ticked to start (or only the ids in `only`),
@@ -239,10 +247,17 @@
     var ended = (ph.ended || []).some(function (f) { return photoId(f.drive_file_id) === cell; });
     return ended ? '' : cell;
   }
-  /* Lisa 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
+  /* 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
   /* the main photo is the 'main' link row in force (the owner 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
-  function mainPhoto(s, table) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
-    return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
+  /* main photo as main picks it (BLDPhotos.shownPhoto: a removed main falls back to the gallery, an ended file is never shown); a plain web link otherwise */
+  function photoRef(s, table) {
+    var rec = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()), m = rec.main;
+    var id = photoId(BLDPhotos.shownPhoto(rec, s.photo));
+    var url = BLDPhotos.safeUrl(m && m.url) || BLDPhotos.safeUrl(s.photo);
+    if (url && /drive\.google\.com|docs\.google\.com|googleusercontent\.com/i.test(url)) { if (!id && m && url === BLDPhotos.safeUrl(m.url)) id = photoId(url); url = ''; }
+    if (id) url = '';
+    return { id: id, url: url };
+  }
   /* the owner 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
      address (which needs them) fails. With the CD Hub Google sign-in on this browser, the page asks Drive for the photo the
      way the hub does: the file's thumbnail link with that sign-in, else the picture itself. No sign-in: the plain address. */
@@ -253,36 +268,74 @@
       return saved && scope && DashAuth.hasScope(saved, scope) ? saved.access_token : '';
     } catch (e) { return ''; }
   }
-  function loadPhoto(img, id, fail) {
-    var tok = driveToken(), auth = { headers: { Authorization: 'Bearer ' + tok } }, tried = false;
-    if (!tok) { img.onerror = fail; img.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800'; return; }
+  function arm(img) { img.removeAttribute('data-loading'); }
+  function showBlob(img, b) {
+    if (!b || !b.size) return Promise.reject(new Error('photo'));
+    if (/^image\//.test(b.type || '')) { img.src = URL.createObjectURL(b); return Promise.resolve(); }
+    return b.slice(0, 12).arrayBuffer().then(function (buf) {
+      var u = new Uint8Array(buf), type = '';
+      if (u[0] === 137 && u[1] === 80) type = 'image/png';
+      else if (u[0] === 255 && u[1] === 216) type = 'image/jpeg';
+      else if (u[0] === 71 && u[1] === 73) type = 'image/gif';
+      else if (u[0] === 82 && u[1] === 73) type = 'image/webp';
+      if (!type) throw new Error('photo');
+      img.src = URL.createObjectURL(new Blob([b], { type: type }));
+    });
+  }
+  function loadPhoto(img, ref, fail) {
+    if (ref.url) { img.onerror = fail; arm(img); img.src = ref.url; return; }
+    var id = ref.id, tok = driveToken(), auth = { headers: { Authorization: 'Bearer ' + tok } }, tried = false;
+    var get = window.DashKit && DashKit.googleFetch ? function (u, i) { return DashKit.googleFetch(u, i); } : fetch;
+    if (!tok) { img.onerror = fail; arm(img); img.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800'; return; }
     function bytes() {
       if (tried) { fail(); return; }
       tried = true;
-      fetch(DRIVE_FILES + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true', auth)
+      get(DRIVE_FILES + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true', auth)
         .then(function (r) { if (!r.ok) throw new Error('photo'); return r.blob(); })
-        .then(function (b) { if (!/^image\//.test(b.type || '')) throw new Error('photo'); img.src = URL.createObjectURL(b); })
+        .then(function (b) { return showBlob(img, b).then(function () { arm(img); }); })
         .catch(fail);
     }
     img.onerror = bytes;
-    fetch(DRIVE_FILES + encodeURIComponent(id) + '?fields=thumbnailLink&supportsAllDrives=true', auth)
+    get(DRIVE_FILES + encodeURIComponent(id) + '?fields=thumbnailLink&supportsAllDrives=true', auth)
       .then(function (r) { return r.ok ? r.json() : {}; })
-      .then(function (m) { var link = m && m.thumbnailLink; if (link && /^https:\/\//i.test(link)) img.src = link.replace(/=s\d+$/, '=s800'); else bytes(); })
+      .then(function (m) { var link = m && m.thumbnailLink; if (link && /^https:\/\//i.test(link)) { arm(img); img.src = link.replace(/=s\d+$/, '=s800'); } else bytes(); })
       .catch(bytes);
+  }
+  /* Photos that cannot show are named on screen (never on paper): the photo records cannot be read with this sign-in,
+     or some photos did not load. */
+  var resay = null, readySaid = -1;
+  function photoNote(root) {
+    var boxes = root.querySelectorAll('[data-k="photo"]');
+    if (!boxes.length) return '';
+    if (readBlock.files || readBlock.links) return ' Photos are not shown: this sign-in cannot read photo records (sign in to CD Hub as owner on this address).';
+    var n = root.querySelectorAll('[data-k="photo"][data-failed]').length;
+    return n ? ' ' + n + ' photo' + (n === 1 ? '' : 's') + ' did not load: sign in to CD Hub on this browser, or the photo is not shared.' : '';
+  }
+  function photosReady(root) {
+    var imgs = (root || document).querySelectorAll('[data-k="photo"] img');
+    return Promise.all(Array.prototype.map.call(imgs, function (img) {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise(function (res) {
+        function fin() { img.removeEventListener('load', fin); img.removeEventListener('error', fin); res(); }
+        img.addEventListener('load', fin);
+        img.addEventListener('error', fin);
+        if (img.complete && !img.getAttribute('data-loading')) fin();
+      });
+    }));
   }
   /* the photo as saved (the hub's crop step saves a square); printing never crops it again: it is fitted whole (contain).
      No photo, or one that fails to load: the size-colour frame stays and is left blank (no placeholder word on paper).
      A saved turn (photo.rotate.<file>) is drawn on top; the stored picture never changes. */
   function photoBox(s, table) {
-    var id = mainPhoto(s, table), box = h('div', { class: 'photo' + (id ? '' : ' none'), 'data-k': 'photo' });
-    var deg = id && typeof BLDPhotos !== 'undefined' && BLDPhotos.rotation ? BLDPhotos.rotation(T.files || [], T.breeding_rule || [], id, BLDNeeds.today()) : 0;
-    if (id) {
-      var img = h('img', { alt: '', referrerpolicy: 'no-referrer', 'data-rot': String(deg) });
+    var ref = photoRef(s, table), on = !!(ref.id || ref.url), box = h('div', { class: 'photo' + (on ? '' : ' none'), 'data-k': 'photo' });
+    var deg = ref.id && typeof BLDPhotos !== 'undefined' && BLDPhotos.rotation ? BLDPhotos.rotation(T.files || [], T.breeding_rule || [], ref.id, BLDNeeds.today()) : 0;
+    if (on) {
+      var img = h('img', { alt: '', referrerpolicy: 'no-referrer', 'data-loading': '1', 'data-rot': String(deg) });
       box.appendChild(img);
       img.addEventListener('load', function () {
         if (deg && BLDPhotos.turnStyle) { box.style.position = 'relative'; img.style.cssText = BLDPhotos.turnStyle(deg, box.clientWidth, box.clientHeight); }
       });
-      loadPhoto(img, id, function () { box.textContent = ''; box.classList.add('none'); });
+      loadPhoto(img, ref, function () { box.textContent = ''; box.classList.add('none'); box.setAttribute('data-failed', '1'); if (resay && saidN === readySaid) resay(); });
     }
     return box; }
   /* the owner's dog card, her APPROVED v4 design (15 Nov 2026, re-confirmed 20 Nov 18:26): name large top-left with no label; Sex (with
@@ -571,7 +624,7 @@
         if (/\bper\d\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per); } });
     }));
     opts.appendChild(perBox);
-    opts.appendChild(h('button', { class: 'btn', type: 'button', text: 'Print', onclick: function () { window.print(); } }));
+    opts.appendChild(h('button', { class: 'btn', type: 'button', text: 'Print', onclick: function () { photosReady(sheet).then(function () { window.print(); }); } }));
     opts.appendChild(lazy('Litter cards', 'litters', function () {
       var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf;
       if (!(T.litter || []).length) { sheet.className = 'sheet'; say('The litter list is not switched on yet.', 'warn'); return; }
@@ -594,7 +647,7 @@
       sheet.appendChild(h('div', { class: 'qcard big' }, [h('div', { html: BLDQr.svg(qrBase() + '#setup=' + encodeURIComponent(url), 'Phone set-up QR') }), h('b', { text: 'Set up a phone' }), h('small', { text: 'Show on screen. Do not pin up or photograph.' })]));
       say('Staff scan this once, then type their own code.', 'good');
     }));
-    opts.appendChild(lazy('Private set-up QR', 'site', privateQr));   /* both QRs use the owner's qr.base_url row */
+    opts.appendChild(lazy('Private set-up QR', 'site', privateQr));
     var add = ''; try { add = new URLSearchParams(location.search).get('add') || ''; } catch (e) { /* old browser */ }
     if (add === 'thermometer') need('thermo').then(function (ok) { if (ok) addThermometer(); });   // from the hub's "+ Thermometer"
     /* from a room's "Print sign" in CD Hub (?sign=<area id>, 21 Nov 2026): the room list with only that room ticked, its card ready to print */

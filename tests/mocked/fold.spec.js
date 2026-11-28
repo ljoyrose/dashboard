@@ -164,7 +164,7 @@ test('the chevron: grey outline icon in a house control (1px line); hover = the 
   expect(rest.motion).toBe('0s');
   await b.hover();
   const hov = await read();
-  expect(hov.bg, 'the pale grey fill on hover (Lisa, 12 Nov 2026)').toBe(hov.hov); expect(hov.box, 'nothing moves on hover').toBe(rest.box);
+  expect(hov.bg, 'the pale grey fill on hover (12 Nov 2026)').toBe(hov.hov); expect(hov.box, 'nothing moves on hover').toBe(rest.box);
   expect(hov.os, 'no line on hover').toBe('none');
   await page.mouse.move(0, 0);
   await b.focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
