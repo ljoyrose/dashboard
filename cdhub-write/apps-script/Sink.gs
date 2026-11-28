@@ -873,8 +873,38 @@ function sinkDecide_(pendingId, decision, note, adminEmail) {
       }
     }
     appendPendingEvent_(merge_(base, { event_id: newId_('evt', now), event: 'applied', at: londonIso_(now), by: adminEmail, role: 'OWNER', note: note, result: alreadyThere ? 'already present' : 'written' }));
-    return { status: 'applied', pending_id: pendingId, id: row.id, file: spec.file };
+    var out = { status: 'applied', pending_id: pendingId, id: row.id, file: spec.file };
+    if (q.kind === 'correction' && spec.deleteOnCorrect) out.original = deleteCorrected_(spec, q, row, tenant, base, adminEmail, now);
+    return out;
   });
+}
+
+/**
+ * Owner 27 Nov 2026: a temperature correction replaces the reading it corrects, so once the correction is APPROVED and
+ * WRITTEN, the original row is deleted. Safeguards: the table is read again and the correction row must be in it (so a
+ * failed append never deletes anything); only the one row whose id is corrects_id AND whose tenant is this kennel goes;
+ * a copy of that row is put in the approvals log first (event original_copy, payload_json); store_deleteRow_ keeps every
+ * other row byte-identical and restores on a bad read-back. A failed delete is logged and the correction stays saved:
+ * the pages already show the correction in its place. Returns 'deleted' | 'not found' | 'failed'.
+ */
+function deleteCorrected_(spec, q, row, tenant, base, by, now) {
+  var ev = function (event, extra) {
+    try { appendPendingEvent_(merge_(base, merge_({ event_id: newId_('evt', now), event: event, at: londonIso_(now), by: by, role: 'OWNER' }, extra || {}))); } catch (e) { /* the log is best effort here */ }
+  };
+  var read;
+  try { read = store_read_(spec.file, true); } catch (e) { ev('original_delete_failed', { note: e.userMessage || String(e), result: 'not deleted' }); return 'failed'; }
+  if (!read.records.some(function (r) { return r.id === row.id && r.tenant_id === tenant; })) {
+    ev('original_delete_failed', { note: 'The correction is not in ' + spec.file + ', so the original was kept.', result: 'not deleted' });
+    return 'failed';
+  }
+  var idx = -1;
+  read.records.forEach(function (r, i) { if (idx < 0 && r.id === q.corrects_id && r.tenant_id === tenant) idx = i; });
+  if (idx < 0) { ev('original_not_found', { note: 'No row ' + q.corrects_id + ' for this kennel in ' + spec.file + '.', result: 'nothing deleted' }); return 'not found'; }
+  ev('original_copy', { payload_json: JSON.stringify(read.records[idx]), note: 'Copy of the corrected reading, kept before it is deleted.', result: 'copied' });
+  try { store_deleteRow_(spec.file, spec.columns, idx, read); }
+  catch (e) { ev('original_delete_failed', { note: e.userMessage || String(e), result: e.restored === false ? 'RESTORE NOT CONFIRMED' : 'not deleted' }); return 'failed'; }
+  ev('original_deleted', { result: 'deleted' });
+  return 'deleted';
 }
 
 function merge_(a, b) {

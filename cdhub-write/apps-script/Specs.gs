@@ -51,6 +51,9 @@ var TABLES = {
     // Report 16 Oct (S02-4): staff see NO past entries, so they cannot point at one. A wrong entry is reported to
     // the owner, who fixes it with the owner edit (or an OWNER code sends a correction row).
     perms: { add: ROLE_ALL, correct: ['OWNER'] },
+    // Owner 27 Nov 2026: once a correction is approved and written, the reading it corrects is deleted (copy kept in the
+    // approvals log). See deleteCorrected_ in Sink.gs.
+    deleteOnCorrect: true,
     ownerEditable: true,
     alwaysPending: false,
     defaultMode: 'direct',   // Lisa 16 Oct: temperature readings go straight in; corrections always wait
