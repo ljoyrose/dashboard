@@ -413,7 +413,7 @@ test('the daily check: other kennels\' dogs are not accepted, there is no correc
   env.writes.forEach((w) => assert.ok(w.next.startsWith(w.old)));                // append-only
 });
 
-test('the daily check can be read by the owner only if Lisa adds rows; staff get nothing by default', () => {
+test('the daily check can be read by the owner only if the owner adds rows; staff get nothing by default', () => {
   const env = withRead({ TABLE_ON_occupancy_check: 'true' });
   assert.equal(check(env, { dog_ids: ['sub-test-a'] }).ok, true);
   assert.equal(read(env, { table: 'occupancy_check' }).code, 'NOT_ALLOWED');
