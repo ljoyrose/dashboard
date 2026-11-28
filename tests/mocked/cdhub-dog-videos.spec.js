@@ -1,4 +1,4 @@
-// Dog videos: any number of RoseQuest clips. Main first, then the rest newest first.
+// Dog videos: any number of video clips. Main first, then the rest newest first.
 // Invented dogs and links only. The save script is pretend.
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 const { SINK, csv, put } = require('../support/dog-photo-world');
@@ -45,7 +45,7 @@ test('dog card lists every clip: main first, then newest, with Show all past fiv
   await expect(sec.locator('[data-k="watch"]')).toHaveAttribute('href', u('a'));
 });
 
-test('Add video sends a RoseQuest link only; a Drive link is refused on the card', async ({ page, guard }) => {
+test('Add video: a Video link box with no host named; a Drive link is refused on the card @live', async ({ page, guard }) => {
   const w = guard.world;
   put(w, 'BLD-subject.csv', SUBJECT);
   put(w, 'BLD-subject_status.csv', STATUS);
@@ -60,9 +60,11 @@ test('Add video sends a RoseQuest link only; a Drive link is refused on the card
   await page.evaluate(() => go('dogs/sub-x1'));
   const f = page.locator('details[data-k="videos"] form');
   await page.locator('details[data-k="videos"] > summary').click();
+  await expect(f.getByLabel('Video link')).toHaveAttribute('placeholder', 'https://\u2026');
+  await expect(f.locator('label').first()).toHaveText(/^Video link/);   // a plain word: no video host named on the card
   await f.locator('input[name=url]').fill('https://drive.google.com/file/d/pretend/view');
   await f.locator('button[type=submit]').click();
-  await expect(f.locator('[data-video-msg]')).toContainText('RoseQuest');
+  await expect(f.locator('[data-video-msg]')).toHaveText("Paste the video's share link.");
   expect(bodies).toHaveLength(0);
   await f.locator('input[name=url]').fill(u('newclip'));
   await f.locator('input[name=title]').fill('New clip');
