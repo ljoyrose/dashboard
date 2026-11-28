@@ -205,8 +205,12 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(cfg).toContain("LANE === 'crawl' ? { testMatch: CRAWL } : LANE === 'rest' ? { testIgnore: CRAWL } : {}");
     expect(cfg).toMatch(/name: 'mocked',\n\s+testDir: '\.\/tests\/mocked',\n\s+\.\.\.laneFilter,/);
     // The required check: the merge job keeps the name, waits for every shard, still reports when one fails, and is red unless all passed.
-    expect(tests).toMatch(/\n  tests:\n    name: Browser tests \(pretend Google and Drive\)\n    needs: shards\n    if: \$\{\{ !cancelled\(\) \}\}/);
+    expect(tests).toMatch(/\n  tests:\n    name: Browser tests \(pretend Google and Drive\)\n    needs: \[shards, unit\]\n    if: \$\{\{ !cancelled\(\) \}\}/);
     expect(tests).toContain('test "${{ needs.shards.result }}" = success');
+    // 27 Nov 2026: the node unit tests are part of the same required check (save script and page helpers, no browser)
+    expect(tests).toContain('test "${{ needs.unit.result }}" = success');
+    expect(tests).toMatch(/\n  unit:\n[\s\S]*?run: npm test\n        working-directory: cdhub-write\n[\s\S]*?run: npm run test:unit\n/);
+    expect(JSON.parse(read('cdhub-write/package.json')).scripts.test).toBe('node --test tests/*.test.js');
     expect(tests).toMatch(/fail-fast: false/);
     expect(pages()).toContain('test "${{ needs.gate-shards.result }}" = success');
   });
