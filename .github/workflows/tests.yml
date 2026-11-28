@@ -30,18 +30,29 @@ env:
   CI: 'true'
 
 jobs:
-  # The suite runs in 4 parallel shards (Playwright --shard), then ONE job merges the results. Only that merge job is called
+  # The suite runs in 8 parallel shards (Playwright --shard, two lanes), then ONE job merges the results. Only that merge job is called
   # "Browser tests (pretend Google and Drive)", so branch protection still sees the same single check (27 Nov 2026:
   # one job ran about 53 of its 60 minutes; #814 was cut off at 60). Every test still runs; each runs in exactly one shard.
+  # 27 Nov: with 4 or 6 plain shards, shard 1 took 28-36 min: cdhub-crawl.spec.js is 62 of the suite's 120 test-minutes
+  # and sorts first. So it has its own lane of 4 shards (PW_LANE=crawl), and the rest has 4 (PW_LANE=rest); see playwright.config.js.
   shards:
-    name: Browser tests shard ${{ matrix.shard }}/4
+    name: Browser tests ${{ matrix.lane }} ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: ubuntu-24.04
-    # One shard is about a quarter of the suite (about 15 min at 53 min in total), so 40 leaves over 2x headroom.
-    timeout-minutes: 40
+    # A ci-guard keeps this at least 2x the slowest shard's last measured run (SLOWEST_SHARD_MIN in ci-guards.spec.js).
+    timeout-minutes: 30
     strategy:
       fail-fast: false # every shard finishes, so the merged report lists every failure
       matrix:
-        shard: [1, 2, 3, 4]
+        include:
+          # rest: every spec but the click-crawl, desktop and phone. crawl: tests/mocked/cdhub-crawl.spec.js only.
+          - { lane: rest, shard: 1, of: 4, projects: '--project=mocked --project=phone' }
+          - { lane: rest, shard: 2, of: 4, projects: '--project=mocked --project=phone' }
+          - { lane: rest, shard: 3, of: 4, projects: '--project=mocked --project=phone' }
+          - { lane: rest, shard: 4, of: 4, projects: '--project=mocked --project=phone' }
+          - { lane: crawl, shard: 1, of: 4, projects: '--project=mocked' }
+          - { lane: crawl, shard: 2, of: 4, projects: '--project=mocked' }
+          - { lane: crawl, shard: 3, of: 4, projects: '--project=mocked' }
+          - { lane: crawl, shard: 4, of: 4, projects: '--project=mocked' }
     permissions:
       contents: read
     steps:
@@ -50,7 +61,7 @@ jobs:
           fetch-depth: 0 # to compare the whole branch with main
 
       # Docs-only branch (only docs/ or *.md, never TESTS.md, .github/ or tests/): skip the browser, still run the
-      # no-browser checks (secret scan of every file, CI guards) in shard 1. main, schedules and hand-started runs always run everything.
+      # no-browser checks (secret scan of every file, CI guards) in rest shard 1. main, schedules and hand-started runs always run everything.
       - name: Docs-only branch? (the browser is skipped, the file checks still run)
         id: scope
         run: bash tools/ci-local/docs-only.sh
@@ -86,25 +97,26 @@ jobs:
         if: steps.scope.outputs.browser == 'true'
         # The desktop suite includes the route crawl (tests/mocked/route-crawl.spec.js): every top-level page,
         # and every hash route, tab, chip and SOP row, must stay on this origin and paint without hanging.
-        run: npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/4 --reporter=blob,dot
+        run: npx playwright test ${{ matrix.projects }} --shard=${{ matrix.shard }}/${{ matrix.of }} --reporter=blob,dot
         env:
-          PLAYWRIGHT_BLOB_OUTPUT_FILE: blob-report/report-${{ matrix.shard }}.zip
+          PW_LANE: ${{ matrix.lane }}
+          PLAYWRIGHT_BLOB_OUTPUT_FILE: blob-report/report-${{ matrix.lane }}-${{ matrix.shard }}.zip
 
       - name: Docs-only branch or private-repo push - run the checks that need no browser (secret scan, CI guards)
-        if: steps.scope.outputs.browser == 'false' && matrix.shard == 1
+        if: steps.scope.outputs.browser == 'false' && matrix.lane == 'rest' && matrix.shard == 1
         run: npx playwright test --project=mocked tests/mocked/repo-hygiene.spec.js tests/mocked/ci-guards.spec.js --reporter=blob,dot
         env:
-          PLAYWRIGHT_BLOB_OUTPUT_FILE: blob-report/report-${{ matrix.shard }}.zip
+          PLAYWRIGHT_BLOB_OUTPUT_FILE: blob-report/report-${{ matrix.lane }}-${{ matrix.shard }}.zip
 
       - name: Keep this shard's drift notes (pretend-Drive calls it could not answer) for the summary
         if: always()
-        run: mkdir -p drift && cp test-results/unhandled-drive.jsonl drift/unhandled-drive-${{ matrix.shard }}.jsonl 2>/dev/null || true
+        run: mkdir -p drift && cp test-results/unhandled-drive.jsonl drift/unhandled-drive-${{ matrix.lane }}-${{ matrix.shard }}.jsonl 2>/dev/null || true
 
       - name: Hand this shard's results to the merge job
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: blob-${{ matrix.shard }}
+          name: blob-${{ matrix.lane }}-${{ matrix.shard }}
           path: |
             blob-report/
             drift/
