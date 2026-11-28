@@ -289,11 +289,26 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     const wf = read('.github/workflows/live-after-deploy.yml');
     expect(wf).toMatch(/npx playwright test --project=live-features/);
     expect(wf).toMatch(/LIVE_FEATURES: '1'/);
-    expect(wf).toMatch(/report-issue\.js --state red --label live-site-red --title "cdhub: live feature check failed" --sha "\$MERGED_SHA" --failed /);
+    expect(wf).toMatch(/report-issue\.js --state red --label live-site-red --title "cdhub: live feature check failed" --sha "\$DEPLOYED_SHA" --failed /);
     expect(read('playwright.config.js')).toMatch(/name: 'live-features'[\s\S]*?grep: \/@live\\b\//);
     const live = fs.readdirSync(path.join(REPO, 'tests', 'mocked')).filter((f) => f.endsWith('.spec.js'))
       .flatMap((f) => [...read('tests/mocked/' + f).matchAll(/^\s*test\((['`])(?:(?!\1).|\\\1)*@live\b/gm)]);
     expect(live.length).toBeGreaterThanOrEqual(8);
+  });
+
+  // 27 Nov 2026 (issue #847): the job checked out main HEAD, newer than the deployed commit after a cancelled publish,
+  // so @live tests ran against older pages and failed. It must check out and report the commit the publish run deployed.
+  test('the live check after deploy tests the deployed commit, reports it, and an apt outage cannot skip the checks @regression', () => {
+    const wf = read('.github/workflows/live-after-deploy.yml');
+    expect(wf).toMatch(/DEPLOYED_SHA: \$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}/);
+    expect(wf).toMatch(/uses: actions\/checkout@[0-9a-f]{40} # [^\n]+\n {8}with:\n {10}ref: \$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}/);
+    expect(wf).toContain('test "$(git rev-parse HEAD)" = "$DEPLOYED_SHA"');
+    // Both red paths name the deployed commit.
+    expect(wf.match(/report-issue\.js --state red [^\n]*--sha "\$DEPLOYED_SHA"/g) || []).toHaveLength(2);
+    // Run 728: an apt 403 in install-deps skipped the live-smoke step, so the issue could never close.
+    expect(wf).toMatch(/install-deps chromium/);
+    expect(wf).toMatch(/continue-on-error: true\n {8}run: npx playwright install-deps chromium/);
+    expect(wf).not.toMatch(/summary\.js smoke-results\.json &&/);
   });
 
   test('the live check after deploy listens for the new publish workflow by its exact name', () => {
