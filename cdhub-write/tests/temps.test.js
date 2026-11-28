@@ -138,7 +138,7 @@ test('thermometer: a QR tag of kind thermometer can be made; the owner edit rena
   assert.equal(save(env, req(env, { code: env.codes.owner, table: 'thermometer', action: 'correct', corrects_id: id, reason: 'renamed', fields: { name: 'X', area_id: areas(env)[0] } })).ok, false);   // fixed by the owner edit, not the queue
 });
 
-test('thermometer: staff and owner can read the list when Lisa allows it; guests never', () => {
+test('thermometer: staff and owner can read the list when the owner allows it; guests never', () => {
   const env = thmEnv();
   thm(env, env.codes.owner);
   assert.equal(read(env, { table: 'thermometer' }).code, 'NOT_ALLOWED');   // default-deny until the visibility rows exist
@@ -151,7 +151,7 @@ test('thermometer: staff and owner can read the list when Lisa allows it; guests
 
 test('requirement: the owner adds a need row straight in; From is required, an end before the start is refused; staff and guests cannot add', () => {
   const env = thmEnv();
-  const r = need(env, env.codes.owner, { to_date: '2026-11-11', source: 'Lisa 11 Nov' });
+  const r = need(env, env.codes.owner, { to_date: '2026-11-11', source: 'Owner 11 Nov' });
   assert.equal(r.ok, true, JSON.stringify(r)); assert.match(r.result.id, /^req-/);
   const [row] = recs(env, 'BLD-requirement.csv');
   assert.deepEqual(Object.keys(row), REQ_HEADER);
@@ -220,7 +220,7 @@ test('compliance: a retired thermometer with no reading on 12 Nov is not flagged
   assert.deepEqual(T.missingOn(rows, [{ area_id: 'area-h', period_start: '2026-11-12T07:00:00Z', room_empty: 'yes' }, { area_id: 'area-c', taken_at: '2026-11-12T08:00:00+00:00' }], '2026-11-12', req), []);   // a Room empty row covers its slot
 });
 
-test('after a thermometer ends, a late reading for a day it was needed still saves (Lisa 11 Nov: late readings from photos)', () => {
+test('after a thermometer ends, a late reading for a day it was needed still saves (owner 11 Nov: late readings from photos)', () => {
   const T = require('../../cdhub/staff/lib/thermometer.js');
   const env = standardEnv({ nowMs: Date.UTC(2026, 10, 12, 10, 0, 0), props: { TABLE_ON_thermometer: 'true' } });   // today is 12 Nov
   env.addFile('BLD-thermometer.csv', fx.headerOnly(THM_HEADER));
