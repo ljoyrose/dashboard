@@ -4361,34 +4361,66 @@ function markSeen(areaId, sid, state){
  var m=document.querySelector('[data-hsave="'+CSS.escape(areaId+'|'+sid)+'"]');
  if(!pt){ if(m) m.textContent=now?'noted on this page, not saved':''; return; }
  if(!now){ if(m) m.textContent=''; return; }
- if(presenceSessionOn(pt,date)) presenceSessionSave(areaId,date,pt,m);
+ if(presenceSessionOn(pt,date)) presentNote(date,areaId,sid,now,fixing&&already?already.id:'',m);
  else presenceSave(areaId,sid,now,date,pt,m,fixing&&already?already.id:'');
 }
-async function presenceSessionSave(areaId,date,pt,m){
- var cur=ROUND[roundKey(date,areaId)]||{}, here=[], not=[], fixing=cur.fix&&Object.keys(cur.fix).length;
- inCabin(areaId,date).forEach(function(sid){ var st=cur.seen&&cur.seen[sid]; if(st==='here') here.push(sid); else if(st==='not') not.push(sid); });
- var dogs=here.concat(not);
- if(!dogs.length){ if(m) m.textContent=''; return; }
- if(!fixing && dogs.some(function(sid){ return presenceForDog(date,sid); })){ if(m) m.innerHTML=saveHtml('Done today'); return; }
- if(m) m.textContent='saving\u2026';
- var at=date===todayISO()?new Date().toISOString():isoAt(date,'12');
- var fields={check_type_id:pt.id,area_id:areaId,dog_ids:dogs.join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,how_recorded:'tapped'};
- var prev=fixing?standingPresence(date).filter(function(l){ return l.area_id===areaId; }).pop():null;
- if(prev) fields.corrects_id=prev.id;
- var r=await sinkSend({table:'check_log',action:'add_session',fields:fields});
- var ok=r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued');
- if(ok&&r.result.status==='saved'){ (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:r.result.id||'',check_type_id:pt.id,area_id:areaId,covered_ids:here.join('|'),exceptions:fields.exceptions,outcome:'recorded',happened_at:at,taken_at:new Date().toISOString(),how_recorded:'tapped',corrects_id:fields.corrects_id||''}); if(cur.fix) cur.fix={}; }
- if(!ok&&!r.kept){   /* refused: the buttons go back to the last saved round. Kept for retry: they stay pressed */
-  var back=savedSeen(areaId,date), sel='[data-area="'+CSS.escape(areaId)+'"]';
-  inCabin(areaId,date).forEach(function(id){
-   if(back[id]) cur.seen[id]=back[id].state; else delete cur.seen[id];
-   var hb=document.querySelector('[data-here="'+CSS.escape(id)+'"]'+sel), nb=document.querySelector('[data-nothere="'+CSS.escape(id)+'"]'+sel);
-   var w=back[id]?back[id].state:'';
-   if(hb&&nb){ hb.setAttribute('aria-pressed',String(w==='here')); nb.setAttribute('aria-pressed',String(w==='not')); hb.parentNode.classList.toggle('on',!!w); }
-  });
- }
- if(m) showSave(m,sinkMsg(r));
+/* PRESENT ONCE A DAY (the owner 28 Nov 2026: "all dogs present, once a day, is sufficient"). Every Present tap used to send
+   the room's whole list again (8 taps = 8 rows, about 25 s each, in the same line as the temperatures). Now a tap is noted
+   on this phone only, and ONE row for the whole site goes for the day: 2 minutes after the last tap, when the round page
+   is left, when the phone locks or the page is hidden, or when the page opens again with taps still noted. The row lists
+   every dog seen, with not here as exceptions, and no room. Dogs already sent today are not written again; a dog first
+   seen later that day goes in one more row. Correct writes one row that corrects today's row. Nothing is lost: the
+   noted taps stay on the phone until they are handed to the save outbox, which keeps them until saved. */
+var PRESENT_IDLE_MS=120000, presentTimer=null;
+function presentKey(date){ return 'cdhub.present.'+date; }
+function presentGet(date){ var d=null; try{ d=JSON.parse(localStorage.getItem(presentKey(date))||'null'); }catch(e){ d=null; }
+ d=d&&typeof d==='object'?d:{}; d.seen=d.seen||{}; d.sent=d.sent||{}; d.fix=d.fix||''; return d; }
+function presentPut(date,d){ try{ localStorage.setItem(presentKey(date),JSON.stringify(d)); }catch(e){} }
+function presentWaiting(d){ return Object.keys(d.seen).length; }
+function presentNote(date,areaId,sid,state,fixId,m){
+ var d=presentGet(date);
+ if(d.sent[sid]&&!fixId){ if(m) m.innerHTML=saveHtml('Done today'); return; }
+ if(fixId&&!d.fix){   /* a correction replaces today's row: it carries that row's dogs, with this one changed */
+  var prev=(T['BLD-check_log.csv']||[]).filter(function(l){ return l.id===fixId; })[0];
+  if(prev&&window.BLDCheckRules){ BLDCheckRules.covered(prev).forEach(function(id){ if(!d.seen[id]) d.seen[id]='here'; });
+   BLDCheckRules.exceptions(prev).forEach(function(ex){ if(!d.seen[ex.id]) d.seen[ex.id]=ex.kind==='not_here'?'not':'here'; }); }
+  else if(prev&&prev.subject_id&&!d.seen[prev.subject_id]) d.seen[prev.subject_id]=prev.item==='not here'?'not':'here';
+  d.fix=fixId; }
+ d.seen[sid]=state; presentPut(date,d);
+ if(presentTimer) clearTimeout(presentTimer);
+ presentTimer=setTimeout(function(){ presentTimer=null; presentSend(date); },PRESENT_IDLE_MS);
+ presentLines(date);
+ var cur=ROUND[roundKey(date,areaId)]; if(cur&&cur.fix) delete cur.fix[sid];
 }
+function presentLines(date){ var n=presentWaiting(presentGet(date));
+ document.querySelectorAll('[data-hsave]').forEach(function(el){ var sid=String(el.getAttribute('data-hsave')||'').split('|')[1]; var d=presentGet(date);
+  if(d.seen[sid]) el.textContent='Present: '+n+' dog'+(n===1?'':'s')+', saves once'; }); }
+async function presentSend(date){
+ if(presentTimer){ clearTimeout(presentTimer); presentTimer=null; }
+ var d=presentGet(date), ids=Object.keys(d.seen); if(!ids.length) return null;
+ var pt=presenceType(date); if(!pt) return null;
+ var here=ids.filter(function(id){ return d.seen[id]==='here'; }), not=ids.filter(function(id){ return d.seen[id]==='not'; });
+ var at=date===todayISO()?new Date().toISOString():isoAt(date,'12');
+ var fields={check_type_id:pt.id,dog_ids:here.concat(not).join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,how_recorded:'tapped'};
+ if(d.fix) fields.corrects_id=d.fix;
+ ids.forEach(function(id){ d.sent[id]=1; }); d.seen={}; d.fix=''; presentPut(date,d);   /* handed to the outbox below, which keeps it until saved */
+ var r=await sinkSend({table:'check_log',action:'add_session',fields:fields});
+ if(r.ok&&r.result&&r.result.status==='saved') (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:r.result.id||'',check_type_id:pt.id,area_id:'',covered_ids:here.join('|'),exceptions:fields.exceptions,outcome:'recorded',happened_at:at,taken_at:new Date().toISOString(),how_recorded:'tapped',corrects_id:fields.corrects_id||''});
+ var ok=r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued');
+ if(!ok&&!r.kept){   /* refused (kept ones stay pressed and go by themselves): the buttons go back to what is saved */
+  var d2=presentGet(date); ids.forEach(function(id){ delete d2.sent[id]; }); presentPut(date,d2);
+  var back={}; Object.keys(ROUND).forEach(function(k){ var c=ROUND[k]; if(!c||c.date!==date||!c.seen) return; var sv=savedSeen(c.areaId,date);
+   ids.forEach(function(id){ if(c.seen[id]===undefined) return; if(sv[id]) c.seen[id]=sv[id].state; else delete c.seen[id];
+    var sel='[data-area="'+CSS.escape(c.areaId)+'"]', hb=document.querySelector('[data-here="'+CSS.escape(id)+'"]'+sel), nb=document.querySelector('[data-nothere="'+CSS.escape(id)+'"]'+sel), w=sv[id]?sv[id].state:'';
+    if(hb&&nb){ hb.setAttribute('aria-pressed',String(w==='here')); nb.setAttribute('aria-pressed',String(w==='not')); hb.parentNode.classList.toggle('on',!!w); } }); }); }
+ var msg=sinkMsg(r);
+ ids.forEach(function(id){ document.querySelectorAll('[data-hsave$="|'+CSS.escape(id)+'"]').forEach(function(el){ showSave(el,msg); }); });
+ return r; }
+function presentSendAll(){ var out=[]; try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('cdhub.present.')===0) out.push(k.slice(14)); } }catch(e){}
+ out.forEach(function(date){ if(presentWaiting(presentGet(date))) presentSend(date); }); }
+document.addEventListener('visibilitychange',function(){ if(document.hidden) presentSendAll(); });
+window.addEventListener('pagehide',presentSendAll);
+window.addEventListener('load',function(){ setTimeout(presentSendAll,3000); });
 async function presenceSave(areaId,sid,state,date,pt,m,correctsId){
  if(m) m.textContent='saving\u2026';
  var at=date===todayISO()?new Date().toISOString():isoAt(date,'12');
@@ -5138,8 +5170,14 @@ function hubRefuse(id,j){
  hubDrop(id);
 }
 function hubAlreadyEnded(j){ return !!(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')); }
+/* A save the script does not know yet ("Unknown action": the Present row before the next script update) is kept, not
+   refused, and the line says so plainly. It goes by itself once the script knows it. */
+var HUB_PRESENT_LATER='Present saves after the next script update';
+function hubUnknownAction(id,j){ if(!(j&&!j.ok&&j.code==='BAD_REQUEST'&&/unknown action/i.test(j.message||''))) return false;
+ var it=hubList(HUB_BOX).filter(function(x){ return x.id===id; })[0]; return !!(it&&it.body&&it.body.action==='add_session'); }
 function hubSettle(id,j,auth){
  if(j&&(j.ok||j.code==='DUPLICATE'||hubAlreadyEnded(j))){ HUB_AUTH_WAIT=null; hubDrop(id); return true; }
+ if(hubUnknownAction(id,j)){ var a=hubList(HUB_BOX); a.forEach(function(x){ if(x.id===id) x.later=1; }); try{ localStorage.setItem(HUB_BOX,JSON.stringify(a)); }catch(e){} hubBoxDraw(); if(!hubStop) hubRetry(60000); return false; }
  if(j&&!j.ok&&hubTerminal(j)){ hubRefuse(id,j); return true; }
  if(j&&!j.ok&&HUB_SIGN_IN[j.code]){ if(auth!=null) HUB_AUTH_WAIT=auth; hubBoxDraw(); if(!hubStop) hubRetry(60000); return false; }
  if(j&&!j.ok&&j.code&&!HUB_RETRY[j.code]){ hubRefuse(id,j); return true; }
@@ -5218,6 +5256,8 @@ function hubBoxDraw(){
  if(fresh.length||hubFlushing) h+='<div class="hob-row"><span data-outbox-waiting="'+fresh.length+'"'+(signIn?' data-outbox-sign-in':'')+'>'+fresh.length+(hubStop?' paused. ':'')+(signIn?' not sent yet: sign in again to send.':fresh.length?' not sent yet.':'')+(fresh.length?' Kept on this phone: do not type again.':'')+'</span>'
   +(fresh.length?'<button type="button" class="btn" data-outbox-send>'+(hubFlushing&&!hubStop?'Sending…':'Send now')+'</button>':'')
   +'<button type="button" class="btn quiet" data-outbox-stop>Stop sending</button></div>';
+ var later=fresh.filter(function(x){ return x.later; }).length;
+ if(later) h+='<div class="hob-row"><span data-outbox-later="'+later+'">'+HUB_PRESENT_LATER+'. Kept on this phone.</span></div>';
  if(old) h+='<div class="hob-row"><span data-outbox-old="'+old+'">'+old+' not confirmed (over 5 hours). Check the records first.</span><button type="button" class="btn" data-outbox-send-old>Send</button><button type="button" class="btn quiet" data-outbox-remove-old>Remove</button></div>';
  hubGroups(rf).forEach(function(g){
   var names=Object.keys(g.errors).map(function(k){ return String(k).replace(/_/g,' '); }), when=hubSpan(g.items), n=g.items.length;
@@ -5261,7 +5301,8 @@ async function sinkSend(body){
   var j=hubAnswer(rid,await sinkFetch(body,g.url)); hubUnsure(rid,j);
   if(sinkGoogleRefused(j,g)){ SINK_GOOGLE_NO=true; delete hubInFlight[rid]; return sinkSend(body); }   /* not an owner account: ask the code instead */
   if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')){ if(g.code) noteBadCode(g.code); } else if(j&&j.ok){ if(g.code) keepStaffCode(g.code); keepSaveUrl(g.url); }
-  if(!hubSettle(rid,j,(g.code||'')+'|'+(g.google||''))) return HUB_SIGN_IN[j&&j.code]?{ok:false,code:j.code,kept:true,signIn:true,requestId:rid,message:HUB_SIGNIN_MSG}:{ok:false,code:(j&&j.code)||'NETWORK',kept:true,requestId:rid,message:HUB_KEPT_MSG};
+  var later0=hubUnknownAction(rid,j);
+  if(!hubSettle(rid,j,(g.code||'')+'|'+(g.google||''))) return later0?{ok:false,code:'BAD_REQUEST',kept:true,later:true,requestId:rid,message:HUB_PRESENT_LATER}:HUB_SIGN_IN[j&&j.code]?{ok:false,code:j.code,kept:true,signIn:true,requestId:rid,message:HUB_SIGNIN_MSG}:{ok:false,code:(j&&j.code)||'NETWORK',kept:true,requestId:rid,message:HUB_KEPT_MSG};
   return j;
  }catch(e){ hubRetry(60000); return {ok:false,code:'NETWORK',kept:true,requestId:rid,message:HUB_KEPT_MSG}; }
  finally{ delete hubInFlight[rid]; }
@@ -5270,6 +5311,7 @@ async function sinkPost(table,fields,rid){
  return sinkSend({table:table,action:'add',fields:fields,request_id:rid||undefined});
 }
 function sinkMsg(r,kind){
+ if(r&&r.kept&&r.later) return HUB_PRESENT_LATER;
  if(r&&r.kept&&r.signIn) return 'Not sent yet: sign in again';
  if(r&&r.kept) return 'Not sent yet, will retry';
  if(r.ok&&r.result&&r.result.status==='saved') return (kind==='move'?'Moved ':'Saved ')+hhmmNow();
@@ -6666,6 +6708,7 @@ function navCurrent(id){
   if(on) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
 }
 function go(id,push){
+ if(SHOWN==='round'&&String(id||'')!=='round') presentSendAll();   /* the round is left: its Present row goes now */
  var keepY=(push===false&&SHOWN===String(id||''))?window.scrollY:0;   /* redraw of the same page keeps its place (the owner 15 Nov 2026) */
  if((go.depth=(go.depth||0)+1)>8){ go.depth--; return; }
  try{ goBody(id,push); }
