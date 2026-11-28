@@ -3043,7 +3043,7 @@ function galleryItem(f,mainId,dates,ended){
  if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-link="'+esc(f.link_id||'')+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" loading="lazy" decoding="async" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
-/* RoseQuest clips (25 Nov 2026). The file stays on RoseQuest; the card stores only the share link. */
+/* Dog video clips (25 Nov 2026). The file stays with the video host; the card stores only the share link. */
 var VIDEO_MORE={}, VIDEO_SHOW=5;
 function videoUrlOk(u){ return /^https:\/\/share\.puppyclassroom\.com\/v\/[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/.test(String(u||'').trim()); }
 function dogVideoList(id){
@@ -3069,7 +3069,7 @@ function videoHtml(d){
   +(rest.length?'<div class="vclips" data-k="vlist">'+shown.map(row).join('')+'</div>':'')
   +(rest.length>VIDEO_SHOW&&!open?'<button type="button" class="btn" data-video-all="'+esc(d.id)+'">Show all ('+rest.length+')</button>':'')
   +'<form class="dcs-form" data-video-form="'+esc(d.id)+'" novalidate><div class="dcs-row">'
-  +'<label>RoseQuest link<input name="url" type="url" inputmode="url" autocomplete="off" placeholder="https://share.puppyclassroom.com/v/" required></label>'
+  +'<label>Video link<input name="url" type="url" inputmode="url" autocomplete="off" placeholder="https://\u2026" required></label>'
   +'<label>Title<input name="title" type="text" maxlength="80" autocomplete="off"></label></div>'
   +'<label class="vmain"><input type="checkbox" name="main"> Main video</label>'
   +'<button type="submit">Add video</button><p class="mut" data-video-msg role="status"></p></form>'
@@ -3838,7 +3838,7 @@ document.addEventListener('submit',async function(ev){
  if(f.matches('[data-video-form]')){ ev.preventDefault();
   var vid=f.getAttribute('data-video-form'), vmsg=f.querySelector('[data-video-msg]'), vbtn=f.querySelector('button[type=submit]');
   var vurl=String(f.url.value||'').trim(), vtitle=String(f.title.value||'').trim();
-  if(!videoUrlOk(vurl)){ vmsg.textContent='Paste a RoseQuest share link, like https://share.puppyclassroom.com/v/abc123'; return; }
+  if(!videoUrlOk(vurl)){ vmsg.textContent='Paste the video\'s share link.'; return; }
   vbtn.disabled=true; vmsg.textContent='Saving\u2026';
   var vr=await sinkAct('subject_video',{subject_id:vid,video_url:vurl,title:vtitle,is_main:f.main.checked?'yes':''});
   vbtn.disabled=false;

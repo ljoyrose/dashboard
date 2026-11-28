@@ -361,7 +361,7 @@
     if (!young) return n;
     return BLDDisplay.marblePupName(n, '') || n;
   }
-  /* The main RoseQuest clip only. No video: nothing extra is printed. The dog's own code stays as it is. */
+  /* The main video clip only. No video: nothing extra is printed. The dog's own code stays as it is. */
   function mainVideoUrl(id) {
     var rows = (T.subject_video || []).filter(function (r) { return r && r.subject_id === id; });
     var replaced = {};

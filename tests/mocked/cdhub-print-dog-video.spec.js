@@ -1,10 +1,10 @@
-// Printed dog card: one client-side QR for the main RoseQuest clip. No video, or a link that is not RoseQuest: nothing extra.
+// Printed dog card: one client-side QR for the main video clip. No video, or a link the card does not accept: nothing extra.
 const { test, expect } = require('../support/test');
 const P = require('../support/print-a4');
 
 const u = (id) => 'https://share.puppyclassroom.com/v/' + id;
 
-test('printed dog card: one QR for the main clip, none when there is no RoseQuest video @regression', async ({ page }) => {
+test('printed dog card: one QR for the main clip, none when there is no video @regression', async ({ page }) => {
   await P.openCards(page, (t) => {
     t.subject_video = [
       { id: 'sv1', subject_id: 'd0', video_url: u('mainclip'), title: 'Main', is_main: 'yes', created_at: '2026-01-01T00:00:00Z', corrects_id: '', active: 'yes' },
