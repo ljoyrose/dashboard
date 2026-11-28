@@ -14,6 +14,12 @@ const read = (rel) => fs.readFileSync(path.join(REPO, rel), 'utf8');
 const specFiles = () => ['mocked', 'phone', 'live'].flatMap((d) => fs.readdirSync(path.join(REPO, 'tests', d)).filter((f) => f.endsWith('.spec.js')).map((f) => `tests/${d}/${f}`));
 const allSpecText = () => specFiles().map(read).join('\n');
 
+// Slowest shard's last measured run, in minutes. Update it when a shard gets slower: the shard timeout must stay at least 2x.
+// 27 Nov 2026, PR #856 (two lanes, 8 shards): crawl 1/4 13.7, rest 2/4 11.6, the rest 3.7-7.7.
+const SLOWEST_SHARD_MIN = 13.7;
+const SAME_SUITE = /npx playwright test \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\}\/\$\{\{ matrix\.of \}\}/;
+const matrixRows = (wf) => (wf.match(/- \{ lane: \w+, shard: \d+, of: \d+, projects: '[^']+' \}/g) || []).join('\n');
+
 test.describe('Learning loop is mechanical @ci-guard', () => {
   const caught = () => {
     const md = read('TESTS.md');
@@ -107,6 +113,18 @@ test.describe('Alarm wiring @ci-guard', () => {
     expect(evaluate({ protected: true, protection: on }, wf, null).problems).toEqual([]); // could not read: no false alarm
   });
 
+  // 27 Nov 2026: broken "keep both sides" merges (#835, #817, #819) only showed after ~30 minutes of browser shards.
+  test('a fast syntax check runs on every pull request: parse every script file and inline script, and load every spec', () => {
+    const wf = read('.github/workflows/lint.yml');
+    expect(wf).toMatch(/\n  pull_request:/);
+    expect(wf).toMatch(/\n  syntax:\n    name: Syntax check \(fast\)\n    runs-on: [^\n]+\n    timeout-minutes: [1-9]\n/);
+    expect(wf).toContain('run: node tools/syntax-check/check.mjs --selftest');
+    expect(wf).toContain('run: node tools/syntax-check/check.mjs\n');
+    expect(wf).toMatch(/npx playwright test --list --project=mocked --project=phone/);
+    const out = execFileSync('node', ['tools/syntax-check/check.mjs', '--selftest'], { cwd: REPO, encoding: 'utf8' });
+    expect(out).toMatch(/Self-test OK/);
+  });
+
   test('the alarm message is one technical line', () => {
     const out = execFileSync('node', ['tests/support/report-issue.js', '--state', 'red', '--label', 'x', '--results', 'none', '--note', 'drill', '--dry-run'], {
       cwd: REPO, encoding: 'utf8', env: { ...process.env, GITHUB_REPOSITORY: 'o/r', GITHUB_RUN_ID: '1' },
@@ -146,30 +164,53 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
   test('the publish job needs the gate job, and the gate runs the same suite as the required check', () => {
     const wf = pages();
     expect(wf).toMatch(/publish:[\s\S]*?needs:\s*gate\n/);
-    expect(wf).toMatch(/npx playwright test --project=mocked --project=phone/);
-    expect(read('.github/workflows/tests.yml')).toMatch(/npx playwright test --project=mocked --project=phone/);
+    // Same suite: both run the same matrix command over the same lane/shard rows (desktop + phone, every spec).
+    expect(wf).toMatch(SAME_SUITE);
+    expect(read('.github/workflows/tests.yml')).toMatch(SAME_SUITE);
+    expect(matrixRows(wf)).toBe(matrixRows(read('.github/workflows/tests.yml')));
+    expect(matrixRows(wf)).not.toBe('');
   });
 
   // 27 Nov 2026: one job ran about 53 of its 60 minutes (#814 was cut off at 60), so the suite runs in shards.
   // Every shard runs the whole mocked+phone command with its own --shard=i/N; one job merges and carries the required name.
-  test('the suite runs in at least 3 shards, each with at least 2x a quarter-suite of time, merged into the one required check', () => {
+  test('the suite runs in at least 3 shards (a crawl lane and a rest lane), each with at least 2x its share of time, merged into the one required check', () => {
     const tests = read('.github/workflows/tests.yml');
-    const shards = (wf, job) => {
-      const m = new RegExp('\\n  ' + job + ':[\\s\\S]*?\\n        shard: \\[([\\d, ]+)\\]').exec(wf);
-      return m ? m[1].split(',').map((x) => Number(x.trim())) : [];
+    // Matrix rows: { lane: rest|crawl, shard: i, of: N, projects: '...' }. Each lane must list shards 1..N with none missing
+    // (a missing one would silently skip tests); together at least 3 shards.
+    const rows = (wf, job) => {
+      const sec = wf.slice(wf.indexOf('\n  ' + job + ':'));
+      return [...sec.slice(0, sec.indexOf('    steps:')).matchAll(/- \{ lane: (\w+), shard: (\d+), of: (\d+), projects: '([^']+)' \}/g)]
+        .map((m) => ({ lane: m[1], shard: Number(m[2]), of: Number(m[3]), projects: m[4] }));
     };
     for (const [wf, job] of [[tests, 'shards'], [pages(), 'gate-shards']]) {
-      const list = shards(wf, job);
+      const list = rows(wf, job);
       expect(list.length, job + ': at least 3 shards').toBeGreaterThanOrEqual(3);
-      expect(list, job + ': shards are 1..N, none missing (a missing one would skip tests)').toEqual(list.map((_, i) => i + 1));
-      expect(wf).toContain('npx playwright test --project=mocked --project=phone --shard=${{ matrix.shard }}/' + list.length);
-      // 53 min in one job on 27 Nov: a shard needs at least 2x its share of that.
+      expect([...new Set(list.map((r) => r.lane))].sort(), job + ': the two lanes').toEqual(['crawl', 'rest']);
+      for (const lane of ['crawl', 'rest']) {
+        const l = list.filter((r) => r.lane === lane);
+        expect(l.map((r) => r.shard), job + ' ' + lane + ': shards 1..N, none missing').toEqual(l.map((_, i) => i + 1));
+        expect(new Set(l.map((r) => r.of)), job + ' ' + lane + ': one N').toEqual(new Set([l.length]));
+      }
+      expect(list.filter((r) => r.lane === 'rest').every((r) => r.projects === '--project=mocked --project=phone'), job + ': rest runs desktop and phone').toBe(true);
+      expect(list.filter((r) => r.lane === 'crawl').every((r) => r.projects === '--project=mocked'), job + ': crawl runs the desktop crawl').toBe(true);
+      expect(wf).toContain('npx playwright test ${{ matrix.projects }} --shard=${{ matrix.shard }}/${{ matrix.of }}');
+      expect(wf).toContain('PW_LANE: ${{ matrix.lane }}');
+      // At least 2x the slowest shard's last measured run, and 2x its share of the 53-minute single-job run.
       const t = Number(new RegExp('\\n  ' + job + ':[\\s\\S]*?\\n    timeout-minutes:\\s*(\\d+)').exec(wf)[1]);
+      expect(t, job + ' timeout vs measured slowest shard').toBeGreaterThanOrEqual(2 * SLOWEST_SHARD_MIN);
       expect(t, job + ' timeout').toBeGreaterThanOrEqual(Math.ceil((2 * 53) / list.length));
     }
+    // The lanes split on one regex, used both ways, so every test is in exactly one lane (unset = everything, for local runs).
+    const cfg = read('playwright.config.js');
+    expect(cfg).toContain("LANE === 'crawl' ? { testMatch: CRAWL } : LANE === 'rest' ? { testIgnore: CRAWL } : {}");
+    expect(cfg).toMatch(/name: 'mocked',\n\s+testDir: '\.\/tests\/mocked',\n\s+\.\.\.laneFilter,/);
     // The required check: the merge job keeps the name, waits for every shard, still reports when one fails, and is red unless all passed.
-    expect(tests).toMatch(/\n  tests:\n    name: Browser tests \(pretend Google and Drive\)\n    needs: shards\n    if: \$\{\{ !cancelled\(\) \}\}/);
+    expect(tests).toMatch(/\n  tests:\n    name: Browser tests \(pretend Google and Drive\)\n    needs: \[shards, unit\]\n    if: \$\{\{ !cancelled\(\) \}\}/);
     expect(tests).toContain('test "${{ needs.shards.result }}" = success');
+    // 27 Nov 2026: the node unit tests are part of the same required check (save script and page helpers, no browser)
+    expect(tests).toContain('test "${{ needs.unit.result }}" = success');
+    expect(tests).toMatch(/\n  unit:\n[\s\S]*?run: npm test\n        working-directory: cdhub-write\n[\s\S]*?run: npm run test:unit\n/);
+    expect(JSON.parse(read('cdhub-write/package.json')).scripts.test).toBe('node --test tests/*.test.js');
     expect(tests).toMatch(/fail-fast: false/);
     expect(pages()).toContain('test "${{ needs.gate-shards.result }}" = success');
   });
@@ -251,7 +292,7 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(read('.github/workflows/tests.yml')).toMatch(/group: tests-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n {2}cancel-in-progress: true/);
     // The publish gate still runs the full suite on every push to main while the repo is public.
     expect(pages()).toMatch(/push:\n\s+branches: \[main\]/);
-    expect(pages()).toMatch(/npx playwright test --project=mocked --project=phone/);
+    expect(pages()).toMatch(SAME_SUITE);
     // Small checks: once per pull request push and on main, not on every branch push as well.
     for (const f of ['gate.yml', 'lint.yml']) {
       expect(on(f), f).toMatch(/\n {2}push:\n {4}branches: \[main\]\n/);
@@ -289,11 +330,26 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     const wf = read('.github/workflows/live-after-deploy.yml');
     expect(wf).toMatch(/npx playwright test --project=live-features/);
     expect(wf).toMatch(/LIVE_FEATURES: '1'/);
-    expect(wf).toMatch(/report-issue\.js --state red --label live-site-red --title "cdhub: live feature check failed" --sha "\$MERGED_SHA" --failed /);
+    expect(wf).toMatch(/report-issue\.js --state red --label live-site-red --title "cdhub: live feature check failed" --sha "\$DEPLOYED_SHA" --failed /);
     expect(read('playwright.config.js')).toMatch(/name: 'live-features'[\s\S]*?grep: \/@live\\b\//);
     const live = fs.readdirSync(path.join(REPO, 'tests', 'mocked')).filter((f) => f.endsWith('.spec.js'))
       .flatMap((f) => [...read('tests/mocked/' + f).matchAll(/^\s*test\((['`])(?:(?!\1).|\\\1)*@live\b/gm)]);
     expect(live.length).toBeGreaterThanOrEqual(8);
+  });
+
+  // 27 Nov 2026 (issue #847): the job checked out main HEAD, newer than the deployed commit after a cancelled publish,
+  // so @live tests ran against older pages and failed. It must check out and report the commit the publish run deployed.
+  test('the live check after deploy tests the deployed commit, reports it, and an apt outage cannot skip the checks @regression', () => {
+    const wf = read('.github/workflows/live-after-deploy.yml');
+    expect(wf).toMatch(/DEPLOYED_SHA: \$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}/);
+    expect(wf).toMatch(/uses: actions\/checkout@[0-9a-f]{40} # [^\n]+\n {8}with:\n {10}ref: \$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}/);
+    expect(wf).toContain('test "$(git rev-parse HEAD)" = "$DEPLOYED_SHA"');
+    // Both red paths name the deployed commit.
+    expect(wf.match(/report-issue\.js --state red [^\n]*--sha "\$DEPLOYED_SHA"/g) || []).toHaveLength(2);
+    // Run 728: an apt 403 in install-deps skipped the live-smoke step, so the issue could never close.
+    expect(wf).toMatch(/install-deps chromium/);
+    expect(wf).toMatch(/continue-on-error: true\n {8}run: npx playwright install-deps chromium/);
+    expect(wf).not.toMatch(/summary\.js smoke-results\.json &&/);
   });
 
   test('the live check after deploy listens for the new publish workflow by its exact name', () => {

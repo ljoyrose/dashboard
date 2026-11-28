@@ -417,7 +417,7 @@ domTest('Bloodline: pasting a wrong address is refused; a right one turns saving
   assert.ok(!post.url.includes('CODE123456'));
 });
 
-domTest('Bloodline patch: only ADDS lines (two stages, the scripts, one mount call); touches nothing of Lisa\'s page', () => {
+domTest('Bloodline patch: only ADDS lines (two stages, the scripts, one mount call); touches nothing of the owner\'s page', () => {
   const patch = read('wired/bloodline-wiring.patch');
   const body = patch.split('\n').filter((l) => /^[+-]/.test(l) && !/^(\+\+\+|---)/.test(l));
   const removed = body.filter((l) => l.startsWith('-'));
@@ -504,7 +504,7 @@ function scriptFake(over = {}) {
     const b = JSON.parse(init.body);
     if (b.action === 'read') {
       if (st.reads && st.reads[b.table]) return { json: async () => st.reads[b.table] };
-      if (!rd[b.table]) return { json: async () => ({ ok: false, code: 'NOT_ALLOWED', message: 'Lisa has not allowed your role to see this list.' }) };
+      if (!rd[b.table]) return { json: async () => ({ ok: false, code: 'NOT_ALLOWED', message: 'The owner has not allowed your role to see this list.' }) };
       return { json: async () => ({ ok: true, result: { table: b.table, fields: Object.keys(rd[b.table][0] || {}), rows: rd[b.table], count: rd[b.table].length, scope: 'all rows' } }) };
     }
     return { json: async () => st.saveReply };
@@ -542,7 +542,7 @@ test('readMany: area, subject and occupancy are required; subject_status may be 
   const s = mkSave(srv); await s.checkStatus(); s.setCode('C');
   const ok = await s.readMany(['area', 'subject', 'occupancy', 'subject_status']);
   assert.equal(ok.ok, true); assert.deepEqual(ok.tables.subject_status, []);
-  const srv2 = scriptFake({ reads: { occupancy: { ok: false, code: 'NOT_ALLOWED', message: 'Lisa has not allowed your role to see this list.' } } });
+  const srv2 = scriptFake({ reads: { occupancy: { ok: false, code: 'NOT_ALLOWED', message: 'The owner has not allowed your role to see this list.' } } });
   const s2 = mkSave(srv2); await s2.checkStatus(); s2.setCode('C');
   const no = await s2.readMany(['area', 'subject', 'occupancy', 'subject_status']);
   assert.equal(no.ok, false); assert.match(no.message, /not allowed/);
@@ -1230,4 +1230,32 @@ test('outbox: kept temperature readings are sent before older kept entries of ot
   s.setScriptUrl(GOOD_URL); s.setCode('ABC');
   assert.equal(await s.outbox.flush(), 0);
   assert.deepEqual(posts, ['r-temp-0001', 'r-temp-0002', 'r-job-0001', 'r-job-0002']);
+test('outbox: kept entries are sent at once when the page is shown again (tab back, phone unlocked, page restored) @regression', async () => {
+  const local = memStore(), posts = [];
+  let online = false;
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    if (!online) throw new TypeError('Load failed');   // the phone locked mid-save
+    posts.push(JSON.parse(init.body)); return { json: async () => ({ ok: true, result: { id: 'x' } }) };
+  };
+  const ev = () => { const h = {}; return { on: h, addEventListener: (n, fn) => { (h[n] = h[n] || []).push(fn); }, fire: (n) => (h[n] || []).forEach((fn) => fn()) }; };
+  const doc = Object.assign(ev(), { hidden: true }), win = ev();
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, document: doc, window: win });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  await s.act('link_end', { id: 'r1' }, 'r-wake-0001');
+  assert.equal(s.outbox.count(), 1);
+  online = true;
+  doc.fire('visibilitychange');                 // still hidden: nothing is sent
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(posts.length, 0);
+  doc.hidden = false; doc.fire('visibilitychange');
+  await new Promise((r) => setTimeout(r, 5));
+  assert.deepEqual(posts.map((p) => p.request_id), ['r-wake-0001']);
+  assert.equal(s.outbox.count(), 0);
+  await s.act('link_end', { id: 'r2' }, 'r-wake-0002').then(() => {});   // sent normally
+  online = false; await s.act('link_end', { id: 'r3' }, 'r-wake-0003'); online = true;
+  win.fire('pageshow');                          // restored from the back/forward cache
+  await new Promise((r) => setTimeout(r, 5));
+  assert.deepEqual(posts.map((p) => p.request_id), ['r-wake-0001', 'r-wake-0002', 'r-wake-0003']);
+  assert.equal(s.outbox.count(), 0);
 });

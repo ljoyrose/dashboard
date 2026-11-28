@@ -5,6 +5,12 @@ const PORT = Number(process.env.PORT || 4173);
 // LIVE (tests/support/site.js): LIVE_URL lets the live checks follow the site when it moves (GitHub Pages today, Cloudflare after cutover).
 const { BASE, LIVE } = require('./tests/support/site');
 const LOCAL = `http://127.0.0.1:${PORT}${BASE}`;
+// CI lanes (tests.yml, pages.yml): the click-crawl spec is about half the suite's test time, so it runs in its own shards.
+// PW_LANE=crawl runs only it; PW_LANE=rest runs everything else; unset (local runs) runs everything. Same regex both ways,
+// so every test is in exactly one lane.
+const CRAWL = /cdhub-crawl\.spec\.js$/;
+const LANE = process.env.PW_LANE || '';
+const laneFilter = LANE === 'crawl' ? { testMatch: CRAWL } : LANE === 'rest' ? { testIgnore: CRAWL } : {};
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -28,6 +34,7 @@ module.exports = defineConfig({
       // Everything here uses the pretend Google sign-in and pretend Drive. No internet needed.
       name: 'mocked',
       testDir: './tests/mocked',
+      ...laneFilter,
       // Service workers are off in the suite so every test starts clean; pwa.spec.js switches them on itself.
       use: { ...devices['Desktop Chrome'], baseURL: LOCAL, serviceWorkers: 'block' },
     },
