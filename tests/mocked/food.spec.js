@@ -836,7 +836,7 @@ test.describe('GA Hub house look', () => {
         expect(l.os, what + ': no coloured line on hover').toBe('none');
         expect(l.bc, what + ': keeps its resting line in its own colour').toBe(l.own);
         expect(l.bc, what + ': resting line is not ink').not.toBe(ink);
-        expect(l.bg, what + ': the pale grey fill on hover (Lisa, 12 Nov 2026)').toBe(l.hov);
+        expect(l.bg, what + ': the pale grey fill on hover (12 Nov 2026)').toBe(l.hov);
       };
       for (const v of ['Apply', 'Not now']) {
         const b = page.locator(`#view .card[data-key^="PRICE-"] button[data-v="${v}"]`);
