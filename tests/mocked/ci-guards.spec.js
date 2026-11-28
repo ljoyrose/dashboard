@@ -113,6 +113,18 @@ test.describe('Alarm wiring @ci-guard', () => {
     expect(evaluate({ protected: true, protection: on }, wf, null).problems).toEqual([]); // could not read: no false alarm
   });
 
+  // 27 Nov 2026: broken "keep both sides" merges (#835, #817, #819) only showed after ~30 minutes of browser shards.
+  test('a fast syntax check runs on every pull request: parse every script file and inline script, and load every spec', () => {
+    const wf = read('.github/workflows/lint.yml');
+    expect(wf).toMatch(/\n  pull_request:/);
+    expect(wf).toMatch(/\n  syntax:\n    name: Syntax check \(fast\)\n    runs-on: [^\n]+\n    timeout-minutes: [1-9]\n/);
+    expect(wf).toContain('run: node tools/syntax-check/check.mjs --selftest');
+    expect(wf).toContain('run: node tools/syntax-check/check.mjs\n');
+    expect(wf).toMatch(/npx playwright test --list --project=mocked --project=phone/);
+    const out = execFileSync('node', ['tools/syntax-check/check.mjs', '--selftest'], { cwd: REPO, encoding: 'utf8' });
+    expect(out).toMatch(/Self-test OK/);
+  });
+
   test('the alarm message is one technical line', () => {
     const out = execFileSync('node', ['tests/support/report-issue.js', '--state', 'red', '--label', 'x', '--results', 'none', '--note', 'drill', '--dry-run'], {
       cwd: REPO, encoding: 'utf8', env: { ...process.env, GITHUB_REPOSITORY: 'o/r', GITHUB_RUN_ID: '1' },

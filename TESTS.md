@@ -260,6 +260,8 @@ There is also a small **optional** check of the three live web addresses. It ope
 - **On your computer:** `LIVE_FEATURES=1 npx playwright test --project=live-features`. `LIVE_URL` points it elsewhere; if the site moves to the root, also set `SITE_BASE=/`.
 - **New feature?** Put `@live` in the title of the test that covers it, if that test opens pages by relative address.
 
+**Syntax check (27 Nov 2026):** a fast job in `lint.yml` ("Syntax check (fast)", about a minute) parses every `.js`, `.mjs` and `.gs` file and every inline `<script>` in the `.html` pages (`tools/syntax-check/check.mjs`), then loads every Playwright spec without running it (`npx playwright test --list`). A broken merge (a doubled test, an unclosed function) shows here with the file and line, long before the browser shards finish. Locally: `node tools/syntax-check/check.mjs`. Not a required check.
+
 Every Tuesday a separate **"teeth check"** breaks things on purpose in a throw-away copy (a wrong link, a lost safety rule, a renamed column, a page too wide for a phone, and so on) and makes sure the tests go red each time. If one slips through, it turns red and opens an Issue. It cannot block a merge.
 
 ## How to run it on your own computer (optional)
