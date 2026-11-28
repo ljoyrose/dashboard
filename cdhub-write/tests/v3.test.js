@@ -27,18 +27,18 @@ const fv = (table, field, aud, visible, cond = '', red = '') => `fv-v3-${++fvn},
 const asOwner = (env) => { env.email = 'owner@example.test'; };
 
 // ================================================================== STEP 1: the proposed permission rows (S02-3 A, S02-4 D)
-test('proposed visibility rows: 42 remain, none of fv-p018 to fv-p024, the rest exactly as before', () => {
+test('proposed visibility rows: 44, none of fv-p018 to fv-p024, p050 and p051 add room size for the owner', () => {
   const text = fs.readFileSync(VIS_FILE, 'utf8');
   const recs = text.split('\r\n').filter(Boolean);
-  assert.equal(recs.length - 1, 42);
+  assert.equal(recs.length - 1, 44);
   assert.equal(recs[0], fx.VIS_HEADER);
   const ids = recs.slice(1).map((l) => l.split(',')[0]);
   for (let n = 18; n <= 24; n++) assert.equal(ids.includes('fv-p' + String(n).padStart(3, '0')), false, 'fv-p0' + n);
-  assert.equal(new Set(ids).size, 42);
-  // the 42 that are kept: p001-p017 and p025-p049
+  assert.equal(new Set(ids).size, 44);
+  // kept: p001-p017 and p025-p049; added: p050-p051 (room size on the room card, owner only)
   const want = [];
   for (let n = 1; n <= 17; n++) want.push('fv-p' + String(n).padStart(3, '0'));
-  for (let n = 25; n <= 49; n++) want.push('fv-p' + String(n).padStart(3, '0'));
+  for (let n = 25; n <= 51; n++) want.push('fv-p' + String(n).padStart(3, '0'));
   assert.deepEqual(ids, want);
   // no row at all gives staff anything on area_reading
   const staffTemp = recs.slice(1).filter((l) => { const c = l.split(','); return c[2] === 'area_reading' && c[4] === 'aud-staff'; });
