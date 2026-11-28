@@ -83,11 +83,11 @@ test('the same Present tap inside 30 minutes is still a repeat, and an older one
 });
 
 test('a repeat that sits above the last rows is still caught, without reading every column', () => {
-  const { env, typeId, before } = bigLog({ index: 1, id: 'clg-high', ms: NOW - 60000, who: 'Lisa (written by Claude)', subject: 'sub-test-b' });
+  const { env, typeId, before } = bigLog({ index: 1, id: 'clg-high', ms: NOW - 60000, who: 'Owner (written by Claude)', subject: 'sub-test-b' });
   const dup = save(env, req(env, { table: 'check_log', fields: fields(typeId, 'sub-test-b') }));
   assert.equal(dup.code, 'DUPLICATE', JSON.stringify(dup));
   assert.equal(env.rows(LOG).length, before);
-  assert.equal(env.rows(LOG)[1][whoAt], 'Lisa (written by Claude)');
+  assert.equal(env.rows(LOG)[1][whoAt], 'Owner (written by Claude)');
   assert.equal(wideReads(env).length, 0, JSON.stringify(wideReads(env)));
 });
 

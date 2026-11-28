@@ -381,7 +381,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(line.msg).toContain('never sort the sheet');
   });
 
-  test('Round present saves a check_log row against the owner\'s round.presence row; the tick shows once the save lands; a failed save puts the buttons back (Lisa 15 Nov)', async ({ page, guard }) => {
+  test('Round present saves a check_log row against the owner\'s round.presence row; the tick shows once the save lands; a failed save puts the buttons back (15 Nov)', async ({ page, guard }) => {
     await open(page, guard);
     let fail = false;
     const bodies = await saves(page, () => (fail ? { ok: false, code: 'BUSY_FOR_GOOD', message: 'Pretend failure' } : { ok: true, result: { status: 'saved', id: 'clg-new' } }));

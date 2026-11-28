@@ -292,7 +292,7 @@ test('a room job saved per dog: not due in an empty room; times a day counted pe
 
 test('a litter job due by age (owner row job.by_age.<key>): daily in week 1, weekly to 4 weeks, then at 6 and 10 weeks', () => {
   const types = [{ id: 'pw', type_key: 'pup_weights', label: 'Puppy weights', target: 'litter', every_days: '', active: 'true', effective_from: '2026-01-01' }];
-  const rules = [{ rule_key: 'job.by_age.pup_weights', value: '0-6:1|7-27:7|42|70', effective_from: '2026-01-01', source: 'Lisa 22 Nov 2026' }];
+  const rules = [{ rule_key: 'job.by_age.pup_weights', value: '0-6:1|7-27:7|42|70', effective_from: '2026-01-01', source: 'Owner 22 Nov 2026' }];
   const born = '2026-03-01', t = { litter_id: 'lit1', born };
   const log = (day) => ({ id: 'w' + day, check_type_id: 'pw', litter_id: 'lit1', outcome: 'ok', taken_at: day + 'T09:00:00Z' });
   const at = (day, logs) => D.forTarget(types, logs, t, day, null, { rules })[0];
