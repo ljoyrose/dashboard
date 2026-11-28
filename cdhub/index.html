@@ -5043,8 +5043,15 @@ function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:f
 var sinkWaiting=0, sinkLine=[], sinkSending=[], sinkQ=[], sinkPumping=false, sinkNoMany=false;
 /* 20 Nov 2026: each waiting save's line says "Waiting, N ahead", then "saving..." once it is sent (was "saving..." for minutes). */
 function sinkTell(){ sinkLine.forEach(function(rid,i){ var el=rid&&document.querySelector('[data-rid="'+rid+'"]'); if(el&&!el.querySelector('.sv-line')) el.textContent=(i===0||sinkSending.indexOf(rid)>=0)?'saving…':'Waiting, '+i+' ahead'; }); }
-function sinkFetch(body,url){ sinkWaiting++; var rid=body&&body.request_id||''; sinkLine.push(rid); sinkTell();
- var p=new Promise(function(res){ sinkQ.push({body:body,url:url,res:res}); });
+/* TEMPS FIRST (the owner 28 Nov 2026: "temps are not getting through"): a temperature reading goes ahead of every waiting
+   save that is not a temperature (a Present row, a job), behind other temperatures, so a long line never holds one back. */
+function sinkHot(b){ return !!(b&&b.table==='area_reading'); }
+function sinkFetch(body,url){ sinkWaiting++; var rid=body&&body.request_id||'';
+ var cold=sinkHot(body)?sinkQ.filter(function(q){ return !sinkHot(q.body); }).map(function(q){ return q.body.request_id; }):[];
+ var li=cold.length?sinkLine.indexOf(cold[0]):-1; if(li>=0) sinkLine.splice(li,0,rid); else sinkLine.push(rid); sinkTell();
+ var p=new Promise(function(res){ var item={body:body,url:url,res:res}, at=-1;
+  if(sinkHot(body)) for(var i=0;i<sinkQ.length;i++){ if(!sinkHot(sinkQ[i].body)){ at=i; break; } }
+  if(at<0) sinkQ.push(item); else sinkQ.splice(at,0,item); });
  var done=function(){ sinkWaiting--; var i=sinkLine.indexOf(rid); if(i>=0) sinkLine.splice(i,1); sinkTell(); };
  p.then(done,done); sinkPump(); return p; }
 /* One request at a time from this phone. ONE REQUEST FOR A ROUND (OV12 20 Nov 2026): when several plain adds are waiting
@@ -5170,6 +5177,7 @@ function hubFlush(o){
  if(hubFlushing) return hubFlushing;
  if(o&&o.ask) hubStop=false;
  var now=Date.now(), due=hubList(HUB_BOX).filter(function(x){ return (o&&o.old)||now-Date.parse(x.at)<HUB_BOX_AUTO; });
+ due=due.filter(function(x){ return sinkHot(x.body); }).concat(due.filter(function(x){ return !sinkHot(x.body); }));   /* temps first, each group oldest first */
  if(!due.length) return Promise.resolve(hubList(HUB_BOX).length);
  hubFlushing=(async function(){
   /* by itself (every minute, on open, signal back): never asks for a code, and waits while no one is signed in */

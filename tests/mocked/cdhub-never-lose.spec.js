@@ -394,3 +394,33 @@ test('first try saved but its answer was lost: the resend answered DUPLICATE sho
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox.refused'))).toBeNull();
   expect(tries).toBe(2);
 });
+
+test('temps first: a kept temperature reading is sent before older kept Present rows, on a script with no list save @live', async ({ page }) => {
+  const sent = [];
+  await page.route(SINK, async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    sent.push(body);
+    const out = body.action === 'add_many' ? { ok: false, code: 'BAD_REQUEST', message: 'Unknown action.' }   // the live script before the list save
+      : { ok: true, result: { status: 'saved', id: 'row-one' } };
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
+  });
+  await page.goto('cdhub/');
+  await page.locator('#signinbtn').click();
+  await page.evaluate((url) => {
+    window.sinkGate = async () => ({ ok: true, url, code: 'river-staff-441' });
+    const at = (m) => new Date(Date.now() - m * 60000).toISOString();
+    const pres = (k, m) => ({ id: 'cd-pres-' + k + '0001', at: at(m), body: { v: 1, request_id: 'cd-pres-' + k + '0001', table: 'check_log', action: 'add', fields: { check_type_id: 'cty-round_presence-1', area_id: 'area-1', covered_ids: 'sub-' + k, outcome: 'recorded' } } });
+    const temp = { id: 'cd-temp-a0001', at: at(1), body: { v: 1, request_id: 'cd-temp-a0001', table: 'area_reading', action: 'add', fields: { area_id: 'area-1', min_c: '12.0', max_c: '15.0' } } };
+    localStorage.setItem('cdhub.outbox', JSON.stringify([pres('a', 9), pres('b', 8), temp]));
+    hubStopSending();
+    hubBoxDraw();
+  }, SINK);
+  const bar = page.locator('#hub-outbox');
+  await bar.locator('[data-outbox-send]').click();
+  await expect(bar).toBeHidden();
+  const adds = sent.filter((b) => b.action === 'add').map((b) => b.request_id);
+  expect(adds[0]).toBe('cd-temp-a0001');
+  expect(adds.slice(1).sort()).toEqual(['cd-pres-a0001', 'cd-pres-b0001']);
+  const many = sent.find((b) => b.action === 'add_many');
+  if (many) expect(many.items[0].request_id).toBe('cd-temp-a0001');   // a script with the list save gets temps first too
+});
