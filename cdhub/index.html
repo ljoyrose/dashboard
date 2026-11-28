@@ -4361,9 +4361,48 @@ function markSeen(areaId, sid, state){
  var m=document.querySelector('[data-hsave="'+CSS.escape(areaId+'|'+sid)+'"]');
  if(!pt){ if(m) m.textContent=now?'noted on this page, not saved':''; return; }
  if(!now){ if(m) m.textContent=''; return; }
- if(presenceSessionOn(pt,date)) presenceSessionSave(areaId,date,pt,m);
+ if(presenceSessionOn(pt,date)){
+  if(fixing&&already){ presenceSessionSave(areaId,date,pt,m); return; }   /* a correction is one row, sent now */
+  if(m) m.textContent=''; presenceBarNote(areaId,'Marked. Press Save room to record the room once.'); return; }
  else presenceSave(areaId,sid,now,date,pt,m,fixing&&already?already.id:'');
 }
+/* Room presence (session rows): one row per room per day covers every dog in it; the dogs that are not present are
+   exceptions, each with its own reason or one reason for all. Taps only mark; Save room or All present sends once, and
+   a second press while it is on its way sends nothing (27 Nov 2026: each tap sent a growing row, about 25 s each). */
+function presenceReason(t){ return String(t||'').replace(/[|\r\n]+/g,' ').replace(/\s+/g,' ').trim().slice(0,200); }
+function presenceBarNote(areaId,text){ var el=document.querySelector('[data-psess="'+CSS.escape(areaId)+'"]'); if(el) el.textContent=text||''; }
+function presenceRoomDone(areaId,date){ var dogs=inCabin(areaId,date); return dogs.length>0&&dogs.every(function(sid){ return presenceForDog(date,sid); }); }
+async function presenceRoomSave(areaId,allPresent){
+ var date=CD._roundDate||todayISO(), pt=presenceType(date), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:'',subjects:inCabin(areaId,date)});
+ if(!pt) return;
+ cur.seen=cur.seen||{}; cur.why=cur.why||{};
+ var host=document.querySelector('[data-pexcept-host="'+CSS.escape(areaId)+'"]');
+ if(host) host.querySelectorAll('[data-pex-dog]').forEach(function(cb){ var sid=cb.getAttribute('data-pex-dog');
+   if(cb.checked){ cur.seen[sid]='not'; var w=host.querySelector('[data-pex-why="'+CSS.escape(sid)+'"]'); cur.why[sid]=presenceReason(w&&w.value); }
+   else if(cur.seen[sid]==='not'){ delete cur.seen[sid]; delete cur.why[sid]; } });
+ inCabin(areaId,date).forEach(function(sid){ if(allPresent||host){ if(cur.seen[sid]!=='not') cur.seen[sid]='here'; } });
+ if(cur.sending){ presenceBarNote(areaId,'Already sending this room. Nothing sent twice.'); return; }
+ cur.sending=true;
+ try{ await presenceSessionSave(areaId,date,pt,document.querySelector('[data-psess="'+CSS.escape(areaId)+'"]')); }
+ finally{ cur.sending=false; }
+ if(host&&!host.querySelector('[data-pex-dog]:checked')) host.innerHTML='';
+}
+function presenceExceptHtml(areaId,date){ var cur=ROUND[roundKey(date,areaId)]||{}, seen=cur.seen||{}, why=cur.why||{};
+ return '<div class="card" data-pexcept="'+esc(areaId)+'" style="margin:6px 0"><p class="mut">Tick each dog that is not present. Give each a reason, or one reason for all of them.</p>'
+  +'<div class="filt"><input class="inp" type="text" data-pex-all="'+esc(areaId)+'" maxlength="200" aria-label="One reason for all ticked dogs" placeholder="One reason for all ticked (optional)">'
+  +'<button type="button" class="btn" data-pex-apply="'+esc(areaId)+'">Use for all ticked</button></div>'
+  +inCabin(areaId,date).map(function(sid){ var d=CD._byId[sid]||{}, on=seen[sid]==='not';
+    return '<div class="filt" style="margin:4px 0"><label style="min-height:40px;display:inline-flex;align-items:center;gap:6px"><input type="checkbox" data-pex-dog="'+esc(sid)+'"'+(on?' checked':'')+'> '+esc(d.name||sid)+' not present</label>'
+     +'<input class="inp" type="text" data-pex-why="'+esc(sid)+'" maxlength="200" aria-label="Why '+esc(d.name||sid)+' is not present" placeholder="Why (optional)" value="'+esc(why[sid]||'')+'"></div>'; }).join('')
+  +'<button type="button" class="btn" data-psave="'+esc(areaId)+'">Save room</button></div>'; }
+function presenceBarHtml(areaId,date,sel){ var pt=presenceType(date);
+ if(!pt||!presenceSessionOn(pt,date)||!sel.length) return '';
+ if(presenceRoomDone(areaId,date)) return '<div class="mut" data-pbar="'+esc(areaId)+'">'+saveHtml('Present: done today')+'</div>';
+ return '<div class="filt" data-pbar="'+esc(areaId)+'" style="margin:4px 0">'
+  +'<button type="button" class="btn" data-pall="'+esc(areaId)+'">All present</button>'
+  +'<button type="button" class="btn quiet" data-pexcept-open="'+esc(areaId)+'">Except\u2026</button>'
+  +'<button type="button" class="btn quiet" data-psave="'+esc(areaId)+'">Save room</button>'
+  +'<span class="mut" role="status" data-psess="'+esc(areaId)+'"></span></div><div data-pexcept-host="'+esc(areaId)+'"></div>'; }
 async function presenceSessionSave(areaId,date,pt,m){
  var cur=ROUND[roundKey(date,areaId)]||{}, here=[], not=[], fixing=cur.fix&&Object.keys(cur.fix).length;
  inCabin(areaId,date).forEach(function(sid){ var st=cur.seen&&cur.seen[sid]; if(st==='here') here.push(sid); else if(st==='not') not.push(sid); });
@@ -4372,7 +4411,8 @@ async function presenceSessionSave(areaId,date,pt,m){
  if(!fixing && dogs.some(function(sid){ return presenceForDog(date,sid); })){ if(m) m.innerHTML=saveHtml('Done today'); return; }
  if(m) m.textContent='saving\u2026';
  var at=date===todayISO()?new Date().toISOString():isoAt(date,'12');
- var fields={check_type_id:pt.id,area_id:areaId,dog_ids:dogs.join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,how_recorded:'tapped'};
+ var why=cur.why||{};
+ var fields={check_type_id:pt.id,area_id:areaId,dog_ids:dogs.join('|'),exceptions:not.map(function(id){ var w=presenceReason(why[id]); return id+':not_here'+(w?':'+w:''); }).join('|'),outcome:'recorded',happened_at:at,how_recorded:'tapped'};
  var prev=fixing?standingPresence(date).filter(function(l){ return l.area_id===areaId; }).pop():null;
  if(prev) fields.corrects_id=prev.id;
  var r=await sinkSend({table:'check_log',action:'add_session',fields:fields});
@@ -4869,7 +4909,7 @@ function pageRound(){
         +'<button type="button" class="cb" data-here="'+sid+'" data-area="'+aid+'" aria-pressed="'+String(seen==='here')+'">present</button>'
         +'<button type="button" class="cb" data-nothere="'+sid+'" data-area="'+aid+'" aria-pressed="'+String(seen==='not')+'">not here</button>'
         +'</span><span class="mut hsave" data-hsave="'+esc(aid+'|'+sid)+'">'+(sv&&sv.state&&!fixing?saveHtml('Done today')+' <button type="button" class="cb" data-pcorrect="'+esc(sid)+'" data-area="'+esc(aid)+'">Correct</button>':'')+'</span></span>'; }).join('')
-     :'<span class="mut">empty</span>')+'</div><div data-move-host="'+esc(aid)+'"></div>'
+     :'<span class="mut">empty</span>')+'</div>'+presenceBarHtml(aid,date,sel)+'<div data-move-host="'+esc(aid)+'"></div>'
    +(function(){ var bd=bandFor(sel,date);
        if(!bd) return sel.length?'<div class="mut">no date of birth for anyone in here \u2014 no band can be set</div>':'';
        return '<div class="mut"><span class="pill '+(bd.b.stated?'i':'w')+'">'+bd.b.min.toFixed(1)+'\u2013'+bd.b.max.toFixed(1)+' \u00b0C</span> '
@@ -6894,7 +6934,7 @@ function goPush(id,sub,full,push,prevShown,leaveY){
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
 document.addEventListener('click',function(e){
- var t=e.target&&e.target.closest&&e.target.closest('[data-move-cancel],[data-over-move],[data-move-to],[data-move-off],[data-cabin-move],[data-move-dog],[data-here],[data-nothere],[data-pcorrect]');
+ var t=e.target&&e.target.closest&&e.target.closest('[data-move-cancel],[data-over-move],[data-move-to],[data-move-off],[data-cabin-move],[data-move-dog],[data-here],[data-nothere],[data-pcorrect],[data-pall],[data-psave],[data-pexcept-open],[data-pex-apply]');
  if(!t) return;
  if(t.hasAttribute('data-move-cancel')){
   var h=t.closest('[data-move-host]'); if(h) h.innerHTML='';
@@ -6908,6 +6948,11 @@ document.addEventListener('click',function(e){
  if(t.hasAttribute('data-move-dog')){ openMovePicker(t.getAttribute('data-from')||'', t.getAttribute('data-move-dog'), t); return; }
  if(t.hasAttribute('data-pcorrect')){ var paid=t.getAttribute('data-area'), psid=t.getAttribute('data-pcorrect'), pdate=CD._roundDate||todayISO(), pk=roundKey(pdate,paid), pcur=ROUND[pk]||(ROUND[pk]={areaId:paid,date:pdate});
   pcur.fix=pcur.fix||{}; pcur.fix[psid]=1; var pm=document.querySelector('[data-hsave="'+CSS.escape(paid+'|'+psid)+'"]'); if(pm) pm.textContent='Tap present or not here to correct today'; return; }
+ if(t.hasAttribute('data-pall')){ presenceRoomSave(t.getAttribute('data-pall'), true); return; }
+ if(t.hasAttribute('data-psave')){ presenceRoomSave(t.getAttribute('data-psave'), true); return; }
+ if(t.hasAttribute('data-pexcept-open')){ var xa=t.getAttribute('data-pexcept-open'), xh=document.querySelector('[data-pexcept-host="'+CSS.escape(xa)+'"]'); if(xh) xh.innerHTML=xh.innerHTML?'':presenceExceptHtml(xa,CD._roundDate||todayISO()); return; }
+ if(t.hasAttribute('data-pex-apply')){ var ya=t.getAttribute('data-pex-apply'), yh=document.querySelector('[data-pexcept-host="'+CSS.escape(ya)+'"]'), yall=yh&&yh.querySelector('[data-pex-all]'), yv=yall?yall.value:'';
+  if(yh) yh.querySelectorAll('[data-pex-dog]:checked').forEach(function(cb){ var w=yh.querySelector('[data-pex-why="'+CSS.escape(cb.getAttribute('data-pex-dog'))+'"]'); if(w) w.value=yv; }); return; }
  if(t.hasAttribute('data-here')){ markSeen(t.getAttribute('data-area'), t.getAttribute('data-here'), 'here'); return; }
  if(t.hasAttribute('data-nothere')){ markSeen(t.getAttribute('data-area'), t.getAttribute('data-nothere'), 'not'); return; }
 });
