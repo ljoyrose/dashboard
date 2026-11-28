@@ -66,7 +66,7 @@ const RISK = {
   dog_details: 'Overwrites the dog row (name, sex, DOB, colour, neuter) and the microchip row IN PLACE; no old value kept.',
   subject_create: 'Adds a dog: subject + subject_status (+ microchip). Same name + DOB of an active dog refused.',
   subject_link: 'BFFs / Fren.; subject_link_end fills to_date only.',
-  subject_video: 'RoseQuest share links only. A change is a new row with corrects_id. Nothing is copied to Drive.',
+  subject_video: 'Accepted video share links only. A change is a new row with corrects_id. Nothing is copied to Drive.',
   files: 'Stores bytes in the FILES_FOLDER_ID folder plus one row; link rows need no folder.',
   links: 'max_per_from can end older open rows in the same save.',
   dog_photo: 'No TABLE_ON switch (Risks found, R1). Overwrites the photo cell of the dog row.',
@@ -106,7 +106,7 @@ function rows() {
     ['dog_details', 'dog_details', 'OWNER', 'header ' + dc.dog_details.need.join(', ') + '; BLD-microchip (id, subject_id, chip_number); BLD-coat_colour'],
     ['subject_create', 'subject_create', 'OWNER', 'header ' + dc.subject_create.need.join(', ') + '; BLD-species rows; BLD-subject_status file; BLD-microchip if a chip'],
     ['subject_link', 'subject_link, subject_link_end', 'OWNER', 'link_kind.<kind> rows in BLD-breeding_rule; header ' + dc.subject_link.need.length + ' cols'],
-    ['subject_video', 'subject_video', 'OWNER, STAFF', 'header ' + dc.subject_video.need.join(', ') + '; RoseQuest share link only'],
+    ['subject_video', 'subject_video', 'OWNER, STAFF', 'header ' + dc.subject_video.need.join(', ') + '; accepted video share link only'],
     ['files', 'file_add', 'OWNER; a file.who_may row widens', 'FILES_FOLDER_ID (photo/upload); file.types + file.max_bytes rows; header ' + dc.files.need.length + ' cols']
   ];
   dcRows.forEach(([k, action, who, needs]) => {

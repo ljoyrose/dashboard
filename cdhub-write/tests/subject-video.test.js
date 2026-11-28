@@ -1,5 +1,5 @@
 'use strict';
-// Dog videos (25 Nov 2026): RoseQuest share links only. A change is a new row. Invented dogs only.
+// Dog videos (25 Nov 2026): accepted share links only. A change is a new row. Invented dogs only.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { standardEnv } = require('./harness');
@@ -23,7 +23,7 @@ function post(e, fields, code) {
 }
 const lines = (e) => e.file('BLD-subject_video.csv')[0].content.trim().split(/\r?\n/);
 
-test('subject_video: off until its switch is on; only a RoseQuest share link; the first clip is the main one', () => {
+test('subject_video: off until its switch is on; only an accepted share link; the first clip is the main one', () => {
   const off = env({ TABLE_ON_subject_video: '' });
   assert.equal(post(off, { subject_id: 'sub-test-a', video_url: LINK + '1' }).code, 'TABLE_OFF');
   const e = env();

@@ -460,7 +460,7 @@ function sinkSubjectLinkEnd_(req) {
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
- * Dog videos (25 Nov 2026). The picture stays on RoseQuest. This list stores only the share link
+ * Dog videos (25 Nov 2026). The picture stays with the video host. This list stores only the share link
  * (https://share.puppyclassroom.com/v/<id>), never a copy and never a Drive file.
  *   action 'subject_video'  Adds one row, or a new row whose corrects_id points at an older one.
  *                           Nothing is overwritten. Remove sets active to no. Make main sets is_main
@@ -505,7 +505,7 @@ function sinkSubjectVideo_(req) {
     var corrects = String(f.corrects_id || '').trim();
     var url = String(f.video_url || '').trim(), title = dogcardText_(f.title, 'title', errors, 80);
     var wantMain = String(f.is_main || '') === 'yes', remove = String(f.active || '') === 'no';
-    if (url && !VIDEO_URL_RE_.test(url)) errors.video_url = 'Paste a RoseQuest share link, like https://share.puppyclassroom.com/v/abc123';
+    if (url && !VIDEO_URL_RE_.test(url)) errors.video_url = 'Paste the video\'s share link.';
     if (corrects && !ID_RE_.test(corrects)) errors.corrects_id = 'Say which video this changes.';
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
     dogcardSubject_(subjectId);
@@ -531,7 +531,7 @@ function sinkSubjectVideo_(req) {
         wrote.push(videoWrite_(spec, orig, { is_main: 'yes', active: 'yes', corrects_id: orig.id }));
       } else throw err_('INVALID', 'Say whether to remove this video or make it the main one.');
     } else {
-      if (!VIDEO_URL_RE_.test(url)) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { video_url: 'Paste a RoseQuest share link, like https://share.puppyclassroom.com/v/abc123' } });
+      if (!VIDEO_URL_RE_.test(url)) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { video_url: 'Paste the video\'s share link.' } });
       if (live.some(function (r) { return r.video_url === url; })) throw err_('DUPLICATE', 'That video is already on this dog.');
       var main = wantMain || !live.some(function (r) { return String(r.is_main) === 'yes'; });
       if (main) live.forEach(function (r) { if (String(r.is_main) === 'yes') wrote.push(videoWrite_(spec, r, { is_main: '', active: 'yes', corrects_id: r.id })); });
