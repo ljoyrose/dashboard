@@ -391,9 +391,14 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     const not = page.locator(`button[data-nothere="${sid}"][data-area="${area}"]`), line = page.locator(`[data-hsave="${area}|${sid}"]`);
     await here.click();
     await expect(here).toHaveAttribute('aria-pressed', 'true');
+    // 28 Nov 2026: a tap is noted on the phone and the day's ONE row goes when the round is left (or 2 minutes after the last tap)
+    await expect(line).toContainText('Present: 1 dog, saves once');
+    await page.waitForTimeout(200); expect(bodies.length).toBe(0);
+    await page.evaluate(() => presentSendAll());
     await expect.poll(() => bodies.length).toBe(1);
-    // Present is one session row for the round (the dogs present, not one row per dog) unless Settings turns that off.
-    expect(bodies[0]).toMatchObject({ table: 'check_log', action: 'add_session', fields: { check_type_id: 'cty-p', area_id: area, outcome: 'recorded', how_recorded: 'tapped', dog_ids: sid, exceptions: '' } });
+    // Present is one row for the whole site for the day (the dogs present, no room) unless Settings turns that off.
+    expect(bodies[0]).toMatchObject({ table: 'check_log', action: 'add_session', fields: { check_type_id: 'cty-p', outcome: 'recorded', how_recorded: 'tapped', dog_ids: sid, exceptions: '' } });
+    expect(bodies[0].fields.area_id).toBeUndefined();
     expect(bodies[0].fields.subject_id).toBeUndefined();
     expect(bodies[0].fields.item).toBeUndefined();
     await expect(line.locator('[data-saved="good"]')).toContainText(/^Saved \d\d:\d\d$/);
@@ -408,7 +413,9 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await page.locator(`[data-pcorrect="${sid}"][data-area="${area}"]`).click();
     fail = true;
     await not.click();
+    await page.evaluate(() => presentSendAll());
     await expect.poll(() => bodies.length).toBe(2);
+    expect(bodies[1].fields.corrects_id).toBe('clg-new');
     await expect(line).toContainText('Not saved');
     await expect(not).toHaveAttribute('aria-pressed', 'false');
     await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
@@ -436,11 +443,66 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(bodies).toEqual([]);
     await page.locator(`[data-pcorrect="${sid}"][data-area="${area}"]`).click();
     await page.locator(`button[data-nothere="${sid}"][data-area="${area}"]`).click();
+    await page.evaluate(() => presentSendAll());
     await expect.poll(() => bodies.length).toBe(1);
     expect(bodies[0].action).toBe('add_session');
     expect(bodies[0].fields).toMatchObject({ check_type_id: 'cty-round_presence-1', outcome: 'recorded', corrects_id: 'clg-am' });
     expect(bodies[0].fields.dog_ids).toContain(sid);
     expect(bodies[0].fields.exceptions).toContain(sid + ':not_here');
+  });
+
+  test('Present once a day: eight taps in a round make ONE row for the whole site, sent when the round is left; a later round writes nothing @regression', async ({ page, guard }) => {
+    await open(page, guard);
+    const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', id: 'clg-day' } }));
+    await page.evaluate(() => {
+      T['BLD-check_type.csv'] = (T['BLD-check_type.csv'] || []).concat([{ id: 'cty-round_presence-1', type_key: 'round_presence', label: 'Present', target: 'dog', active: 'true', effective_from: '2026-01-01', source: 'Pretend' }]);
+      go('round');
+    });
+    const buttons = page.locator('button[data-here]');
+    const n = await buttons.count();
+    const sids = [];
+    for (let i = 0; i < n; i++) sids.push(await buttons.nth(i).getAttribute('data-here'));
+    for (let t = 0; t < 8; t++) {   // eight taps: present, not here, present again, across the round's dogs
+      const i = t % n, sid = sids[i], area = await buttons.nth(i).getAttribute('data-area');
+      const which = t % 3 === 1 ? 'data-nothere' : 'data-here';
+      await page.locator(`button[${which}="${sid}"][data-area="${area}"]`).click();
+    }
+    for (let i = 0; i < n; i++) await buttons.nth(i).click();   // end with every dog present
+    await page.waitForTimeout(300);
+    expect(bodies).toEqual([]);   // nothing goes per tap
+    await page.evaluate(() => go('areas'));   // the round is left: the day's one row goes
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0].action).toBe('add_session');
+    expect(bodies[0].fields.area_id).toBeUndefined();
+    expect(bodies[0].fields.dog_ids.split('|').sort()).toEqual([...new Set(sids)].sort());
+    await page.evaluate(() => go('round'));   // a later round the same day
+    for (let i = 0; i < n; i++) await buttons.nth(i).click();
+    await page.evaluate(() => go('areas'));
+    await page.waitForTimeout(300);
+    expect(bodies.length).toBe(1);
+  });
+
+  test('Present on a script that does not know the one-row save yet is kept, never refused, and the line says it saves after the next script update @regression', async ({ page, guard }) => {
+    await open(page, guard);
+    let knows = false;
+    const bodies = await saves(page, (b) => (b.action === 'add_session' && !knows ? { ok: false, code: 'BAD_REQUEST', message: 'Unknown action.' } : { ok: true, result: { status: 'saved', id: 'clg-day' } }));
+    await page.evaluate(() => {
+      T['BLD-check_type.csv'] = (T['BLD-check_type.csv'] || []).concat([{ id: 'cty-round_presence-1', type_key: 'round_presence', label: 'Present', target: 'dog', active: 'true', effective_from: '2026-01-01', source: 'Pretend' }]);
+      go('round');
+    });
+    const here = page.locator('button[data-here]').first();
+    const sid = await here.getAttribute('data-here'), area = await here.getAttribute('data-area');
+    await here.click();
+    await page.evaluate(() => presentSendAll());
+    await expect.poll(() => bodies.length).toBe(1);
+    await expect(page.locator(`[data-hsave="${area}|${sid}"]`)).toContainText('Present saves after the next script update');
+    await expect(page.locator('#hub-outbox [data-outbox-later="1"]')).toContainText('Present saves after the next script update');
+    expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox.refused'))).toBeNull();
+    expect(JSON.parse(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).map((x) => x.body.action)).toEqual(['add_session']);
+    await expect(here).toHaveAttribute('aria-pressed', 'true');   // kept: the tap stays
+    knows = true;   // the script is updated
+    await page.evaluate(() => hubFlush());
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
   });
 
   test('Round "add a dog": puppies under their litter heading, a whole-litter-with-dam choice, cabin names not codes', async ({ page, guard }) => {
