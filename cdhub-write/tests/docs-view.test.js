@@ -53,7 +53,7 @@ test('the section draws a count and a Drive link per document; none says so', ()
   assert.match(V.html(Object.assign({ esc: String, dmy: (s) => s }, v), 'nobody', ''), /no documents/);
 });
 
-test("files linked from the dog's own records show, named by the record (Lisa 18 Nov 2026)", () => {
+test("files linked from the dog's own records show, named by the record (owner 18 Nov 2026)", () => {
   const recs = { check_log: [{ id: 'c1', subject_id: 'd1', check_type_id: 'ct-ftb', happened_at: '2026-02-15T10:00:00Z' }, { id: 'c2', subject_id: 'd2', check_type_id: 'ct-ftb' }] };
   const extra = [
     L('certificate', 'f2', { from_table: 'check_log', from_id: 'c1' }),

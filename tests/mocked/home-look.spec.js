@@ -137,7 +137,7 @@ test.describe('Home: house look', () => {
   // House hover rule (the owner, 12 Nov 2026, replaces 28 Oct): every control, meaning-coloured or neutral, hovers with the pale grey fill
   // (--hov) and no line; a meaning colour keeps its resting line. Checked in light and dark.
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: hover is the pale grey fill and no line, coloured and neutral controls alike (Lisa, 12 Nov 2026)`, async ({ page }) => {
+    test(`${scheme}: hover is the pale grey fill and no line, coloured and neutral controls alike (12 Nov 2026)`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.goto('./');
       await signIn(page);

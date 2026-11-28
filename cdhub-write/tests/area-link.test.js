@@ -26,7 +26,7 @@ function addVis(env, lines) { const f = env.file('BLD-field_visibility.csv')[0];
 
 test('area_link: the owner adds one straight in, stamped; the columns are the link-row standard', () => {
   const env = env1();
-  const r = link(env, env.codes.owner, { source: 'Lisa 12 Nov' });
+  const r = link(env, env.codes.owner, { source: 'Owner 12 Nov' });
   assert.equal(r.ok, true, JSON.stringify(r)); assert.match(r.result.id, /^alk-/);
   const [row] = recs(env);
   assert.deepEqual(Object.keys(row), HEADER);

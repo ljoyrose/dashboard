@@ -417,7 +417,7 @@ domTest('Bloodline: pasting a wrong address is refused; a right one turns saving
   assert.ok(!post.url.includes('CODE123456'));
 });
 
-domTest('Bloodline patch: only ADDS lines (two stages, the scripts, one mount call); touches nothing of Lisa\'s page', () => {
+domTest('Bloodline patch: only ADDS lines (two stages, the scripts, one mount call); touches nothing of the owner\'s page', () => {
   const patch = read('wired/bloodline-wiring.patch');
   const body = patch.split('\n').filter((l) => /^[+-]/.test(l) && !/^(\+\+\+|---)/.test(l));
   const removed = body.filter((l) => l.startsWith('-'));
@@ -504,7 +504,7 @@ function scriptFake(over = {}) {
     const b = JSON.parse(init.body);
     if (b.action === 'read') {
       if (st.reads && st.reads[b.table]) return { json: async () => st.reads[b.table] };
-      if (!rd[b.table]) return { json: async () => ({ ok: false, code: 'NOT_ALLOWED', message: 'Lisa has not allowed your role to see this list.' }) };
+      if (!rd[b.table]) return { json: async () => ({ ok: false, code: 'NOT_ALLOWED', message: 'The owner has not allowed your role to see this list.' }) };
       return { json: async () => ({ ok: true, result: { table: b.table, fields: Object.keys(rd[b.table][0] || {}), rows: rd[b.table], count: rd[b.table].length, scope: 'all rows' } }) };
     }
     return { json: async () => st.saveReply };
@@ -542,7 +542,7 @@ test('readMany: area, subject and occupancy are required; subject_status may be 
   const s = mkSave(srv); await s.checkStatus(); s.setCode('C');
   const ok = await s.readMany(['area', 'subject', 'occupancy', 'subject_status']);
   assert.equal(ok.ok, true); assert.deepEqual(ok.tables.subject_status, []);
-  const srv2 = scriptFake({ reads: { occupancy: { ok: false, code: 'NOT_ALLOWED', message: 'Lisa has not allowed your role to see this list.' } } });
+  const srv2 = scriptFake({ reads: { occupancy: { ok: false, code: 'NOT_ALLOWED', message: 'The owner has not allowed your role to see this list.' } } });
   const s2 = mkSave(srv2); await s2.checkStatus(); s2.setCode('C');
   const no = await s2.readMany(['area', 'subject', 'occupancy', 'subject_status']);
   assert.equal(no.ok, false); assert.match(no.message, /not allowed/);
@@ -1215,6 +1215,21 @@ test('a kept entry resent after a lost answer and answered DUPLICATE leaves the 
   assert.equal(r.kept, true);
   assert.equal(await s.outbox.flush(), 0);
   assert.equal(s.outbox.refused().length, 0);
+});
+
+test('outbox: kept temperature readings are sent before older kept entries of other kinds (temps first) @regression', async () => {
+  const local = memStore(), posts = [];
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    posts.push(JSON.parse(init.body).request_id); return { json: async () => ({ ok: true, result: { id: 'x' } }) };
+  };
+  const t0 = Date.now();
+  const item = (id, table, m) => ({ id, at: new Date(t0 - m * 60000).toISOString(), body: { v: 1, request_id: id, table, action: 'add', fields: {} } });
+  local.setItem('bld.outbox', JSON.stringify([item('r-job-0001', 'check_log', 9), item('r-temp-0001', 'area_reading', 5), item('r-job-0002', 'check_log', 4), item('r-temp-0002', 'area_reading', 1)]));
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  assert.equal(await s.outbox.flush(), 0);
+  assert.deepEqual(posts, ['r-temp-0001', 'r-temp-0002', 'r-job-0001', 'r-job-0002']);
 });
 
 test('outbox: kept entries are sent at once when the page is shown again (tab back, phone unlocked, page restored) @regression', async () => {
