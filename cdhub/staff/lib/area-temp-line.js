@@ -25,6 +25,22 @@
   } else root.BLDAreaTempLine = factory(root.BLDAreaLink, root.BLDThermometer, root.BLDCapacity);
 }(typeof self !== 'undefined' ? self : this, function (L, T, C) {
   'use strict';
+  /* A correction replaces the reading it corrects (owner 27 Nov 2026): the original is not shown, and a correction with no
+     period_start of its own takes its original's slot. Rows are never changed; this only picks which one to show. */
+  function inForce(rows) {
+    var byId = {}, replaced = {};
+    (rows || []).forEach(function (r) { if (r.id) byId[r.id] = r; if (r.corrects_id) replaced[r.corrects_id] = 1; });
+    return (rows || []).filter(function (r) { return !replaced[r.id]; }).map(function (r) {
+      if (!r.corrects_id || r.period_start) return r;
+      var o = byId[r.corrects_id], n = 0;
+      while (o && !o.period_start && o.corrects_id && n++ < 20) o = byId[o.corrects_id];
+      if (!o || !(o.period_start || o.taken_at)) return r;
+      var c = {}, k; for (k in r) if (Object.prototype.hasOwnProperty.call(r, k)) c[k] = r[k];
+      c.period_start = o.period_start || o.taken_at;
+      return c;
+    });
+  }
+
   function num(v) { if (v === '' || v == null) return null; var n = parseFloat(v); return isNaN(n) ? null : n; }
   function dp(n) { return n === null ? '–' : n.toFixed(1); }
   function day(v) { var s = String(v || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
@@ -72,7 +88,7 @@
     if (all.length && opts.req && T) mine = mine.filter(function (t) { return T.neededOn(t, d, opts.req); });
     if (all.length && !mine.length) return { lines: [], limit: lim };
     var rows = L && links && links.length ? L.expand(readings || [], links) : (readings || []);
-    rows = rows.filter(function (r) { return r.area_id === areaId && day(r.period_start || r.taken_at) === d && !r.corrects_id; });
+    rows = inForce(rows).filter(function (r) { return r.area_id === areaId && day(r.period_start || r.taken_at) === d; });
     var roomCount = all.filter(function (t) { return t.area_id === areaId; }).length;
     var items = mine.length ? mine : [{ id: '', name: '' }];
     var lines = items.map(function (t) {

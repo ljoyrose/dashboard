@@ -347,6 +347,19 @@ function isoDay(v){
   var y=m[3].length===2?'20'+m[3]:m[3], mo=('0'+m[2]).slice(-2), d=('0'+m[1]).slice(-2);
   return y+'-'+mo+'-'+d;
 }
+/* A correction replaces the reading it corrects (owner 27 Nov 2026): the original is not shown, and a correction with no
+   period_start of its own takes its original's slot. Rows are never changed; this only picks which one to show. */
+function inForceReadings(rows){
+  var byId={}, replaced={};
+  (rows||[]).forEach(function(r){ if(r.id) byId[r.id]=r; if(r.corrects_id) replaced[r.corrects_id]=1; });
+  return (rows||[]).filter(function(r){ return !replaced[r.id]; }).map(function(r){
+    if(!r.corrects_id||r.period_start) return r;
+    var o=byId[r.corrects_id], n=0;
+    while(o&&!o.period_start&&o.corrects_id&&n++<20) o=byId[o.corrects_id];
+    if(!o||!(o.period_start||o.taken_at)) return r;
+    return Object.assign({},r,{period_start:o.period_start||o.taken_at});
+  });
+}
 function readingWhen(at){
   var s=String(at||'').trim(), day=isoDay(s), tm=s.match(/[T ](\d{1,2}):/), hr=tm?parseInt(tm[1],10):NaN;
   return {day:day, slot:(isNaN(hr)||hr<12)?'am':'pm'};
@@ -464,6 +477,7 @@ async function loadAreaData(){
       AREA_HDR_BAD=(rows.length&&(!('area_id' in rows[0])||!('min_c' in rows[0])||!('max_c' in rows[0])))?'row 1 is not the heading row'
         :rows.some(function(r){ return r.id==='id'||r.area_id==='area_id'; })?'a heading row is also lower down':'';
       rows=rows.filter(function(r){ return r.id!=='id'&&r.area_id!=='area_id'; });
+      rows=inForceReadings(rows);   /* a correction replaces the reading it corrects (owner 27 Nov 2026) */
       /* the owner 18 Nov 2026: a room marked empty (BLD-requirement room.empty, dated) shows Room empty with its temperatures hidden;
          the readings stay in the records. Before and after the link copies, so a copy never carries them into another room. */
       var hideE=function(x){ var O=window.BLDOccupancy; return O&&O.hideEmpty?O.hideEmpty(x,REQ,function(r){ return readingWhen(r.period_start||r.taken_at).day; }):x; };

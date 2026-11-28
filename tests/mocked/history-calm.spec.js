@@ -726,6 +726,33 @@ test('Print / PDF: outside-limit lines say who took the reading; a save that arr
   await expect(tbl).not.toContainText(/late/i);
 });
 
+test('a corrected temperature replaces the original on the page and the print; the original is not shown @regression @live', async ({ page, guard }) => {
+  await open(page, guard);
+  // R1 AM on 5 Jan was saved as 9.0-15.0 (outside); a correction saved on 6 Jan, with no period_start, makes it 12.0-15.0
+  const rows = 'id,area_id,taken_at,period_start,min_c,max_c,read_method,taken_by,corrects_id\n'
+    + 'o1,area-r1,2026-01-05T09:00:00Z,2026-01-05T00:00:00+00:00,9.0,15.0,typed,Staff A,\n'
+    + 'o2,area-r2,2026-01-05T09:00:00Z,2026-01-05T00:00:00+00:00,12.0,15.0,typed,Staff A,\n'
+    + 'c1,area-r1,2026-01-06T10:00:00Z,,12.0,15.0,typed,Owner,o1\n';
+  const f = guard.world.files.find((x) => x.name === 'BLD-area_reading.csv'); f.content = rows; f.size = String(rows.length);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await openDay(page, '2026-01-05');
+  const r1 = page.locator('#drill .rl', { hasText: 'R1' });
+  await expect(r1).toContainText('AM 12.0–15.0');
+  await expect(r1).not.toContainText('9.0');
+  await page.locator('#drill .dclose').click();
+  await page.evaluate(() => { window.print = () => {}; });
+  await page.locator('[data-rp-open]').click();
+  const panel = page.locator('#rpPanel');
+  await panel.locator('#rpMonth').selectOption('0');
+  await panel.locator('#rpYear').selectOption('2026');
+  await panel.locator('#rpGo').click();
+  const tbl = page.locator('#report [data-rp="table"]');
+  await expect(tbl).not.toContainText('9.0');
+  await expect(tbl.locator('[data-rp-totals]')).toContainText('outside the limit: 0');
+});
+
 // the owner 22 Nov 2026: "print pages for month ... fit on one page nicely for each type, particularly the tick versions".
 // A full month for 30 rooms: the summary is one A4 sheet and the room table is one A4 sheet, checked in a real PDF.
 test('Print / PDF: a 30-room month prints the summary on one page and the room table on one page', async ({ page, guard }, info) => {
