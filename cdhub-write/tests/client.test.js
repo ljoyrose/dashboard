@@ -1230,6 +1230,8 @@ test('outbox: kept temperature readings are sent before older kept entries of ot
   s.setScriptUrl(GOOD_URL); s.setCode('ABC');
   assert.equal(await s.outbox.flush(), 0);
   assert.deepEqual(posts, ['r-temp-0001', 'r-temp-0002', 'r-job-0001', 'r-job-0002']);
+});
+
 test('outbox: kept entries are sent at once when the page is shown again (tab back, phone unlocked, page restored) @regression', async () => {
   const local = memStore(), posts = [];
   let online = false;
