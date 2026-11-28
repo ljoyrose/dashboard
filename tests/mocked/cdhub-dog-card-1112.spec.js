@@ -417,7 +417,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('room presence: Save room sends one row for the room; Except… marks dogs not present with their own reason or one for all; a second press sends nothing @regression', async ({ page, guard }) => {
+  test('room presence: Save room sends one row for the room; Except marks dogs not present with their own reason or one for all; a second press sends nothing @regression', async ({ page, guard }) => {
     await open(page, guard);
     let release;
     const gate = new Promise((r) => { release = r; });
