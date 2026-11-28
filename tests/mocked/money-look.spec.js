@@ -173,7 +173,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
           continue;
         }
         expect(got.os, `${where} draws no line on hover`).toBe('none');
-        expect(got.bg, `${where} hover is the pale grey fill (Lisa, 12 Nov 2026)`).toBe(got.want.fill);
+        expect(got.bg, `${where} hover is the pale grey fill (12 Nov 2026)`).toBe(got.want.fill);
         expect(restBg, `${where} rests without that fill`).not.toBe(got.want.fill);
       }
     });

@@ -257,7 +257,7 @@ asOwner.describe('Breed Better acceptance: dog card chip', () => {
     }
   });
 
-  asOwner('S5.2 the chip carries the Testing label until Lisa signs off', async ({ page }) => {
+  asOwner('S5.2 the chip carries the Testing label until the owner signs off', async ({ page }) => {
     await openDogs(page);
     await expect(card(page, 'Test Dog One').locator('.bb-chip')).toContainText('Testing');
   });
@@ -310,7 +310,7 @@ draftScheme.describe('Breed Better acceptance: no active scheme', () => {
 
 // ---------------------------------------------------------------- staff
 
-asStaff.describe('Breed Better acceptance: staff see nothing (Lisa 11 Nov 2026)', () => {
+asStaff.describe('Breed Better acceptance: staff see nothing (11 Nov 2026)', () => {
 
   asStaff('S2 staff (who cannot read the score files) see no Breed Better entry under More', async ({ page }) => {
     await page.goto('cdhub/');
